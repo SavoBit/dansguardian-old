@@ -683,9 +683,9 @@ bool FatController::testProxy(std::string proxyip, int proxyport, bool report) {
     if (conn) {
         if (report) {
             if (!isDaemonised) {
-                std::cerr << "Error creating connection to test proxy" << std::endl;
+                std::cerr << "Error connecting to parent proxy" << std::endl;
             }
-            syslog(LOG_ERR, "%s","Error creating connection to test proxy");
+            syslog(LOG_ERR, "%s","Error connecting to parent proxy");
         }
         return false;
     }
