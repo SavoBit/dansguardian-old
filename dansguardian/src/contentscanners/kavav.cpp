@@ -12,9 +12,9 @@
 #include <unistd.h>
 #include <kavclient.h>
 
-class instance : public CSPlugin { // class name is irrelevent
+class csinstance : public CSPlugin { // class name is irrelevent
 public:
-    instance( ConfigVar & definition );
+    csinstance( ConfigVar & definition );
     int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* object, unsigned int objectsize);
     int scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename);
 
@@ -31,13 +31,13 @@ extern OptionContainer o;
 
 // class factory code *MUST* be included in every plugin
 
-instance::instance( ConfigVar & definition ): CSPlugin( definition ) {
+csinstance::csinstance( ConfigVar & definition ): CSPlugin( definition ) {
     cv = definition;
     return;
 };
 
 extern "C" CSPlugin* create( ConfigVar & definition ) {
-    return new instance( definition ) ;
+    return new csinstance( definition ) ;
 }
 
 extern "C" void destroy(CSPlugin* p) {
@@ -47,7 +47,7 @@ extern "C" void destroy(CSPlugin* p) {
 // end of Class factory
 
 
-int instance::init(int dgversion) {
+int csinstance::init(int dgversion) {
     if (!readStandardLists()) {  //always
         return DGCS_ERROR;       //include
     }                            //these
@@ -75,14 +75,14 @@ int instance::init(int dgversion) {
     return DGCS_OK;
 }
 
-int instance::quit(void) {
+int csinstance::quit(void) {
     if (kavcon != NULL) {
         kav_free(kavcon);  // return to kavcon 5 ;-)
     }
     return DGCS_OK;
 }
 
-int instance::dorc(int rc) {
+int csinstance::dorc(int rc) {
     switch(rc) {
         case KAV_STATUS_CLEAN:
             #ifdef DGDEBUG
@@ -109,7 +109,7 @@ int instance::dorc(int rc) {
 }
 
 
-int instance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip, const char *object, unsigned int objectsize) {
+int csinstance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip, const char *object, unsigned int objectsize) {
     lastvirusname = lastmessage = "";
     if (kav_check_mem(kavcon, object, objectsize) != 0) {
         lastmessage = kav_strerror(kav_get_error(kavcon));
@@ -120,7 +120,7 @@ int instance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const
 }
 
 
-int instance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
+int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
     lastvirusname = lastmessage = "";
     if (kav_check_file(kavcon, filename) != 0) {
         lastmessage = kav_strerror(kav_get_error(kavcon));

@@ -11,9 +11,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-class instance : public CSPlugin { // class name is irrelevent
+class csinstance : public CSPlugin { // class name is irrelevent
 public:
-    instance( ConfigVar & definition );
+    csinstance( ConfigVar & definition );
     int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* object, unsigned int objectsize);
     int scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename);
 
@@ -28,13 +28,13 @@ extern OptionContainer o;
 
 // class factory code *MUST* be included in every plugin
 
-instance::instance( ConfigVar & definition ): CSPlugin( definition ) {
+csinstance::csinstance( ConfigVar & definition ): CSPlugin( definition ) {
     cv = definition;
     return;
 };
 
 extern "C" CSPlugin* create( ConfigVar & definition ) {
-    return new instance( definition ) ;
+    return new csinstance( definition ) ;
 }
 
 extern "C" void destroy(CSPlugin* p) {
@@ -44,7 +44,7 @@ extern "C" void destroy(CSPlugin* p) {
 // end of Class factory
 
 
-int instance::init(int dgversion) {
+int csinstance::init(int dgversion) {
     if (!readStandardLists()) {  //always
         return DGCS_ERROR;       //include
     }                            //these
@@ -67,7 +67,7 @@ int instance::init(int dgversion) {
 // a file name to scan.  So we save the memory to disk and pass that.
 // Then delete the temp file.
 
-int instance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
+int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
     lastvirusname = lastmessage = "";
     String command = "SCAN bPQRSTUW ";
     command += filename;

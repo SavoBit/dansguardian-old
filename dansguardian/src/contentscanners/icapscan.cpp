@@ -17,9 +17,9 @@
 // dgav.sf.net and openantivirus.org were a great help in providing example
 // code to show how to connect to an ICAP server
 
-class instance : public CSPlugin { // class name is irrelevent
+class csinstance : public CSPlugin { // class name is irrelevent
 public:
-    instance( ConfigVar & definition );
+    csinstance( ConfigVar & definition );
 
     int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* object, unsigned int objectsize);
     int scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename);
@@ -38,13 +38,13 @@ extern OptionContainer o;
 
 // class factory code *MUST* be included in every plugin
 
-instance::instance( ConfigVar & definition ): CSPlugin( definition ) {
+csinstance::csinstance( ConfigVar & definition ): CSPlugin( definition ) {
     cv = definition;
     return;
 };
 
 extern "C" CSPlugin* create( ConfigVar & definition ) {
-    return new instance( definition ) ;
+    return new csinstance( definition ) ;
 }
 
 extern "C" void destroy(CSPlugin* p) {
@@ -54,7 +54,7 @@ extern "C" void destroy(CSPlugin* p) {
 // end of Class factory
 
 
-int instance::init(int dgversion) {
+int csinstance::init(int dgversion) {
     if (!readStandardLists()) {  //always
         return DGCS_ERROR;       //include
     }                            //these
@@ -90,7 +90,7 @@ int instance::init(int dgversion) {
 
 
 
-int instance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip, const char *object, unsigned int objectsize) {
+int csinstance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip, const char *object, unsigned int objectsize) {
     lastvirusname = lastmessage = "";
 
     String filename = requestheader->url();
@@ -201,7 +201,7 @@ int instance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const
 }
 
 
-int instance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
+int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
     lastmessage = lastvirusname = "";
 
     Socket icapsock;

@@ -11,9 +11,9 @@
 #include <unistd.h>
 
 
-class instance : public DMPlugin { // class name is irrelevent
+class dminstance : public DMPlugin { // class name is irrelevent
 public:
-    instance( ConfigVar & definition );
+    dminstance( ConfigVar & definition );
     int in(OptionContainer *o, DataBuffer *d, Socket *sock, Socket *peersock, HTTPHeader *requestheader, HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig);
 // uncomment these if you wish to replace the default inherited functions
 //    int init(int dgversion);
@@ -24,7 +24,7 @@ private:
 };
 
 
-instance::instance( ConfigVar & definition ): DMPlugin( definition ) {
+dminstance::dminstance( ConfigVar & definition ): DMPlugin( definition ) {
     cv = definition;
     return;
 };
@@ -32,7 +32,7 @@ instance::instance( ConfigVar & definition ): DMPlugin( definition ) {
 // class factory code *MUST* be included in every plugin
 
 extern "C" DMPlugin* create( ConfigVar & definition ) {
-    return new instance( definition ) ;
+    return new dminstance( definition ) ;
 }
 
 extern "C" void destroy(DMPlugin* p) {
@@ -43,10 +43,10 @@ extern "C" void destroy(DMPlugin* p) {
 
 
 // uncomment these if you wish to replace the default inherited functions
-//int instance::init(int dgversion) {
+//int dminstance::init(int dgversion) {
 //    return 0;
 //}
-//int instance::quit(void) {
+//int dminstance::quit(void) {
 //    return 0;
 //}
 
@@ -55,7 +55,7 @@ extern "C" void destroy(DMPlugin* p) {
 // > 0 = warning
 
 
-int instance::in(OptionContainer *o, DataBuffer *d, Socket *sock, Socket *peersock, class HTTPHeader *requestheader, class HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) {
+int dminstance::in(OptionContainer *o, DataBuffer *d, Socket *sock, Socket *peersock, class HTTPHeader *requestheader, class HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) {
 
     //DataBuffer *d = where to stick the data back into
     //Socket *sock = where to read from

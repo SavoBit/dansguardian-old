@@ -11,22 +11,22 @@
 #include <unistd.h>
 
 
-class instance : public DMPlugin { // class name is irrelevent
+class dminstance : public DMPlugin { // class name is irrelevent
 public:
-    instance( ConfigVar & definition );
+    dminstance( ConfigVar & definition );
     int in(OptionContainer *o, DataBuffer *d, Socket *sock, Socket *peersock, HTTPHeader *requestheader, HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig);
 private:
      ConfigVar cv;
 };
 
-instance::instance( ConfigVar & definition ): DMPlugin( definition ) {
+dminstance::dminstance( ConfigVar & definition ): DMPlugin( definition ) {
     cv = definition;
     return;
 };
 
 // class factory code *MUST* be included in every plugin
 extern "C" DMPlugin* create( ConfigVar & definition ) {
-    return new instance( definition ) ;
+    return new dminstance( definition ) ;
 }
 
 extern "C" void destroy(DMPlugin* p) {
@@ -35,7 +35,7 @@ extern "C" void destroy(DMPlugin* p) {
 // end of Class factory
 
 
-int instance::in(OptionContainer *o, DataBuffer *d, Socket *sock, Socket *peersock, class HTTPHeader *requestheader, class HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) {
+int dminstance::in(OptionContainer *o, DataBuffer *d, Socket *sock, Socket *peersock, class HTTPHeader *requestheader, class HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) {
 
     //DataBuffer *d = where to stick the data back into
     //Socket *sock = where to read from

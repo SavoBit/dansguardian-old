@@ -11,9 +11,9 @@
 #include <unistd.h>
 #include <clamav.h>
 
-class instance : public CSPlugin { // class name is irrelevent
+class csinstance : public CSPlugin { // class name is irrelevent
 public:
-    instance( ConfigVar & definition );
+    csinstance( ConfigVar & definition );
 
     // we are replacing the inherited scanMemory as it has support for it
     int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* object, unsigned int objectsize);
@@ -36,13 +36,13 @@ extern OptionContainer o;
 
 // class factory code *MUST* be included in every plugin
 
-instance::instance( ConfigVar & definition ): CSPlugin( definition ) {
+csinstance::csinstance( ConfigVar & definition ): CSPlugin( definition ) {
     cv = definition;
     return;
 };
 
 extern "C" CSPlugin* create( ConfigVar & definition ) {
-    return new instance( definition ) ;
+    return new csinstance( definition ) ;
 }
 
 extern "C" void destroy(CSPlugin* p) {
@@ -53,7 +53,7 @@ extern "C" void destroy(CSPlugin* p) {
 
 
 
-int instance::init(int dgversion) {
+int csinstance::init(int dgversion) {
     if (!readStandardLists()) {  //always
         return DGCS_ERROR;       //include
     }                            //these
@@ -96,7 +96,7 @@ int instance::init(int dgversion) {
     return DGCS_OK;
 }
 
-int instance::quit(void) {
+int csinstance::quit(void) {
     cl_free(root);
     return DGCS_OK;
 }
@@ -105,7 +105,7 @@ int instance::quit(void) {
 // > 0 = warning
 
 
-int instance::dorc(int rc, const char *vn) {
+int csinstance::dorc(int rc, const char *vn) {
     if (rc == CL_VIRUS) {
         lastvirusname = vn;
         #ifdef DGDEBUG
@@ -126,7 +126,7 @@ int instance::dorc(int rc, const char *vn) {
     return DGCS_CLEAN;
 }
 
-int instance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip, const char *object, unsigned int objectsize) {
+int csinstance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip, const char *object, unsigned int objectsize) {
     lastmessage = lastvirusname = "";
     const char *vn = "";
     int rc = cl_scanbuff(object, objectsize, &vn, root);
@@ -138,7 +138,7 @@ int instance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const
 //2 = object cured - not used
 //-1 = error (DG will assume ok)
 
-int instance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
+int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
     lastmessage = lastvirusname = "";
     const char *vn = "";
     int rc = cl_scanfile(filename, &vn, NULL, root, &limits, CL_ARCHIVE | CL_OLE2 | CL_MAIL | CL_OLE2 | CL_SCAN_PE | CL_SCAN_BLOCKBROKEN | CL_SCAN_HTML);
@@ -150,6 +150,6 @@ int instance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const c
 //2 = object cured - not used
 //-1 = error (DG will assume ok)
 
-int instance::scanTest(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip) {
+int csinstance::scanTest(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip) {
     return CSPlugin::scanTest(requestheader, docheader, user, filtergroup, ip);
 }
