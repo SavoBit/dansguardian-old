@@ -28,4 +28,4 @@
 
 CVSROOT /cvsroot/sitedocs/CVSROOT/cvstools/syncmail -u %{sVv} dansguardian@users.sourceforge.net
 
-DEFAULT /cvsroot/sitedocs/CVSROOT/cvstools/syncmail -ub %{sVv} dansguardian-cvs@lists.sourceforge.net
+DEFAULT /cvsroot/sitedocs/CVSROOT/cvstools/syncmail -u %{sVv} dansguardian-cvs@lists.sourceforge.net
