@@ -5,7 +5,7 @@ LANGUAGES = arspanish bulgarian chinesebig5 chinesegb2312 czech danish dutch fre
 	    german german2 hebrew indonesian italian lithuanian mxspanish polish \
 	    portuguese russian-koi8-r swedish turkish ukenglish
 
-extra_DIST= ReadMe
+EXTRA_DIST= ReadMe
 
 install-data-local: 
 	@for l in $(LANGUAGES); do \
@@ -29,7 +29,7 @@ dist-hook:
 	    test -d $(distdir)/$$lang \
 	    || mkdir $(distdir)/$$lang \
 	    || exit 1; \
-	    cp -p $(srcdir)/$$l/messages $(srcdir)/$$l/template.html $(distdir)/$$lang \
+	    cp -p $(srcdir)/$$lang/messages $(srcdir)/$$lang/template.html $(distdir)/$$lang \
 	      || exit 1; \
 	  fi; \
 	done		

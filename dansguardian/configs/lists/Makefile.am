@@ -12,8 +12,12 @@ WLISTS = bannedextensionlist bannediplist bannedmimetypelist \
 	 greyurllist pics bannedphraselist weightedphraselist \
 	 exceptionphraselist bannediplist exceptioniplist
 
-extra_DIST = weightedphraselist.in bannedphraselist.in	\
-	exceptionphraselist.in
+EXTRA_DIST = bannedextensionlist bannediplist bannedmimetypelist \
+	 bannedregexpurllist bannedsitelist bannedurllist banneduserlist \
+	 contentregexplist exceptioniplist exceptionsitelist \
+	 exceptionurllist exceptionuserlist filtergroupslist greysitelist \
+	 greyurllist pics bannedphraselist.in weightedphraselist.in \
+	 exceptionphraselist.in bannediplist exceptioniplist
 
 install-data-local: 
 	$(mkinstalldirs) $(DESTDIR)$(DGDATADIR) && \
@@ -27,15 +31,3 @@ uninstall-local:
 	for l in $(WLISTS) ; do \
 		rm -f $(DESTDIR)$(DGDATADIR)/$$l ; \
 	done
-
-dist-hook:
-	for lang in $(WLISTS); do \
-	  if test "$$lang" = .; then :; else \
-	    test -d $(distdir)/$$lang \
-	    || mkdir $(distdir)/$$lang \
-	    || exit 1; \
-	    cp -p  $(distdir)/$$lang \
-	      || exit 1; \
-	  fi; \
-	done		
-

@@ -22,7 +22,7 @@ AC_CACHE_SAVE
 # checking for libtool
 AC_LIBTOOL_DLOPEN
 AC_PROG_LIBTOOL
-AC_CHECK_HEADERS([dlfcn.h])
+AC_CHECK_HEADERS([dlfcn.h ltdl.h /usr/local/include/ltdl.h])
 
 # Checks for header files.
 AC_HEADER_STDC

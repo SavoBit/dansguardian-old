@@ -7,7 +7,7 @@ SUBDIRS = .
 
 FLISTS = default.conf fancy.conf
 
-extra_DIST = default.conf.in fancy.conf.in
+EXTRA_DIST = default.conf.in fancy.conf.in
 
 install-data-local: 
 	$(mkinstalldirs) $(DESTDIR)$(DGDATADIR) && \

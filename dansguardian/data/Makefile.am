@@ -6,7 +6,7 @@ DATATOPDIR = $(datadir)/$(PACKAGE_NAME)
 
 FLISTS = transparent1x1.gif dansguardian.pl
 
-extra_DIST = transparent1x1.gif dansguardian.pl
+EXTRA_DIST = $(FLISTS)
 
 install-data-local: 
 	$(mkinstalldirs) $(DESTDIR)$(DATATOPDIR) && \
@@ -21,4 +21,3 @@ uninstall-local:
 	for l in $(FLISTS) ; do \
 		rm -f $(DESTDIR)$(DATATOPDIR)/$$l ; \
 	done
-

@@ -9,7 +9,7 @@ SUBDIRS = .
 FLISTS = clamav.conf clamdscan.conf icapscan.conf kavav.conf \
          kavdscan.conf
 
-extra_DIST = clamav.conf.in clamdscan.conf.in icapscan.conf.in \
+EXTRA_DIST = clamav.conf.in clamdscan.conf.in icapscan.conf.in \
              kavav.conf.in kavdscan.conf.in
 
 install-data-local: 

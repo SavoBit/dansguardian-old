@@ -31,7 +31,14 @@ dist-hook:
 	    test -d $(distdir)/$$phrase \
 	    || mkdir $(distdir)/$$phrase \
 	    || exit 1; \
-	    cp -p $(srcdir)/$$l/weighted $(distdir)/$$phrase \
-	      || exit 1; \
+	    if test -e $(srcdir)/$$phrase/weighted ; then \
+	      cp -p $(srcdir)/$$phrase/weighted $(distdir)/$$phrase ;\
+	    fi; \
+	    if test -e $(srcdir)/$$phrase/banned ; then \
+	      cp -p $(srcdir)/$$phrase/banned $(distdir)/$$phrase ;\
+	    fi; \
+	    if test -e $(srcdir)/$$phrase/exception ; then \
+	      cp -p $(srcdir)/$$phrase/exception $(distdir)/$$phrase ;\
+	    fi; \
 	  fi; \
 	done		

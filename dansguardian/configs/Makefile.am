@@ -7,7 +7,7 @@ DATATOPDIR = $(sysconfdir)/$(PACKAGE_NAME)
 
 FLISTS = dansguardian.conf dansguardianf1.conf
 
-extra_DIST = dansguardian.conf.in dansguardianf1.conf.in
+EXTRA_DIST = dansguardian.conf.in dansguardianf1.conf.in
 
 install-data-local: 
 	$(mkinstalldirs) $(DESTDIR)$(DATATOPDIR) && \

@@ -1,4 +1,4 @@
-MAINTAINERCLEANFILES = Makefile.in platform.h
+MAINTAINERCLEANFILES = Makefile.in platform.h.in
 
 SUBDIRS= . downloadmanagers contentscanners 
 
@@ -29,7 +29,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        FatController.cpp FatController.hpp \
                        UDSocket.cpp UDSocket.hpp \
                        SysV.cpp SysV.hpp \
-                       ListContainer.cpp ListContainter.hpp \
+                       ListContainer.cpp ListContainer.hpp \
                        Ident.cpp Ident.hpp \
                        HTMLTemplate.cpp HTMLTemplate.hpp \
                        LanguageContainer.cpp LanguageContainer.hpp \
