@@ -89,7 +89,7 @@ bool HTMLTemplate::readTemplateFile(const char* filename) {
 
 void HTMLTemplate::display(Socket* s, String url, String reason, String logreason, String user, String ip, String filtergroup, String hashed) {
     #ifdef DGDEBUG
-        std::cout << "Displaying TEMPLRTE" << std::endl;
+        std::cout << "Displaying TEMPLATE" << std::endl;
     #endif
     String line;
     bool newline;
