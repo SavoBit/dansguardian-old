@@ -1,0 +1,9 @@
+libpath = '@DGLIBDIR@/kavdscan.so'
+
+# kaspersky unix domain socket file
+kavdudsfile = '/tmp/kavav'
+
+exceptionvirusmimetypelist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusmimetypelist'
+exceptionvirusextensionlist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusextensionlist'
+exceptionvirussitelist = '@DGCONFDIR@/lists/contentscanners/exceptionvirussitelist'
+exceptionvirusurllist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusurllist'

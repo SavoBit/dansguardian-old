@@ -1,0 +1,50 @@
+#ifndef __H_PLATFORM
+#define __H_PLATFORM 1
+
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
+
+#define __CONFFILE "@DGCONFFILE@"
+#define __PIDDIR "@DGPIDDIR@/"
+#define __LOGLOCATION "@DGLOGLOCATION@/"
+#define __PROXYUSER "@DGPROXYUSER@"
+#define __PROXYGROUP "@DGPROXYGROUP@"
+#define __CONFDIR "@DGCONFDIR@"
+
+#if defined(__GNUG__) && __GNUG__ >= 3
+	#define __GCCVER3 1
+#endif
+
+#ifdef HAVE_SYS_WAIT_H
+	#include <sys/wait.h>
+#else
+	#ifdef HAVE_WAIT_H
+		#include <wait.h>
+	#else
+		#error "You have no sys/wait.h and no wait.h"
+	#endif
+#endif
+
+#ifdef HAVE_SYS_SELECT_H
+	#include <sys/select.h>
+#else
+	#error "You have no sys/select.h"
+#endif
+
+#ifdef HAVE_DARWIN
+	#ifndef _BSD_SOCKLEN_T_
+		#define _BSD_SOCKLEN_T_ size_t
+	#endif
+	#define __DARWIN 1
+#endif
+
+#ifdef HAVE_BSD
+	#define __BSD 1
+#endif
+
+#ifdef HAVE_DGDEBUG
+	#define DGDEBUG 1
+#endif
+
+#endif //ifndef __H_PLATFORM

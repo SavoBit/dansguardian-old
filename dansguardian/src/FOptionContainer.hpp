@@ -1,0 +1,191 @@
+//Please refer to http://dansguardian.org/?page=copyright2
+//for the license for this code.
+//Written by Daniel Barron (daniel@//jadeb/.com).
+//For support go to http://groups.yahoo.com/group/dansguardian
+
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 2 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, write to the Free Software
+//  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+#ifndef __HPP_FOPTIONCONTAINER
+#define __HPP_FOPTIONCONTAINER
+#include "String.hpp"
+#include "HTMLTemplate.hpp"
+#include "ListContainer.hpp"
+#include "LanguageContainer.hpp"
+#include "ImageContainer.hpp"
+#include "RegExp.hpp"
+#include <string>
+#include <deque>
+
+class FOptionContainer {
+
+public:
+    ~FOptionContainer();
+    bool read(std::string filename);
+    void reset();
+    bool inexceptions(String url);
+    bool iswebserver(String url);
+    bool inurlexceptions(String url);
+    char* inBannedSiteList(String url);
+    char* inBannedURLList(String url);
+    bool inGreySiteList(String url);
+    bool inGreyURLList(String url);
+    int inBannedRegExpURLList(String url);
+    char* inBannedExtensionList(String url);
+    bool isIPHostname(String url);
+    int disable_content_scan;
+    int weighted_phrase_mode;
+    int naughtyness_limit;
+    int createlistcachefiles;
+    int enable_PICS;
+    int blanketblock;
+    int blanket_ip_block;
+    int reverse_lookups;
+    int force_quick_search;
+    int bypass_mode;
+    int pics_rsac_violence;
+    int pics_rsac_sex;
+    int pics_rsac_nudity;
+    int pics_rsac_language;
+    int pics_icra_chat;
+    int pics_icra_moderatedchat;
+    int pics_icra_languagesexual;
+    int pics_icra_languageprofanity;
+    int pics_icra_languagemildexpletives;
+    int pics_icra_nuditygraphic;
+    int pics_icra_nuditymalegraphic;
+    int pics_icra_nudityfemalegraphic;
+    int pics_icra_nuditytopless;
+    int pics_icra_nuditybottoms;
+    int pics_icra_nuditysexualacts;
+    int pics_icra_nudityobscuredsexualacts;
+    int pics_icra_nuditysexualtouching;
+    int pics_icra_nuditykissing;
+    int pics_icra_nudityartistic;
+    int pics_icra_nudityeducational;
+    int pics_icra_nuditymedical;
+    int pics_icra_drugstobacco;
+    int pics_icra_drugsalcohol;
+    int pics_icra_drugsuse;
+    int pics_icra_gambling;
+    int pics_icra_weaponuse;
+    int pics_icra_intolerance;
+    int pics_icra_badexample;
+    int pics_icra_pgmaterial;
+    int pics_icra_violencerape;
+    int pics_icra_violencetohumans;
+    int pics_icra_violencetoanimals;
+    int pics_icra_violencetofantasy;
+    int pics_icra_violencekillinghumans;
+    int pics_icra_violencekillinganimals;
+    int pics_icra_violencekillingfantasy;
+    int pics_icra_violenceinjuryhumans;
+    int pics_icra_violenceinjuryanimals;
+    int pics_icra_violenceinjuryfantasy;
+    int pics_icra_violenceartisitic;
+    int pics_icra_violenceeducational;
+    int pics_icra_violencemedical;
+    int pics_icra_violencesports;
+    int pics_icra_violenceobjects;
+    int pics_evaluweb_rating;
+    int pics_cybernot_sex;
+    int pics_cybernot_other;
+    int pics_safesurf_agerange;
+    int pics_safesurf_profanity;
+    int pics_safesurf_heterosexualthemes;
+    int pics_safesurf_homosexualthemes;
+    int pics_safesurf_nudity;
+    int pics_safesurf_violence;
+    int pics_safesurf_sexviolenceandprofanity;
+    int pics_safesurf_intolerance;
+    int pics_safesurf_druguse;
+    int pics_safesurf_otheradultthemes;
+    int pics_safesurf_gambling;
+    int pics_weburbia_rating;
+    int pics_vancouver_multiculturalism;
+    int pics_vancouver_educationalcontent;
+    int pics_vancouver_environmentalawareness;
+    int pics_vancouver_tolerance;
+    int pics_vancouver_violence;
+    int pics_vancouver_sex;
+    int pics_vancouver_profanity;
+    int pics_vancouver_safety;
+    int pics_vancouver_canadiancontent;
+    int pics_vancouver_commercialcontent;
+    int pics_vancouver_gambling;
+    std::string magic;
+    std::string cookie_magic;
+    std::string banned_phrase_list_location;
+    std::string exception_phrase_list_location;
+    std::string weighted_phrase_list_location;
+    std::string banned_site_list_location;
+    std::string banned_url_list_location;
+    std::string grey_site_list_location;
+    std::string grey_url_list_location;
+    std::string banned_regexpurl_list_location;
+    std::string content_regexp_list_location;
+    std::string banned_extension_list_location;
+    std::string banned_mimetype_list_location;
+    std::string exceptions_site_list_location;
+    std::string exceptions_url_list_location;
+    unsigned int banned_phrase_list;
+    unsigned int exception_site_list;
+    unsigned int exception_url_list;
+    unsigned int banned_extension_list;
+    unsigned int banned_mimetype_list;
+    unsigned int banned_site_list;
+    unsigned int banned_url_list;
+    unsigned int grey_site_list;
+    unsigned int grey_url_list;
+    unsigned int banned_regexpurl_list;
+    unsigned int content_regexp_list;
+    std::deque<int> banned_phrase_list_index;
+    std::deque<RegExp> banned_regexpurl_list_comp;
+    std::deque<String> banned_regexpurl_list_source;
+    std::deque<unsigned int> banned_regexpurl_list_ref;
+    std::deque<RegExp> content_regexp_list_comp;
+    std::deque<String> content_regexp_list_rep;
+
+    // precompiled reg exps for speed
+    RegExp pics1;
+    RegExp pics2;
+    RegExp isiphost;
+    String ada;
+    std::deque<String> ipToHostname(String ip);
+
+private:
+    std::deque<std::string> conffile;
+    bool precompileregexps();
+    bool readbplfile(const char* banned, const char* exception, const char* weighted);
+    bool readeslfile(const char* filename);
+    bool readeurllfile(const char* filename);
+    bool readbelfile(const char* filename);
+    bool readbmlfile(const char* filename);
+    bool readbslfile(const char* filename);
+    bool readbulfile(const char* filename);
+    bool readgslfile(const char* filename);
+    bool readgulfile(const char* filename);
+    bool readbreulfile(const char* filename);
+    bool compilebreulfile(unsigned int list);
+    bool readcrelfile(const char* filename);
+    void bwlfilehelper(String line, int index);
+    void bwlfilehelperhelper(String line, int index);
+    int findoptionI(const char* option);
+    std::string findoptionS(const char* option);
+    bool realitycheck(String s, int minl, int maxl, char* emessage);
+
+
+};
+
+#endif

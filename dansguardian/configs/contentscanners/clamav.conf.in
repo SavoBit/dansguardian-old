@@ -1,0 +1,15 @@
+libpath = '@DGLIBDIR@/clamav.so'
+
+#maxfiles - The maximum number of files inside an archive
+maxfiles = 1000
+
+#maxrecursionlevel - The maximum number of archives within archives
+maxreclevel = 5
+
+#maxratio - maxmimum compression ratio to avoid archive bombs
+maxratio = 200
+
+exceptionvirusmimetypelist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusmimetypelist'
+exceptionvirusextensionlist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusextensionlist'
+exceptionvirussitelist = '@DGCONFDIR@/lists/contentscanners/exceptionvirussitelist'
+exceptionvirusurllist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusurllist'

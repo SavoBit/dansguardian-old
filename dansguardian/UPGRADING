@@ -1,0 +1,32 @@
+HOW TO UPGRADE FROM AN EARLIER VERSION OF DansGuardian
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before installing the new copy, first make a backup of your existing config
+files.  For example:
+mv /etc/dansguardian/ /etc/dansguardian.old/
+
+Then install the new copy.  After doing this you should copy over the old
+settings by manually importing them by hand.  I.e. edit the new
+dansguardian.conf file and give it the settings from the old one.  You should
+also do the same for the rest of the config files.
+
+You can usually get away with just copying back over most of the files but
+the dansguardian.conf is likely to have new options so this can't be done.
+The other conf files such as phrase lists are often improved but are unlikely
+to have format changes between versions.
+
+Unfortunately there is no easy way.
+
+However as a guide the versions will tell you if there is likely to be a
+conf file change.  When the a, b and c of the version (a.b.c-d) are the same
+and the only change is in the d number then the difference between the two
+is most likely to be only bug fixing and no other changes so you can simple
+compile and replace the binary leaving the same config files in place.
+
+If in doubt ask on the mailing list.  See http://dansguardian.org/ for a
+link to it.
+
+If you want to update/replace this or any other doc then email me.
+
+Daniel Barron
+Sun 31st August 2003

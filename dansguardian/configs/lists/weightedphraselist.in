@@ -1,0 +1,45 @@
+# DANSGUARDIAN weightedphraselist INSTRUCTIONS FOR USE
+#
+# Examples:
+#
+# <slut><10>			
+# - Adds 10 to the count against the string 'slut'.   ie. sluts, slut!, abslutxyz.
+#
+# < slut ><10>
+# - Adds 10 to the count against the word 'slut'.   ie. Sally is a slut that smells.
+#
+# <slut>,<horny><50>
+# - Adds 50 to the count when the strings 'slut' and 'horny' are found on the same page.
+#
+# <breast>,<medical><-30>
+# - Subtracts 30 from the count when 'breast' and 'medical' are on the one page.
+#
+# <education><-25>
+# - Subtracts 25 from the count when 'education' is on the page.
+#
+# See the bannedphraselist for more examples.
+#
+# Extra weighted-list files to include
+# .Include<@DGCONFDIR@/lists/phraselists/weightedphraselist.topic>
+#
+# Help by contributing customised lists and/or new keyword lists. 
+# Email: pornmastergeneral@dansguardian.org
+#
+
+.Include<@DGCONFDIR@/lists/phraselists/chat/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/drugadvocacy/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/dutchbadwords/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/frenchbadwords/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/frenchpornography/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/gambling/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/germanpornography/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/gore/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/illegaldrugs/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/intolerance/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/legaldrugs/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/personals/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/violence/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/warezhacking/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/weapons/weighted>

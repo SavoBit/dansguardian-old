@@ -1,0 +1,5 @@
+libpath = '@DGLIBDIR@/default.so'
+#
+# More options can be added here:
+#
+# dummy = 'pacifier'
