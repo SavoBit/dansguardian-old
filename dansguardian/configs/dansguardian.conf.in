@@ -98,15 +98,15 @@ custombannedimagefile = '@DGDATADIR@/transparent1x1.gif'
 # to a group.  The more filter groups the more copies of the lists will be in RAM so
 # use as few as possible.
 filtergroups = 1
-filtergroupslist = '@DGCONFDIR@/filtergroupslist'
+filtergroupslist = '@DGCONFDIR@/lists/filtergroupslist'
 
 
 
 # Authentication files location
-bannediplist = '@DGCONFDIR@/bannediplist'
-exceptioniplist = '@DGCONFDIR@/exceptioniplist'
-banneduserlist = '@DGCONFDIR@/banneduserlist'
-exceptionuserlist = '@DGCONFDIR@/exceptionuserlist'
+bannediplist = '@DGCONFDIR@/lists/bannediplist'
+exceptioniplist = '@DGCONFDIR@/lists/exceptioniplist'
+banneduserlist = '@DGCONFDIR@/lists/banneduserlist'
+exceptionuserlist = '@DGCONFDIR@/lists/exceptionuserlist'
 
 
 
@@ -349,8 +349,7 @@ downloadmanager = '.*','@DGCONFDIR@/downloadmanagers/default.conf'
 # Some of the scanner(s) require 3rd party software and libraries eg clamav.
 # See the individual plugin conf file for more options (if any).
 #
-contentscanner = '@DGCONFDIR@/contentscanners/clamav.conf'
-
+#contentscanner = '@DGCONFDIR@/contentscanners/clamav.conf'
 #contentscanner = '@DGCONFDIR@/contentscanners/clamdscan.conf'
 #contentscanner = '@DGCONFDIR@/contentscanners/kavav.conf'
 #contentscanner = '@DGCONFDIR@/contentscanners/kavdscan.conf'

@@ -9,7 +9,7 @@ WLISTS = bannedextensionlist bannediplist bannedmimetypelist \
 	 bannedregexpurllist bannedsitelist bannedurllist banneduserlist \
 	 contentregexplist exceptioniplist exceptionsitelist \
 	 exceptionurllist exceptionuserlist filtergroupslist greysitelist \
-	 greyurllist pics bannedphraselist \
+	 greyurllist pics bannedphraselist weightedphraselist \
 	 exceptionphraselist bannediplist exceptioniplist
 
 extra_DIST = weightedphraselist.in bannedphraselist.in	\

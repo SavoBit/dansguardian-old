@@ -912,14 +912,19 @@ bool OptionContainer::loadCSPlugins() {
     String match, config;
     RegExp reefer;
     for (unsigned int i = 0; i < numplugins; i++) {
-        #ifdef DGDEBUG
-            std::cout << "loading config for:" << dq[i] << std::endl;
-        #endif
 
         config = dq[i];
         // worth adding some input checking on config
+        #ifdef DGDEBUG
+            std::cout << "loading config for:" << config << std::endl;
+        #endif
 
         CSPluginLoader cspl( config.toCharArray() );
+
+        #ifdef DGDEBUG
+            std::cout << "CSPluginLoader created" << std::endl;
+        #endif
+
         CSPlugin *cspp;
 
         if (!cspl.isGood) {
@@ -930,7 +935,13 @@ bool OptionContainer::loadCSPlugins() {
             syslog(LOG_ERR, "%s", config.toCharArray());
             return false;
         }
+        #ifdef DGDEBUG
+            std::cout << "Content scanner plugin loader is good" << std::endl;
+        #endif
         cspp = cspl.create();
+        #ifdef DGDEBUG
+            std::cout << "Content scanner plugin loader created plugin" << std::endl;
+        #endif
 
         if (cspp == NULL) {
             if (!isDaemonised) {
@@ -940,8 +951,15 @@ bool OptionContainer::loadCSPlugins() {
             syslog(LOG_ERR, "%s", config.toCharArray());
             return false;
         }
+        #ifdef DGDEBUG
+            std::cout << "Content scanner plugin is good" << std::endl;
+        #endif
 
         int rc = cspp->init(dgversion);
+
+        #ifdef DGDEBUG
+            std::cout << "Content scanner plugin init called" << std::endl;
+        #endif
 
         if (rc < 0) {
             if (!isDaemonised) {

@@ -2,7 +2,12 @@ MAINTAINERCLEANFILES = Makefile.in platform.h
 
 SUBDIRS= . downloadmanagers contentscanners 
 
-AM_CXXFLAGS = @CXXFLAGS@ -fexceptions -g
+# A MASSIVE thank you to Lawrence Manning for pointing out the
+# -export-dynamic option was needed to solve a long problem
+# which stopped DG2.9 from actually running ever.
+# Daniel Barron Fri 18th March 2005
+
+AM_CXXFLAGS = @CXXFLAGS@ -fexceptions -g -export-dynamic
 AM_CFLAGS = @CFLAGS@
 
 DGCONFFILE = @DGCONFFILE@
