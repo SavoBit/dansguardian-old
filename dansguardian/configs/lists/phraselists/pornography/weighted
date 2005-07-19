@@ -1,3 +1,6 @@
+#
+# Pornography Weighted Phrases
+#
 <mancheck><80>
 <xbanner.it><130>
 <xxxadult><50>
@@ -341,7 +344,7 @@
 <beating your meat><60>
 <beat your meat><60>
 <beautiful tits><80>
-<beaver><10>
+#<beaver><10>  #overblocking
 <beaver>,< fuck><40>
 <beaver>,< porn><40>
 <beaver>,< xxx><40>
@@ -537,7 +540,7 @@
 <ccbill.com><20>
 <ccbucks.com><80>
 <celeb nude><50>
-<celebrities in the nude>
+<celebrities in the nude><40>
 <celebrities nude><80>
 <celebrity gangbang><80>
 <celebrity nude><80>
@@ -558,7 +561,7 @@
 <chat with horny><80>
 <chat with naked><80>
 <chat with real girls><80>
-<cheerlead><10>
+#<cheerlead><10>
 <cheerleader ezine><20>
 <cheerleaders naked><80>
 <cheerlead>,<fuck><40>
@@ -593,13 +596,13 @@
 <chunky jizz><80>
 < churd ><10>
 <circle jerk><10>
-<circumcise><5>
-<circumcision><5>
-<circumcize><5>
+#<circumcise><5>
+#<circumcision><5>
+#<circumcize><5>
 <classical bondage><60>
 <clevland steamer><50>
 < clit ><40>
-<clit><5>
+#<clit><5>
 < clit >,<fuck><40>      
 < clit >,< horny ><40>   
 <clitoral stimulation><70>
@@ -1203,7 +1206,6 @@
 <fornicate><20>
 <fornication><20>
 <for the discerning adult><70>
-<foto><20>
 <four cocks in two holes><60>
 <free amateur><30>
 <free amateur pics><80>
@@ -1740,7 +1742,7 @@
 <if you>,<looking for porn>,<credit card><80>
 <if you want pussy><70>
 <if you want to block this site><80>
-<illegal><10>
+#<illegal><10> #overblocking - example Java programming and 'illegal operation'
 <illegal pic><50>
 <illegal to view>,<in your community><70>
 <impotence><10>
@@ -2092,7 +2094,6 @@
 <megaporn><80>
 <megasex><80>
 <members entrance><20>
-<membership><10>
 <membership will automatically renew><20>
 <members only><20>
 <men enlarge your penis><80>
@@ -2193,9 +2194,6 @@
 <nasty shots><30>
 <nasty whore><40>
 <nasty xxx><60>
-< naturism ><10>
-< naturist ><10>
-<naturists and nudists><50>
 <naughty><10>
 <naughty amateur><80>
 <naughty>,<fuck><30>
@@ -2271,7 +2269,7 @@
 <not suitable for minors><30>
 <nubile beauties><40>
 <nubile tighties><70>
-< nude ><10>
+< nude><10>
 <nude adults engaged in sex><50>
 <nude amateur><60>
 <nude beach><30>
@@ -2297,8 +2295,6 @@
 <nudes in all flavors><80>
 <nude webcam><70>
 < nudie><10>
-< nudism><10>
-< nudist><10>
 <nudists paradise><70>
 <nudists-paradise><70>
 < nudity><20>
@@ -2396,12 +2392,12 @@
 <panties>,< porn><40>
 <panties>,< slut><30>
 <panties>,< xxx ><40>
-<panty><10>
+#<panty><10>
 <panty ezine><20>
 <panty fetish><50>
 <panty>,<fuck><30>
 <panty>,< horny ><30>  
-<pantyhose><10>
+#<pantyhose><10>
 <pantyhose ezine><20>
 <pantyhose fetish><50>
 <panty>,< porn><40>
@@ -2461,7 +2457,7 @@
 <permit any minor to see this material><50>
 <permit any minor to see this site><50>
 <permit any minor to see this web><50>
-<personals><10>
+#<personals><10> #Fernand overblocking - included in personals list
 <perversion><10>
 <perversity><10>
 <pervert><10>
@@ -2755,7 +2751,7 @@
 <quality porn><40>
 <quality sex shops><80>
 <queens of porn><50>
-<rape><5>
+< rape><5>
 <rape collection><50>
 <rape comix><80>
 <raped by you><50>
@@ -2823,8 +2819,8 @@
 <redhead rape><30>
 <redhead sluts><80>
 <restrict access to this site>,<parent><30>
-<rimjob><80>
-<rimmed><10>
+< rimjob ><80>
+< rimmed ><20>
 < rimming><10>
 <ripe tits><60>
 <rock hard and ready to><80>
@@ -3195,7 +3191,7 @@
 <spanking the monkey><50>
 <spanking the stick><50>
 <spattered with cum><80>
-<sperm><10>
+< sperm ><10>
 <sperm angel><50>
 <sperm>,<blow>,<load><30>
 <sperm build-up><20>
@@ -3552,7 +3548,7 @@
 <vibrator>,<butterfly><50>
 <view adult material>,<in your community><50>
 <vintage porn><60>
-<virgin><10>
+<virgins><20>
 <virgin dyke><80>
 <virgin>,<fuck><40>
 <virginity cam><60>
@@ -3840,3 +3836,55 @@
 <zoo passion><50>
 <zoo sex><80>
 <zoo xxx><80>
+
+#Added by Fernand
+< glamour model><30>
+< model>,< portfolio><20>
+< glamour>,<studio><50>
+<usc>,<2257>,<statement><100>
+<2257>,<statement><60>
+<usc2257><60>
+<bondage>,<sample>,< vid>,< pic>,< member><60>
+<latex>,<fetish><50>
+<latex>,<bondage><50>
+<fetish>,<bondage><50>
+<contains adult content><60>
+<for adults aged 18 and over><60>
+<are confirming that you are aged 18yrs and over><60>
+< do not enter>,<age>,<18><50>
+<contains images of an adult nature><60>
+<do not enter>,<under the age of 18><60>
+<do not enter if you are a minor><60>
+<adult>,<model>,<x rated><50>
+<models were over the age of 18><60>
+<domination>,<sex><40>
+<nude model><20>
+<all models>,<over the age of 18><60>
+<netnanny>,<cyberpatrol>,<surfwatch>,<safesurf>,<cybersitter><60>
+<netnanny>,<cyberpatrol>,<surfwatch><30>
+<topless>,<amateur><50>
+<lingerie>,<amateur><50>
+<portfolio>,<fetish><50>
+<portfolio>,<glamour><50>
+<model>,<fetish><50>
+<images>,<sexually explicit><50>
+<topless>,<nude>,<glamour><60>
+<adult>,<topless>,<nude><60>
+< see thru><10>
+< sheer >,< bikini><50>
+< see thru >,< bikini><50>
+< sheer ><10>
+< penthouse >,< pet><50>
+< nip>,< slip ><50>
+< pretty >,< nude><50>
+< nudes><30>
+<fantasy fest><30>
+<fanstasyfest><30>
+
+#magazines
+<fhm><10>
+
+<showing off my body><50>
+<just turned 18><20>
+<age verification><30>
+<member section><30>

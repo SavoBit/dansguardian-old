@@ -1,0 +1,49 @@
+#sports news sites
+<sportsillustrated><100>
+< si.com ><100>
+< espn><100>
+
+#sports
+<basketball><10>
+<football><10>
+<soccer><10>
+<volleyball><10>
+<badminton><10>
+<hockey><10>
+<lacrosse><10>
+<curling><10>
+<polo><10>
+<fox hunting><10>
+<rugby><10>
+<golf><10>
+<baseball><10>
+<boxing><10>
+<wrestling><10>
+<horse racing><10>
+<racing><10>
+<tennis><10>
+<racquetball><10>
+<cricket><10>
+<snooker><10>
+<cycling><10>
+<motorsport><10>
+<athletics><10>
+
+#sports news words
+<sports scores><50>
+<scores>,<stats>,<sport><50>
+<sports><10>
+<sports teams><30>
+<nfl><10>
+<nba><10>
+<ncaa><10>
+<nhl><10>
+<players association><30>
+<trading deadline><10>
+
+#olympics
+<olympic games><100>
+<olympic><10>
+
+
+

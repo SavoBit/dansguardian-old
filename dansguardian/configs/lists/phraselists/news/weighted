@@ -1,0 +1,61 @@
+#
+# News Weighted Phrases
+# Originally created by Fernand Jonker
+#
+# This list is seriously ALPHA - it blocks many news pages, but may overblock.
+#
+<cnn.com><100>
+<local news><30>
+
+<business>,<art>,<local>,<weather>,<world>,<entertainment><50>
+<world>,<business>,<sports>,<science><50>
+<sci>,<tech><30>
+<news>,<entertainment><20>
+<top stories><50>
+<in the news><50>
+<news>,<front page><50>
+<bbc news><50>
+<Week at a Glance><50>
+<week in pictures><50>
+<top stories><50>
+<in pictures><20>
+<interactive>,<news><30>
+<complete coverage>,<news><40>
+<biography>,<news><20>
+<columnists>,<news><20>
+<classifieds>,<news><20>
+
+<newspaper online><40>
+<news>,<report><20>
+<news>,<solicitor><30>
+<national news><50>
+<news>,<article><30>
+<news headlines><50>
+<news>,<interview><50>
+<news>,<lawyer><30>
+<breaking headlines><30>
+<breaking news><30>
+<international news><20>
+<latest news><50>
+<sun newspaper><50>
+<world news><20>
+
+<editor><30>
+<world>,<headline><30>
+
+<business news><50>
+<entertainment news><50>
+<national news><50>
+
+<canadian press><30>
+<reuters><30>
+<Associated Press><30>
+<United Press International><30>
+
+<times >,<news><50>
+< post >,<news><50>
+< telegraph >,<news><50>
+< daily mail >,<news><50>
+<tribune><50>
+<herald><50>
+<star>,<news><50>

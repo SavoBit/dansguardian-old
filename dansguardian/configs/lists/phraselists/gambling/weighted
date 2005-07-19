@@ -1,4 +1,8 @@
-< bet ><30>
+#
+# Phraselists to block gambling sites
+#
+
+#< bet ><30>   #Removed due to overblock - esp. on Lithuanian sites.
 < betting ><30>
 < blackjack ><30>
 < casino ><30>
@@ -23,3 +27,4 @@
 < sportsbook ><10>
 < totalisator ><30>
 < wagering ><10>
+< bet >,<poker><40>

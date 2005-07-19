@@ -1,0 +1,39 @@
+#
+# Phraselists to block web-based proxy services like phproxy and cgiproxy
+# Originally Created by Fernand Jonker
+#
+
+#PHProxy or Poxy
+<phproxy>,<post><150>
+<phproxy><100>
+<include form>,<remove scripts>,<accept cookies>,<show images>,<show referer><100>
+
+#CGIPROXY
+<start browsing through this cgi-based proxy by entering a url below><200>
+<remove ads><20>
+<hide referrer information><30>
+<show url entry form><30>
+<remove all cookies><30>
+<dmirror><30>
+<cgi>,<prox>,<nph><30>
+<nph-proxy><100>
+<nph-pro><50>
+
+#CECID
+<cecid><100>
+<censorship circumvention device><100>
+<remove banned words completely><30>
+<filter banned words><30>
+<please enter url to access><100>
+
+#General Proxy Lists
+< anonymous >,< transparent >,< prox><50>
+<keep your identity hidden><50>
+<anonymous>,<proxy><50>
+<anonymous>,<surfing><50>
+<anonymous>,<internet><50>
+<high anonymity><30>
+< proxy><5>
+< proxies><30>
+<public prox><30>
+<proxy list><20>

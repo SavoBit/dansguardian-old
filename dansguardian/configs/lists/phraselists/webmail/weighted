@@ -1,0 +1,35 @@
+#
+# Phraselists to block webmail 
+# Originally Created by Fernand Jonker
+#
+
+#General webmail
+< inbox >,< outbox >,< sent ><100>
+<compose>,< inbox >,< subject >,< date ><30>
+< webmail ><30>
+< date>,< from >,< subject >,< size >,<delete><100>
+< delete >,<empty trash>,< search ><100>
+<inbox><20>
+<mailbox><20>
+<free email><20>
+<free webmail><20>
+
+#Stalker Communigate
+<communigate>,<mailbox>,<compose><150>
+<from>,<subject>,<received>,<mailbox><150>
+<forward>,<delete>,<copy>,<move>,<mail><150>
+<stalker>,<mailbox>,<compose><150>
+
+#Squirrelmail
+<by the squirrelmail development team><100>
+<folders>,<inbox>,<sent>,<trash>,<check mail><100>
+<compose>,<addresses>,<folders>,<options>,<search>,<help><100>
+
+#Hotmail
+<today>,<mail>,<calendar>,<contacts>,<hotmail><100>
+<new message>,<new appointment>,<new contact>,<hotmail><100>
+<from my contacts>,<junk e-mail folder>,<hotmail><50>
+
+
+
+

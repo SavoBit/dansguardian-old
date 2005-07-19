@@ -1,0 +1,23 @@
+#
+# Good Weighted Phrases to prevent the blocking of news sites
+#
+
+<newspaper online><-40>
+<news>,<report><-20>
+<news>,<solicitor><-30>
+<national news><-50>
+<news>,<article><-30>
+<news headlines><-50>
+<news>,<interview><-50>
+<news>,<lawyer><-30>
+<breaking headlines><-30>
+<breaking news><-30>
+<international news><-20>
+<latest news><-20>
+<sun newspaper><-50>
+<world news><-20>
+
+<sport>,<competition><-30>
+<sport news><-40>
+<sports news><-40>
+
