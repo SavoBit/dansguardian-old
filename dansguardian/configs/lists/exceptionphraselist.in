@@ -13,4 +13,6 @@
 #<education>,<biology>,<medical>
 #
 # See the bannedphraselist for more examples.
-.Include<@DGCONFDIR@/lists/phraselists/goodphrases/exception>
+
+.Include</etc/dansguardian/phraselists/goodphrases/exception>
+#.Include</etc/dansguardian/phraselists/goodphrases/exception_email>

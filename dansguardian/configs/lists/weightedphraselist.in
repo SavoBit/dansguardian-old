@@ -20,26 +20,76 @@
 # See the bannedphraselist for more examples.
 #
 # Extra weighted-list files to include
-# .Include<@DGCONFDIR@/lists/phraselists/weightedphraselist.topic>
+# .Include</etc/dansguardian/weightedphraselist.topic>
 #
 # Help by contributing customised lists and/or new keyword lists. 
-# Email: pornmastergeneral@dansguardian.org
+# Email: phrasemaster@dansguardian.org
+#
+# NOTE: New lists are commented out as ALPHA or BETA depending on how much the 
+# lists have been tested.
+# ALPHA - Brand new - no testing has been done
+# BETA - Relatively new - tested in at least one location
 #
 
-.Include<@DGCONFDIR@/lists/phraselists/chat/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/drugadvocacy/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/dutchbadwords/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/frenchbadwords/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/frenchpornography/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/gambling/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/germanpornography/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/gore/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/illegaldrugs/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/intolerance/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/legaldrugs/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/personals/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/violence/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/warezhacking/weighted>
-.Include<@DGCONFDIR@/lists/phraselists/weapons/weighted>
+#Good Phrases (to allow medical, education, news and other good sites)
+.Include</etc/dansguardian/phraselists/goodphrases/weighted_general>
+.Include</etc/dansguardian/phraselists/goodphrases/weighted_news>
+.Include</etc/dansguardian/phraselists/goodphrases/weighted_general_danish>
+.Include</etc/dansguardian/phraselists/goodphrases/weighted_general_portuguese>
+
+#Pornography
+.Include</etc/dansguardian/phraselists/pornography/weighted>
+.Include</etc/dansguardian/phraselists/pornography/weighted_danish> #ALPHA#
+.Include</etc/dansguardian/phraselists/pornography/weighted_dutch> #ALPHA#
+.Include</etc/dansguardian/phraselists/pornography/weighted_french>
+.Include</etc/dansguardian/phraselists/pornography/weighted_german>
+.Include</etc/dansguardian/phraselists/pornography/weighted_italian>
+.Include</etc/dansguardian/phraselists/pornography/weighted_portuguese>
+.Include</etc/dansguardian/phraselists/pornography/weighted_spanish> #ALPHA#
+.Include</etc/dansguardian/phraselists/nudism/weighted>
+
+#Bad Words - swearing
+.Include</etc/dansguardian/phraselists/badwords/weighted_dutch> #BETA#
+.Include</etc/dansguardian/phraselists/badwords/weighted_french>
+.Include</etc/dansguardian/phraselists/badwords/weighted_german> #ALPHA#
+.Include</etc/dansguardian/phraselists/badwords/weighted_portuguese> #ALPHA#
+.Include</etc/dansguardian/phraselists/badwords/weighted_spanish> #ALPHA#
+
+#Drugs
+#.Include</etc/dansguardian/phraselists/drugadvocacy/weighted>
+#.Include</etc/dansguardian/phraselists/illegaldrugs/weighted>
+#.Include</etc/dansguardian/phraselists/illegaldrugs/weighted_portuguese>
+#.Include</etc/dansguardian/phraselists/legaldrugs/weighted>
+
+#Violence and intolerance
+#.Include</etc/dansguardian/phraselists/intolerance/weighted>
+#.Include</etc/dansguardian/phraselists/intolerance/weighted_portuguese>
+#.Include</etc/dansguardian/phraselists/gore/weighted>
+#.Include</etc/dansguardian/phraselists/gore/weighted_portuguese>
+#.Include</etc/dansguardian/phraselists/violence/weighted>
+#.Include</etc/dansguardian/phraselists/violence/weighted_portuguese>
+#.Include</etc/dansguardian/phraselists/weapons/weighted>
+#.Include</etc/dansguardian/phraselists/weapons/weighted_portuguese>
+
+#Chat
+#.Include</etc/dansguardian/phraselists/chat/weighted>
+#.Include</etc/dansguardian/phraselists/chat/weighted_italian>
+
+#Webmail
+#.Include</etc/dansguardian/phraselists/webmail/weighted> #ALPHA#
+#Note that if you enable the webmail weighted list you should also disable 
+#the "exception_email" list in the exceptionphraselist file.
+
+#Productivity
+#.Include</etc/dansguardian/phraselists/gambling/weighted>
+#.Include</etc/dansguardian/phraselists/gambling/weighted_portuguese>
+.Include</etc/dansguardian/phraselists/warezhacking/weighted>
+#.Include</etc/dansguardian/phraselists/personals/weighted>
+#.Include</etc/dansguardian/phraselists/personals/weighted_portuguese>
+#.Include</etc/dansguardian/phraselists/games/weighted> #ALPHA#
+#.Include</etc/dansguardian/phraselists/sport/weighted> #ALPHA#
+#.Include</etc/dansguardian/phraselists/news/weighted> #ALPHA#
+
+#System Management and Security
+.Include</etc/dansguardian/phraselists/malware/weighted> #ALPHA#
+.Include</etc/dansguardian/phraselists/proxies/weighted> #BETA#
