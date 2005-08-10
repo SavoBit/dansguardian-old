@@ -149,7 +149,10 @@ int FatController::controlIt(int pidfilefd) {
     }
 
     // Needs deleting if its there
-    unlink(o.ipc_filename.c_str()); // this would normally be in a -r situation.
+//    unlink(o.ipc_filename.c_str()); // this would normally be in a -r situation.
+// disabled as requested by Christopher Weimann <csw@k12hq.com>
+// Fri, 11 Feb 2005 15:42:28 -0500
+
     // Needs deleting if its there
     unlink(o.urlipc_filename.c_str()); // this would normally be in a -r situation.
 

@@ -1205,36 +1205,10 @@ bool ListContainer::isCacheFileNewer(const char* filename) {
         syslog(LOG_ERR, "%s", filename);
         return false;
     }
-    ifstream listfile(filename, ios::in);
-    if (!listfile.good()) {
-        if (!isDaemonised) {
-            std::cerr << "Error opening: "<< filename << std::endl;
-        }
-        syslog(LOG_ERR, "%s", "Error opening:");
-        syslog(LOG_ERR, "%s", filename);
-        return false;
-    }
-    std::string linebuffer;
-    String temp, inc;
     int bannedlistdate = getFileDate(filename);
-    linebuffer = filename;
+    std::string linebuffer = filename;
     linebuffer += ".processed";
     int cachedate = getFileDate(linebuffer.c_str());
-    while (!listfile.eof()) {
-        getline(listfile, linebuffer);
-        if (linebuffer.length() < 3) continue;
-        if (linebuffer[0] == '#') continue;
-        temp = (char*)linebuffer.c_str();
-        if (temp.startsWith(".Include<")) {
-            inc = temp.after(".Include<");
-            inc = inc.before(">");
-            if (cachedate < getFileDate(inc.toCharArray())) {
-                listfile.close();
-                return false;  // cache file is older than included list file
-            }
-        }
-    }
-    listfile.close();
     if (cachedate < bannedlistdate) {
         return false;  // cache file is older than list file
     }

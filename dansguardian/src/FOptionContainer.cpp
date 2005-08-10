@@ -246,7 +246,7 @@ bool FOptionContainer::read(std::string filename) {
         bypass_mode = findoptionI("bypass");
         if (!realitycheck(String(bypass_mode), 1, 4, "bypass"))
             { return false; }
-        if (bypass_mode > 0) {
+        if (bypass_mode != 0) {
             magic = findoptionS("bypasskey");
             if (magic.length() < 9) {
                 std::string s(16u, ' ');
@@ -620,7 +620,8 @@ bool FOptionContainer::readcrelfile(const char* filename) {
         }
         replacement.chop();
         regexp = regexp.after("\"").before("\"->\"");
-        if (replacement.length() < 1 || regexp.length() < 1) {
+//        if (replacement.length() < 1 || regexp.length() < 1) {
+        if (regexp.length() < 1) { // allow replace with nothing
             continue;
         }
         rv = r.comp(regexp.toCharArray());

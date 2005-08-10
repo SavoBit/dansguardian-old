@@ -198,7 +198,7 @@ void ConnectionHandler::handleConnection(int peerfd, String ip, int port) {
             isbypass = true;
             exceptionreason = o.language_list.getTranslation(608);
         }
-        else if ((*o.fg[filtergroup]).bypass_mode > 0) {
+        else if ((*o.fg[filtergroup]).bypass_mode != 0) {
             #ifdef DGDEBUG
                 std::cout << "About to check for bypass..." << std::endl;
             #endif
@@ -1132,7 +1132,7 @@ bool ConnectionHandler::denyAccess (Socket *peerconn, Socket *proxysock, HTTPHea
 //Other bypass code mostly written by Ernest also
 
                     String hashed;
-                    if ((*o.fg[filtergroup]).bypass_mode > 0 && !ispostblock) {
+                    if ((*o.fg[filtergroup]).bypass_mode != 0 && !ispostblock) {
                         hashed = hashedURL(url, filtergroup, clientip);
                     }
                     if (headersent == 0) {
@@ -1179,7 +1179,7 @@ bool ConnectionHandler::denyAccess (Socket *peerconn, Socket *proxysock, HTTPHea
                 writestring += (*clientip).c_str();
                 writestring += "::USER==";
                 writestring += (*clientuser).c_str();
-                if ((*o.fg[filtergroup]).bypass_mode > 0 && !ispostblock) {
+                if ((*o.fg[filtergroup]).bypass_mode != 0 && !ispostblock) {
                     //String timecode(time(NULL) + 300);
                    // String hashed = (*url).md5(std::string((*o.fg[filtergroup]).magic + timecode.toCharArray()).c_str());
                     //hashed += timecode;
@@ -1195,7 +1195,7 @@ bool ConnectionHandler::denyAccess (Socket *peerconn, Socket *proxysock, HTTPHea
                 writestring += (*clientip).c_str();
                 writestring += "&USER=";
                 writestring += (*clientuser).c_str();
-                if ((*o.fg[filtergroup]).bypass_mode > 0 && !ispostblock) {
+                if ((*o.fg[filtergroup]).bypass_mode > != 0 && !ispostblock) {
                     //String timecode(time(NULL) + 300);
                     //String hashed = (*url).md5(std::string((*o.fg[filtergroup]).magic + timecode.toCharArray()).c_str());
                     //hashed += timecode;

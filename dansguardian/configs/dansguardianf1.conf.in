@@ -34,8 +34,11 @@ naughtynesslimit = 50
 # It provides a link on the denied page to bypass the ban for a few minutes.  To be
 # secure it uses a random hashed secret generated at daemon startup.  You define the
 # number of seconds the bypass will function for before the deny will appear again.
-# 300 = 5 minutes
+# To allow the link on the denied page to appear you will need to edit the template.html
+# or dansguardian.pl file for your language.
+# 300 = enable for 5 minutes
 # 0 = disable ( defaults to 0 )
+# -1 = enable but you require a seperate program to generate a valid link
 bypass = 0
 
 # Temporary Denied Page Bypass Secret Key
