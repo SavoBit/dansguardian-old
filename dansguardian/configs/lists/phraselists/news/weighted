@@ -1,8 +1,11 @@
 #
-# News Weighted Phrases
+# Phraselists to block news websites 
 # Originally created by Fernand Jonker
 #
-# This list is seriously ALPHA - it blocks many news pages, but may overblock.
+# This list is seriously ALPHA - it blocks many pages, but may overblock.
+# This list has NOT been tested in a production environment!
+# If you use this list please send feedback to phrasemaster@dansguardian.org
+# Waiting for input :-)
 #
 <cnn.com><100>
 <local news><30>

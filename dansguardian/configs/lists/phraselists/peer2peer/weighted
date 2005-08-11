@@ -1,6 +1,11 @@
 #
-# Phraselists to block websites about Peer to Peer (P2P) software
+# Phraselists to block Peer to Peer websites 
 # Originally Created by Fernand Jonker
+#
+# This list is seriously ALPHA - it blocks many pages, but may overblock.
+# This list has NOT been tested in a production environment!
+# If you use this list please send feedback to phrasemaster@dansguardian.org
+# Waiting for input :-)
 #
 
 #Applications

@@ -1,4 +1,13 @@
-#sports news sites
+#
+# Phraselists to block sports sites 
+# Originally created by Fernand Jonker
+#
+# This list is seriously ALPHA - it blocks many pages, but may overblock.
+# This list has NOT been tested in a production environment!
+# If you use this list please send feedback to phrasemaster@dansguardian.org
+# Waiting for input :-)
+#
+
 <sportsillustrated><100>
 < si.com ><100>
 < espn><100>
