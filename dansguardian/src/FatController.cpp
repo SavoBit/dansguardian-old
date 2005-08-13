@@ -1321,7 +1321,7 @@ int FatController::logListener(std::string log_location, int logconerror) {
     UDSocket ipcpeersock;  // the socket which will contain the ipc connection
     ipcpeersock.close(); // don't need default fd as will be accept()ing
     int rc, ipcsockfd;
-    char* logline = new char[4096];
+    char* logline = new char[8192];
 
     ofstream logfile(log_location.c_str(), ios::app);
     if (logfile.fail()) {
@@ -1373,7 +1373,7 @@ int FatController::logListener(std::string log_location, int logconerror) {
                           // but we ignore it as its not a problem
             }
             try {
-                rc = ipcpeersock.getline(logline, 4096, 3);  // throws on err
+                rc = ipcpeersock.getline(logline, 8192, 3);  // throws on err
             } catch (exception& e) {
                 ipcpeersock.close();
                 if (logconerror == 1) {
@@ -1442,7 +1442,7 @@ int FatController::urlListListener(int logconerror) {
     UDSocket ipcpeersock;  // the socket which will contain the ipc connection
     ipcpeersock.close(); // don't need default fd as will be accept()ing
     int rc, ipcsockfd;
-    char* logline = new char[4096];
+    char* logline = new char[32000];
     String reply;
     DynamicURLList urllist;
     #ifdef DGDEBUG
@@ -1497,7 +1497,7 @@ int FatController::urlListListener(int logconerror) {
                           // but we ignore it as its not a problem
             }
             try {
-                rc = ipcpeersock.getline(logline, 4096, 3);  // throws on err
+                rc = ipcpeersock.getline(logline, 32000, 3);  // throws on err
             } catch (exception& e) {
                 ipcpeersock.close();  // close the connection
                 if (logconerror == 1) {

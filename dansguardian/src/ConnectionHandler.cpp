@@ -701,6 +701,9 @@ void ConnectionHandler::doTheLogMan(std::string who, std::string from, std::stri
     utime = "." + utime;
     utime = String((int)theend.tv_sec).toCharArray() + utime;
 
+    if (what.length() > 3000) {
+        what = what.substr(0, 2999);
+    }
 
     if (code == 403) {
         hitmiss = "TCP_DENIED/403";
