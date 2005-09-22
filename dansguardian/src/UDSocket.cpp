@@ -248,6 +248,9 @@ int UDSocket::getline(char* buff, int size, int timeout) throw(exception) {
 void UDSocket::writeString(const char* line) throw(exception) {
     int l = strlen(line);
     if (!writeToSocket((char*)line, l, 0, 10)) {
+#ifdef DGDEBUG
+	    std::cerr << "Can't write to unix socket: " << strerror(errno) << std::endl;
+#endif
         throw runtime_error(string("Can't write to unix socket: ") + strerror(errno));
     }
 }
