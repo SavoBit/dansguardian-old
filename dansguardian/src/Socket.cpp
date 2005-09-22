@@ -220,23 +220,21 @@ int Socket::getline(char* buff, int size, int timeout) throw(exception) {
     char b[1];
     int rc;
     int i = 0;
-    b[0] = 0;
-    while(i < (size - 1)) {
+    while(i < (size-1)) {
         rc = readFromSocket(b, 1, 0, timeout);
         if (rc < 0) {
             throw runtime_error(string("Can't read from socket: ") + strerror(errno));  // on error
         }
-        if (rc == 0) {  // eof, other end closed so
-            b[0] = '\n'; // force it to return what read
+        //if socket closed or newline received...
+        if ((rc == 0)||(b[0]=='\n')) {
+            buff[i] = '\0'; // ...terminate string & return what read
+            return i;
         }
-        buff[i] = b[0];
+        buff[i]=b[0];
         i++;
-        if (b[0] == '\n') {
-            buff[i - 1] = '\0';
-            break;
-        }
     }
-    buff[i] = '\0';
+    // oh dear - buffer end reached before we found a newline
+    buff[i]='\0';
     return i;
 }
 
