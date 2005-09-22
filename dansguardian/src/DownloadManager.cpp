@@ -11,41 +11,40 @@
 
 extern bool isDaemonised;
 
+extern dmcreate_t defaultdmcreate;
+extern dmdestroy_t defaultdmdestroy;
+
+#ifdef __FANCYDM
+extern dmcreate_t fancydmcreate;
+extern dmdestroy_t fancydmdestroy;
+#endif
+
 DMPlugin::DMPlugin( ConfigVar & definition )
 {
     // nothing to see here; move along
 }
 
-DMPluginLoader::DMPluginLoader( ) throw(std::runtime_error)
+DMPluginLoader::DMPluginLoader( )
 {
-    handle = NULL;
     create_it  = NULL;
     destroy_it = NULL;
     isGood = false;
-    if (lt_dlinit() != 0)
-           throw std::runtime_error("Can\'t initialise libltdl");
 }
 
-DMPluginLoader::DMPluginLoader( const DMPluginLoader & a ) throw(std::runtime_error)
+DMPluginLoader::DMPluginLoader( const DMPluginLoader & a )
 {
-    handle     = a.handle;
     create_it  = a.create_it;        // used to create said plugin
-    destroy_it = a.destroy_it;        // to destroy (delete) it
+    destroy_it = a.destroy_it;
     isGood     = a.isGood;
-    if (lt_dlinit() != 0)
-           throw std::runtime_error("Can\'t initialise libltdl");
 }
 
 DMPluginLoader::~DMPluginLoader()
 {
-    lt_dlexit();
     return;
 }
 
-DMPluginLoader::DMPluginLoader( const char * pluginConfigPath ) throw(std::runtime_error)
+DMPluginLoader::DMPluginLoader( const char * pluginConfigPath )
 {
-    if (lt_dlinit() != 0)
-           throw std::runtime_error("Can\'t initialise libltdl");
     isGood = false;
 
     if (cv.readVar(pluginConfigPath, "=" ) > 0) {
@@ -56,58 +55,68 @@ DMPluginLoader::DMPluginLoader( const char * pluginConfigPath ) throw(std::runti
         return;
     }
 
-    String pluginpath = cv["libpath"];
+    String plugname = cv["plugname"];
 
-    if (pluginpath.length() < 1) {
+    if (plugname.length() < 1) {
         if (!isDaemonised) {
-            std::cerr << "Unable read plugin config libpath variable: " << pluginConfigPath << std::endl;
+            std::cerr << "Unable read plugin config plugname variable: " << pluginConfigPath << std::endl;
         }
-        syslog( LOG_ERR, "Unable read plugin config libpath variable %s\n", pluginConfigPath);
+        syslog( LOG_ERR, "Unable read plugin config plugname variable %s\n", pluginConfigPath);
         return;
     }
 
-    handle = lt_dlopen(pluginpath.toCharArray());
-
-    if ( handle == NULL ){
-        handle = NULL;
-//        pluginname = "";
-        create_it  = NULL;
-        destroy_it = NULL;
-        if (!isDaemonised) {
-            std::cerr << "Unable to load plugin: " << pluginpath << " " << lt_dlerror() << std::endl;
-        }
-        syslog( LOG_ERR, "Unable to load plugin %s - %s\n", pluginpath.toCharArray(), lt_dlerror() );
+    if (plugname == "default") {
+#ifdef DGDEBUG
+        std::cout << "Enabling default DM plugin" << std::endl;
+#endif
+        create_it  = (dmcreate_t*)  defaultdmcreate;
+        destroy_it = (dmdestroy_t*) defaultdmdestroy;
+        isGood = true;
         return;
     }
-//    setname( pluginName );
 
-    create_it  = (dmcreate_t*)  lt_dlsym( handle, "create");
-    destroy_it = (dmdestroy_t*) lt_dlsym( handle, "destroy");
-    isGood = true;
+#ifdef __FANCYDM
+    if (plugname == "fancy") {
+#warning foo
+#ifdef DGDEBUG
+        std::cout << "Enabling fancy DM plugin" << std::endl;
+#endif
+        create_it  = (dmcreate_t*)  fancydmcreate;
+        destroy_it = (dmdestroy_t*)  fancydmdestroy;
+        isGood = true;
+        return;
+    }
+#endif
+
+    create_it  = NULL;
+    destroy_it = NULL;
+    if (!isDaemonised) {
+        std::cerr << "Unable to load plugin: " << plugname << std::endl;
+    }
+    syslog( LOG_ERR, "Unable to load plugin %s\n", plugname.toCharArray() );
     return;
+
 }
 
 
 DMPlugin * DMPluginLoader::create()
 {
-	if ( create_it ){
-		return create_it( cv );
-	} else {
-		return NULL;
-	}
-	return NULL;
+#ifdef DGDEBUG
+        std::cout << "Creating DM" << std::endl;
+#endif
+    if ( create_it ){
+        return &create_it( cv );
+    }
+    return NULL;
 }
 
 void DMPluginLoader::destroy( DMPlugin * object )
 {
-	if ( object ){
-		if ( destroy_it ){
-			destroy_it( object );
-			return;
-		} else {
-			return;
-		}
-	}
-	return;
+    if ( object ){
+        if ( destroy_it ){
+            destroy_it(object);
+        }
+    }
+    return;
 }
 

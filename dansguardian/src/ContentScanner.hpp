@@ -22,7 +22,6 @@
 #include "HTTPHeader.hpp"
 #include "ListContainer.hpp"
 #include <stdexcept>
-#include <ltdl.h>
 
 class CSPlugin;
 class CSPluginLoader;
@@ -44,15 +43,19 @@ public:
     virtual int reload(int dgversion);
     virtual int quit(void) {return DGCS_OK;};
 
-    // these are unlikely to need to be overwridden
+    // these are unlikely to need to be overridden
     virtual bool readStandardLists();
     virtual bool readListFile(String *filename, ListContainer *list, bool startswith);
     virtual int makeTempFile(String *filename);
     virtual int writeMemoryTempFile(const char *object, unsigned int objectsize, String *filename);
     virtual int readEINTR(int fd, char *buf, unsigned int count);
     virtual int writeEINTR(int fd, char *buf, unsigned int count);
-
+    
     ConfigVar cv;
+    String lastmessage;
+    String lastvirusname;
+
+private:
     ListContainer exceptionvirusmimetypelist;
     ListContainer exceptionvirusextensionlist;
     ListContainer exceptionvirussitelist;
@@ -61,8 +64,6 @@ public:
     String exceptionvirusextensionlist_location;
     String exceptionvirussitelist_location;
     String exceptionvirusurllist_location;
-    String lastmessage;
-    String lastvirusname;
 
 };
 
@@ -71,9 +72,9 @@ typedef void csdestroy_t(CSPlugin*);
 
 class CSPluginLoader {
 public:
-    CSPluginLoader() throw(std::runtime_error);
-    CSPluginLoader( const char *pluginConfigPath ) throw(std::runtime_error);
-    CSPluginLoader( const CSPluginLoader & a ) throw(std::runtime_error);
+    CSPluginLoader();
+    CSPluginLoader( const char *pluginConfigPath );
+    CSPluginLoader( const CSPluginLoader & a );
                     // copy constructor
     ~CSPluginLoader();
     ConfigVar cv;
@@ -83,12 +84,8 @@ public:
     bool isGood;
 
 private:
-    lt_dlhandle handle;            // the handle of the module it's in
     cscreate_t *  create_it;        // used to create said plugin
     csdestroy_t * destroy_it;        // to destroy (delete) it
-//    std::string pluginname;        // the name of the plugin
-
-//    void setname( std::string pluginName );
 
 };
 

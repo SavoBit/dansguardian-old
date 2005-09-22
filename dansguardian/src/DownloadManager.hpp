@@ -7,7 +7,6 @@
 #include "Socket.hpp"
 #include "HTTPHeader.hpp"
 #include <stdexcept>
-#include <ltdl.h>
 
 class DMPlugin;
 class DMPluginLoader;
@@ -24,14 +23,14 @@ public:
     virtual int quit(void) {return 0;};
 };
 
-typedef DMPlugin* dmcreate_t(ConfigVar &);
-typedef void dmdestroy_t(DMPlugin*);
+typedef DMPlugin& dmcreate_t(ConfigVar &);
+typedef void dmdestroy_t(DMPlugin *);
 
 class DMPluginLoader {
 public:
-    DMPluginLoader() throw(std::runtime_error);
-    DMPluginLoader( const char *pluginConfigPath ) throw(std::runtime_error);
-    DMPluginLoader( const DMPluginLoader & a ) throw(std::runtime_error);
+    DMPluginLoader();
+    DMPluginLoader( const char *pluginConfigPath );
+    DMPluginLoader( const DMPluginLoader & a );
                     // copy constructor
     ~DMPluginLoader();
     ConfigVar cv;
@@ -41,12 +40,8 @@ public:
     bool isGood;
 
 private:
-    lt_dlhandle handle;            // the handle of the module it's in
     dmcreate_t *  create_it;        // used to create said plugin
     dmdestroy_t * destroy_it;        // to destroy (delete) it
-//    std::string pluginname;        // the name of the plugin
-
-//    void setname( std::string pluginName );
 
 };
 

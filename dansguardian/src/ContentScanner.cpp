@@ -13,9 +13,36 @@
 extern bool isDaemonised;
 extern OptionContainer o;
 
+#ifdef __CLAMD
+extern cscreate_t clamdcreate;
+extern csdestroy_t clamddestroy;
+#endif
+
+#ifdef __CLAMAV
+extern cscreate_t clamavcreate;
+extern csdestroy_t clamavdestroy;
+#endif
+
+#ifdef __ICAP
+extern cscreate_t icapcreate;
+extern csdestroy_t icapdestroy;
+#endif
+
+#ifdef __KAVAV
+extern cscreate_t kavavcreate;
+extern csdestroy_t kavavdestroy;
+#endif
+
+#ifdef __KAVD
+extern cscreate_t kavdcreate;
+extern csdestroy_t kavddestroy;
+#endif
+
 CSPlugin::CSPlugin( ConfigVar & definition )
 {
-    // nothing to see here; move along
+#ifdef DGDEBUG
+    std::cerr << "Default CS ctor called" << std::endl;
+#endif
 }
 
 int CSPlugin::init(int dgversion) {
@@ -38,11 +65,11 @@ int CSPlugin::makeTempFile(String *filename) {
     int tempfilefd;
     String tempfilepath = o.download_dir.c_str();
     tempfilepath += "/tfXXXXXX";
-    char *tempfilepatharray = new char[tempfilepath.length() + 1];
-    strcpy(tempfilepatharray, tempfilepath.toCharArray());
-    if ((tempfilefd = mkstemp(tempfilepatharray)) < 0) {
+    char *tempfilepatharray = new char[tempfilepath.length()+1];
+    strcpy(tempfilepatharray,tempfilepath.toCharArray());
+    if ((tempfilefd = mkstemp(tempfilepatharray))<1) {
         #ifdef DGDEBUG
-            std::cerr << "error creating cs temp: " << tempfilepath << std::endl;
+            std::cerr << "error creating cs temp " << tempfilepath <<": " << strerror(errno) << std::endl;
         #endif
         syslog(LOG_ERR, "%s","Could not create cs temp file.");
         tempfilefd = -1;
@@ -88,9 +115,9 @@ int CSPlugin::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const
     String tempfilepath;
     if (writeMemoryTempFile(object, objectsize, &tempfilepath) != DGCS_OK) {
         #ifdef DGDEBUG
-            std::cerr << "Error creating/writing temp file for scanMemory in clamdscan." << std::endl;
+            std::cerr << "Error creating/writing temp file for scanMemory." << std::endl;
         #endif
-        syslog(LOG_ERR, "%s","Error creating/writing temp file for scanMemory in clamdscan.");
+        syslog(LOG_ERR, "%s","Error creating/writing temp file for scanMemory.");
         return DGCS_SCANERROR;
     }
     int rc = scanFile(requestheader, docheader, user, filtergroup, ip, tempfilepath.toCharArray());
@@ -252,6 +279,10 @@ int CSPlugin::scanTest(HTTPHeader *requestheader, HTTPHeader *docheader, const c
         tempurl = tempurl.after(".");  // check for being in higher level domains
     }
 
+#ifdef DGDEBUG
+    std::cout << "URL " << url << " is going to need AV scanning." << std::endl;
+#endif
+
     return DGCS_NEEDSCAN;
 }
 
@@ -286,36 +317,27 @@ int CSPlugin::writeEINTR(int fd, char *buf, unsigned int count) {
 }
 
 
-CSPluginLoader::CSPluginLoader( ) throw(std::runtime_error)
+CSPluginLoader::CSPluginLoader( )
 {
-    handle = NULL;
     create_it  = NULL;
     destroy_it = NULL;
     isGood = false;
-    if (lt_dlinit() != 0)
-           throw std::runtime_error("Can\'t initialise libltdl");
 }
 
-CSPluginLoader::CSPluginLoader( const CSPluginLoader & a ) throw(std::runtime_error)
+CSPluginLoader::CSPluginLoader( const CSPluginLoader & a )
 {
-    handle     = a.handle;
     create_it  = a.create_it;        // used to create said plugin
     destroy_it = a.destroy_it;        // to destroy (delete) it
     isGood     = a.isGood;
-    if (lt_dlinit() != 0)
-           throw std::runtime_error("Can\'t initialise libltdl");
 }
 
 CSPluginLoader::~CSPluginLoader()
 {
-    lt_dlexit();
     return;
 }
 
-CSPluginLoader::CSPluginLoader( const char * pluginConfigPath ) throw(std::runtime_error)
+CSPluginLoader::CSPluginLoader( const char * pluginConfigPath )
 {
-    if (lt_dlinit() != 0)
-           throw std::runtime_error("Can\'t initialise libltdl");
     isGood = false;
 
     if (cv.readVar(pluginConfigPath, "=" ) > 0) {
@@ -326,58 +348,101 @@ CSPluginLoader::CSPluginLoader( const char * pluginConfigPath ) throw(std::runti
         return;
     }
 
-    String pluginpath = cv["libpath"];
+    String plugname = cv["plugname"];
 
-    if (pluginpath.length() < 1) {
+    if (plugname.length() < 1) {
         if (!isDaemonised) {
-            std::cerr << "Unable read plugin config libpath variable: " << pluginConfigPath << std::endl;
+            std::cerr << "Unable read plugin config plugname variable: " << pluginConfigPath << std::endl;
         }
-        syslog( LOG_ERR, "Unable read plugin config libpath variable %s\n", pluginConfigPath);
+        syslog( LOG_ERR, "Unable read plugin config plugname variable %s\n", pluginConfigPath);
         return;
     }
 
-    handle = lt_dlopen( pluginpath.toCharArray() );
-
-    if ( !handle ){
-        handle = NULL;
-//        pluginname = "";
-        create_it  = NULL;
-        destroy_it = NULL;
-        if (!isDaemonised) {
-            std::cerr << "Unable to load plugin: " << pluginConfigPath << " " << lt_dlerror() << std::endl;
-        }
-        syslog( LOG_ERR, "Unable to load plugin %s - %s\n", pluginConfigPath, lt_dlerror() );
+#ifdef __CLAMD
+    if (plugname == "clamdscan") {
+#ifdef DGDEBUG
+        std::cout << "Enabling ClamDscan CS plugin" << std::endl;
+#endif
+        create_it  = (cscreate_t*) clamdcreate;
+        destroy_it = (csdestroy_t*) clamddestroy;
+        isGood = true;
         return;
     }
-//    setname( pluginName );
+#endif
 
-    create_it  = (cscreate_t*)  lt_dlsym( handle, "create");
-    destroy_it = (csdestroy_t*) lt_dlsym( handle, "destroy");
-    isGood = true;
+#ifdef __CLAMAV
+    if (plugname == "clamav") {
+#ifdef DGDEBUG
+        std::cout << "Enabling ClamAV CS plugin" << std::endl;
+#endif
+        create_it  = (cscreate_t*) clamavcreate;
+        destroy_it = (csdestroy_t*) clamavdestroy;
+        isGood = true;
+        return;
+    }
+#endif
+
+#ifdef __KAVAV
+    if (plugname == "kavav") {
+#ifdef DGDEBUG
+        std::cout << "Enabling KAVClient CS plugin" << std::endl;
+#endif
+        create_it  = (cscreate_t*) kavavcreate;
+        destroy_it = (csdestroy_t*) kavavdestroy;
+        isGood = true;
+        return;
+    }
+#endif
+
+#ifdef __KAVD
+    if (plugname == "kavdscan") {
+#ifdef DGDEBUG
+        std::cout << "Enabling KAVDscan CS plugin" << std::endl;
+#endif
+        create_it  = (cscreate_t*) kavdcreate;
+        destroy_it = (csdestroy_t*) kavddestroy;
+        isGood = true;
+        return;
+    }
+#endif
+
+#ifdef __ICAP
+    if (plugname == "icapscan") {
+#ifdef DGDEBUG
+        std::cout << "Enabling ICAPscan CS plugin" << std::endl;
+#endif
+        create_it  = (cscreate_t*) icapcreate;
+        destroy_it = (csdestroy_t*) icapdestroy;
+        isGood = true;
+        return;
+    }
+#endif
+
+    create_it  = NULL;
+    destroy_it = NULL;
+    if (!isDaemonised) {
+        std::cerr << "Unable to load plugin: " << pluginConfigPath << std::endl;
+    }
+    syslog( LOG_ERR, "Unable to load plugin %s\n", pluginConfigPath);
     return;
 }
 
 
 CSPlugin * CSPluginLoader::create()
 {
-	if ( create_it ){
-		return create_it( cv );
-	} else {
-		return NULL;
-	}
-	return NULL;
+    if ( create_it ){
+        return create_it( cv );
+    }
+    return NULL;
 }
 
 void CSPluginLoader::destroy( CSPlugin * object )
 {
-	if ( object ){
-		if ( destroy_it ){
-			destroy_it( object );
-			return;
-		} else {
-			return;
-		}
-	}
-	return;
+    if ( object ){
+        if ( destroy_it ){
+            destroy_it( object );
+        }
+    }
+    return;
 }
 
