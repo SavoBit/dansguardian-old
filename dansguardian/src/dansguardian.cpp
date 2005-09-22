@@ -32,6 +32,7 @@
 #include "OptionContainer.hpp"
 #include <syslog.h>
 #include <pwd.h>
+#include <grp.h>
 #include <fstream>
 #include <fcntl.h>
 #include "Socket.hpp"
@@ -164,36 +165,51 @@ int main(int argc, char* argv[]) {
     o.root_user = rootuid;
 
     struct passwd *st;  // prepare a struct
+    struct group *sg;
+
+    // "daemongroup" option exists, but never used to be honoured. this is now
+    // an important feature, however, because we need to be able to create temp
+    // files with suitable permissions for scanning by AV daemons - we do this
+    // by becoming a member of a specified AV group and setting group read perms
+    if ((sg = getgrnam(o.daemon_group_name.c_str())) != 0) {
+        o.proxy_group = sg->gr_gid;
+    } else {
+        syslog(LOG_ERR, "Unable to getgrnam(): %s", strerror(errno));
+        std::cerr << "Unable to getgrnam(): " << strerror(errno) << std::endl;
+        return 1;
+    }
+    
     if ((st = getpwnam(o.daemon_user_name.c_str())) != 0) {  // find uid for proxy user
 
         o.proxy_user = st->pw_uid;
-        o.proxy_group = st->pw_gid;
 
         rc = setgid(o.proxy_group);  // change to rights of proxy user group
-		                     // i.e. low - for security
+                             // i.e. low - for security
         if (rc == -1) {
             syslog(LOG_ERR, "%s","Unable to setgid()");
-	    std::cerr << "Unable to setgid()" << std::endl;
-	    return 1;  // setgid failed for some reason so exit with error
+            std::cerr << "Unable to setgid()" << std::endl;
+            return 1;  // setgid failed for some reason so exit with error
         }
+
         #ifdef HAVE_SETREUID
-         rc = setreuid((uid_t)-1, st->pw_uid);
+        rc = setreuid((uid_t)-1, st->pw_uid);
         #else
-	 rc = seteuid(o.proxy_user);  // need to be euid so can su back
-                                     // (yes it negates but no choice)
-	#endif
-	if (rc == -1) {
-	    syslog(LOG_ERR, "%s","Unable to seteuid()");
-	    std::cerr << "Unable to seteuid()" << std::endl;
-	    return 1;  // seteuid failed for some reason so exit with error
+        rc = seteuid(o.proxy_user);  // need to be euid so can su back
+                                        // (yes it negates but no choice)
+        #endif
+
+        if (rc == -1) {
+            syslog(LOG_ERR, "%s","Unable to seteuid()");
+            std::cerr << "Unable to seteuid()" << std::endl;
+            return 1;  // seteuid failed for some reason so exit with error
         }
     }
     else {
         syslog(LOG_ERR, "%s","Unable to getpwnam() - does the proxy user exist?");
-	cerr << "Unable to getpwnam() - does the proxy user exist?" << std::endl;
-	cerr << "Proxy user looking for is '" << o.daemon_user_name << "'" << std::endl;
-	return 1;  // was unable to lockup the user id from passwd
-	           // for some reason, so exit with error
+        cerr << "Unable to getpwnam() - does the proxy user exist?" << std::endl;
+        cerr << "Proxy user looking for is '" << o.daemon_user_name << "'" << std::endl;
+        return 1;  // was unable to lockup the user id from passwd
+               // for some reason, so exit with error
     }
 
 
@@ -258,7 +274,7 @@ int main(int argc, char* argv[]) {
                 #endif
                 return 1;
                    // OptionContainer class had an error reading the conf or
-	           // other files so exit with error
+               // other files so exit with error
             }
             #ifdef DGDEBUG
                 std::cout << "conf file read." << std::endl;
@@ -277,11 +293,11 @@ int main(int argc, char* argv[]) {
             #endif
 
             if (rc == -1) {
-	        syslog(LOG_ERR, "%s","Unable to re-seteuid()");
-	        #ifdef DGDEBUG
+            syslog(LOG_ERR, "%s","Unable to re-seteuid()");
+            #ifdef DGDEBUG
                     std::cerr << "Unable to re-seteuid()" << std::endl;
                 #endif
-	        return 1;  // seteuid failed for some reason so exit with error
+            return 1;  // seteuid failed for some reason so exit with error
             }
             continue;
         }
