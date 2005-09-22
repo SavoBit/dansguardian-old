@@ -47,4 +47,28 @@
 	#define DGDEBUG 1
 #endif
 
+#ifdef ENABLE_FANCYDM
+	#define __FANCYDM
+#endif
+
+#ifdef HAVE_KAVCLIENT
+	#define __KAVAV
+#endif
+
+#ifdef HAVE_CLAMAV
+	#define __CLAMAV
+#endif
+
+#ifdef ENABLE_CLAMD
+	#define __CLAMD
+#endif
+
+#ifdef ENABLE_ICAP
+	#define __ICAP
+#endif
+
+#ifdef ENABLE_KAVD
+	#define __KAVD
+#endif
+
 #endif //ifndef __H_PLATFORM
