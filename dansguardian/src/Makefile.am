@@ -1,13 +1,18 @@
-MAINTAINERCLEANFILES = Makefile.in platform.h.in
+# Please don't delete platform.h.in. it's not very nice.
+MAINTAINERCLEANFILES = Makefile.in #platform.h.in
 
-SUBDIRS= . downloadmanagers contentscanners 
+clean_SUBDIRS= . downloadmanagers contentscanners 
 
 # A MASSIVE thank you to Lawrence Manning for pointing out the
 # -export-dynamic option was needed to solve a long problem
 # which stopped DG2.9 from actually running ever.
 # Daniel Barron Fri 18th March 2005
 
-AM_CXXFLAGS = @CXXFLAGS@ -fexceptions -g -export-dynamic
+# Unfortunately, since it was never made to work on anything
+# other than Linux, libtool support has been removed in favour
+# of configure-time options (at DB's request).
+
+AM_CXXFLAGS = @CXXFLAGS@ -fexceptions
 AM_CFLAGS = @CFLAGS@
 
 DGCONFFILE = @DGCONFFILE@
@@ -15,6 +20,50 @@ DGLOGLOCATION = @DGLOGLOCATION@
 DGPIDDIR = @DGPIDDIR@
 DGPROXYUSER = @DGPROXYUSER@ 
 DGPROXYGROUP = @DGPROXYGROUP@
+
+if HAVE_CLAMAV
+CLAMAV_LDFLAGS = $(LIBCLAMAV_LIBS) -lclamav
+CLAMAV_SOURCE = contentscanners/clamav.cpp
+else
+CLAMAV_LDFLAGS =
+CLAMAV_SOURCE =
+endif
+
+#if HAVE_KAVCLIENT
+#KAVAV_SOURCES = contentscanners/kavav.cpp
+#KAVAV_CFLAGS = -I$(KAV_INCLUDES)
+#KAVAV_LDFLAGS = $(KAV_LIBS)
+#else
+#KAVAV_SOURCES =
+#KAVAV_CFLAGS =
+#KAVAV_LDFLAGS =
+#endif
+
+if ENABLE_CLAMD
+CLAMDSCAN_SOURCE = contentscanners/clamdscan.cpp
+else
+CLAMDSCAN_SOURCE =
+endif
+
+if ENABLE_ICAP
+ICAPSCAN_SOURCE = contentscanners/icapscan.cpp
+else
+ICAPSCAN_SOURCE =
+endif
+
+if ENABLE_KAVD
+KAVDSCAN_SOURCE = contentscanners/kavdscan.cpp
+else
+KAVDSCAN_SOURCE =
+endif
+
+DEFAULTDM_SOURCE = downloadmanagers/default.cpp
+
+if ENABLE_FANCYDM
+FANCYDM_SOURCE = downloadmanagers/fancy.cpp
+else
+FANCYDM_SOURCE =
+endif
 
 sbin_PROGRAMS = dansguardian 
 
@@ -43,6 +92,12 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        ConfigVar.cpp ConfigVar.hpp \
                        ContentScanner.cpp ContentScanner.hpp \
                        platform.h \
-                       dansguardian.cpp dansguardian.hpp
+                       dansguardian.cpp dansguardian.hpp \
+		       $(CLAMAV_SOURCE) $(ICAPSCAN_SOURCE) \
+		       $(KAVDSCAN_SOURCE) $(CLAMDSCAN_SOURCE) \
+		       $(DEFAULTDM_SOURCE) $(FANCYDM_SOURCE) \
+		       $(KAVAV_SOURCES)
 
-dansguardian_LDADD = $(ZLIB) -lltdl	
+dansguardian_LDADD = $(ZLIB) $(CLAMAV_LDFLAGS) $(KAVAV_LDFLAGS)
+
+dansguardian_CFLAGS = $(KAVAV_CFLAGS)
