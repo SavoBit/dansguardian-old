@@ -9,11 +9,12 @@
 #include <syslog.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
-class csinstance : public CSPlugin { // class name is irrelevent
+class clamdinstance : public CSPlugin { // class name is irrelevent
 public:
-    csinstance( ConfigVar & definition );
+    clamdinstance( ConfigVar & definition );
 
 // we are not replacing scanTest or scanMemory
 
@@ -29,25 +30,31 @@ private:
 
 extern OptionContainer o;
 
-// class factory code *MUST* be included in every plugin
-
-csinstance::csinstance( ConfigVar & definition ): CSPlugin( definition ) {
+clamdinstance::clamdinstance( ConfigVar & definition ): CSPlugin( definition ) {
     cv = definition;
     return;
 };
 
-extern "C" CSPlugin* create( ConfigVar & definition ) {
-    return new csinstance( definition ) ;
+// class factory code *MUST* be included in every plugin
+
+CSPlugin* clamdcreate( ConfigVar & definition ) {
+#ifdef DGDEBUG
+        std::cout << "Creating ClamD CS plugin" << std::endl;
+#endif
+    return new clamdinstance( definition ) ;
 }
 
-extern "C" void destroy(CSPlugin* p) {
+void clamddestroy(CSPlugin* p) {
+#ifdef DGDEBUG
+        std::cout << "Destroying ClamD CS plugin" << std::endl;
+#endif
     delete p;
 }
 
 // end of Class factory
 
 
-int csinstance::init(int dgversion) {
+int clamdinstance::init(int dgversion) {
     if (!readStandardLists()) {  //always
         return DGCS_ERROR;       //include
     }                            //these
@@ -56,7 +63,7 @@ int csinstance::init(int dgversion) {
         #ifdef DGDEBUG
             std::cerr << "Error reading clamdudsfile option." << std::endl;
         #endif
-        syslog(LOG_ERR, "%s", "Error reading clamdudsfile option.");
+        syslog(LOG_ERR, "Error reading clamdudsfile option.");
         return DGCS_ERROR;
         // it would be far better to do a test connection to the file but
         // could not be arsed for now
@@ -70,8 +77,19 @@ int csinstance::init(int dgversion) {
 // a file name to scan.  So we save the memory to disk and pass that.
 // Then delete the temp file.
 
-int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
+int clamdinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
     lastmessage = lastvirusname = "";
+    // mkstemp seems to only set owner permissions, so our AV daemon won't be
+    // able to read the file, unless it's running as the same user as us. that's
+    // not usually very convenient. so instead, just allow group read on the
+    // file, and tell users to make sure the daemongroup option is friendly to
+    // the AV daemon's group membership.
+    // TODO? chmod can error out with EINTR, we may wish to ignore this
+    if (chmod(filename,S_IRGRP) != 0) {
+        lastmessage = "Error giving ClamD read access to temp file";
+        syslog(LOG_ERR,"Could not change file ownership to give ClamD read access: %s",strerror(errno));
+        return DGCS_SCANERROR;
+    };
     String command = "CONTSCAN ";
     command += filename;
     command += "\r\n";
@@ -80,11 +98,13 @@ int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const
     #endif
     UDSocket stripedsocks;
     if (stripedsocks.getFD() < 0) {
-        syslog(LOG_ERR, "%s","Error creating clamdscan socket");
+        lastmessage = "Error opening socket to talk to ClamD";
+        syslog(LOG_ERR, "Error creating socket for talking to ClamD");
         return DGCS_SCANERROR;
     }
-    if (stripedsocks.bind(udspath.toCharArray()) < 0) {
-        syslog(LOG_ERR, "%s","Error binding to clamdscan socket");
+    if (stripedsocks.connect(udspath.toCharArray()) < 0) {
+        lastmessage = "Error connecting to ClamD socket";
+        syslog(LOG_ERR, "Error connecting to ClamD socket");
         stripedsocks.close();
         return DGCS_SCANERROR;
     }
@@ -96,7 +116,8 @@ int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const
     } catch (exception& e) {
         delete[] buff;
         stripedsocks.close();
-        syslog(LOG_ERR, "%s","Error reading clamdscan socket");
+        lastmessage = "Exception whist reading ClamD socket";
+        syslog(LOG_ERR, "Exception whilst reading ClamD socket: %s",e.what());
         return DGCS_SCANERROR;
     }
     String reply = buff;
@@ -120,6 +141,8 @@ int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const
         return DGCS_INFECTED;
     }
     // must be clean
+    // Note: we should really check what the output of a "clean" message actually looks like,
+    // and check explicitly for that, but the ClamD documentation is sparse on output formats.
     #ifdef DGDEBUG
         std::cerr << "clamdscan - he say yes (clean)" << std::endl;
     #endif

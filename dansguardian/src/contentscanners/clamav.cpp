@@ -11,9 +11,9 @@
 #include <unistd.h>
 #include <clamav.h>
 
-class csinstance : public CSPlugin { // class name is irrelevent
+class clamavinstance : public CSPlugin { // class name is irrelevent
 public:
-    csinstance( ConfigVar & definition );
+    clamavinstance( ConfigVar & definition );
 
     // we are replacing the inherited scanMemory as it has support for it
     int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* object, unsigned int objectsize);
@@ -24,11 +24,11 @@ public:
     int init(int dgversion);
     int quit(void);
 
+private:
+    int dorc(int rc, const char *vn);
+    
     struct cl_node *root;
     struct cl_limits limits;
-
-private:
-     int dorc(int rc, const char *vn);
 
 };
 
@@ -36,16 +36,16 @@ extern OptionContainer o;
 
 // class factory code *MUST* be included in every plugin
 
-csinstance::csinstance( ConfigVar & definition ): CSPlugin( definition ) {
+clamavinstance::clamavinstance( ConfigVar & definition ): CSPlugin( definition ) {
     cv = definition;
     return;
 };
 
-extern "C" CSPlugin* create( ConfigVar & definition ) {
-    return new csinstance( definition ) ;
+CSPlugin* clamavcreate( ConfigVar & definition ) {
+    return new clamavinstance( definition ) ;
 }
 
-extern "C" void destroy(CSPlugin* p) {
+void clamavdestroy(CSPlugin* p) {
     delete p;
 }
 
@@ -53,7 +53,7 @@ extern "C" void destroy(CSPlugin* p) {
 
 
 
-int csinstance::init(int dgversion) {
+int clamavinstance::init(int dgversion) {
     if (!readStandardLists()) {  //always
         return DGCS_ERROR;       //include
     }                            //these
@@ -76,6 +76,9 @@ int csinstance::init(int dgversion) {
     #endif
     unsigned int virnum = 0;
     int rc = cl_loaddbdir(cl_retdbdir(), &root, &virnum);
+    #ifdef DGDEBUG
+        std::cout << "root: " << root << " virnum: " << virnum << std::endl;
+    #endif
     if (rc != 0) {
         #ifdef DGDEBUG
             std::cerr << "Error loading clamav db:" << cl_strerror(rc) << std::endl;
@@ -96,7 +99,7 @@ int csinstance::init(int dgversion) {
     return DGCS_OK;
 }
 
-int csinstance::quit(void) {
+int clamavinstance::quit(void) {
     cl_free(root);
     return DGCS_OK;
 }
@@ -105,7 +108,7 @@ int csinstance::quit(void) {
 // > 0 = warning
 
 
-int csinstance::dorc(int rc, const char *vn) {
+int clamavinstance::dorc(int rc, const char *vn) {
     if (rc == CL_VIRUS) {
         lastvirusname = vn;
         #ifdef DGDEBUG
@@ -126,10 +129,10 @@ int csinstance::dorc(int rc, const char *vn) {
     return DGCS_CLEAN;
 }
 
-int csinstance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip, const char *object, unsigned int objectsize) {
+int clamavinstance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip, const char *object, unsigned int objectsize) {
     lastmessage = lastvirusname = "";
     const char *vn = "";
-    int rc = cl_scanbuff(object, objectsize, &vn, root);
+    int rc = cl_scanbuff(object, objectsize-1, &vn, root);
     return dorc(rc, vn);
 }
 //Return values:
@@ -138,10 +141,10 @@ int csinstance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, con
 //2 = object cured - not used
 //-1 = error (DG will assume ok)
 
-int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
+int clamavinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
     lastmessage = lastvirusname = "";
     const char *vn = "";
-    int rc = cl_scanfile(filename, &vn, NULL, root, &limits, CL_ARCHIVE | CL_OLE2 | CL_MAIL | CL_OLE2 | CL_SCAN_PE | CL_SCAN_BLOCKBROKEN | CL_SCAN_HTML);
+    int rc = cl_scanfile(filename, &vn, NULL, root, &limits, CL_SCAN_STDOPT /*CL_ARCHIVE | CL_OLE2 | CL_MAIL | CL_OLE2 | CL_SCAN_PE | CL_SCAN_BLOCKBROKEN | CL_SCAN_HTML*/);
     return dorc(rc, vn);
 }
 //Return values:
@@ -150,6 +153,6 @@ int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const
 //2 = object cured - not used
 //-1 = error (DG will assume ok)
 
-int csinstance::scanTest(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip) {
+int clamavinstance::scanTest(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip) {
     return CSPlugin::scanTest(requestheader, docheader, user, filtergroup, ip);
 }

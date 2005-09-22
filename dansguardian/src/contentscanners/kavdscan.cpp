@@ -1,3 +1,5 @@
+//TODO: Replace error reporting with detailed entries in syslog(LOG_ERR), short entries in lastmessage.
+
 #include "../ContentScanner.hpp"
 #include "../String.hpp"
 #include "../DataBuffer.hpp"
@@ -9,42 +11,41 @@
 #include <syslog.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
-class csinstance : public CSPlugin { // class name is irrelevent
+class kavdinstance : public CSPlugin { // class name is irrelevent
 public:
-    csinstance( ConfigVar & definition );
-    int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* object, unsigned int objectsize);
+    kavdinstance( ConfigVar & definition );
     int scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename);
 
     int init(int dgversion);
-    int quit(void);
 
 private:
-     String udspath;
+    String udspath;
 };
 
 extern OptionContainer o;
 
 // class factory code *MUST* be included in every plugin
 
-csinstance::csinstance( ConfigVar & definition ): CSPlugin( definition ) {
+kavdinstance::kavdinstance( ConfigVar & definition ): CSPlugin( definition ) {
     cv = definition;
     return;
 };
 
-extern "C" CSPlugin* create( ConfigVar & definition ) {
-    return new csinstance( definition ) ;
+CSPlugin* kavdcreate( ConfigVar & definition ) {
+    return new kavdinstance( definition ) ;
 }
 
-extern "C" void destroy(CSPlugin* p) {
+void kavddestroy(CSPlugin* p) {
     delete p;
 }
 
 // end of Class factory
 
 
-int csinstance::init(int dgversion) {
+int kavdinstance::init(int dgversion) {
     if (!readStandardLists()) {  //always
         return DGCS_ERROR;       //include
     }                            //these
@@ -67,8 +68,18 @@ int csinstance::init(int dgversion) {
 // a file name to scan.  So we save the memory to disk and pass that.
 // Then delete the temp file.
 
-int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
+int kavdinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
     lastvirusname = lastmessage = "";
+    // mkstemp seems to only set owner permissions, so our AV daemon won't be
+    // able to read the file, unless it's running as the same user as us. that's
+    // not usually very convenient. so instead, just allow group read on the
+    // file, and tell users to make sure the daemongroup option is friendly to
+    // the AV daemon's group membership.
+    // chmod can error with EINTR, ignore this?
+    if (chmod(filename,S_IRGRP) != 0) {
+        syslog(LOG_ERR,"Could not change file ownership to give kavd read access: %s",strerror(errno));
+        return DGCS_SCANERROR;
+    };
     String command = "SCAN bPQRSTUW ";
     command += filename;
     command += "\r\n";
@@ -77,11 +88,11 @@ int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const
     #endif
     UDSocket stripedsocks;
     if (stripedsocks.getFD() < 0) {
-        syslog(LOG_ERR, "%s","Error creating kavdscan socket");
+        syslog(LOG_ERR, "%s","Error creating socket for talking to kavdscan");
         return DGCS_SCANERROR;
     }
-    if (stripedsocks.bind(udspath.toCharArray()) < 0) {
-        syslog(LOG_ERR, "%s","Error binding to kavdscan socket");
+    if (stripedsocks.connect(udspath.toCharArray()) < 0) {
+        syslog(LOG_ERR, "%s","Error connecting to kavdscan socket");
         stripedsocks.close();
         return DGCS_SCANERROR;
     }

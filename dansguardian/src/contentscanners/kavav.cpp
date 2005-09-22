@@ -1,3 +1,5 @@
+//TODO: Replace error reporting with detailed entries in syslog(LOG_ERR), short entries in lastmessage.
+
 #include "../ContentScanner.hpp"
 #include "../String.hpp"
 #include "../DataBuffer.hpp"
@@ -12,9 +14,9 @@
 #include <unistd.h>
 #include <kavclient.h>
 
-class csinstance : public CSPlugin { // class name is irrelevent
+class kavavinstance : public CSPlugin { // class name is irrelevent
 public:
-    csinstance( ConfigVar & definition );
+    kavavinstance( ConfigVar & definition );
     int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* object, unsigned int objectsize);
     int scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename);
 
@@ -31,23 +33,23 @@ extern OptionContainer o;
 
 // class factory code *MUST* be included in every plugin
 
-csinstance::csinstance( ConfigVar & definition ): CSPlugin( definition ) {
+kavavinstance::kavavinstance( ConfigVar & definition ): CSPlugin( definition ) {
     cv = definition;
     return;
 };
 
-extern "C" CSPlugin* create( ConfigVar & definition ) {
-    return new csinstance( definition ) ;
+CSPlugin* kavavcreate( ConfigVar & definition ) {
+    return new kavavinstance( definition ) ;
 }
 
-extern "C" void destroy(CSPlugin* p) {
+void kavavdestroy(CSPlugin* p) {
     delete p;
 }
 
 // end of Class factory
 
 
-int csinstance::init(int dgversion) {
+int kavavinstance::init(int dgversion) {
     if (!readStandardLists()) {  //always
         return DGCS_ERROR;       //include
     }                            //these
@@ -75,14 +77,14 @@ int csinstance::init(int dgversion) {
     return DGCS_OK;
 }
 
-int csinstance::quit(void) {
+int kavavinstance::quit(void) {
     if (kavcon != NULL) {
         kav_free(kavcon);  // return to kavcon 5 ;-)
     }
     return DGCS_OK;
 }
 
-int csinstance::dorc(int rc) {
+int kavavinstance::dorc(int rc) {
     switch(rc) {
         case KAV_STATUS_CLEAN:
             #ifdef DGDEBUG
@@ -109,7 +111,7 @@ int csinstance::dorc(int rc) {
 }
 
 
-int csinstance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip, const char *object, unsigned int objectsize) {
+int kavavinstance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip, const char *object, unsigned int objectsize) {
     lastvirusname = lastmessage = "";
     if (kav_check_mem(kavcon, object, objectsize) != 0) {
         lastmessage = kav_strerror(kav_get_error(kavcon));
@@ -120,7 +122,7 @@ int csinstance::scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, con
 }
 
 
-int csinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
+int kavavinstance::scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char *filename) {
     lastvirusname = lastmessage = "";
     if (kav_check_file(kavcon, filename) != 0) {
         lastmessage = kav_strerror(kav_get_error(kavcon));
