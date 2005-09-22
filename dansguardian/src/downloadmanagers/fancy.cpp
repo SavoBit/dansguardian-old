@@ -11,31 +11,37 @@
 #include <unistd.h>
 
 
-class dminstance : public DMPlugin { // class name is irrelevent
+class fancydm : public DMPlugin { // class name is irrelevent
 public:
-    dminstance( ConfigVar & definition );
+    fancydm( ConfigVar & definition );
     int in(OptionContainer *o, DataBuffer *d, Socket *sock, Socket *peersock, HTTPHeader *requestheader, HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig);
 private:
      ConfigVar cv;
 };
 
-dminstance::dminstance( ConfigVar & definition ): DMPlugin( definition ) {
+fancydm::fancydm( ConfigVar & definition ): DMPlugin( definition ) {
     cv = definition;
     return;
 };
 
 // class factory code *MUST* be included in every plugin
-extern "C" DMPlugin* create( ConfigVar & definition ) {
-    return new dminstance( definition ) ;
+DMPlugin* fancydmcreate( ConfigVar & definition ) {
+#ifdef DGDEBUG
+	std::cout << "Creating fancy DM" << std::endl;
+#endif
+    return new fancydm( definition ) ;
 }
 
-extern "C" void destroy(DMPlugin* p) {
+void fancydmdestroy(DMPlugin* p) {
+#ifdef DGDEBUG
+	std::cout << "Destroying fancy DM" << std::endl;
+#endif
     delete p;
 }
 // end of Class factory
 
 
-int dminstance::in(OptionContainer *o, DataBuffer *d, Socket *sock, Socket *peersock, class HTTPHeader *requestheader, class HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) {
+int fancydm::in(OptionContainer *o, DataBuffer *d, Socket *sock, Socket *peersock, class HTTPHeader *requestheader, class HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) {
 
     //DataBuffer *d = where to stick the data back into
     //Socket *sock = where to read from
