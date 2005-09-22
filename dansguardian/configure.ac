@@ -19,11 +19,6 @@ AC_PROG_MAKE_SET
 
 AC_CACHE_SAVE
 
-# checking for libtool
-AC_LIBTOOL_DLOPEN
-AC_PROG_LIBTOOL
-AC_CHECK_HEADERS([dlfcn.h ltdl.h /usr/local/include/ltdl.h])
-
 # Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
@@ -31,7 +26,7 @@ AC_HEADER_DIRENT
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netdb.h netinet/in.h stdlib.h])
 AC_CHECK_HEADERS([string.h sys/socket.h sys/time.h syslog.h unistd.h locale.h])
 AC_CHECK_HEADERS([sys/types.h sys/un.h sys/poll.h sys/resource.h])
-AC_CHECK_HEADERS([pwd.h wait.h])
+AC_CHECK_HEADERS([pwd.h grp.h wait.h])
 AC_CHECK_HEADERS([endian.h])
 
 # check for zlib
@@ -61,7 +56,7 @@ AC_FUNC_STAT
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([dup2 gethostbyaddr gettimeofday inet_ntoa memset regcomp select])
 AC_CHECK_FUNCS([socket strerror strstr strtol])
-AC_CHECK_FUNCS([setuid seteuid setreuid setlocale strdup])
+AC_CHECK_FUNCS([setuid setgid umask seteuid setreuid setlocale strdup])
 
 AC_CACHE_SAVE
 
@@ -111,7 +106,7 @@ AC_ARG_WITH(dgdebug,
 [if test "${withval}" == "on" ; then
   AC_MSG_RESULT(yes)
   dgdebug=${withval}
-  AC_DEFINE(HAVE_DGDEBUG, 1, [Define to enable debub build mode])
+  AC_DEFINE(HAVE_DGDEBUG, 1, [Define to enable debug build mode])
 else
   AC_MSG_RESULT(no)
 fi], [
@@ -187,20 +182,117 @@ fi], [
 AC_FINALIZE_VAR(DGLOGLOCATION,"$logdir")
 AC_SUBST(DGLOGLOCATION)
 
+# asking user if they want clamav support
+AC_MSG_CHECKING(for libclamav)
+USE_CLAMAV=false
+AC_ARG_ENABLE(
+clamav,
+[  --enable-clamav=[[no]]  Enable the ClamAV content scanner],
+[ if test "x$enableval" = "xyes"; then
+	#dnl detecting clamav and make conditional for it
+	PKG_CHECK_MODULES(LIBCLAMAV, libclamav,
+		[AC_MSG_RESULT(yes)
+		USE_CLAMAV=true
+		AC_DEFINE([HAVE_CLAMAV],[],[Define to enable ClamAV content scanner])]
+	)
+	#pkg_check_modules requires pkg-config to be installed which seems an overkill
+	#and extra work - maybe better to let the user choose with a configure option?
+	#Thu 10th February 2005 - DB
+else
+	AC_MSG_RESULT(no)
+fi
+],
+[ #disable by default
+	AC_MSG_RESULT(no)
+]
+)
+AM_CONDITIONAL(HAVE_CLAMAV, test "x$USE_CLAMAV" = "xtrue")
 
+# asking user if they want clamd support
+AC_MSG_CHECKING(for clamd support)
+AC_ARG_ENABLE(
+clamd,
+[  --enable-clamd=[[no]]  Enable the ClamD content scanner],
+[ if test "x$enableval" = "xyes"; then
+	AC_MSG_RESULT(yes)
+	clamd=true
+	AC_DEFINE([ENABLE_CLAMD],[],[Define to enable ClamD content scanner])
+else
+	AC_MSG_RESULT(no)
+	clamd=false
+fi],
+[
+	AC_MSG_RESULT(no)
+	clamd=false
+]
+)
+AM_CONDITIONAL(ENABLE_CLAMD, test "x$clamd" = "xtrue")
+
+# asking user if they want icap support
+AC_MSG_CHECKING(for icap support)
+AC_ARG_ENABLE(
+icap,
+[  --enable-icap=[[no]]  Enable ICAP AV server content scanner],
+[ if test "x$enableval" = "xyes"; then
+	AC_MSG_RESULT(yes)
+	icap=true
+	AC_DEFINE([ENABLE_ICAP],[],[Define to enable ICAP content scanner])
+else
+	AC_MSG_RESULT(no)
+	icap=false
+fi],
+[
+	AC_MSG_RESULT(no)
+	icap=false
+]
+)
+AM_CONDITIONAL(ENABLE_ICAP, test "x$icap" = "xtrue")
+
+# asking user if they want kavd support
+AC_MSG_CHECKING(for kavd support)
+AC_ARG_ENABLE(
+kavd,
+[  --enable-kavd=[[no]]  Enable the Kaspersky AV daemon content scanner],
+[ if test "x$enableval" = "xyes"; then
+	AC_MSG_RESULT(yes)
+	kavd=true
+	AC_DEFINE([ENABLE_KAVD],[],[Define to enable KAVD content scanner])
+else
+	AC_MSG_RESULT(no)
+	kavd=false
+fi],
+[
+	AC_MSG_RESULT(no)
+	kavd=false
+]
+)
+AM_CONDITIONAL(ENABLE_KAVD, test "x$kavd" = "xtrue")
+
+# asking user if they want fancy downloadmanager support
+AC_MSG_CHECKING(for fancy download manager support)
+AC_ARG_ENABLE(
+fancydm,
+[  --enable-fancydm=[[yes]]  Enable the fancy download manager],
+[ if test "x$enableval" = "xyes"; then
+	AC_MSG_RESULT(yes)
+	fancydm=true
+	AC_DEFINE([ENABLE_FANCYDM],[],[Define to enable fancy download manager])
+else
+	fancydm=false
+	AC_MSG_RESULT(no)
+fi],
+[
+	fancydm=true
+	AC_MSG_RESULT(yes)
+	AC_DEFINE([ENABLE_FANCYDM],[],[Define to enable fancy download manager])
+]
+)
+AM_CONDITIONAL(ENABLE_FANCYDM, test "x$fancydm" = "xtrue")
 
 #dnl detecting kaspersky antivirus client
 #KAV_PATH_KAVCLIENT
 #AM_CONDITIONAL(HAVE_KAVCLIENT, test "x$kavclient_found" = "xyes")
 #kav stuff is not finished Wed 09th February 2005 - DB
-
-#dnl detecting clamav and make conditional for it
-PKG_CHECK_MODULES(LIBCLAMAV, libclamav, HAVE_LIBCLAMAV=true, HAVE_LIBCLAMAV=false)
-AM_CONDITIONAL(HAVE_LIBCLAMAV, test "x$HAVE_LIBCLAMAV" = "xtrue")
-#pkg_check_modules requires pkg-config to be installed which seems an overkill
-#and extra work - maybe better to let the user choose with a configure option?
-#Thu 10th February 2005 - DB
-
 
 libdir="${libdir}/${PACKAGE_NAME}"
 AC_FINALIZE_VAR(DGLIBDIR,"${libdir}")
@@ -244,8 +336,6 @@ AC_CONFIG_FILES([Makefile
 	        configs/contentscanners/kavdscan.conf
                 src/Makefile
                 src/platform.h
-                src/contentscanners/Makefile
-                src/downloadmanagers/Makefile
 		])
 
 AC_OUTPUT
