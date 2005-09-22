@@ -321,14 +321,14 @@ void ConnectionHandler::handleConnection(int peerfd, String ip, int port) {
             std::cerr << "runav = no thanks" << std::endl;
         #endif
 
-	if ( (isourwebserver || isexception || iscookiebypass)
-	    // don't filter exception and local web server
-	    // Cookie bypass so don't need to add cookie so just CONNECT
-	    && !o.inBannedIPList(&clientip)		// bad users pc
-	    && !o.inBannedUserList(&clientuser)         // bad user
+    if ( (isourwebserver || isexception || iscookiebypass)
+        // don't filter exception and local web server
+        // Cookie bypass so don't need to add cookie so just CONNECT
+        && !o.inBannedIPList(&clientip)        // bad users pc
+        && !o.inBannedUserList(&clientuser)         // bad user
             && !(runav && o.content_scan_exceptions)) {
 
-	    proxysock.readyForOutput(10);  // exception on timeout or error
+        proxysock.readyForOutput(10);  // exception on timeout or error
             header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
             try {
                 FDTunnel fdt;  // make a tunnel object
@@ -402,8 +402,8 @@ void ConnectionHandler::handleConnection(int peerfd, String ip, int port) {
             wasrequested = true;  // so we know where we are later
 
             if (isbypass) {
-	        docheader.setCookie("GBYPASS", hashedCookie(&urldomain, filtergroup, &clientip, bypasstimestamp).toCharArray());
-	    }
+            docheader.setCookie("GBYPASS", hashedCookie(&urldomain, filtergroup, &clientip, bypasstimestamp).toCharArray());
+        }
 
             mimetype = docheader.getcontenttype().toCharArray();
             if (!isexception) {
@@ -1198,7 +1198,7 @@ bool ConnectionHandler::denyAccess (Socket *peerconn, Socket *proxysock, HTTPHea
                 writestring += (*clientip).c_str();
                 writestring += "&USER=";
                 writestring += (*clientuser).c_str();
-                if ((*o.fg[filtergroup]).bypass_mode > != 0 && !ispostblock) {
+                if ((*o.fg[filtergroup]).bypass_mode != 0 && !ispostblock) {
                     //String timecode(time(NULL) + 300);
                     //String hashed = (*url).md5(std::string((*o.fg[filtergroup]).magic + timecode.toCharArray()).c_str());
                     //hashed += timecode;
@@ -1316,34 +1316,47 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
     else {
         dblen = docbody->buffer_length;
     }
-    (*docsize) = (signed)dblen;
+    // don't scan zero-length buffers (waste of AV resources, especially with external scanners (ICAP)).
+    // these were encountered browsing opengroup.org, caused by a stats script. (PRA 21/09/2005)
+    // if we wanted to honour a hypothetical min_content_scan_size, we'd do it here.
+    if (((*docsize) = (signed)dblen) == 0) return;
 
     if (!wasclean) { // was not clean or no urlcache
 
-        if (runav && dblen <= o.max_content_filecache_scan_size) {
+        // fixed to obey maxcontentramcachescansize
+        if (runav && (isfile ? dblen <= o.max_content_filecache_scan_size : dblen <= o.max_content_ramcache_scan_size)) {
             (*wasscanned) = true;
-            #ifdef DGDEBUG
-                system("date");
-                std::cout << "running AV" << std::endl;
-            #endif
             int csrc = 0;
             for(unsigned int i = 0; i < o.csplugins.size(); i++) {
                 if ((*sendtoscanner)[i]) {
                     if (isfile) {
+                        #ifdef DGDEBUG
+                            std::cout << "Running scanFile" << std::endl;
+                        #endif
                         csrc = o.csplugins[i]->scanFile(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->tempfilepath.toCharArray());
-                        if (csrc > 0) {
+                        if (csrc != DGCS_OK) {
                             unlink(docbody->tempfilepath.toCharArray());
-                            // delete infected file straight away
+                            // delete infected (or unscanned due to error) file straight away
                         }
                     }
                     else {
+                        #ifdef DGDEBUG
+                            std::cout << "Running scanMemory" << std::endl;
+                        #endif
                         csrc = o.csplugins[i]->scanMemory(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->data, docbody->buffer_length);
                     }
                     #ifdef DGDEBUG
-                        std::cerr << "scanFile/Memory " << i << " returned:" << csrc << std::endl;
+                        std::cerr << "AV scan " << i << " returned:" << csrc << std::endl;
                     #endif
                     if (csrc < 0) {
                         syslog(LOG_ERR, "%s","scanTest returned error");
+                        //TODO: have proper error checking/reporting here?
+                        //at the very least, integrate with the translation system.
+                        checkme->whatIsNaughty = "WARNING: Could not perform virus scan!";
+                        checkme->whatIsNaughtyLog = o.csplugins[i]->getLastMessage().toCharArray();
+                        checkme->isItNaughty = true;
+                        checkme->isException = false;
+                        break;
                     }
                     else if (csrc > 0) {
                         checkme->whatIsNaughty = o.language_list.getTranslation(1100);
