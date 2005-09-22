@@ -1,4 +1,4 @@
-libpath = '@DGLIBDIR@/clamav.so'
+plugname = 'clamav'
 
 #maxfiles - The maximum number of files inside an archive
 maxfiles = 1000

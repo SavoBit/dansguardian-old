@@ -1,4 +1,4 @@
-libpath = '@DGLIBDIR@/default.so'
+plugname = 'default'
 #
 # More options can be added here:
 #

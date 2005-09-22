@@ -61,6 +61,11 @@ You may change with the configure options:
   bindir           (where the binary gets placed)
   with-proxyuser   (the system user the daemon runs as)
   with-proxygroup  (the system group the daemon runs as)
+  enable-clamd     (enable clamd antivirus scanner)
+  enable-clamav    (enable libclamav av scanner)
+  enable-icap      (enable ICAP-compatible av scanner)
+  enable-kavd      (enable kaspersky av daemon scanner)
+  enable-fancydm   (enable the 'fancy' download manager)
   
 See ./configure --help for more details.
 

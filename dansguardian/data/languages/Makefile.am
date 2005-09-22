@@ -1,9 +1,11 @@
 MAINTAINERCLEANFILES = Makefile.in
 
 LANGDIR = $(datadir)/$(PACKAGE_NAME)/languages
-LANGUAGES = arspanish bulgarian chinesebig5 chinesegb2312 czech danish dutch french \
-	    german german2 hebrew indonesian italian lithuanian mxspanish polish \
-	    portuguese russian-koi8-r swedish turkish ukenglish
+LANGUAGES = 	arspanish      czech   hebrew      turkish \
+		bulgarian      danish  indonesian  russian-1251 ukenglish \
+		chinesebig5    dutch   italian     mxspanish    russian-koi8-r \
+		chinesegb2312  french  lithuanian  polish       slovak \
+		german         portuguese  swedish
 
 EXTRA_DIST= ReadMe
 

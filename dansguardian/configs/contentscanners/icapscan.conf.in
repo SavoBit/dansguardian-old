@@ -1,4 +1,4 @@
-libpath = '@DGLIBDIR@/icapscan.so'
+plugname = 'icapscan'
 
 # ICAP URL
 # Use hostname rather than IP address

@@ -34,15 +34,15 @@
 # listed in the exceptionphraselist file.
 #
 
-.Include</etc/dansguardian/phraselists/pornography/banned>
-.Include</etc/dansguardian/phraselists/pornography/banned_portuguese>
+.Include<@DGCONFDIR@/lists/phraselists/pornography/banned>
+#.Include<@DGCONFDIR@/lists/phraselists/pornography/banned_portuguese>
 
-#.Include</etc/dansguardian/phraselists/illegaldrugs/banned>
-#.Include</etc/dansguardian/phraselists/illegaldrugs/banned_portuguese>
+#.Include<@DGCONFDIR/lists/phraselists/illegaldrugs/banned>
+#.Include<@DGCONFDIR/lists/phraselists/illegaldrugs/banned_portuguese>
 
-#.Include</etc/dansguardian/phraselists/gambling/banned>
-#.Include</etc/dansguardian/phraselists/gambling/banned_portuguese>
+#.Include<@DGCONFDIR/lists/phraselists/gambling/banned>
+#.Include<@DGCONFDIR/lists/phraselists/gambling/banned_portuguese>
 
-#.Include</etc/dansguardian/phraselists/googlesearches/banned>
+#.Include<@DGCONFDIR/lists/phraselists/googlesearches/banned>
 
-#.Include</etc/dansguardian/phraselists/intolerance/banned_portuguese>
+#.Include<@DGCONFDIR/lists/phraselists/intolerance/banned_portuguese>

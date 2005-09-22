@@ -1,4 +1,4 @@
-libpath = '@DGLIBDIR@/kavav.so'
+plugname = 'kavav'
 
 # kaspersky unix domain socket file
 #kavdudsfile = '/tmp/kavav'

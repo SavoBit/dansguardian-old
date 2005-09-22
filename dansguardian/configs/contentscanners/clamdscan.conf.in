@@ -1,5 +1,7 @@
-libpath = '@DGLIBDIR@/clamdscan.so'
+plugname = 'clamdscan'
 
+# edit this to match the location of your ClamD UNIX domain socket
+#clamdudsfile = '/var/run/clamav/clamd.sock'
 
 exceptionvirusmimetypelist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusmimetypelist'
 exceptionvirusextensionlist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusextensionlist'

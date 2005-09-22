@@ -1,16 +1,15 @@
 MAINTAINERCLEANFILES    = Makefile.in
 
 DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists/phraselists
-PHRASELISTS = chat drugadvocacy dutchbadwords frenchbadwords frenchpornography gambling \
-	      germanpornography goodphrases googlesearches gore illegaldrugs intolerance \
-	      italianbadwords legaldrugs personals pornography violence \
-	      warezhacking weapons
+PHRASELISTS = badwords chat drugadvocacy gambling games goodphrases googlesearches \
+	      gore illegaldrugs intolerance legaldrugs malware news nudism peer2peer \
+	      personals pornography proxies sport violence warezhacking weapons webmail
 
 
 install-data-local: 
 	for l in $(PHRASELISTS); do \
 		$(mkinstalldirs) $(DESTDIR)$(DGDATADIR)/$$l && \
-		for f in $(srcdir)/$$l/weighted $(srcdir)/$$l/exception $(srcdir)/$$l/banned; do \
+		for f in $(srcdir)/$$l/weighted* $(srcdir)/$$l/exception* $(srcdir)/$$l/banned*; do \
 		   if test -f $$f ; then \
 			echo "$(INSTALL_DATA) $$f $(DESTDIR)$(DGDATADIR)/$$l"; \
 			$(INSTALL_DATA) $$f $(DESTDIR)$(DGDATADIR)/$$l; \
@@ -20,7 +19,7 @@ install-data-local:
 
 uninstall-local:
 	for l in $(PHRASELISTS); do \
-		for f in $(srcdir)/$$l/weighted $(srcdir)/$$l/exception; do \
+		for f in $(srcdir)/$$l/weighted* $(srcdir)/$$l/exception*; do \
 	        	rm -f $(DESTDIR)$(DGDATADIR)/$$l/`basename $$f`; \
 		done \
 	done
@@ -31,14 +30,10 @@ dist-hook:
 	    test -d $(distdir)/$$phrase \
 	    || mkdir $(distdir)/$$phrase \
 	    || exit 1; \
-	    if test -e $(srcdir)/$$phrase/weighted ; then \
-	      cp -p $(srcdir)/$$phrase/weighted $(distdir)/$$phrase ;\
-	    fi; \
-	    if test -e $(srcdir)/$$phrase/banned ; then \
-	      cp -p $(srcdir)/$$phrase/banned $(distdir)/$$phrase ;\
-	    fi; \
-	    if test -e $(srcdir)/$$phrase/exception ; then \
-	      cp -p $(srcdir)/$$phrase/exception $(distdir)/$$phrase ;\
-	    fi; \
+	    for f in $(srcdir)/$$phrase/weighted* $(srcdir)/$$phrase/banned* $(srcdir)/$$phrase/exception*; do \
+	      if test -f $$f ; then \
+	        cp -p $$f $(distdir)/$$phrase ;\
+	      fi; \
+	    done; \
 	  fi; \
 	done		

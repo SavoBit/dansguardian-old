@@ -1,1 +1,1 @@
-libpath = '@DGLIBDIR@/fancy.so'
+plugname = 'fancy'
