@@ -1,3 +1,5 @@
+// ListContainer class - for item and phrase lists
+
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
 //Written by Daniel Barron (daniel@/ jadeb.com).
@@ -19,113 +21,140 @@
 
 #ifndef __HPP_LISTCONTAINER
 #define __HPP_LISTCONTAINER
+
+
+// INLCUDES
+
+#include "platform.h"
+
 #include <deque>
 #include <string>
 #include "String.hpp"
 
-class ListContainer {
 
+// DECLARATIONS
+
+class ListContainer
+{
 public:
-    ListContainer();
-    ~ListContainer();
+	std::deque<int> combilist;
+	int refcount;
+	bool parent;
+	int filedate;
+	bool used;
+	String bannedpfile;
+	String exceptionpfile;
+	String weightedpfile;
+	int bannedpfiledate;
+	int exceptionpfiledate;
+	int weightedpfiledate;
+	String sourcefile;  // used for non-phrase lists only
+	String category;  // used for phrase lists only
+	String lastcategory;  // used for phrase lists only
+	std::deque<unsigned int> morelists;  // has to be non private as reg exp compiler needs to access these
 
-    void reset();
+	ListContainer();
+	~ListContainer();
 
-    bool readPhraseList(const char* filename, bool isexception);
-    bool readItemList(const char* filename, bool startswith, int filters);
+	void reset();
 
-    bool inList(char* string);
-    bool inListEndsWith(char* string);
-    bool inListStartsWith(char* string);
+	bool readPhraseList(const char *filename, bool isexception);
+	bool readItemList(const char *filename, bool startswith, int filters);
 
-    char* findInList(char* string);
+	bool inList(char *string);
+	bool inListEndsWith(char *string);
+	bool inListStartsWith(char *string);
 
-    char* findEndsWith(char* string);
-    char* findStartsWith(char* string);
-    char* findStartsWithPartial(char* string);
+	char *findInList(char *string);
 
-
-    int getListLength() {return items;}
-    std::string getItemAt(char* index);
-    std::string getItemAtInt(int index);
-
-    int getWeightAt(unsigned int index);
-    int getTypeAt(unsigned int index);
+	char *findEndsWith(char *string);
+	char *findStartsWith(char *string);
+	char *findStartsWithPartial(char *string);
 
 
-    void endsWithSort();
-    void startsWithSort();
+	int getListLength()
+	{
+		return items;
+	}
+	std::string getItemAt(char *index);
+	std::string getItemAtInt(int index);
 
-    bool createCacheFile();
-    void makeGraph(int fqs);
+	int getWeightAt(unsigned int index);
+	int getTypeAt(unsigned int index);
 
-    bool previousUseItem(const char* filename, bool startswith, int filters);
-    bool upToDate();
 
-    std::deque<unsigned int> graphSearch(char* doc, int len);
-    std::deque<int> combilist;
-    int refcount;
-    bool parent;
-    int filedate;
-    bool used;
-    String bannedpfile;
-    String exceptionpfile;
-    String weightedpfile;
-    int bannedpfiledate;
-    int exceptionpfiledate;
-    int weightedpfiledate;
-    String sourcefile;  // used for non-phrase lists only
-    std::deque<unsigned int> morelists;  // has to be non private as reg
-    // exp compiler needs to access these
+	void endsWithSort();
+	void startsWithSort();
+
+	bool createCacheFile();
+	void makeGraph(int fqs);
+
+	bool previousUseItem(const char *filename, bool startswith, int filters);
+	bool upToDate();
+
+	String getListCategoryAt(int index, int *catindex = NULL);
+	String getListCategoryAtD(int index);
+
+	std::deque<unsigned int > graphSearch(char *doc, int len);
 
 private:
+	bool sourceisexception;
+	bool sourcestartswith;
+	int sourcefilters;
+	char *data;
+	int *graphdata;
+	int graphitems;
+	std::deque<unsigned int > slowgraph;
+	unsigned int data_length;
+	unsigned int data_memory;
+	int items;
+	bool isSW;
+	bool issorted;
+	bool graphused;
+	std::deque<unsigned int > list;
+	std::deque<int > weight;
+	std::deque<int > itemtype;  // 0=banned, 1=weighted, -1=exception
+	int force_quick_search;
+	//time-limited lists
+	unsigned int sthour, stmin, endhour, endmin;
+	String days, timetag;
+	bool istimelimited;
+	//categorised lists
+	std::deque<String > listcategory;
+	std::deque<int > categoryindex;
 
-    bool sourceisexception;
-    bool sourcestartswith;
-    int sourcefilters;
-    char* data;
-    int* graphdata;
-    int graphitems;
-    std::deque<unsigned int> slowgraph;
-    unsigned int data_length;
-    unsigned int data_memory;
-    int items;
-    bool isSW;
-    bool issorted;
-    bool graphused;
-    std::deque<unsigned int> list;
-    std::deque<int> weight;
-    std::deque<int> itemtype;  // 0=banned, 1=weighted, -1=exception
-    int force_quick_search;
 
+	bool readAnotherItemList(const char *filename, bool startswith, int filters);
 
-    bool readAnotherItemList(const char* filename, bool startswith, int filters);
-
-    void readPhraseListHelper(String line, bool isexception);
-    void readPhraseListHelper2(String phrase, int type, int weighting);
-    bool addToItemListPhrase(char* s, int len, int type, int weighting, bool combi);
-    void graphSizeSort(int l, int r, std::deque<unsigned int>* sizelist);
-    void graphAdd(String s, int inx, int item);
-    int graphFindBranches(unsigned int pos);
-    void graphCopyNodePhrases(unsigned int pos);
-    int bmsearch(char* file, int fl, std::string s);
-    void quicksortSW(int l, int r);
-    void quicksortEW(int l, int r);
-    bool readProcessedItemList(const char* filename, bool startswith, int filters);
-    void addToItemList(char* s, int len);
-    int greaterThanEWF(const char* a, const char* b);  // full match
-    int greaterThanEW(const char* a, const char* b);  // partial ends with
-    int greaterThanSWF(const char* a, const char* b);  // full match
-    int greaterThanSW(const char* a, const char* b);  // partial starts with
-    int searchREWF(int a, int s, const char* p);
-    int searchREW(int a, int s, const char* p);
-    int searchRSW(int a, int s, const char* p);
-    int searchRSWF(int a, int s, const char* p);
-    bool isCacheFileNewer(const char* string);
-    int getFileLength(const char* filename);
-    int getFileDate(const char* filename);
-    void increaseMemoryBy(int bytes);
-    std::string toLower(std::string s);
+	void readPhraseListHelper(String line, bool isexception, int catindex);
+	void readPhraseListHelper2(String phrase, int type, int weighting, int catindex);
+	bool addToItemListPhrase(char *s, int len, int type, int weighting, bool combi, int catindex);
+	void graphSizeSort(int l, int r, std::deque<unsigned int > *sizelist);
+	void graphAdd(String s, int inx, int item);
+	int graphFindBranches(unsigned int pos);
+	void graphCopyNodePhrases(unsigned int pos);
+	int bmsearch(char *file, int fl, std::string s);
+	void quicksortSW(int l, int r);
+	void quicksortEW(int l, int r);
+	bool readProcessedItemList(const char *filename, bool startswith, int filters);
+	void addToItemList(char *s, int len);
+	int greaterThanEWF(const char *a, const char *b);  // full match
+	int greaterThanEW(const char *a, const char *b);  // partial ends with
+	int greaterThanSWF(const char *a, const char *b);  // full match
+	int greaterThanSW(const char *a, const char *b);  // partial starts with
+	int searchREWF(int a, int s, const char *p);
+	int searchREW(int a, int s, const char *p);
+	int searchRSW(int a, int s, const char *p);
+	int searchRSWF(int a, int s, const char *p);
+	bool isCacheFileNewer(const char *string);
+	int getFileLength(const char *filename);
+	int getFileDate(const char *filename);
+	void increaseMemoryBy(int bytes);
+	std::string toLower(std::string s);
+	//categorised & time-limited lists support
+	bool readTimeTag(String * tag);
+	bool isNow();
+	int getCategoryIndex(String * lcat);
 };
 
 #endif
