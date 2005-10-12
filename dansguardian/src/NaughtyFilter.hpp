@@ -19,36 +19,56 @@
 
 #ifndef __HPP_NAUGHTYFILTER
 #define __HPP_NAUGHTYFILTER
+
+
+// INCLUDES
+
+#include "platform.h"
+
 #include "String.hpp"
-#include <string>
 #include "OptionContainer.hpp"
 #include "DataBuffer.hpp"
 
 
-class NaughtyFilter {
+// DECLARATIONS
 
+class NaughtyFilter
+{
 public:
-    NaughtyFilter();
-    void checkme(DataBuffer* body);
-    void contentRegExp(DataBuffer* body);
-    bool isItNaughty;
-    bool isException;
-    int filtergroup;
-    std::string whatIsNaughty;
-    std::string whatIsNaughtyLog;
+	// should the content be blocked?
+	bool isItNaughty;
+	// should the content bypass any further filtering?
+	bool isException;
+
+	int filtergroup;
+	
+	// the reason for banning, what to say about it in the logs, and the
+	// categories under which banning has taken place
+	std::string whatIsNaughty;
+	std::string whatIsNaughtyLog;
+	std::string whatIsNaughtyCategories;
+
+	NaughtyFilter();
+	void checkme(DataBuffer * body);
+	
+	// content regexp replacement - checkme: not implemented
+	//void contentRegExp(DataBuffer * body);
 
 private:
-    void checkphrase(char* file, int l);
-    void checkPICS(char* file, int l);
-    void checkPICSrating(std::string label);
-    void checkPICSratingSafeSurf(String r);
-    void checkPICSratingevaluWEB(String r);
-    void checkPICSratingCyberNOT(String r);
-    void checkPICSratingRSAC(String r);
-    void checkPICSratingICRA(String r);
-    void checkPICSratingWeburbia(String r);
-    void checkPICSratingVancouver(String r);
-    void checkPICSagainstoption(String s, char* l, int opt, std::string m);
-    };
+	// check the banned, weighted & exception lists
+	void checkphrase(char *file, int l);
+	
+	// check PICS ratings
+	void checkPICS(char *file, int l);
+	void checkPICSrating(std::string label);
+	void checkPICSratingSafeSurf(String r);
+	void checkPICSratingevaluWEB(String r);
+	void checkPICSratingCyberNOT(String r);
+	void checkPICSratingRSAC(String r);
+	void checkPICSratingICRA(String r);
+	void checkPICSratingWeburbia(String r);
+	void checkPICSratingVancouver(String r);
+	void checkPICSagainstoption(String s, char *l, int opt, std::string m);
+};
 
 #endif
