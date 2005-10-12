@@ -12,8 +12,9 @@ clean_SUBDIRS= . downloadmanagers contentscanners
 # other than Linux, libtool support has been removed in favour
 # of configure-time options (at DB's request).
 
-AM_CXXFLAGS = @CXXFLAGS@ -fexceptions
-AM_CFLAGS = @CFLAGS@
+#AM_CXXFLAGS = @CXXFLAGS@ -fexceptions
+AM_CXXFLAGS = -fexceptions $(LIBCLAMAV_CFLAGS)
+#AM_CFLAGS = @CFLAGS@
 
 DGCONFFILE = @DGCONFFILE@
 DGLOGLOCATION = @DGLOGLOCATION@
@@ -22,10 +23,12 @@ DGPROXYUSER = @DGPROXYUSER@
 DGPROXYGROUP = @DGPROXYGROUP@
 
 if HAVE_CLAMAV
-CLAMAV_LDFLAGS = $(LIBCLAMAV_LIBS) -lclamav
+CLAMAV_LDFLAGS = $(LIBCLAMAV_LIBS)
+#CLAMAV_CFLAGS = $(LIBCLAMAV_CFLAGS)
 CLAMAV_SOURCE = contentscanners/clamav.cpp
 else
 CLAMAV_LDFLAGS =
+#CLAMAV_CFLAGS =
 CLAMAV_SOURCE =
 endif
 
@@ -74,6 +77,8 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        HTTPHeader.cpp HTTPHeader.hpp \
                        NaughtyFilter.cpp NaughtyFilter.hpp \
                        RegExp.cpp RegExp.hpp \
+		       FDFuncs.cpp FDFuncs.hpp \
+		       BaseSocket.cpp BaseSocket.hpp \
                        Socket.cpp Socket.hpp \
                        FatController.cpp FatController.hpp \
                        UDSocket.cpp UDSocket.hpp \
@@ -92,7 +97,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        ConfigVar.cpp ConfigVar.hpp \
                        ContentScanner.cpp ContentScanner.hpp \
                        platform.h \
-                       dansguardian.cpp dansguardian.hpp \
+                       dansguardian.cpp \
 		       $(CLAMAV_SOURCE) $(ICAPSCAN_SOURCE) \
 		       $(KAVDSCAN_SOURCE) $(CLAMDSCAN_SOURCE) \
 		       $(DEFAULTDM_SOURCE) $(FANCYDM_SOURCE) \
@@ -100,4 +105,4 @@ dansguardian_SOURCES = String.cpp String.hpp \
 
 dansguardian_LDADD = $(ZLIB) $(CLAMAV_LDFLAGS) $(KAVAV_LDFLAGS)
 
-dansguardian_CFLAGS = $(KAVAV_CFLAGS)
+#dansguardian_CFLAGS = $(CLAMAV_CFLAGS) $(KAVAV_CFLAGS)
