@@ -1,3 +1,5 @@
+// ImageContainer - container class for custom banned image
+
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
 //Written by Daniel Barron (daniel@jadeb//.com).
@@ -19,23 +21,30 @@
 
 #ifndef __HPP_IMAGECONTAINER
 #define __HPP_IMAGECONTAINER
-#include <string>
+
+
+// INCLUDES
+#include "platform.h"
+
 #include "Socket.hpp"
 #include "String.hpp"
 
-class ImageContainer {
-
+class ImageContainer
+{
 public:
-    ImageContainer();
-    ~ImageContainer();
-    void reset();
-    bool read(const char* filename);
-    void display(Socket* s);
+	ImageContainer();
+	~ImageContainer();
+	
+	// wipe loaded image
+	void reset();
+	// read image from file
+	bool read(const char *filename);
+	// send image to client
+	void display(Socket * s);
 
 private:
-    long int imagelength;
-    String mimetype;
-    char *image;
+	long int imagelength;
+	String mimetype;
+	char *image;
 };
 #endif
-

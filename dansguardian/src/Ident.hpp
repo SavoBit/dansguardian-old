@@ -1,3 +1,5 @@
+// Ident class - provides various methods for retrieving client usernames
+
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
 //Written by Daniel Barron (daniel@//jadeb.com).
@@ -19,22 +21,33 @@
 
 #ifndef __HPP_IDENT
 #define __HPP_IDENT
+
+
+// INCLUDES
+#include "platform.h"
+
 #include "Socket.hpp"
 #include "HTTPHeader.hpp"
 #include "OptionContainer.hpp"
 #include "String.hpp"
 
-class Ident {
+class Ident
+{
+public:
+	Ident();
+	
+	// get client's username from one of various sources, depending on configuration
+	std::string getUsername(HTTPHeader * h, string * s, int port);
 
-    public:
-        Ident();
-        std::string getUsername(HTTPHeader* h, string* s, int port);
-
-    private:
-        bool getUsernameProxyAuth(HTTPHeader* h);
-        bool getUsernameNTLM(HTTPHeader* h);
-        bool getUsernameIdent(string* s, int port, int serverport, int timeout);
-        std::string username;
+private:
+	std::string username;
+	
+	// get username from proxy auth headers
+	bool getUsernameProxyAuth(HTTPHeader * h);
+	// get username via NTLM (unimplemented)
+	bool getUsernameNTLM(HTTPHeader * h);
+	// get username from ident server
+	bool getUsernameIdent(string * s, int port, int serverport, int timeout);
 };
 
 #endif

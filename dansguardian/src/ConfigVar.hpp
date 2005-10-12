@@ -1,31 +1,41 @@
+//Defines the ConfigVar class, which implements reading options from a file
+//into a map
+
 #ifndef __HPP_CONFIGVAR
 #define __HPP_CONFIGVAR
 
-#include <iostream>
-#include <vector>
+
+// INCLUDES
 #include <map>
 #include "String.hpp"
 
-class ConfigVar {
-	public:
-		ConfigVar();
-		ConfigVar( const char * filename, const char * delimiter = "=" );
-		int readVar( const char * filename, const char * delimiter = "=");
 
-		String entry( const char * reference );
+// DECLARATIONS
+class ConfigVar
+{
+public:
+	ConfigVar();
 
-		String operator[] ( const char * reference );
-	private:
+	// read the given file, splitting option/value at the given delimiter
+	ConfigVar(const char *filename, const char *delimiter = "=");
+	int readVar(const char *filename, const char *delimiter = "=");
 
-		struct ltstr
+	// return the value for the named option
+	String entry(const char *reference);
+	String operator[] (const char *reference);
+
+private:
+	// comparison operator (maps are sorted) - true if s1 comes before s2
+	struct ltstr
+	{
+		bool operator() (String s1, String s2) const
 		{
-			bool operator()(String s1, String s2) const
-			{
-				return strcmp(s1.toCharArray(), s2.toCharArray()) < 0;
-			}
-		};
+			return strcmp(s1.toCharArray(), s2.toCharArray()) < 0;
+		}
+	};
 
-  		std::map<String, String, ltstr> params;
+	// the map itself - key type, value type, key comparison operator
+	std::map < String, String, ltstr > params;
 };
 
 #endif

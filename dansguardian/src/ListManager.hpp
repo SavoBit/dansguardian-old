@@ -1,3 +1,5 @@
+// ListManager - for creating & containing all ListContainers of item & phrase lists
+
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
 //Written by Daniel Barron (daniel@/jadeb//.com).
@@ -19,28 +21,46 @@
 
 #ifndef __HPP_LISTMANAGER
 #define __HPP_LISTMANAGER
+
+
+// INCLUDES
+
+#include "platform.h"
+
 #include "String.hpp"
-#include "HTMLTemplate.hpp"
 #include "ListContainer.hpp"
-#include "FOptionContainer.hpp"
-#include "LanguageContainer.hpp"
-#include "ImageContainer.hpp"
-#include "RegExp.hpp"
-#include <string>
+
 #include <deque>
 
-class ListManager {
 
+// DECLARATION
+
+class ListManager
+{
 public:
-    ~ListManager();
-    int newItemList(const char *filename, bool startswith, int filters, bool parent);
-    int newPhraseList(const char *exception, const char *banned, const char *weighted);
-    void deRefList(unsigned int item);
-    void garbageCollect();
-    std::deque<ListContainer*> l;
+	// the lists we manage
+	std::deque<ListContainer * > l;
+
+	~ListManager();
+	
+	// create a new item list. re-uses existing lists if a reload is not necessary.
+	// calls readItemList.
+	int newItemList(const char *filename, bool startswith, int filters, bool parent);
+	// create a new phrase list. re-uses existing lists, but cannot check nested lists (known limitation).
+	// does not call readPhraseList. (checkme - why?)
+	int newPhraseList(const char *exception, const char *banned, const char *weighted);
+	
+	// reduce the reference count on a list
+	void deRefList(unsigned int item);
+	// delete lists with refcount zero
+	void garbageCollect();
+
 private:
-    int findNULL();
-    int getFileDate(const char* filename);
+	// find an empty slot in our collection of listcontainters
+	int findNULL();
+	
+	// find file modification date
+	int getFileDate(const char *filename);
 };
 
 #endif

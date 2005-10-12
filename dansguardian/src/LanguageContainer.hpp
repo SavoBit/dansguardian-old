@@ -19,22 +19,30 @@
 
 #ifndef __HPP_LANGUAGECONTAINER
 #define __HPP_LANGUAGECONTAINER
+
+
+// INCLUDES
+#include "platform.h"
+
 #include <deque>
-#include <string>
+
 #include "String.hpp"
 
-class LanguageContainer {
 
+// DECLARATIONS
+
+class LanguageContainer
+{
 public:
-    void reset();
+	void reset();
 
-    bool readLanguageList(const char* filename);
+	bool readLanguageList(const char *filename);
 
-    const char* getTranslation(const unsigned int index);
+	const char *getTranslation(const unsigned int index);
 
 private:
-    std::deque<unsigned int> keys;
-    std::deque<String> values;
+	  std::deque<unsigned int > keys;
+	  std::deque<String > values;
 
 };
 

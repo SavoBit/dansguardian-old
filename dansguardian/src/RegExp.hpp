@@ -1,3 +1,6 @@
+// RegExp class - search text using regular expressions
+// (no replace functionality yet)
+
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
 //Written by Daniel Barron (daniel@// jadeb.com).
@@ -19,8 +22,13 @@
 
 #ifndef __HPP_REGEXP
 #define __HPP_REGEXP
+
+
+// INCLUDES
+
 #include "platform.h"
-#include <sys/types.h>  // needed for size_t used in regex.h
+
+#include <sys/types.h>		// needed for size_t used in regex.h
 #include <regex.h>
 #include <string>
 #include <deque>
@@ -29,29 +37,56 @@
 using namespace std;
 #endif
 
-class RegExp {
 
+// DECLARATIONS
+
+class RegExp
+{
 public:
-    RegExp();
-    ~RegExp();
-    RegExp(const RegExp& r);
-    bool comp(const char* exp);
-    bool match(const char* text);
-    int numberOfMatches();
-    bool matched();
-    std::string result(int i);
-    unsigned int offset(int i);
-    unsigned int length(int i);
-    char* search(char* file, char* fileend, char* phrase, char* phraseend);
+	// constructor - set sensible defaults
+	RegExp();
+	// destructor - delete regexp if compiled
+	~RegExp();
+	// copy constructor
+	RegExp(const RegExp & r);
+	
+	// compile the given regular expression
+	bool comp(const char *exp);
+	// match the given text against the pre-compiled expression
+	bool match(const char *text);
+	
+	// how many matches did the last run generate?
+	int numberOfMatches();
+	// did it generate any at all?
+	bool matched();
+	
+	// the i'th match from the last run
+	std::string result(int i);
+	// position of the i'th match in the overall text
+	unsigned int offset(int i);
+	// length of the i'th match
+	unsigned int length(int i);
+	
+	// faster equivalent of STL::Search
+	char *search(char *file, char *fileend, char *phrase, char *phraseend);
 
 private:
-    std::deque<std::string> results;
-    std::deque<unsigned int> offsets;
-    std::deque<unsigned int> lengths;
-    bool imatched;
-    regex_t reg;
-    bool wascompiled;
-    std::string searchstring;
+	// the match results, their positions in the text & their lengths
+	std::deque<std::string> results;
+	std::deque<unsigned int> offsets;
+	std::deque<unsigned int> lengths;
+
+	// have we matched something yet?
+	bool imatched;
+
+	// the expression itself
+	regex_t reg;
+	// whether it's been pre-compiled
+	bool wascompiled;
+	
+	// the uncompiled form of the expression (checkme: is this only used
+	// for debugging purposes?)
+	std::string searchstring;
 };
 
 #endif
