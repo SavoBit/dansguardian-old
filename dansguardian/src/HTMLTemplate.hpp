@@ -1,3 +1,5 @@
+//Declares the HTMLTemplate class, for displaying template-based banned pages to clients
+
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
 //Written by Daniel Barron (daniel@//jadeb.com).
@@ -19,22 +21,35 @@
 
 #ifndef __HPP_HTMLTEMPLATE
 #define __HPP_HTMLTEMPLATE
-#include <deque>
-#include <string>
+
+
+// INCLUDES
+
 #include "String.hpp"
 #include "Socket.hpp"
 
+#include <deque>
+#include <string>
 
-class HTMLTemplate {
 
+// DECLARATIONS
+
+class HTMLTemplate
+{
 public:
-    void reset();
-    bool readTemplateFile(const char* filename);
-    void display(Socket* s, String url, String reason, String logreason, String user, String ip, String filtergroup, String hashed);
+	// wipe the loaded template
+	void reset();
+	// load in a template from the given file, looking for placeholder strings (reason, URL, category etc.)
+	bool readTemplateFile(const char *filename);
+	// fill in the template with the given info and send it to the client over the given socket
+	void display(Socket *s, String url, String reason, String logreason, String categories, String user, String ip, String filtergroup, String hashed);
 
 private:
-    std::deque<String> html;
-    void push(String s);
+	// string list for holding the template
+	std::deque<String> html;
+	
+	// add a string to the list
+	void push(String s);
 };
 
 #endif
