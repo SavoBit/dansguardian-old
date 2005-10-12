@@ -7,6 +7,7 @@ $deniedurl = $in{'DENIEDURL'};
 $reason = $in{'REASON'};
 $user = $in{'USER'};
 $ip = $in{'IP'};
+$cats = $in{'CATEGORIES'};
 
 print "Content-type: text/html\n\n";
 print '<HTML><HEAD><TITLE>DansGuardian - Access Denied</TITLE></HEAD>';
@@ -20,6 +21,10 @@ else {
 print "<strong><a href=\"$deniedurl\">$deniedurl</a></strong>";
 print '<P>... has been denied for the following reason:<P>';
 print "<strong><font color=\"#ff0000\">$reason</font></strong>";
+if (length($cats) > 0) {
+  print '<P>Categories:<P>';
+  print "<strong><font color=\"#ff0000\">$cats</font></strong>";
+}
 print '<P>Your username, IP address, date, time and URL have been logged.';
 print '<P><table border=1 bgcolor="#FFEE00"><tr><td>You are seeing this error because the page you attempted<br>';
 print 'to access contains, or is labelled as containing, material that';
