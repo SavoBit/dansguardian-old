@@ -537,7 +537,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				url = header.url();
 				//urld = header.decode(url);  // unneeded really
 
-				doLog(clientuser, clientip, ur, header.port, exceptionreason,
+				doLog(clientuser, clientip, url, header.port, exceptionreason,
 					rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
 					cachehit, 200, mimetype, wasinfected, wasscanned);
 
@@ -599,7 +599,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				docsize = fdt.throughput;
 				if (!isourwebserver) {	// don't log requests to the web server
 					String rtype = header.requestType();
-					doLog(clientuser, clientip, ur, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
+					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
 						       cachehit, 200, mimetype, wasinfected, wasscanned);
 				}
 
@@ -642,7 +642,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				fdt.tunnel(proxysock, peerconn);  // not expected to exception
 				docsize = fdt.throughput;
 				String rtype = header.requestType();
-				doLog(clientuser, clientip, ur, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
+				doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
 					       cachehit, 200, mimetype, wasinfected, wasscanned);
 			}
 			catch(exception & e) {
@@ -789,7 +789,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 		if (checkme.isItNaughty && !isbypass) {	// then we deny, unless we were told to bypass the block
 			String rtype = header.requestType();
-			doLog(clientuser, clientip, ur, header.port, checkme.whatIsNaughtyLog,
+			doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
 				rtype, docsize, &checkme.whatIsNaughtyCategories, o.ll, true, false, 0, false, &thestart,
 				cachehit, 403, mimetype, wasinfected, wasscanned);
 			if (denyAccess(&peerconn, &proxysock, &header, &docheader, &url, &checkme, &clientuser, &clientip, filtergroup, ispostblock, headersent)) {
@@ -824,7 +824,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		if (waschecked) {
 			if (!docheader.authRequired() && !pausedtoobig) {
 				String rtype = header.requestType();
-				doLog(clientuser, clientip, ur, header.port, exceptionreason,
+				doLog(clientuser, clientip, url, header.port, exceptionreason,
 					rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits,
 					docheader.isContentType("text"), &thestart, cachehit, 200, mimetype, wasinfected, wasscanned);
 			}
@@ -895,7 +895,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				fdt.tunnel(proxysock, peerconn);
 				docsize += fdt.throughput;
 				String rtype = header.requestType();
-				doLog(clientuser, clientip, ur, header.port, exceptionreason,
+				doLog(clientuser, clientip, url, header.port, exceptionreason,
 					rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits,
 					docheader.isContentType("text"), &thestart, cachehit, 200, mimetype, wasinfected, wasscanned);
 			}
@@ -907,7 +907,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			fdt.tunnel(proxysock, peerconn);
 			docsize = fdt.throughput;
 			String rtype = header.requestType();
-			doLog(clientuser, clientip, ur, header.port, exceptionreason,
+			doLog(clientuser, clientip, url, header.port, exceptionreason,
 				rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, docheader.isContentType("text"),
 				&thestart, cachehit, 200, mimetype, wasinfected, wasscanned);
 
@@ -990,12 +990,12 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 
 		// don't output gigantic category lists.
 		// now that we detect & reject duplicate categories to begin with, is this really necessary?
-		int truncto = (o.max_logitem_length > 3000 ? o.max_logitem_length : 3000);
-		if ((cat != NULL) && (cat->length() > truncto)) {
-			(*cat) = cat->substr(0, truncto);
+		//int truncto = (o.max_logitem_length > 3000 ? o.max_logitem_length : 3000);
+		if ((cat != NULL) && (cat->length() > o.max_logitem_length)) {
+			(*cat) = cat->substr(0, o.max_logitem_length);
 		}
-		if (what.length() > truncto) {
-			what = what.substr(0, truncto);
+		if (what.length() > o.max_logitem_length) {
+			what = what.substr(0, o.max_logitem_length);
 		}
 
 		// "when" not used in format 3
@@ -1021,8 +1021,8 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 			sec = temp.toCharArray();
 			when = year + "." + month + "." + day + " " + hour + ":" + min + ":" + sec;
 			// truncate long log items
-			if ((o.max_logitem_length > 0) && (when.length() > o.max_logitem_length))
-				when = when.substr(0, o.max_logitem_length);
+			/*if ((o.max_logitem_length > 0) && (when.length() > o.max_logitem_length))
+				when = when.substr(0, o.max_logitem_length);*/
 		}
 		
 		ssize = String(size).toCharArray();
@@ -1036,13 +1036,13 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		// truncate long log items
 		if (o.max_logitem_length > 0) {
 			where.limitLength(o.max_logitem_length);
-			if (who.length() > o.max_logitem_length)
+			/*if (who.length() > o.max_logitem_length)
 				who = who.substr(0, o.max_logitem_length);
 			if (from.length() > o.max_logitem_length)
 				from = from.substr(0, o.max_logitem_length);
 			how.limitLength(o.max_logitem_length);
 			if (ssize.length() > o.max_logitem_length)
-				ssize = ssize.substr(0, o.max_logitem_length);
+				ssize = ssize.substr(0, o.max_logitem_length);*/
 		}
 		
 		switch (o.log_file_format) {
@@ -1089,7 +1089,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 				hier = "DEFAULT_PARENT/";
 				hier += o.proxy_ip;
 
-				if (o.max_logitem_length > 0) {
+				/*if (o.max_logitem_length > 0) {
 					if (utime.length() > o.max_logitem_length)
 						utime = utime.substr(0, o.max_logitem_length);
 					if (duration.length() > o.max_logitem_length)
@@ -1098,7 +1098,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 						hier = hier.substr(0, o.max_logitem_length);
 					if (hitmiss.length() > o.max_logitem_length)
 						hitmiss = hitmiss.substr(0, o.max_logitem_length);
-				}
+				}*/
 
 				logline = utime + " " + duration + " " + from + " " + hitmiss + " " + ssize + " " + how.toCharArray() + " " + where.toCharArray() + " " + who + " " + hier + " " + mimetype + "\n";
 				break;
