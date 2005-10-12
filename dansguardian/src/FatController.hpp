@@ -19,87 +19,22 @@
 
 #ifndef __HPP_FATCONTROLLER
 #define __HPP_FATCONTROLLER
+
+
+// INCLUDES
+
 #include "OptionContainer.hpp"
 #include "UDSocket.hpp"
+
 #include <string>
 
-extern "C" {
 
-    void sig_chld(int signo);  // The kernal knows nothing of objects so
-                               // we have to have a lump of c
-    void sig_term(int signo);  // This is so we can kill our children
-    void sig_termsafe(int signo);  // This is so we can kill our children safer
-    void sig_hup(int signo);  // This is so we know if we should re-read
-                              // our config.
+// DECLARATIONS
 
-    void sig_usr1(int signo);  // This is so we know if we should re-read
-                              // our config but not kill current connections
-}
+// program main loop - pass in FD of pidfile
+int fc_controlit();
 
-static volatile bool ttg = false;
-
-static volatile bool reloadconfig = false;
-
-static volatile bool gentlereload = false;
-
-static volatile bool sig_term_killall = false;
-
-class FatController {
-
-
-
-public:
-    int controlIt(int pidfilefd);
-    bool testProxy(std::string proxyip, int proxyport, bool report);
-
-private:
-    int logListener(std::string log_location, int logconerror);
-    bool daemonise(int pidfilefd);
-    int urlListListener(int logconerror);
-    int preFork(int num);
-    void mopUpAfterKids();
-    bool checkForInput(int fd, int timeout);
-    bool checkKidReadyStatus(int tofind);
-    int getFreeChild();
-    void tellChildAccept(int num);
-    void cullChildren(int num);
-    void killAllChildren();
-    void hupAllChildren();
-    void tidyUpForChild();
-    int handleConnections(int pipe);
-    void addChild(int pos, int fd, pid_t child_pid);
-    int sendReadyStatus(int pipe);
-    bool getFDFromParent(int fd);
-    int getChildSlot();
-    int getLineFromFD(int fd, char* buff, int size, int timeout);
-    void deleteChild(int child_pid, int stat);
-    bool writeToFd(int fd, const char* buff, int len, int timeout);
-    bool readyForOutput(int fd, int timeout);
-    int selectEINTR(int numfds, fd_set * readfds, fd_set * writefds, fd_set * exceptfds, struct timeval * timeout);
-    bool dropPrivCompletely();
-    void flushURLCache();
-
-    int numchildren;  // to keep count of our children
-    int busychildren;  // to keep count of our children
-    int freechildren;  // to keep count of our children
-    int waitingfor;  // num procs waiting for to be preforked
-    int* childrenpids;  // so when one exits we know who
-    int* childrenstates;  // so we know what they're up to
-    struct pollfd* pids;
-    int failurecount;
-    Socket serversock;  // the socket we will listen on for connections
-    UDSocket ipcsock;  // the unix domain socket to be used for ipc with
-                       // the forked children
-    UDSocket urllistsock;
-    Socket peersock;  // the socket which will contain the connection
-    // note - remove peersock
-    // note - remove previous note
-    // note - stop writing notes to yourself to remove notes
-
-    int peersockfd;  // fd which will contain the connection
-    String peersockip; // which will contain the connection ip
-    int peersockport;  // port connection originates
-
-};
+// test whether we can connect to the parent proxy, optionally printing error messages
+bool fc_testproxy(std::string proxyip, int proxyport, bool report);
 
 #endif
