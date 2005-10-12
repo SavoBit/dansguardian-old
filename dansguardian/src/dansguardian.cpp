@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 					read_config(configfile.c_str(), 0);
 					return sysv_usr1(o.pid_filename);
 				case 'v':
-					std::cout << "DansGuardian 2.9.0" << std::endl;
+					std::cout << "DansGuardian 2.9.0.1" << std::endl;
 					break;
 				case 'N':
 					nodaemon = true;
