@@ -23,45 +23,67 @@
 #include <exception>
 #include "Socket.hpp"
 #include "String.hpp"
-//#include "OptionContainer.hpp"
+#include "FDFuncs.hpp"
 
-
-class DataBuffer {
-
+class DataBuffer
+{
 public:
-    char* buffer[1024];
-    char* data;
-    unsigned int buffer_length;
-    char* compresseddata;
-    unsigned int compressed_buffer_length;
-    DataBuffer();
-    ~DataBuffer();
-    void read(Socket *sock, int length) throw(exception);
-    int length() {return buffer_length;}
-    void copytomemory(char* location);
-    bool in(Socket *sock, Socket *peersock, class HTTPHeader *requestheader, class HTTPHeader *docheader, bool runav, int *headersent);  // gives true if it pauses due to too much data
-    void out(Socket *sock) throw(exception);
-    void setTimeout(int t);
-    void setDecompress(String d);
-    bool contentRegExp(int filtergroup);
-    void swapbacktocompressed();
+	char *buffer[1024];
+	char *data;
+	unsigned int buffer_length;
+	char *compresseddata;
+	unsigned int compressed_buffer_length;
+	unsigned int tempfilesize;
+	String tempfilepath;
+	bool dontsendbody;  // used for fancy download manager for example
+	int tempfilefd;
 
-//private:
-    int timeout;
-    int tempfilefd;
-    unsigned int tempfilesize;
-    unsigned int bytesalreadysent;
-    String tempfilepath;
-    bool preservetemp;
-    bool dontsendbody;  // used for fancy download manager for example
-    String decompress;
-    void zlibinflate(bool header);
-    int bufferReadFromSocket(Socket* sock, char* buffer, int size, int sockettimeout);
-    int bufferReadFromSocket(Socket* sock, char* buffer, int size, int sockettimeout, int timeout);
+	DataBuffer();
+	~DataBuffer();
 
-    int getTempFileFD();
-    int readEINTR(int fd, char *buf, unsigned int count);
-    int writeEINTR(int fd, char *buf, unsigned int count);
+	void read(Socket * sock, int length) throw(exception);
+
+	int length() { return buffer_length; };
+
+	void copyToMemory(char *location) { memcpy(location, data, buffer_length); };
+	
+	// read body in from proxy
+	// gives true if it pauses due to too much data
+	bool in(Socket * sock, Socket * peersock, class HTTPHeader * requestheader, class HTTPHeader * docheader, bool runav, int *headersent);
+	// send body to client
+	void out(Socket * sock) throw(exception);
+
+	void setTimeout(int t) { timeout = t; };
+	void setDecompress(String d) { decompress = d; };
+	
+	// swap back to compressed version of body data (if data was decompressed but not modified; saves bandwidth)
+	void swapbacktocompressed();
+
+	// content regexp search and replace
+	bool contentRegExp(int filtergroup);
+
+	// create a temp file and return its FD	- NOT a simple accessor function
+	int getTempFileFD();
+
+private:
+	// DM plugins do horrible things to our innards - this is acceptable pending a proper cleanup
+	friend class DMPlugin;
+	friend class dminstance;
+#ifdef __FANCYDM
+	friend class fancydm;
+#endif
+
+	int timeout;
+	unsigned int bytesalreadysent;
+	bool preservetemp;
+
+	String decompress;
+
+	void zlibinflate(bool header);
+
+	// buffered socket reads - one with an extra "global" timeout within which all individual reads must complete
+	int bufferReadFromSocket(Socket * sock, char *buffer, int size, int sockettimeout);
+	int bufferReadFromSocket(Socket * sock, char *buffer, int size, int sockettimeout, int timeout);
 
 };
 
