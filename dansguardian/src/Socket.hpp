@@ -1,7 +1,4 @@
-//Please refer to http://dansguardian.org/?page=copyright2
-//for the license for this code.
-//Written by Daniel Barron (daniel@ //jadeb.com).
-//For support go to http://groups.yahoo.com/group/dansguardian
+// Socket class - implements BaseSocket for INET domain sockets
 
 //  This program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -17,64 +14,51 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-#include "platform.h"
 #ifndef __HPP_SOCKET
 #define __HPP_SOCKET
-#include <string>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <exception>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-#ifdef __GCCVER3
-using namespace std;
-#endif
-
-class Socket {
-
-    public:
-        Socket();
-        ~Socket();
-        Socket(int newfd, struct sockaddr_in myip, struct sockaddr_in peerip);
-        void reset();
-        int connect(std::string ip, int port);
-        int bind(int port);
-        int bind(std::string ip, int port);
-        int listen(int queue);
-        Socket accept();
-
-        std::string getPeerIP();
-        int getPeerSourcePort();
-
-        int getFD();
-        void setFD(int newfd);
-        void close();
-        void setTimeout(int t);
-        int getTimeout();
-
-        bool checkForInput();
-        void checkForInput(int timeout) throw(exception);
-        bool readyForOutput();
-        void readyForOutput(int timeout) throw(exception);
-        int getline(char* buff, int size, int timeout) throw(exception);
-        void writeString(const char* line) throw(exception);
-        bool writeToSocket(char* buff, int len, unsigned int flags, int timeout);
-        int readFromSocketn(char* buff, int len, unsigned int flags, int timeout);
-        int readFromSocket(char* buff, int len, unsigned int flags, int timeout);
-        void writeToSockete(char* buff, int len, unsigned int flags, int timeout) throw(exception);
 
 
-    private:
-        int timeout;
-        bool isclosed;
-        bool isused;
-        socklen_t peer_adr_inet_length;
-        int sck_inet;
-        struct sockaddr_in my_adr_inet;
-        struct sockaddr_in peer_adr_inet;
-        int selectEINTR(int numfds, fd_set * readfds, fd_set * writefds, fd_set * exceptfds, struct timeval * timeout);
+// INCLUDES
 
+#include "platform.h"
+
+#include "BaseSocket.hpp"
+
+
+// DECLARATIONS
+
+class Socket : public BaseSocket
+{
+public:
+	// create INET socket & clear address structs
+	Socket();
+	// create socket using pre-existing FD (address structs will be empty!)
+	Socket(int fd);
+	// create socket from pre-existing FD, storing given local & remote IPs
+	Socket(int newfd, struct sockaddr_in myip, struct sockaddr_in peerip);
+	
+	// connect to given IP & port (following default constructor)
+	int connect(std::string ip, int port);
+	
+	// bind to given port
+	int bind(int port);
+	// bind to given IP & port, for machines with multiple NICs
+	int bind(std::string ip, int port);
+
+	// accept incoming connections & return new Socket
+	Socket* accept();
+	
+	// close socket & clear address structs
+	void reset();
+
+	// get remote IP/port
+	std::string getPeerIP();
+	int getPeerSourcePort();
+
+private:
+	// local & remote addresses
+	struct sockaddr_in my_adr;
+	struct sockaddr_in peer_adr;
 };
 
 #endif
