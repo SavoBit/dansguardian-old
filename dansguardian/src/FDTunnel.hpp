@@ -1,3 +1,7 @@
+// This class is a generic multiplexing tunnel
+// that uses blocking select() to be as efficient as possible.  It tunnels
+// between the two supplied FDs.
+
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
 //Written by Daniel Barron (daniel@//jadeb/.com).
@@ -19,20 +23,28 @@
 
 #ifndef __HPP_FDTUNNEL
 #define __HPP_FDTUNNEL
+
+
+// INCLUDES
+
 #include "platform.h"
-#include <iostream>
-#include <sys/types.h>
 
-class FDTunnel {
+#include "Socket.hpp"
 
+
+// DECLARATIONS
+
+// transparently forward data from one FD to another, i.e. tunnel between them
+class FDTunnel
+{
 public:
-    FDTunnel();
-    void tunnel(int fdfrom, int fdto);
-    int throughput;  // used to log total data from from to to
-private:
-    int read(int fd, char* buff, int len);
-    bool write(int fd, char* buff, int len);
-    int selectEINTR(int numfds, fd_set * readfds, fd_set * writefds, fd_set * exceptfds, struct timeval * timeout);
+	int throughput;  // used to log total data from from to to
+	
+	FDTunnel();
+	
+	// tunnel from fdfrom to fdto
+	void tunnel(Socket &sockfrom, Socket &sockto);
+
 };
 
 #endif
