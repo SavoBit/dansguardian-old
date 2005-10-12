@@ -1,7 +1,4 @@
-//Please refer to http://dansguardian.org/?page=copyright2
-//for the license for this code.
-//Written by Daniel Barron (daniel@ /jadeb.com).
-//For support go to http://groups.yahoo.com/group/dansguardian
+// UDSocket class - implements BaseSocket for UNIX domain sockets
 
 //  This program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -17,61 +14,45 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-#include "platform.h"
 #ifndef __HPP_UDSOCKET
 #define __HPP_UDSOCKET
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <exception>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string> // NEEDED!!!
-
-#ifdef __GCCVER3
-using namespace std;
-#endif
-
-class UDSocket {
-
-    public:
-        UDSocket();
-        ~UDSocket();
-        UDSocket(int newfd, struct sockaddr_un myadr);
-
-        void reset();
-        int connect(const char* path);
-        int bind(const char* path);
-        int listen(int queue);
-        UDSocket accept();
-
-        int getFD();
-        void setFD(int newfd);
-        void close();
-        void setTimeout(int t);
-        int getTimeout();
-
-        bool checkForInput();
-        void checkForInput(int timeout) throw(exception);
-        bool readyForOutput();
-        void readyForOutput(int timeout) throw(exception);
-        int getline(char* buff, int size, int timeout) throw(exception);
-        void writeString(const char* line) throw(exception);
-        bool writeToSocket(char* buff, int len, unsigned int flags, int timeout);
-        int readFromSocketn(char* buff, int len, unsigned int flags, int timeout);
-        int readFromSocket(char* buff, int len, unsigned int flags, int timeout);
-        void writeToSockete(char* buff, int len, unsigned int flags, int timeout) throw(exception);
 
 
-    private:
-        int timeout;
-        bool isclosed;
-        bool isused;
-        socklen_t my_adr_un_length;
-        int sck_un;
-        struct sockaddr_un my_adr_un;
-        struct sockaddr_un peer_adr_un;
-        int selectEINTR(int numfds, fd_set * readfds, fd_set * writefds, fd_set * exceptfds, struct timeval * timeout);
+// INCLUDES
+
+#include "platform.h"
+
+#include "BaseSocket.hpp"
+
+
+// DECLARATIONS
+
+class UDSocket : public BaseSocket
+{
+public:
+	// create default UNIX domain socket & clear address structs
+	UDSocket();
+	// create socket from pre-existing FD (address structs will be empty!)
+	UDSocket(int fd);
+	// create socket from FD & local path (checkme - is it actually local that gets passed?)
+	UDSocket(int newfd, struct sockaddr_un myadr);
+	
+	// connect socket to given server (following default constructor)
+	int connect(const char *path);
+	// bind socket to given path (for creating servers)
+	int bind(const char *path);
+	
+	// accept incoming connection & return new UDSocket
+	UDSocket* accept();
+	
+	// close connection & clear address structs
+	void reset();
+
+private:
+	// local & remote address structs
+	struct sockaddr_un my_adr;
+	struct sockaddr_un peer_adr;
+	socklen_t my_adr_length;
 };
 
 #endif
