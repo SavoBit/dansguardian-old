@@ -41,6 +41,12 @@ logexceptionhits = on
 # 3 = Squid Log File Format      4 = Tab delimited
 logfileformat = 1
 
+# truncate large items in log lines
+#maxlogitemlength = 400
+
+# anonymize logs (blank out usernames & IPs)
+#anonymizelogs = on
+
 
 # Log file location
 # 
