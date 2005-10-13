@@ -599,8 +599,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				docsize = fdt.throughput;
 				if (!isourwebserver) {	// don't log requests to the web server
 					String rtype = header.requestType();
-					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
-						       cachehit, 200, mimetype, wasinfected, wasscanned);
+					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception,
+						o.log_exception_hits, false, &thestart, cachehit, 200, mimetype, wasinfected, wasscanned);
 				}
 
 			}
@@ -781,8 +781,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		}
 
 		if (o.url_cache_number > 0) {
-			if (!wasclean && !checkme.isItNaughty && (docheader.isContentType("text") || runav) && header.requestType() == "GET") {
-
+			if (!wasclean && !checkme.isItNaughty && (docheader.isContentType("text") || (runav && o.scan_clean_cache)) && header.requestType() == "GET") {
 				addToClean(urld);
 			}
 		}
