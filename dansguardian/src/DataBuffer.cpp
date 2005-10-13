@@ -230,7 +230,7 @@ bool DataBuffer::in(Socket * sock, Socket * peersock, HTTPHeader * requestheader
 #ifdef DGDEBUG
 			std::cerr << "Got to final download manager so defaulting to always match." << std::endl;
 #endif
-			rc = o.dmplugins[i]->in(&o, this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
+			rc = o.dmplugins[i]->in(this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
 			break;
 		} else {
 #ifdef DGDEBUG
@@ -238,7 +238,7 @@ bool DataBuffer::in(Socket * sock, Socket * peersock, HTTPHeader * requestheader
 #endif
 			o.dmplugins_regexp[i].match(useragent.toCharArray());
 			if (o.dmplugins_regexp[i].matched()) {
-				rc = o.dmplugins[i]->in(&o, this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
+				rc = o.dmplugins[i]->in(this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
 				break;
 			}
 		}
