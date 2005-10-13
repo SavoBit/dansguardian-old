@@ -1585,6 +1585,7 @@ bool ListContainer::isNow()
 	hour = tmnow->tm_hour;
 	min = tmnow->tm_min;
 	wday = tmnow->tm_wday;
+	// wrap week to start on Monday
 	if (wday == 0) {
 		wday = 7;
 	}
