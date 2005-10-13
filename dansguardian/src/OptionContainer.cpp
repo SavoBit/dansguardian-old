@@ -202,7 +202,6 @@ bool OptionContainer::read(const char *filename, int type)
 		if (!realitycheck(String(max_logitem_length), 1, 4, "maxlogitemlength")) {
 			return false;
 		}
-		std::cout<<max_logitem_length<<std::endl;
 		max_children = findoptionI("maxchildren");
 		if (!realitycheck(String(max_children), 1, 3, "maxchildren")) {
 			return false;
