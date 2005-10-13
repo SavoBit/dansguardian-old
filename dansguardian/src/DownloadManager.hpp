@@ -23,6 +23,8 @@
 
 // INCLUDES
 
+#include "platform.h"
+
 #include "String.hpp"
 #include "ConfigVar.hpp"
 #include "DataBuffer.hpp"
@@ -47,8 +49,12 @@ public:
 	DMPlugin() {};
 	DMPlugin(ConfigVar & definition) {};
 	virtual ~ DMPlugin() {};
-	virtual int in(class OptionContainer *o, class DataBuffer *d, Socket *sock, Socket *peersock,
+	
+	// download the body for the given request
+	virtual int in(class DataBuffer *d, Socket *sock, Socket *peersock,
 		class HTTPHeader *requestheader, class HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) = 0;
+	
+	
 	virtual int init() { return 0; };
 	virtual int quit() { return 0; };
 };
