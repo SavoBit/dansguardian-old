@@ -788,6 +788,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 		if (checkme.isItNaughty && !isbypass) {	// then we deny, unless we were told to bypass the block
 			String rtype = header.requestType();
+			std::cout<<"Category: "<<checkme.whatIsNaughtyCategories<<std::endl;
 			doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
 				rtype, docsize, &checkme.whatIsNaughtyCategories, o.ll, true, false, 0, false, &thestart,
 				cachehit, 403, mimetype, wasinfected, wasscanned);
@@ -987,16 +988,6 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		// start making the log entry proper
 		std::string logline, year, month, day, hour, min, sec, when, ssize;
 
-		// don't output gigantic category lists.
-		// now that we detect & reject duplicate categories to begin with, is this really necessary?
-		//int truncto = (o.max_logitem_length > 3000 ? o.max_logitem_length : 3000);
-		if ((cat != NULL) && (cat->length() > o.max_logitem_length)) {
-			(*cat) = cat->substr(0, o.max_logitem_length);
-		}
-		if (what.length() > o.max_logitem_length) {
-			what = what.substr(0, o.max_logitem_length);
-		}
-
 		// "when" not used in format 3
 		if (o.log_file_format != 3) {
 			String temp;
@@ -1035,6 +1026,19 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		// truncate long log items
 		if (o.max_logitem_length > 0) {
 			where.limitLength(o.max_logitem_length);
+
+			// don't output gigantic category lists.
+			// now that we detect & reject duplicate categories to begin with, is this really necessary?
+			//int truncto = (o.max_logitem_length > 3000 ? o.max_logitem_length : 3000);
+			std::cout<<"Cat: "<<(*cat)<<std::endl;
+			if ((cat != NULL) && (cat->length() > o.max_logitem_length)) {
+				(*cat) = cat->substr(0, o.max_logitem_length);
+			}
+			std::cout<<"Cat: "<<(*cat)<<std::endl;
+			if (what.length() > o.max_logitem_length) {
+				what = what.substr(0, o.max_logitem_length);
+			}
+
 			/*if (who.length() > o.max_logitem_length)
 				who = who.substr(0, o.max_logitem_length);
 			if (from.length() > o.max_logitem_length)
@@ -1141,7 +1145,7 @@ void ConnectionHandler::requestChecks(HTTPHeader * header, NaughtyFilter * check
 		(*checkme).whatIsNaughty = o.language_list.getTranslation(502);
 		// Blanket Block is active and that site is not on the white list.
 		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-		(*checkme).whatIsNaughtyCategories = "Banned client IP";
+		(*checkme).whatIsNaughtyCategories = "Blanket Block";
 	}
 	else if (o.inBannedIPList(clientip)) {
 		(*checkme).isItNaughty = true;
@@ -1150,6 +1154,7 @@ void ConnectionHandler::requestChecks(HTTPHeader * header, NaughtyFilter * check
 		(*checkme).whatIsNaughtyLog += (*clientip);
 		(*checkme).whatIsNaughty = o.language_list.getTranslation(101);
 		// Your IP address is not allowed to web browse.
+		(*checkme).whatIsNaughtyCategories = "Banned Client IP";
 	}
 	else if (o.inBannedUserList(clientuser)) {
 		(*checkme).isItNaughty = true;
