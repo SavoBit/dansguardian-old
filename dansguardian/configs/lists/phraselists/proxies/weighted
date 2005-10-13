@@ -3,6 +3,8 @@
 # Originally Created by Fernand Jonker
 #
 
+#listcategory: "Proxies"
+
 #PHProxy or Poxy
 <phproxy>,<post><150>
 <phproxy><100>

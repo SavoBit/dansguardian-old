@@ -3,6 +3,8 @@
 # Originally Created by Fernand Jonker
 #
 
+#listcategory: "Webmail"
+
 #General webmail
 < inbox >,< outbox >,< sent ><100>
 <compose>,< inbox >,< subject >,< date ><30>

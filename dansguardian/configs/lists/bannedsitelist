@@ -25,6 +25,8 @@
 
 #You can have multiple .Includes.
 
+#listcategory: "Banned Sites"
+
 #List other sites to block:
 
 badboys.com

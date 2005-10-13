@@ -2,6 +2,8 @@
 # Phraselists to block gambling sites
 #
 
+#listcategory: "Gambling"
+
 #< bet ><30>   #Removed due to overblock - esp. on Lithuanian sites.
 < betting ><30>
 < blackjack ><30>

@@ -2,6 +2,9 @@
 # Phraselists to block nudism/naturaism sites 
 # Created by Fernand Jonker
 #
+
+#listcategory: "Nudism"
+
 <clothes-free><30>
 <clothing optional><30>
 < naturism ><30>

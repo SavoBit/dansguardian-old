@@ -34,6 +34,8 @@
 # listed in the exceptionphraselist file.
 #
 
+#listcategory: "Banned Phrases"
+
 .Include<@DGCONFDIR@/lists/phraselists/pornography/banned>
 #.Include<@DGCONFDIR@/lists/phraselists/pornography/banned_portuguese>
 

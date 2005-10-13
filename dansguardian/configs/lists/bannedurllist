@@ -22,6 +22,8 @@
 
 #You can have multiple .Includes.
 
+#listcategory: "Banned URLs"
+
 #List other URLs to block:
 
 members.home.net/uporn

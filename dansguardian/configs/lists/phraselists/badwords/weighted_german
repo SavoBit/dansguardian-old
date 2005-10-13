@@ -2,6 +2,9 @@
 # German Swear Words Weighted Phrases
 # Taken from swif.zip from dansguardian website
 #
+
+#listcategory: "Bad words (German)"
+
 < arschloch ><20>
 < scheiss ><20>
 < scheisse ><20>
