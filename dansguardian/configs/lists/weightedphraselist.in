@@ -31,6 +31,8 @@
 # BETA - Relatively new - tested in at least one location
 #
 
+#listcategory: "Weighted Phrases"
+
 #Good Phrases (to allow medical, education, news and other good sites)
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general>
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_news>
