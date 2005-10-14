@@ -96,8 +96,7 @@ int main(int argc, char *argv[])
 				char option = argv[i][j];
 				switch (option) {
 				case 'P':
-					//return 0;
-					break;
+					return 0;
 				case 'q':
 					read_config(configfile.c_str(), 0);
 					return sysv_kill(o.pid_filename);
@@ -121,8 +120,9 @@ int main(int argc, char *argv[])
 					read_config(configfile.c_str(), 0);
 					return sysv_usr1(o.pid_filename);
 				case 'v':
-					std::cout << "DansGuardian 2.9.0.1" << std::endl;
-					break;
+					std::cout << "DansGuardian 2.9.0.1" << std::endl << std::endl
+						<< "Built with: " << DG_CONFIGURE_OPTIONS << std::endl;
+					return 0;
 				case 'N':
 					nodaemon = true;
 					break;
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 					break;
 				case 'h':
 					std::cout << "Usage: " << argv[0] << " [{-c ConfigFileName|-v|-P|-h|-N|-q|-s|-r|-g}]" << std::endl;
-					std::cout << "  -v gives the version number." << std::endl;
+					std::cout << "  -v gives the version number and build options." << std::endl;
 					std::cout << "  -P displays the name and version of any 3rd party extensions compiled in." << std::endl;
 					std::cout << "  -h gives this message." << std::endl;
 					std::cout << "  -c allows you to specify a different configuration file location." << std::endl;
@@ -143,7 +143,8 @@ int main(int argc, char *argv[])
 					std::cout << "  -s shows the parent process PID." << std::endl;
 					std::cout << "  -r closes all connections and reloads config files by issuing a HUP," << std::endl;
 					std::cout << "     but this does not reset the maxchildren option." << std::endl;
-					std::cout << "  -g gently restarts by not closing all current connections and only reloads\n     filter group config files by issuing a USR1." << std::endl;
+					std::cout << "  -g gently restarts by not closing all current connections and only reloads" << std::endl
+						<< "     filter group config files by issuing a USR1." << std::endl;
 					return 0;
 				}
 			}

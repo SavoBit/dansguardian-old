@@ -187,7 +187,7 @@ AC_ARG_ENABLE(
 clamav,
 [  --enable-clamav=[[no]]  Enable support for the libClamAV content scanner],
 [ if test "x$enableval" = "xyes"; then
-	#dnl detecting clamav and make conditional for it
+	dnl detecting clamav and make conditional for it
 	#PKG_CHECK_MODULES(LIBCLAMAV, libclamav,
 	#	[AC_MSG_RESULT(yes)
 	#	USE_CLAMAV=true
@@ -308,10 +308,12 @@ fi],
 )
 AM_CONDITIONAL(ENABLE_FANCYDM, test "x$fancydm" = "xtrue")
 
-#dnl detecting kaspersky antivirus client
+dnl detecting kaspersky antivirus client
 #KAV_PATH_KAVCLIENT
 #AM_CONDITIONAL(HAVE_KAVCLIENT, test "x$kavclient_found" = "xyes")
 #kav stuff is not finished Wed 09th February 2005 - DB
+
+AC_DEFINE_UNQUOTED([DG_CONFIGURE_OPTIONS], ["$ac_configure_args"], [Record configure-time options])
 
 libdir="${libdir}/${PACKAGE_NAME}"
 AC_FINALIZE_VAR(DGLIBDIR,"${libdir}")
