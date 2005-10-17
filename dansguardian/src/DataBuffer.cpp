@@ -33,6 +33,7 @@
 #include <cerrno>
 #include <fstream>
 #include <sys/time.h>
+#include <queue>
 
 #ifdef __GCCVER3
 #include <istream>
@@ -211,7 +212,7 @@ bool DataBuffer::in(Socket * sock, Socket * peersock, HTTPHeader * requestheader
 	//HTTPHeader *docheader = header used for sending first line of reply
 	//bool runav = to determine if limit is av or not
 	//int *headersent = to use to send the first line of header if needed
-	//                  or to mark that the header has already been sent
+	//				  or to mark that the header has already been sent
 
 	// so we know if we only partially downloaded from
 	// squid so later, if allowed, we can send the rest
@@ -389,13 +390,18 @@ void DataBuffer::zlibinflate(bool header)
 	
 	// I could create a new block the exact size and memcpy
 	// it over to save RAM but RAM is cheap and this saves CPU
-//    data = new char[bytesgot];
-//    memcpy(data, block, bytesgot);
-//    delete[] block;
+//	data = new char[bytesgot];
+//	memcpy(data, block, bytesgot);
+//	delete[] block;
 
 }
 
 // Does a regexp search and replace.
+	typedef struct newreplacement
+	{
+		int match;
+		String replacement;
+	};
 bool DataBuffer::contentRegExp(int filtergroup)
 {
 
@@ -404,44 +410,98 @@ bool DataBuffer::contentRegExp(int filtergroup)
 #endif
 	bool contentmodified = false;
 	unsigned int i;
-	int j;
+	int j, k, m;
 	unsigned int s = (*o.fg[filtergroup]).content_regexp_list_comp.size();
 	int matches;
-	String exp;
-	String replacement;
+	int submatch, submatches;
+	RegExp *re;
+	String *replacement;
 	int replen;
 	int sizediff;
 	char *newblock;
 	char *dstpos;
 	unsigned int srcoff;
 	unsigned int nextoffset;
+	unsigned int matchlen;
+
+	std::queue<newreplacement*> matchqueue;
+
 	for (i = 0; i < s; i++) {
-		if ((*o.fg[filtergroup]).content_regexp_list_comp[i].match(data)) {
-			replacement = (*o.fg[filtergroup]).content_regexp_list_rep[i];
-			replen = replacement.length();
-			matches = (*o.fg[filtergroup]).content_regexp_list_comp[i].numberOfMatches();
-			sizediff = matches * replen;
+		re = &((*o.fg[filtergroup]).content_regexp_list_comp[i]);
+		if (re->match(data)) {
+			replacement = &((*o.fg[filtergroup]).content_regexp_list_rep[i]);
+			//replen = replacement->length();
+			matches = re->numberOfMatches();
+
+			sizediff = 0;
+			m = 0;
 			for (j = 0; j < matches; j++) {
-				sizediff -= (*o.fg[filtergroup]).content_regexp_list_comp[i].length(j);
+				srcoff = re->offset(j);
+				matchlen = re->length(j);
+
+				// Count matches for ()'s
+				for (submatches = 0; j+submatches+1 < matches; submatches++)
+					if (re->offset(j+submatches+1) + re->length(j+submatches+1) > srcoff + matchlen)
+						break;
+
+				// \1 and $1 replacement
+				
+				// store match no. and default (empty) replacement string
+				newreplacement* newrep = new newreplacement;
+				newrep->match = j;
+				newrep->replacement = "";
+				// iterate over regex's replacement string
+				for (k = 0; k < replacement->length(); k++) {
+					// look for \1..\9 and $1..$9
+					if (((*replacement)[k] == '\\' || (*replacement)[k] == '$') && (*replacement)[k+1] >= '1' && (*replacement)[k+1] <= '9') {
+						// determine match number
+						submatch = (*replacement)[++k] - '0';
+						// add submatch contents to replacement string
+						if (submatch <= submatches) {
+							newrep->replacement += re->result(j + submatch).c_str();
+						}
+					} else {
+						// unescape \\ and \$, and add other non-backreference characters
+						if ((*replacement)[k] == '\\' && ((*replacement)[k+1] == '\\' || (*replacement)[k+1] == '$'))
+							k++;
+						newrep->replacement += replacement->subString(k, 1);
+					}
+				}
+				matchqueue.push(newrep);
+
+				// update size difference between original and modified content
+				sizediff -= re->length(j);
+				sizediff += newrep->replacement.length();
+				// skip submatches to next top level match
+				j += submatches;
+				m++;
 			}
+
+			// now we know eventual size of content-replaced block, allocate memory for it
 			newblock = new char[buffer_length + sizediff];
 			srcoff = 0;
 			dstpos = newblock;
+			matches = m;
 
 #ifdef DGDEBUG
 			std::cout << "content matches:" << matches << std::endl;
 #endif
-
+			// replace top-level matches using filled-out replacement strings
+			newreplacement* newrep;
 			for (j = 0; j < matches; j++) {
-				nextoffset = (*o.fg[filtergroup]).content_regexp_list_comp[i].offset(j);
+				newrep = matchqueue.front();
+				nextoffset = re->offset(newrep->match);
 				if (nextoffset > srcoff) {
 					memcpy(dstpos, data + srcoff, nextoffset - srcoff);
 					dstpos += nextoffset - srcoff;
 					srcoff = nextoffset;
 				}
-				memcpy(dstpos, replacement.toCharArray(), replen);
+				replen = newrep->replacement.length();
+				memcpy(dstpos, newrep->replacement.toCharArray(), replen);
 				dstpos += replen;
-				srcoff += (*o.fg[filtergroup]).content_regexp_list_comp[i].length(j);
+				srcoff += re->length(newrep->match);
+				delete newrep;
+				matchqueue.pop();
 			}
 			if (srcoff < buffer_length) {
 				memcpy(dstpos, data + srcoff, buffer_length - srcoff);
