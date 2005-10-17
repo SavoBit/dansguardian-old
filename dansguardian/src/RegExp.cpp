@@ -1,5 +1,4 @@
 // RegExp class - search text using regular expressions
-// (no replace functionality yet)
 
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
@@ -52,7 +51,7 @@ RegExp::RegExp(const RegExp & r)
 	wascompiled = r.wascompiled;
 	searchstring = r.searchstring;
 	if (wascompiled == true) {
-		if (regcomp(&reg, searchstring.c_str(), REG_ICASE | REG_EXTENDED)) {
+		if (regcomp(&reg, searchstring.c_str(), REG_ICASE | REG_EXTENDED /*| REG_DOTALL*/) != 0 ) {
 			regfree(&reg);
 			imatched = false;
 			wascompiled = false;
@@ -119,7 +118,7 @@ bool RegExp::comp(const char *exp)
 	offsets.clear();
 	lengths.clear();
 	imatched = false;
-	if (regcomp(&reg, exp, REG_ICASE | REG_EXTENDED)) {	// compile regex
+	if (regcomp(&reg, exp, REG_ICASE | REG_EXTENDED /*| REG_DOTALL*/) != 0) {	// compile regex
 		regfree(&reg);
 
 		return false;  // need exception?

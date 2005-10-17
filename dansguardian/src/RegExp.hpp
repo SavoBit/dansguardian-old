@@ -1,5 +1,4 @@
 // RegExp class - search text using regular expressions
-// (no replace functionality yet)
 
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
@@ -29,7 +28,8 @@
 #include "platform.h"
 
 #include <sys/types.h>		// needed for size_t used in regex.h
-#include <regex.h>
+//#include <regex.h>
+#include <pcreposix.h>
 #include <string>
 #include <deque>
 

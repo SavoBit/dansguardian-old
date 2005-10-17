@@ -13,7 +13,7 @@ clean_SUBDIRS= . downloadmanagers contentscanners
 # of configure-time options (at DB's request).
 
 #AM_CXXFLAGS = @CXXFLAGS@ -fexceptions
-AM_CXXFLAGS = -fexceptions $(LIBCLAMAV_CFLAGS)
+AM_CXXFLAGS = -fexceptions $(LIBCLAMAV_CFLAGS) $(LIBPCRE_CFLAGS)
 #AM_CFLAGS = @CFLAGS@
 
 DGCONFFILE = @DGCONFFILE@
@@ -21,14 +21,14 @@ DGLOGLOCATION = @DGLOGLOCATION@
 DGPIDDIR = @DGPIDDIR@
 DGPROXYUSER = @DGPROXYUSER@ 
 DGPROXYGROUP = @DGPROXYGROUP@
+ 
+PCRE_LDFLAGS = $(LIBPCRE_LIBS) -lpcreposix
 
 if HAVE_CLAMAV
 CLAMAV_LDFLAGS = $(LIBCLAMAV_LIBS)
-#CLAMAV_CFLAGS = $(LIBCLAMAV_CFLAGS)
 CLAMAV_SOURCE = contentscanners/clamav.cpp
 else
 CLAMAV_LDFLAGS =
-#CLAMAV_CFLAGS =
 CLAMAV_SOURCE =
 endif
 
@@ -103,6 +103,6 @@ dansguardian_SOURCES = String.cpp String.hpp \
 		       $(DEFAULTDM_SOURCE) $(FANCYDM_SOURCE) \
 		       $(KAVAV_SOURCES)
 
-dansguardian_LDADD = $(ZLIB) $(CLAMAV_LDFLAGS) $(KAVAV_LDFLAGS)
+dansguardian_LDADD = $(PCRE_LDFLAGS) $(ZLIB) $(CLAMAV_LDFLAGS) $(KAVAV_LDFLAGS)
 
 #dansguardian_CFLAGS = $(CLAMAV_CFLAGS) $(KAVAV_CFLAGS)

@@ -180,6 +180,21 @@ fi], [
 AC_FINALIZE_VAR(DGLOGLOCATION,"$logdir")
 AC_SUBST(DGLOGLOCATION)
 
+	AC_CHECK_PROG(
+		      PCRE,
+		      pcre-config,
+		      yes,
+		      no
+	)
+	if ! test $PCRE = "yes"; then
+		AC_MSG_ERROR([pcre-config not found!])
+	fi
+	LIBPCRE_LIBS=`pcre-config --libs`
+	PCRE_PREFIX=`pcre-config --prefix`
+	LIBPCRE_CFLAGS="-I${PCRE_PREFIX}/include"
+	AC_SUBST([LIBPCRE_LIBS])
+	AC_SUBST([LIBPCRE_CFLAGS])
+
 # asking user if they want clamav support
 AC_MSG_CHECKING(for libclamav support)
 #USE_CLAMAV=false
