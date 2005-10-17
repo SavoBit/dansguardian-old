@@ -575,7 +575,7 @@ bool OptionContainer::doReadItemList(const char* filename, ListContainer* lc, co
 	return true;
 }
 
-bool OptionContainer::inuserexceptions(const std::string * user)
+bool OptionContainer::inExceptionUserList(const std::string *user)
 {
 	if ((*user).length() < 1) {
 		return false;
@@ -583,29 +583,7 @@ bool OptionContainer::inuserexceptions(const std::string * user)
 	return exception_user_list.inList((char *) (*user).c_str());
 }
 
-bool OptionContainer::inipexceptions(const std::string * ip)
-{
-	if ((*ip).length() < 1) {
-		return false;
-	}
-	if (reverse_client_ip_lookups != 1) {
-		return exception_ip_list.inList((char *) (*ip).c_str());
-	}
-	if (exception_ip_list.inList((char *) (*ip).c_str())) {
-		return true;
-	}
-	std::deque<String > hostnames = (*fg[0]).ipToHostname((*ip).c_str());
-	bool result;
-	for (unsigned int i = 0; i < hostnames.size(); i++) {
-		result = exception_ip_list.inList(hostnames[i].toCharArray());
-		if (result) {
-			return true;
-		}
-	}
-	return false;
-}
-
-bool OptionContainer::inBannedUserList(const std::string * user)
+bool OptionContainer::inBannedUserList(const std::string *user)
 {
 	if ((*user).length() < 1) {
 		return false;
@@ -613,26 +591,38 @@ bool OptionContainer::inBannedUserList(const std::string * user)
 	return banned_user_list.inList((char *) (*user).c_str());
 }
 
-bool OptionContainer::inBannedIPList(const std::string * ip)
+bool OptionContainer::inIPList(const std::string *ip, ListContainer& list)
 {
 	if ((*ip).length() < 1) {
 		return false;
 	}
 	if (reverse_client_ip_lookups != 1) {
-		return banned_ip_list.inList((char *) (*ip).c_str());
+		return list.inList((char *) (*ip).c_str());
 	}
-	if (banned_ip_list.inList((char *) (*ip).c_str())) {
+	if (list.inList((char *) (*ip).c_str())) {
 		return true;
 	}
 	std::deque<String > hostnames = (*fg[0]).ipToHostname((*ip).c_str());
 	bool result;
 	for (unsigned int i = 0; i < hostnames.size(); i++) {
-		result = banned_ip_list.inList(hostnames[i].toCharArray());
+		result = list.inList(hostnames[i].toCharArray());
 		if (result) {
 			return true;
 		}
 	}
 	return false;
+}
+
+// checkme: remove these and make inIPList public?
+
+bool OptionContainer::inExceptionIPList(const std::string *ip)
+{
+	return inIPList(ip, exception_ip_list);
+}
+
+bool OptionContainer::inBannedIPList(const std::string *ip)
+{
+	return inIPList(ip, banned_ip_list);
 }
 
 

@@ -150,8 +150,8 @@ public:
 	void deleteCSPlugins();
 	void deleteDMPlugins();
 	bool loadCSPlugins();
-	bool inipexceptions(const std::string * ip);
-	bool inuserexceptions(const std::string * user);
+	bool inExceptionIPList(const std::string * ip);
+	bool inExceptionUserList(const std::string * user);
 	bool inBannedIPList(const std::string * ip);
 	bool inBannedUserList(const std::string * user);
 	bool readFilterGroupConf();
@@ -170,6 +170,7 @@ private:
 	bool readAnotherFilterGroupConf(const char *filename);
 	std::deque<String> findoptionM(const char *option);
 
+	bool inIPList(const std::string *ip, ListContainer& list);
 };
 
 #endif
