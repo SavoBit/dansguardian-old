@@ -27,6 +27,7 @@
 #include "HTTPHeader.hpp"
 #include "DataBuffer.hpp"
 #include "Socket.hpp"
+#include "OptionContainer.hpp"
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -38,6 +39,9 @@
 
 
 // GLOBALS
+extern OptionContainer o;
+
+// regexp for decoding %xx in URLs
 extern RegExp urldecode_re;
 
 
@@ -208,7 +212,7 @@ String HTTPHeader::getAuth()
 	String line;
 	for (int i = 0; i < (signed) header.size(); i++) {
 		if (header[i].startsWith("Proxy-Authorization: Basic ")
-		    || header[i].startsWith("Proxy-Authorization: basic ")) {
+			|| header[i].startsWith("Proxy-Authorization: basic ")) {
 			line = header[i].after("asic ");
 			line = decodeb64(line).c_str();  // its base64 MIME encoded
 			break;
@@ -313,6 +317,146 @@ void HTTPHeader::setContentLength(int newlen)
 	}
 }
 
+// modifies the URL in all relevant header lines after a regexp search and replace
+// setURL Code originally from from Ton Gorter 2004
+void HTTPHeader::setURL(String &url) {
+	String hostname;
+	int port = 80;
+
+	if (!url.after("://").contains("/")) {
+		url += "/";
+	}
+	hostname = url.after("://").before("/");
+	if (hostname.contains("@")) { // Contains a username:password combo
+		hostname = hostname.after("@");
+	}
+	if (hostname.contains(":")) {
+		port = hostname.after(":").toInteger();
+		if (port == 0 || port > 65535) {
+			port = 80;
+		}
+		hostname = hostname.before(":");  // chop off the port bit
+	}
+
+#ifdef DGDEBUG
+	std::cout << "setURL: header[0] changed from: " << header[0] << std::endl;
+#endif
+	header[0] = header[0].before(" ") + " " + url + " " + header[0].after(" ").after(" ");
+#ifdef DGDEBUG
+	std::cout << " to: " << header[0] << std::endl;
+#endif
+
+	for (int i = 1; i < (signed)header.size(); i++) {
+		if (header[i].startsWith("Host:")) {
+#ifdef DGDEBUG
+			std::cout << "setURL: header[] line changed from: " << header[i] << std::endl;
+#endif
+			header[i] = String("Host: ") + hostname + "\r";
+#ifdef DGDEBUG
+			std::cout << " to " << header[i] << std::endl;
+#endif
+		}
+		if (header[i].startsWith("Port:")) {
+#ifdef DGDEBUG
+			std::cout << "setURL: header[] line changed from: " << header[i] << std::endl;
+#endif
+			header[i] = String("Port: ") + port + "\r";
+#ifdef DGDEBUG
+			std::cout << " to " << header[i] << std::endl;
+#endif
+		}
+	}
+}
+
+// Does a regexp search and replace.
+// urlRegExp Code originally from from Ton Gorter 2004
+bool HTTPHeader::urlRegExp(int filtergroup) {
+
+#ifdef DGDEBUG
+	std::cout << "Starting url reg exp replace" << std::endl;
+#endif
+	RegExp *re;
+	String replacement;
+	String repstr;
+	String oldUrl = url();
+	String newUrl;
+	bool urlmodified = false;
+	unsigned int i;
+	int j, k;
+	unsigned int s =  (*o.fg[filtergroup]).url_regexp_list_comp.size();
+	int matches, submatches;
+	int match;
+	int srcoff;
+	int nextoffset;
+	unsigned int matchlen;
+	int oldurllen;
+
+	// iterate over our list of precompiled regexes
+	for (i = 0; i < s; i++) {
+		newUrl = "";
+		re = &((*o.fg[filtergroup]).url_regexp_list_comp[i]);
+		if (re->match(oldUrl.toCharArray())) {
+			repstr = (*o.fg[filtergroup]).url_regexp_list_rep[i];
+			matches = re->numberOfMatches();
+
+			srcoff = 0;
+
+			for (j = 0; j < matches; j++) {
+				nextoffset = re->offset(j);
+				matchlen = re->length(j);
+				
+				// copy next chunk of unmodified data
+				if (nextoffset > srcoff) {
+					newUrl += oldUrl.subString(srcoff, nextoffset - srcoff);
+					srcoff = nextoffset;
+				}
+
+				// Count number of submatches (brackets) in replacement string
+				for (submatches = 0; j+submatches+1 < matches; submatches++)
+					if (re->offset(j+submatches+1) + re->length(j+submatches+1) > srcoff + matchlen)
+						break;
+
+				// \1 and $1 replacement
+				replacement = "";
+				for (k = 0; k < repstr.length(); k++) {
+					// find \1..\9 and $1..$9 and fill them in with submatched strings
+					if ((repstr[k] == '\\' || repstr[k] == '$') && repstr[k+1] >= '1' && repstr[k+1] <= '9') {
+						match = repstr[++k] - '0';
+						if (match <= submatches) {
+							replacement += re->result(j + match).c_str();
+						}
+					} else {
+						// unescape \\ and \$, and add non-backreference characters to string
+						if (repstr[k] == '\\' && (repstr[k+1] == '\\' || repstr[k+1] == '$'))
+							k++;
+						replacement += repstr.subString(k, 1);
+					}
+				}
+				
+				// copy filled in replacement string
+				newUrl += replacement;
+				srcoff += matchlen;
+				j += submatches;
+			}
+			oldurllen = oldUrl.length();
+			if (srcoff < oldurllen) {
+				newUrl += oldUrl.subString(srcoff, oldurllen - srcoff);
+			}
+			// copy newUrl into oldUrl and continue with other regexes
+			/*setURL(*/oldUrl = newUrl/*)*/;
+			urlmodified = true;
+		}
+	}
+	
+	// surely we can get away with doing this once, not every time round the loop?
+	if (urlmodified) {
+		// replace URL string in all relevant header lines
+		setURL(newUrl);
+	}
+	
+	return urlmodified;
+}
+
 // *
 // *
 // * detailed header checks & fixes
@@ -344,7 +488,7 @@ bool HTTPHeader::malformedURL(String url)
 	for (i = 0; i < len; i++) {
 		c = (unsigned char) host[i];
 		if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z')
-		    && !(c >= '0' && c <= '9') && c != '.' && c != '-' && c != '_') {
+			&& !(c >= '0' && c <= '9') && c != '.' && c != '-' && c != '_') {
 #ifdef DGDEBUG
 			std::cout << "bad char in hostname" << std::endl;
 #endif
@@ -821,7 +965,7 @@ String HTTPHeader::hexToChar(String n)
 	}
 	c = a * 16 + b;
 	if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-	    || (c >= '0' && c <= '9') || (c == '-')) {
+		|| (c >= '0' && c <= '9') || (c == '-')) {
 		buf[0] = c;
 		buf[1] = '\0';
 		n = buf;

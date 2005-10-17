@@ -89,6 +89,9 @@ public:
 	// strip content-encoding, and simultaneously set content-length to newlen
 	void removeEncoding(int newlen);
 	void setContentLength(int newlen);
+	// regexp search and replace
+	// urlRegExp Code originally from from Ton Gorter 2004
+	bool urlRegExp(int filtergroup);
 
 	// do URL decoding (%xx) on string
 	String decode(String s);
@@ -127,6 +130,9 @@ private:
 
 	// modify supplied accept-encoding header, adding "identity" and stripping unsupported compression types
 	String modifyEncodings(String e);
+	// modifies the URL in all relevant header lines after a regexp search and replace
+	// setURL Code originally from from Ton Gorter 2004
+	void setURL(String &url);
 
 	// grab cookies from headers
 	String getCookie(const char *cookie);
