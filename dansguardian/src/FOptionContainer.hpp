@@ -1,3 +1,6 @@
+// FOptionContainer class - contains the options for a filter group,
+// including the banned/grey/exception site lists and the content/site/url regexp lists
+
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
 //Written by Daniel Barron (daniel@//jadeb/.com).
@@ -19,6 +22,12 @@
 
 #ifndef __HPP_FOPTIONCONTAINER
 #define __HPP_FOPTIONCONTAINER
+
+
+// INCLUDES
+
+#include "platform.h"
+
 #include "String.hpp"
 #include "HTMLTemplate.hpp"
 #include "ListContainer.hpp"
@@ -28,23 +37,13 @@
 #include <string>
 #include <deque>
 
+
+// DECLARATIONS
+
 class FOptionContainer
 {
 
 public:
-	~FOptionContainer();
-	bool read(std::string filename);
-	void reset();
-	bool inexceptions(String url);
-	bool iswebserver(String url);
-	bool inurlexceptions(String url);
-	char *inBannedSiteList(String url);
-	char *inBannedURLList(String url);
-	bool inGreySiteList(String url);
-	bool inGreyURLList(String url);
-	int inBannedRegExpURLList(String url);
-	char *inBannedExtensionList(String url);
-	bool isIPHostname(String url);
 	int disable_content_scan;
 	int weighted_phrase_mode;
 	int naughtyness_limit;
@@ -125,21 +124,23 @@ public:
 	int pics_vancouver_canadiancontent;
 	int pics_vancouver_commercialcontent;
 	int pics_vancouver_gambling;
-	  std::string magic;
-	  std::string cookie_magic;
-	  std::string banned_phrase_list_location;
-	  std::string exception_phrase_list_location;
-	  std::string weighted_phrase_list_location;
-	  std::string banned_site_list_location;
-	  std::string banned_url_list_location;
-	  std::string grey_site_list_location;
-	  std::string grey_url_list_location;
-	  std::string banned_regexpurl_list_location;
-	  std::string content_regexp_list_location;
-	  std::string banned_extension_list_location;
-	  std::string banned_mimetype_list_location;
-	  std::string exceptions_site_list_location;
-	  std::string exceptions_url_list_location;
+	std::string magic;
+	std::string cookie_magic;
+	std::string banned_phrase_list_location;
+	std::string exception_phrase_list_location;
+	std::string weighted_phrase_list_location;
+	std::string banned_site_list_location;
+	std::string banned_url_list_location;
+	std::string grey_site_list_location;
+	std::string grey_url_list_location;
+	std::string banned_regexpurl_list_location;
+	std::string exception_regexpurl_list_location;
+	std::string content_regexp_list_location;
+	std::string url_regexp_list_location;
+	std::string banned_extension_list_location;
+	std::string banned_mimetype_list_location;
+	std::string exceptions_site_list_location;
+	std::string exceptions_url_list_location;
 	unsigned int banned_phrase_list;
 	unsigned int exception_site_list;
 	unsigned int exception_url_list;
@@ -150,44 +151,69 @@ public:
 	unsigned int grey_site_list;
 	unsigned int grey_url_list;
 	unsigned int banned_regexpurl_list;
+	unsigned int exception_regexpurl_list;
 	unsigned int content_regexp_list;
-	  std::deque<int > banned_phrase_list_index;
-	  std::deque<RegExp > banned_regexpurl_list_comp;
-	  std::deque<String > banned_regexpurl_list_source;
-	  std::deque<unsigned int > banned_regexpurl_list_ref;
-	  std::deque<RegExp > content_regexp_list_comp;
-	  std::deque<String > content_regexp_list_rep;
+	unsigned int url_regexp_list;
+	std::deque<int> banned_phrase_list_index;
+	
+	// regex match lists
+	std::deque<RegExp> banned_regexpurl_list_comp;
+	std::deque<String> banned_regexpurl_list_source;
+	std::deque<unsigned int> banned_regexpurl_list_ref;
+	std::deque<RegExp> exception_regexpurl_list_comp;
+	std::deque<String> exception_regexpurl_list_source;
+	std::deque<unsigned int> exception_regexpurl_list_ref;
+
+	// regex search & replace lists
+	std::deque<RegExp> content_regexp_list_comp;
+	std::deque<String> content_regexp_list_rep;
+	std::deque<RegExp> url_regexp_list_comp;
+	std::deque<String> url_regexp_list_rep;
 
 	// precompiled reg exps for speed
 	RegExp pics1;
 	RegExp pics2;
 	RegExp isiphost;
 	String ada;
-	  std::deque<String > ipToHostname(String ip);
+
+	~FOptionContainer();
+	bool read(const char *filename);
+	void reset();
+	//bool inexceptions(String url);
+	bool isOurWebserver(String url);
+	//bool inurlexceptions(String url);
+	char *inBannedSiteList(String url);
+	char *inBannedURLList(String url);
+	bool inGreySiteList(String url);
+	bool inGreyURLList(String url);
+	bool inExceptionSiteList(String url);
+	bool inExceptionURLList(String url);
+	int inBannedRegExpURLList(String url);
+	int inExceptionRegExpURLList(String url);
+	char *inBannedExtensionList(String url);
+	bool isIPHostname(String url);
+
+	std::deque<String > ipToHostname(const char *ip);
 
 private:
-	  std::deque<std::string > conffile;
+	std::deque<std::string > conffile;
 	bool precompileregexps();
 	bool readbplfile(const char *banned, const char *exception, const char *weighted);
 	bool readFile(const char *filename, unsigned int* whichlist, bool sortsw, bool cache, const char *listname);
-	/*bool readeslfile(const char *filename);
-	bool readeurllfile(const char *filename);
-	bool readbelfile(const char *filename);
-	bool readbmlfile(const char *filename);
-	bool readbslfile(const char *filename);
-	bool readbulfile(const char *filename);
-	bool readgslfile(const char *filename);
-	bool readgulfile(const char *filename);*/
-	bool readbreulfile(const char *filename);
-	bool compilebreulfile(unsigned int list);
-	bool readcrelfile(const char *filename);
-	void bwlfilehelper(String line, int index);
-	void bwlfilehelperhelper(String line, int index);
+	bool readRegExURLFile(const char *filename, const char *listname, unsigned int listref,
+		std::deque<RegExp> &list_comp, std::deque<String> &list_source, std::deque<unsigned int> &list_ref);
+	bool compileRegExURLFile(unsigned int list, std::deque<RegExp> &list_comp,
+		std::deque<String> &list_source, std::deque<unsigned int> &list_ref);
+	bool readRegExListFile(const char *filename, const char *listname, unsigned int listid,
+	std::deque<String> &list_rep, std::deque<RegExp> &list_comp);
+	/*void bwlfilehelper(String &line, int index);
+	void bwlfilehelperhelper(String &line, int index);*/
 	int findoptionI(const char *option);
-	  std::string findoptionS(const char *option);
+	std::string findoptionS(const char *option);
 	bool realitycheck(String s, int minl, int maxl, char *emessage);
-
-
+	int inRegExpURLList(String &url, std::deque<RegExp> &list_comp);
+	char *inURLList(String &url, unsigned int list);
+	char *inSiteList(String &url, unsigned int list);
 };
 
 #endif
