@@ -11,11 +11,13 @@ exceptionsitelist = '@DGCONFDIR@/lists/exceptionsitelist'
 bannedurllist = '@DGCONFDIR@/lists/bannedurllist'
 greyurllist = '@DGCONFDIR@/lists/greyurllist'
 exceptionurllist = '@DGCONFDIR@/lists/exceptionurllist'
+exceptionregexpurllist = '@DGCONFDIR@/lists/exceptionregexpurllist'
 bannedregexpurllist = '@DGCONFDIR@/lists/bannedregexpurllist'
 bannedextensionlist = '@DGCONFDIR@/lists/bannedextensionlist'
 bannedmimetypelist = '@DGCONFDIR@/lists/bannedmimetypelist'
 picsfile = '@DGCONFDIR@/lists/pics'
 contentregexplist = '@DGCONFDIR@/lists/contentregexplist'
+urlregexplist = '@DGCONFDIR@/lists/urlregexplist'
 
 
 
