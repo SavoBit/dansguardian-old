@@ -491,18 +491,19 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			std::cout << "Bypass activated!" << std::endl;
 #endif
 		}
-		else if (o.inipexceptions(&clientip)) {	// admin pc
+		else if (o.inExceptionIPList(&clientip)) {	// admin pc
 			isexception = true;
 			exceptionreason = o.language_list.getTranslation(600);
 			// Exception client IP match.
 		}
-		else if (o.inuserexceptions(&clientuser)) {	// admin user
+		else if (o.inExceptionUserList(&clientuser)) {	// admin user
 			isexception = true;
 			exceptionreason = o.language_list.getTranslation(601);
 			// Exception client user match.
 		}
-		else if ((*o.fg[filtergroup]).inexceptions(urld)) {	// allowed site
-			if ((*o.fg[0]).iswebserver(url)) {
+		//else if ((*o.fg[filtergroup]).inexceptions(urld)) {	// allowed site
+		else if ((*o.fg[filtergroup]).inExceptionSiteList(urld)) {	// allowed site
+			if ((*o.fg[0]).isOurWebserver(url)) {
 				isourwebserver = true;
 			} else {
 				isexception = true;
@@ -510,10 +511,17 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// Exception site match.
 			}
 		}
-		else if ((*o.fg[filtergroup]).inurlexceptions(urld)) {	// allowed url
+		//else if ((*o.fg[filtergroup]).inurlexceptions(urld)) {	// allowed url
+		else if ((*o.fg[filtergroup]).inExceptionURLList(urld)) {	// allowed url
 			isexception = true;
 			exceptionreason = o.language_list.getTranslation(603);
 			// Exception url match.
+		}
+		else if ((rc = (*o.fg[filtergroup]).inExceptionRegExpURLList(urld)) > -1) {
+			isexception = true;
+			// checkme: make tr string
+			exceptionreason = "Exception Regular Expression URL: ";
+			exceptionreason += (*o.fg[filtergroup]).exception_regexpurl_list_source[rc].toCharArray();
 		}
 
 
@@ -612,6 +620,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 		NaughtyFilter checkme;  // our filter object
 		checkme.filtergroup = filtergroup;
+		
+		// URL regexp search and replace
+		if (header.urlRegExp(filtergroup)) {
+			url = header.url();
+			urld = header.decode(url);
+		}
 
 		// if o.content_scan_exceptions is on then exceptions have to
 		// pass on until later for AV scanning too.
