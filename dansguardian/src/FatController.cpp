@@ -70,10 +70,11 @@ int *childrenstates;  // so we know what they're up to
 struct pollfd *pids;
 UDSocket **childsockets;
 int failurecount;
-Socket serversock;  // the socket we will listen on for connections
+int serversocketcount;
+Socket **serversockets;  // the sockets we will listen on for connections
 UDSocket ipcsock;  // the unix domain socket to be used for ipc with the forked children
 UDSocket urllistsock;
-Socket* peersock = NULL;  // the socket which will contain the connection
+Socket *peersock = NULL;  // the socket which will contain the connection
 
 String peersockip;  // which will contain the connection ip
 int peersockport;  // port connection originates
@@ -110,9 +111,9 @@ int send_readystatus(UDSocket &pipe);
 // child process main loop - sits waiting for incoming connections & processes them
 int handle_connections(UDSocket &pipe);
 // tell a non-busy child process to accept the incoming connection
-void tellchild_accept(int num);
+void tellchild_accept(int num, int whichsock);
 // child process accept()s connection from server socket
-bool getsock_fromparent(UDSocket &fd);
+bool getsock_fromparent(UDSocket &fd/*, int socknum*/);
 
 // add known info about a child to our info lists
 void addchild(int pos, int fd, pid_t child_pid);
@@ -366,7 +367,11 @@ int prefork(int num)
 			int rc = handle_connections(sock);
 			
 			// ok - job done, time to tidy up.
-			serversock.close();  // listening connection
+			for (int i=0; i < serversocketcount; i++) {
+				delete serversockets[i];
+			}
+			delete[] serversockets;
+			//delete[] serversockfds;
 			_exit(rc);  // baby go bye bye
 		} else {
 			// I am the parent
@@ -416,7 +421,7 @@ void tidyup_forchild()
 	// now close open socket pairs don't need
 
 	for (int i = 0; i < o.max_children; i++) {
-		if (pids[i + 1].fd != -1) {
+		if (pids[i].fd != -1) {
 			delete childsockets[i];
 		}
 	}
@@ -464,7 +469,9 @@ int handle_connections(UDSocket &pipe)
 			toldparentready = true;
 		}
 
-		if (!getsock_fromparent(pipe)) {	// blocks waiting for a few mins
+		//int socknum;
+
+		if (!getsock_fromparent(pipe/*, socknum*/)) {	// blocks waiting for a few mins
 			continue;
 		}
 		toldparentready = false;
@@ -473,7 +480,7 @@ int handle_connections(UDSocket &pipe)
 			continue;
 		}
 
-		h.handleConnection(*peersock, peersockip, peersockport);  // deal with the connection
+		h.handleConnection(*peersock, peersockip, peersockport/*, socknum*/);  // deal with the connection
 		delete peersock;
 	}
 #ifdef DGDEBUG
@@ -488,17 +495,15 @@ int handle_connections(UDSocket &pipe)
 }
 
 // the parent process recieves connections - children receive notifications of this over their socketpair, and accept() them for handling
-bool getsock_fromparent(UDSocket &fd)
+bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
 {
 	String message;
-	char *buf = new char[5];
+	char buf;
 	int rc;
 	try {
-		rc = fd.readFromSocket(buf, 4, 0, 360, true, true);  // blocks for a few mins
+		rc = fd.readFromSocket(&buf, 1, 0, 360, true, true);  // blocks for a few mins
 	}
 	catch(exception & e) {
-		delete[]buf;
-
 		// whoop! we received a SIGHUP. we should reload our configuration - and no, we didn't get an FD.
 
 		reloadconfig = true;
@@ -512,23 +517,17 @@ bool getsock_fromparent(UDSocket &fd)
 	
 	// check the message from the parent
 	if (rc < 1) {
-		delete[]buf;
 		return false;
 	}
-	if (buf[0] != 'G') {
-		delete[]buf;
-		return false;
-	}
-	delete[]buf;
 
 	// woo! we have a connection. accept it.
-	
-	peersock = serversock.accept();
+	//socknum = buf[1]-32;
+	peersock = serversockets[buf]->accept();
 	peersockip = peersock->getPeerIP();
 	peersockport = peersock->getPeerSourcePort();
 
 	try {
-		fd.writeToSockete("K\n", 2, 0, 10, true);  // need to make parent wait for OK
+		fd.writeToSockete("K", 1, 0, 10, true);  // need to make parent wait for OK
 		// so effectively providing a lock
 	}
 	catch(exception & e) {
@@ -596,7 +595,7 @@ void addchild(int pos, int fd, pid_t child_pid)
 	numchildren++;
 	busychildren++;
 	waitingfor++;
-	pids[pos + 1].fd = fd;
+	pids[pos].fd = fd;
 	UDSocket* sock = new UDSocket(fd);
 	childsockets[pos] = sock;
 }
@@ -616,7 +615,7 @@ void cullchildren(int num)
 			childrenstates[i] = -2;  // dieing
 			numchildren--;
 			delete childsockets[i];
-			pids[i + 1].fd = -1;
+			pids[i].fd = -1;
 			if (count >= num) {
 				break;
 			}
@@ -658,7 +657,7 @@ bool check_kid_readystatus(int tofind)
 	bool found = false;
 	char *buf = new char[5];
 	int rc = -1;  // for compiler warnings
-	for (int f = 1; f <= o.max_children; f++) {
+	for (int f = 0; f < o.max_children; f++) {
 
 		if (tofind < 1) {
 			break;  // no point looping through all if all found
@@ -667,35 +666,35 @@ bool check_kid_readystatus(int tofind)
 			continue;
 		}
 		if ((pids[f].revents & POLLIN) > 0) {
-			if (childrenstates[f - 1] < 0) {
+			if (childrenstates[f] < 0) {
 				tofind--;
 				continue;
 			}
 			try {
-				rc = childsockets[f-1]->getLine(buf, 4, 100, true);
+				rc = childsockets[f]->getLine(buf, 4, 100, true);
 			}
 			catch(exception & e) {
-				kill(childrenpids[f - 1], SIGTERM);
-				deletechild(childrenpids[f - 1], -1);
+				kill(childrenpids[f], SIGTERM);
+				deletechild(childrenpids[f], -1);
 				tofind--;
 				continue;
 			}
 			if (rc > 0) {
 				if (buf[0] == '2') {
-					if (childrenstates[f - 1] == 4) {
+					if (childrenstates[f] == 4) {
 						waitingfor--;
 					}
-					childrenstates[f - 1] = 0;
+					childrenstates[f] = 0;
 					busychildren--;
 					tofind--;
 				}
 			} else {	// child -> parent communications failure so kill it
-				kill(childrenpids[f - 1], SIGTERM);
-				deletechild(childrenpids[f - 1], -1);
+				kill(childrenpids[f], SIGTERM);
+				deletechild(childrenpids[f], -1);
 				tofind--;
 			}
 		}
-		if (childrenstates[f - 1] == 0) {
+		if (childrenstates[f] == 0) {
 			found = true;
 		}
 	}
@@ -723,7 +722,7 @@ void deletechild(int child_pid, int stat)
 			if (childrenstates[i] != -2) {	// -2 is when its been culled
 				numchildren--;  // so no need to duplicater
 				delete childsockets[i];
-				pids[i + 1].fd = -1;
+				pids[i].fd = -1;
 			}
 			childrenstates[i] = -1;  // unused
 			break;
@@ -749,29 +748,30 @@ int getfreechild()
 }
 
 // tell given child process to accept an incoming connection
-void tellchild_accept(int num)
+void tellchild_accept(int num, int whichsock)
 {
-	int fd = pids[num + 1].fd;
-	String message = "G\n";
+	int fd = pids[num].fd;
+	
+	// include server socket number in message
 	try {
-		childsockets[num]->writeToSockete(message.toCharArray(), message.length(), 0, 5, true);
+		childsockets[num]->writeToSockete((char*)&whichsock, 1, 0, 5, true);
 	} catch(exception & e) {
 		kill(childrenpids[num], SIGTERM);
 		deletechild(childrenpids[num], -1);
 		return;
 	}
-	char *buf = new char[5];
+	
+	// check for response from child
+	char buf;
 	try {
-		childsockets[num]->getLine(buf, 4, 5, true);
+		childsockets[num]->readFromSocket(&buf, 1, 0, 5, false, true);
 	} catch(exception & e) {
 		kill(childrenpids[num], SIGTERM);
 		deletechild(childrenpids[num], -1);
-		delete[]buf;
 		return;
 	}
-
-	delete[]buf;  // no need to check as the very fact the child sent
-	// something back is a good sign
+	// no need to check what it actually contains,
+	// as the very fact the child sent something back is a good sign 
 	busychildren++;
 	childrenstates[num] = 1;  // busy
 }
@@ -1022,9 +1022,30 @@ int url_list_listener(int logconerror)
 // also handles the various signalling options DG supports (reload config, flush cache, kill all processes etc.)
 int fc_controlit()
 {
+	int rc, fds;
+
 	o.lm.garbageCollect();
 
-	serversock.reset();
+	// allocate & create our server sockets
+	serversocketcount = o.filter_ip.size();
+	int *serversockfds = new int[serversocketcount];
+	serversockets = new Socket* [serversocketcount];
+	for (int i = 0; i < serversocketcount; i++) {
+		serversockets[i] = new Socket();
+		serversockets[i]->reset();
+		serversockfds[i] = serversockets[i]->getFD();
+
+		// if the socket fd is not +ve then the socket creation failed
+		if (serversockfds[i] < 0) {
+			if (!is_daemonised) {
+				std::cerr << "Error creating server socket " << i << std::endl;
+			}
+			syslog(LOG_ERR, "Error creating server socket %d", i);
+			return 1;
+		}
+	}
+
+
 	if (o.no_logger == 0) {
 		ipcsock.reset();
 	} else {
@@ -1034,18 +1055,6 @@ int fc_controlit()
 
 	pid_t loggerpid = 0;  // to hold the logging process pid
 	pid_t urllistpid = 0;  // to hold the logging process pid (zero to stop warning)
-	int rc, serversockfd, fds;
-
-	serversockfd = serversock.getFD();
-
-	if (serversockfd < 0) {
-		if (!is_daemonised) {
-			std::cerr << "Error creating server socket" << std::endl;
-		}
-		syslog(LOG_ERR, "%s", "Error creating server socket");
-		return 1;  // if the socket fd is not +ve then the socket
-		// creation failed
-	}
 
 	if (o.no_logger == 0) {
 		if (ipcsock.getFD() < 0) {
@@ -1088,17 +1097,23 @@ int fc_controlit()
 		return 1;
 	}
 
-	if (o.filter_ip.length() > 6) {	// filter ip specified in conf
-		// listen/bind to a port and ip
-		if (serversock.bind(o.filter_ip, o.filter_port)) {
-			if (!is_daemonised) {
-				std::cerr << "Error binding server socket (is something else running on the filter port and ip? [" << o.filter_port << " " << o.filter_ip << "])" << std::endl;
+	// we expect to find a valid filter ip 0 specified in conf if multiple IPs are in use.
+	// if we don't find one, bind to any, as per old behaviour.
+	if (o.filter_ip[0].length() > 6) {
+		for (int i = 0; i < serversocketcount; i++) {
+			// listen/bind to a port and ip
+			if (serversockets[i]->bind(o.filter_ip[i].toCharArray(), o.filter_port)) {
+				if (!is_daemonised) {
+					std::cerr << "Error binding server socket (is something else running on the filter port and ip? ["
+						<< o.filter_port << " " << o.filter_ip[i] << "])" << std::endl;
+				}
+				syslog(LOG_ERR, "%s", "Error binding server socket (is something else running on the filter port and ip?");
+				return 1;
 			}
-			syslog(LOG_ERR, "%s", "Error binding server socket (is something else running on the filter port and ip?");
-			return 1;
 		}
-	} else {		// listen/bind to a port
-		if (serversock.bind(o.filter_port)) {
+	} else {
+		// listen/bind to a port on any interface
+		if (serversockets[0]->bind(o.filter_port)) {
 			if (!is_daemonised) {
 				std::cerr << "Error binding server socket (is something else running on the filter port? [" << o.filter_port << "])" << std::endl;
 			}
@@ -1153,14 +1168,17 @@ int fc_controlit()
 	}
 
 
-	if (serversock.listen(256)) {	// set it to listen mode with a kernel
-		// queue of 256 backlog connections
-		if (!is_daemonised) {
-			std::cerr << "Error listening to server socket" << std::endl;
+	for (int i = 0; i < serversocketcount; i++) {
+		if (serversockets[i]->listen(256)) {	// set it to listen mode with a kernel
+			// queue of 256 backlog connections
+			if (!is_daemonised) {
+				std::cerr << "Error listening to server socket " << i << std::endl;
+			}
+			syslog(LOG_ERR, "Error listening to server socket %d", i);
+			return 1;
 		}
-		syslog(LOG_ERR, "%s", "Error listening to server socket");
-		return 1;
 	}
+
 	if (o.no_logger == 0) {
 		if (ipcsock.listen(256)) {	// set it to listen mode with a kernel
 			// queue of 256 backlog connections
@@ -1226,7 +1244,11 @@ int fc_controlit()
 		loggerpid = fork();  // make a child processes copy of self to be logger
 
 		if (loggerpid == 0) {	// ma ma!  i am the child
-			serversock.close();  // we don't need our copy of this so close it
+			for (int i=0; i < serversocketcount; i++) {
+				delete serversockets[i];  // we don't need our copy of this so close it
+			}
+			delete[] serversockets;
+			delete[] serversockfds;
 			urllistsock.close();  // we don't need our copy of this so close it
 			log_listener(o.log_location, o.logconerror);
 #ifdef DGDEBUG
@@ -1240,7 +1262,11 @@ int fc_controlit()
 		urllistpid = fork();  // make a child processes copy of self to be logger
 
 		if (urllistpid == 0) {	// ma ma!  i am the child
-			serversock.close();  // we don't need our copy of this so close it
+			for (int i=0; i < serversocketcount; i++) {
+				delete serversockets[i];  // we don't need our copy of this so close it
+			}
+			delete[] serversockets;
+			delete[] serversockfds;
 			if (o.no_logger == 0) {
 				ipcsock.close();  // we don't need our copy of this so close it
 			}
@@ -1315,7 +1341,7 @@ int fc_controlit()
 	childrenpids = new int[o.max_children];  // so when one exits we know who
 	childrenstates = new int[o.max_children];  // so we know what they're up to
 	childsockets = new UDSocket* [o.max_children];
-	fds = o.max_children + 1;
+	fds = o.max_children + serversocketcount;
 
 	pids = new struct pollfd[fds];
 
@@ -1330,15 +1356,19 @@ int fc_controlit()
 	std::cout << "Parent process pid structs allocated" << std::endl;
 #endif
 
+	// store child fds...
 	for (i = 0; i < o.max_children; i++) {
 		childrenpids[i] = -1;
 		childrenstates[i] = -1;
-		pids[i + 1].fd = -1;
-		pids[i + 1].events = POLLIN;
+		pids[i].fd = -1;
+		pids[i].events = POLLIN;
 
 	}
-	pids[0].fd = serversockfd;
-	pids[0].events = POLLIN;
+	// ...and server fds
+	for (i = o.max_children; i < fds; i++) {
+		pids[i].fd = serversockfds[i - o.max_children];
+		pids[i].events = POLLIN;
+	}
 
 #ifdef DGDEBUG
 	std::cout << "Parent process pid structs zeroed" << std::endl;
@@ -1406,7 +1436,7 @@ int fc_controlit()
 		}
 
 		// Lets take the opportunity to clean up our dead children if any
-		for (i = 0; i <= o.max_children; i++) {
+		for (i = 0; i < fds; i++) {
 			pids[i].revents = 0;
 		}
 		mopup_afterkids();
@@ -1427,8 +1457,10 @@ int fc_controlit()
 
 		tofind = rc;
 		if (rc > 0) {
-			if ((pids[0].revents & POLLIN) > 0) {
-				tofind--;
+			for (i = o.max_children; i < fds; i++) {
+				if ((pids[i].revents & POLLIN) > 0) {
+					tofind--;
+				}
 			}
 		}
 
@@ -1448,32 +1480,37 @@ int fc_controlit()
 #endif
 
 		if (rc > 0) {
-			if ((pids[0].revents & (POLLERR | POLLHUP | POLLNVAL)) > 0) {
-				ttg = true;
-				syslog(LOG_ERR, "%s", "Error with main listening socket.  Exiting.");
-				continue;
-			}
-			if ((pids[0].revents & POLLIN) > 0) {
-				// socket ready to accept() a connection
-				failurecount = 0;  // something is clearly working so reset count
-				if (freechildren < 1 && numchildren < o.max_children) {
-					if (!preforked) {
-						rc = prefork(1);
-						if (rc < 0) {
-							syslog(LOG_ERR, "%s", "Error forking 1 extra process.");
-							failurecount++;
-						}
-						preforked = true;
-					}
-					qscopy = quicksleep;  // use copy as select() can modify it
-					select(0, NULL, NULL, NULL, &qscopy);  // is a very quick sleep()
+			for (i = o.max_children; i < fds; i++) {
+				if ((pids[i].revents & (POLLERR | POLLHUP | POLLNVAL)) > 0) {
+					ttg = true;
+					syslog(LOG_ERR, "%s", "Error with main listening socket.  Exiting.");
 					continue;
 				}
-				if (freechildren > 0) {
-					tellchild_accept(getfreechild());
-				} else {
-					qscopy = quicksleep;  // use copy as select() can modify it
-					select(0, NULL, NULL, NULL, &qscopy);  // is a very quick sleep()
+				if ((pids[i].revents & POLLIN) > 0) {
+					// socket ready to accept() a connection
+					failurecount = 0;  // something is clearly working so reset count
+					if (freechildren < 1 && numchildren < o.max_children) {
+						if (!preforked) {
+							rc = prefork(1);
+							if (rc < 0) {
+								syslog(LOG_ERR, "%s", "Error forking 1 extra process.");
+								failurecount++;
+							}
+							preforked = true;
+						}
+						qscopy = quicksleep;  // use copy as select() can modify it
+						select(0, NULL, NULL, NULL, &qscopy);  // is a very quick sleep()
+						continue;
+					}
+					if (freechildren > 0) {
+#ifdef DGDEBUG
+						std::cout<<"telling child to accept "<<(i-o.max_children)<<std::endl;
+#endif
+						tellchild_accept(getfreechild(), i - o.max_children);
+					} else {
+						qscopy = quicksleep;  // use copy as select() can modify it
+						select(0, NULL, NULL, NULL, &qscopy);  // is a very quick sleep()
+					}
 				}
 			}
 		}
@@ -1500,7 +1537,7 @@ int fc_controlit()
 	}
 	cullchildren(numchildren);  // remove the fork pool of spare children
 	for (int i = 0; i < o.max_children; i++) {
-		if (pids[i + 1].fd != -1) {
+		if (pids[i].fd != -1) {
 			delete childsockets[i];
 		}
 	}
@@ -1531,7 +1568,11 @@ int fc_controlit()
 #ifdef DGDEBUG
 	std::cout << "Main parent process exiting." << std::endl;
 #endif
-	serversock.close();  // be nice and neat
+	for (i = 0; i < serversocketcount; i++) {
+		delete serversockets[i];  // be nice and neat
+	}
+	delete[] serversockets;
+	delete[] serversockfds;
 	if (o.url_cache_number > 0) {
 		urllistsock.close();
 	}
