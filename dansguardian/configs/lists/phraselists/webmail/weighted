@@ -1,6 +1,5 @@
 #
-# Phraselists to block webmail 
-# Originally Created by Fernand Jonker
+# Contributed by Fernand Jonker
 #
 
 #listcategory: "Webmail"
@@ -9,6 +8,7 @@
 < inbox >,< outbox >,< sent ><100>
 <compose>,< inbox >,< subject >,< date ><30>
 < webmail ><30>
+< drafts >,< spam >,< trash ><40>
 < date>,< from >,< subject >,< size >,<delete><100>
 < delete >,<empty trash>,< search ><100>
 <inbox><20>
@@ -32,6 +32,11 @@
 <new message>,<new appointment>,<new contact>,<hotmail><100>
 <from my contacts>,<junk e-mail folder>,<hotmail><50>
 
+#GMail
+< gmail ><20>
 
+#Horde
+<welcome to imp><30>
+<internet messaging program><20>
 
 

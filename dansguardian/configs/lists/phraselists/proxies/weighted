@@ -1,5 +1,5 @@
 #
-# Phraselists to block web-based proxy services like phproxy and cgiproxy
+# Phraselists to block web-based proxy services like phproxy and cgiproxy and to block lists of proxies.
 # Originally Created by Fernand Jonker
 #
 
