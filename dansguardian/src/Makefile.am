@@ -96,6 +96,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        DownloadManager.cpp DownloadManager.hpp \
                        ConfigVar.cpp ConfigVar.hpp \
                        ContentScanner.cpp ContentScanner.hpp \
+		       SocketArray.cpp SocketArray.hpp \
                        platform.h \
                        dansguardian.cpp \
 		       $(CLAMAV_SOURCE) $(ICAPSCAN_SOURCE) \
