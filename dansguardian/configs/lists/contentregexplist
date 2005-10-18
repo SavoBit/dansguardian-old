@@ -15,3 +15,7 @@
 #"<html>"->"<script language='javascript'>fwo=window.open;function NO(url,nam,atr){return(this.window);}window.open=NO;</script><html>"
 #"=[ ]*?window\.open[ ]*?\("->"=fwo("
 #"<html>"->"<script language='javascript'>function NO(url,nam,atr){return(this.window);}window.open=NO;</script><html>"
+
+# Fix Firefox <= 1.0.7 DoS
+# http://www.whitedust.net/speaks/1432/
+"((<source)|(</source))text>"->"$1dosremovedtext"
