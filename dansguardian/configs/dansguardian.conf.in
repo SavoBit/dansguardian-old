@@ -59,7 +59,8 @@ logfileformat = 1
 # the IP that DansGuardian listens on.  If left blank DansGuardian will
 # listen on all IPs.  That would include all NICs, loopback, modem, etc.
 # Normally you would have your firewall protecting this, but if you want
-# you can limit it to only 1 IP.  Yes only one.
+# you can limit it to a certain IP. To bind to multiple interfaces,
+# specify each IP on an individual filterip line.
 filterip =
 
 # the port that DansGuardian listens to.
