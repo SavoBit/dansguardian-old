@@ -10,14 +10,16 @@ WLISTS = bannedextensionlist bannediplist bannedmimetypelist \
 	 contentregexplist exceptioniplist exceptionsitelist \
 	 exceptionurllist exceptionuserlist filtergroupslist greysitelist \
 	 greyurllist pics bannedphraselist weightedphraselist \
-	 exceptionphraselist bannediplist exceptioniplist
+	 exceptionphraselist bannediplist exceptioniplist urlregexplist \
+	 exceptionregexpurllist
 
 EXTRA_DIST = bannedextensionlist bannediplist bannedmimetypelist \
 	 bannedregexpurllist bannedsitelist bannedurllist banneduserlist \
 	 contentregexplist exceptioniplist exceptionsitelist \
 	 exceptionurllist exceptionuserlist filtergroupslist greysitelist \
 	 greyurllist pics bannedphraselist.in weightedphraselist.in \
-	 exceptionphraselist.in bannediplist exceptioniplist
+	 exceptionphraselist.in bannediplist exceptioniplist urlregexplist \
+	 exceptionregexpurllist
 
 install-data-local: 
 	$(mkinstalldirs) $(DESTDIR)$(DGDATADIR) && \
