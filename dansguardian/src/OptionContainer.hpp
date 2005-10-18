@@ -72,7 +72,7 @@ public:
 	int filter_port;
 	int proxy_port;
 	std::string proxy_ip;
-	std::string filter_ip;
+	std::deque<String> filter_ip;
 	int ll;
 	int reporting_level;
 	int max_children;

@@ -66,6 +66,7 @@ void OptionContainer::reset()
 	language_list.reset();
 	conffile.clear();
 	filter_groups_list.reset();
+	filter_ip.clear();
 }
 
 void OptionContainer::deleteFilterGroups()
@@ -346,10 +347,17 @@ bool OptionContainer::read(const char *filename, int type)
 		if (!realitycheck(String(proxy_ip.c_str()), 7, 15, "proxyip")) {
 			return false;
 		}
-		filter_ip = findoptionS("filterip");
-		if (!realitycheck(String(filter_ip.c_str()), 0, 15, "filterip")) {
+
+		// multiple listen IP support
+		filter_ip = findoptionM("filterip");
+		if (filter_ip.size() > 127) {
+			if (!is_daemonised) {
+				std::cerr << "Can not listen on more than 127 IPs" << std::endl;
+			}
+			syslog(LOG_ERR, "%s", "Can not listen on more than 127 IPs");
 			return false;
 		}
+
 		ll = findoptionI("loglevel");
 		if (!realitycheck(ll, 1, 1, "loglevel")) {
 			return false;
