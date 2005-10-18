@@ -82,6 +82,7 @@ int main(int argc, char *argv[])
 {
 	is_daemonised = false;
 	bool nodaemon = false;
+	bool needreset = false;
 	std::string configfile = __CONFFILE;
 	srand(time(NULL));
 	int rc;
@@ -109,6 +110,8 @@ int main(int argc, char *argv[])
 					unlink(o.pid_filename.c_str());
 					unlink(o.ipc_filename.c_str());
 					unlink(o.urlipc_filename.c_str());
+					// remember to reset config before continuing
+					needreset = true;
 					break;
 				case 's':
 					read_config(configfile.c_str(), 0);
@@ -154,6 +157,10 @@ int main(int argc, char *argv[])
 	// Set current locale for proper character conversion
 	setlocale(LC_ALL, "");
 
+	if (needreset) {
+		o.reset();
+	}
+	
 	read_config(configfile.c_str(), 2);
 
 	if (sysv_amirunning(o.pid_filename)) {
