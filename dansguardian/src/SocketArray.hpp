@@ -35,7 +35,7 @@ class SocketArray
 {
 public:
 	// set sensible defaults
-	SocketArray():socknum(0) {};
+	SocketArray():socknum(0),drawer(NULL) {};
 	// delete all sockets
 	~SocketArray();
 
@@ -56,11 +56,11 @@ public:
 	int* getFDAll();
 
 	// array dereference operator
-	Socket* operator[] (int i) { return drawer[i]; };
+	Socket* operator[] (int i) { return &(drawer[i]); };
 
 private:
 	// our sock collection container
-	Socket** drawer;
+	Socket* drawer;
 	// how many sockets we have
 	int socknum;
 };

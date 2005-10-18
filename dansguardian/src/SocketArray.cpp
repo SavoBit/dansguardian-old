@@ -34,35 +34,26 @@ extern bool is_daemonised;
 
 SocketArray::~SocketArray()
 {
-	for (int i=0; i < socknum; i++) {
-		delete drawer[i];
-	}
-	delete[] drawer;
+	if (drawer != NULL)
+		delete[] drawer;
 }
 
 void SocketArray::deleteAll()
 {
-	for (int i=0; i < socknum; i++) {
-		delete drawer[i];
-	}
-	delete[] drawer;
+	if (drawer != NULL)
+		delete[] drawer;
+	drawer = NULL;
 	socknum = 0;
 }
 
 // close all sockets & create new ones
 void SocketArray::reset(int sockcount)
 {
-	for (int i=0; i < socknum; i++) {
-		delete drawer[i];
-	}
-	delete[] drawer;
+	if (drawer != NULL)
+		delete[] drawer;
 	
-	drawer = new Socket* [sockcount];
+	drawer = new Socket[sockcount];
 	socknum = sockcount;
-	
-	for (int i=0; i < socknum; i++) {
-		drawer[i] = new Socket;
-	}
 }
 
 // bind our first socket to any IP
@@ -71,7 +62,7 @@ int SocketArray::bindSingle(int port)
 	if (socknum < 1) {
 		return -1;
 	}
-	return drawer[0]->bind(port);
+	return drawer[0].bind(port);
 }
 
 // return an array of our socket FDs
@@ -80,9 +71,9 @@ int* SocketArray::getFDAll()
 	int *fds = new int[socknum];
 	for (unsigned int i = 0; i < socknum; i++) {
 #ifdef DGDEBUG
-		std::cerr << "Socket " << i << " fd:" << drawer[i]->getFD() << std::endl;
+		std::cerr << "Socket " << i << " fd:" << drawer[i].getFD() << std::endl;
 #endif
-		fds[i] = drawer[i]->getFD();
+		fds[i] = drawer[i].getFD();
 	}
 	return fds;
 }
@@ -91,7 +82,7 @@ int* SocketArray::getFDAll()
 int SocketArray::listenAll(int queue)
 {
 	for (unsigned int i = 0; i < socknum; i++) {
-		if (drawer[i]->listen(queue)) {
+		if (drawer[i].listen(queue)) {
 			if (!is_daemonised) {
 				std::cerr << "Error listening to socket" << std::endl;
 			}
@@ -112,7 +103,7 @@ int SocketArray::bindAll(std::deque<String> &ips, int port)
 #ifdef DGDEBUG
 		std::cerr << "Binding server socket[" << port << " " << ips[i] << " " << i << "])" << std::endl;
 #endif
-		if (drawer[i]->bind(ips[i].toCharArray(), port)) {
+		if (drawer[i].bind(ips[i].toCharArray(), port)) {
 			if (!is_daemonised) {
 				std::cerr << "Error binding server socket (is something else running on the filter port and ip? ["
 					<< port << " " << ips[i] << " " << i << "])" << std::endl;
