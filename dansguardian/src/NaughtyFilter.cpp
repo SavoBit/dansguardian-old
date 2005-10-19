@@ -130,6 +130,114 @@ void NaughtyFilter::checkme(DataBuffer * body)
 			bodylc = hexdecoded;
 
 		}
+		
+		// filter meta tags & title only
+		// based on idea from Nicolas Peyrussie
+		if(o.phrase_filter_mode == 3) {
+
+#ifdef DGDEBUG
+			std::cout << "Filtering META/title" << std::endl;
+#endif
+			bool addit = false;  // flag if we should copy this char to filtered version
+			bool needcheck = false;  // flag if we actually find anything worth filtering
+			int bodymetalen;
+			
+			// find </head> or <body> as end of search range
+			char* endhead = strstr(bodylc, "</head");
+#ifdef DGDEBUG
+			if (endhead != NULL) {
+				std::cout<<"Found '</head', limiting search range"<<std::endl;
+			}
+#endif
+			if (endhead == NULL) {
+				endhead = strstr(bodylc, "<body");
+#ifdef DGDEBUG
+				if (endhead != NULL) {
+					std::cout<<"Found '<body', limiting search range"<<std::endl;
+				}
+#endif
+			}
+			if (endhead == NULL)
+				endhead = bodylc+bodylen;
+
+			char* bodymeta = new char[endhead - bodylc];
+			
+			// initialisation for removal of duplicate non-alphanumeric characters
+			j = 1;
+			bodymeta[0] = 32;
+
+			for (i = 0; i < (endhead - bodylc) - 7; i++) {
+				c = bodylc[i];
+
+				// are we at the start of a tag?
+				if ((!addit) && (c == '<')) {
+					if (strncmp(bodylc+i+1, "meta", 4) == 0) {
+#ifdef DGDEBUG
+						std::cout << "Found META" << std::endl;
+#endif
+						// start adding data to the check buffer
+						addit = true;
+						needcheck = true;
+						// skip 'meta '
+						i += 6;
+						c = bodylc[i];
+					}
+					// are we at the start of a title tag?
+					else if (strncmp(bodylc+i+1, "title", 5) == 0) {
+#ifdef DGDEBUG
+						std::cout << "Found title" << std::endl;
+#endif
+						// start adding data to the check buffer
+						addit = true;
+						needcheck = true;
+						// skip 'title>'
+						i += 7;
+						c = bodylc[i];
+					}
+				}
+				// meta tags end at a >
+				// title tags end at the next < (opening of </title>)
+				if (addit && ((c == '>') || (c == '<'))) {
+					// stop ading data
+					addit = false;
+					// add a space before the next word in the check buffer
+					bodymeta[j++] = 32;
+				}
+				
+				if (addit) {
+					// if we're in "record" mode (i.e. inside a title/metatag), strip certain characters out
+					// of the data (to sanitise metatags & aid filtering of titles)
+					if ( c== ',' || c == '=' || c == '"' || c  == '\''
+						|| c == '(' || c == ')' || c == '.')
+					{
+						// replace with a space
+						c = 32;
+					}
+					// don't bother duplicating spaces
+					if ((c != 32) || (c == 32 && (bodymeta[j-1] != 32))) {
+						bodymeta[j++] = c;  // copy it to the filtered copy
+					}
+				}
+			}
+			if (needcheck) {
+				bodymeta[j++] = '\0';
+#ifdef DGDEBUG
+				std::cout << bodymeta << std::endl;
+#endif
+				bodymetalen = j;
+				checkphrase(bodymeta, bodymetalen);
+			}
+#ifdef DGDEBUG
+			else
+				std::cout<<"Nothing to filter"<<std::endl;
+#endif
+
+			delete[] bodymeta;
+			// surely the intention is to search *only* meta/title, so always exit
+			delete[] bodylc;
+			return;
+		}
+
 
 		if ((*o.fg[filtergroup]).enable_PICS == 1) {
 			checkPICS(bodylc, bodylen);
@@ -599,6 +707,18 @@ void NaughtyFilter::checkPICSrating(std::string label)
 		if (service.contains("vancouver")) {
 			checkPICSratingVancouver(r);
 		}
+		if (service.contains("icec")) {
+			checkPICSratingICEC(r);
+		}
+		if (isItNaughty) {
+			return;
+		}
+		if (service.contains("safenet")) {
+			checkPICSratingSafeNet(r);
+		}
+		if (isItNaughty) {
+			return;
+		}
 		// check label for word denoting rating system then pass on to the
 		// appropriate function the rating String.
 	}
@@ -648,6 +768,26 @@ void NaughtyFilter::checkPICSratingCyberNOT(String r)
 		return;
 	}
 	checkPICSagainstoption(r, "other ", (*o.fg[filtergroup]).pics_cybernot_sex, "CyberNOT other rating");
+}
+
+// Korean PICS
+void NaughtyFilter::checkPICSratingICEC(String r) {
+    checkPICSagainstoption(r, "y ", (*o.fg[filtergroup]).pics_icec_rating, "ICEC rating");
+}
+
+// Korean PICS
+void NaughtyFilter::checkPICSratingSafeNet(String r) {
+	checkPICSagainstoption(r, "n ", (*o.fg[filtergroup]).pics_safenet_nudity, "SafeNet nudity");
+	if (isItNaughty) {return;}
+	checkPICSagainstoption(r, "s ", (*o.fg[filtergroup]).pics_safenet_sex, "SafeNet sex");
+	if (isItNaughty) {return;}
+	checkPICSagainstoption(r, "v ", (*o.fg[filtergroup]).pics_safenet_violence, "SafeNet violence");
+	if (isItNaughty) {return;}
+	checkPICSagainstoption(r, "l ", (*o.fg[filtergroup]).pics_safenet_language, "SafeNet language");
+	if (isItNaughty) {return;}
+	checkPICSagainstoption(r, "i ", (*o.fg[filtergroup]).pics_safenet_gambling, "SafeNet gambling");
+	if (isItNaughty) {return;}
+	checkPICSagainstoption(r, "h ", (*o.fg[filtergroup]).pics_safenet_alcoholtobacco, "SafeNet alcohol tobacco");
 }
 
 void NaughtyFilter::checkPICSratingRSAC(String r)

@@ -68,6 +68,11 @@ private:
 	void checkPICSratingICRA(String r);
 	void checkPICSratingWeburbia(String r);
 	void checkPICSratingVancouver(String r);
+
+	// new Korean stuff
+	void checkPICSratingICEC(String r);
+	void checkPICSratingSafeNet(String r);
+
 	void checkPICSagainstoption(String s, char *l, int opt, std::string m);
 };
 
