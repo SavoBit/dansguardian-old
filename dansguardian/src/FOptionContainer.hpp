@@ -124,6 +124,16 @@ public:
 	int pics_vancouver_canadiancontent;
 	int pics_vancouver_commercialcontent;
 	int pics_vancouver_gambling;
+
+	// new Korean PICS support
+	int pics_icec_rating;
+	int pics_safenet_nudity;
+	int pics_safenet_sex;
+	int pics_safenet_violence;
+	int pics_safenet_language;
+	int pics_safenet_gambling;
+	int pics_safenet_alcoholtobacco;
+
 	std::string magic;
 	std::string cookie_magic;
 	std::string banned_phrase_list_location;

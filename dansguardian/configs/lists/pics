@@ -104,3 +104,18 @@ Vancouversafety = 0  # -2 to 2
 Vancouvercanadiancontent = 0  # -2 to 0
 Vancouvercommercialcontent = 0  # 0 to 3
 Vancouvergambling = 0  # -1 to 3
+
+
+# Korean PICS services
+# Thanks to Richard Lee for outlining tag formats
+
+# ICEC - service.icec.or.kr
+ICECrating = 0 # 0 to 1
+
+# SafeNet - www.safenet.ne.kr
+SafeNetnudity = 1  # 0 to 4
+SafeNetsex = 1  # 0 to 4
+SafeNetviolence = 1  # 0 to 4
+SafeNetlanguage = 1  # 0 to 4
+SafeNetgambling = 0  # 0 to 1
+SafeNetalcoholtabacco = 0 # 0 to 1

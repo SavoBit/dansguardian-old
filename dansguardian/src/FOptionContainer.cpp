@@ -293,6 +293,16 @@ bool FOptionContainer::read(const char *filename)
 		pics_vancouver_canadiancontent = findoptionI("Vancouvercanadiancontent");
 		pics_vancouver_commercialcontent = findoptionI("Vancouvercommercialcontent");
 		pics_vancouver_gambling = findoptionI("Vancouvergambling");
+		
+		// new Korean PICS support
+		pics_icec_rating = findoptionI("ICECrating");
+		pics_safenet_nudity = findoptionI("SafeNetnudity");
+		pics_safenet_language = findoptionI("SafeNetlanguage");
+		pics_safenet_sex = findoptionI("SafeNetsex");
+		pics_safenet_violence = findoptionI("SafeNetviolence");
+		pics_safenet_gambling = findoptionI("SafeNetgambling");
+		pics_safenet_alcoholtobacco = findoptionI("SafeNetalcoholtobacco");
+
 
 		bypass_mode = findoptionI("bypass");
 		if (!realitycheck(String(bypass_mode), 1, 4, "bypass")) {
