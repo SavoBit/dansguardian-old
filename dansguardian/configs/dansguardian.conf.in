@@ -159,13 +159,15 @@ scancleancache = on
 
 
 
-# Smart and Raw phrase content filtering options
+# Smart, Raw and Meta/Title phrase content filtering options
 # Smart is where the multiple spaces and HTML are removed before phrase filtering
 # Raw is where the raw HTML including meta tags are phrase filtered
-# CPU usage can be effectively halved by using setting 0 or 1
+# Meta/Title is where only meta and title tags are phrase filtered (v. quick)
+# CPU usage can be effectively halved by using setting 0 or 1 compared to 2
 # 0 = raw only
 # 1 = smart only
-# 2 = both (default)
+# 2 = both of the above (default)
+# 3 = meta/title
 phrasefiltermode = 2
 
 
