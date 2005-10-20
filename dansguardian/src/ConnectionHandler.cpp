@@ -519,8 +519,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		}
 		else if ((rc = (*o.fg[filtergroup]).inExceptionRegExpURLList(urld)) > -1) {
 			isexception = true;
-			// checkme: make tr string
-			exceptionreason = "Exception Regular Expression URL: ";
+			// exception regular expression url match:
+			exceptionreason = o.language_list.getTranslation(609);
 			exceptionreason += (*o.fg[filtergroup]).exception_regexpurl_list_source[rc].toCharArray();
 		}
 
@@ -951,7 +951,12 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		std::string &what, String &how, int &size, std::string *cat, int &loglevel, bool isnaughty,
 		bool isexception, int logexceptions, bool istext, struct timeval *thestart, bool cachehit, int code, std::string &mimetype, bool wasinfected, bool wasscanned)
 {
-	if (loglevel == 0) {
+	// don't log if logging disabled entirely, or if it's an ad block and ad logging is disabled
+	if ((loglevel == 0) || ((cat != NULL) && (o.log_ad_blocks == 0) && (strstr(cat->c_str(),"ADs") != NULL))) {
+#ifdef DGDEBUG
+		if ((loglevel != 0) && (cat != NULL))
+			std::cout << "Not logging AD blocks" << std::endl;
+#endif
 		return;
 	}
 	else if ((isexception && logexceptions == 1)
@@ -1325,36 +1330,59 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				}
 				
 				// if we're denying an image request, show the image; otherwise, show the HTML page.
+				// (or advanced ad block page, or HTML page with bypass URLs)
 				if (replaceimage) {
 					if (headersent == 0) {
 						(*peerconn).writeString("HTTP/1.0 200 OK\n");
 					}
 					o.banned_image.display(peerconn);
 				} else {
+					// advanced ad blocking - if category contains ADs, wrap ad up in an "ad blocked" message,
+					// which provides a link to the original URL if you really want it. primarily
+					// for IFRAMEs, which will end up containing this link instead of the ad (standard non-IFRAMEd
+					// ad images still get image-replaced.)
+					if (strstr(checkme->whatIsNaughtyCategories.c_str(), "ADs") != NULL) {
+						String writestring = "HTTP/1.0 200 ";
+						writestring += o.language_list.getTranslation(1101); // advert blocked
+						writestring += "\nContent-Type: text/html\n\n<HTML><HEAD><TITLE>Guardian - ";
+						writestring += o.language_list.getTranslation(1101); // advert blocked
+						writestring += "</TITLE></HEAD><BODY><CENTER><FONT SIZE=\"-1\"><A HREF=\"";
+						writestring += (*url);
+						writestring += "\" TARGET=\"_BLANK\">";
+						writestring += o.language_list.getTranslation(1101); // advert blocked
+						writestring += "</A></FONT></CENTER></BODY></HTML>\n";
+						try { // writestring throws exception on error/timeout
+							(*peerconn).writeString(writestring.toCharArray());
+						} catch (exception& e) {}
+					}
+					
 					// Mod by Ernest W Lessenger Mon 2nd February 2004
 					// Other bypass code mostly written by Ernest also
 					// create temporary bypass URL to show on denied page
-					String hashed;
-					if ((*o.fg[filtergroup]).bypass_mode != 0 && !ispostblock) {
-						hashed = hashedURL(url, filtergroup, clientip);
-					}
+					else {
 
-					if (headersent == 0) {
-						(*peerconn).writeString("HTTP/1.0 200 OK\n");
+						String hashed;
+						if ((*o.fg[filtergroup]).bypass_mode != 0 && !ispostblock) {
+							hashed = hashedURL(url, filtergroup, clientip);
+						}
+
+						if (headersent == 0) {
+							(*peerconn).writeString("HTTP/1.0 200 OK\n");
+						}
+						if (headersent < 2) {
+							(*peerconn).writeString("Content-type: text/html\n\n");
+						}
+						// if the header has been sent then likely displaying the
+						// template will break the download, however as this is
+						// only going to be happening if the unsafe trickle
+						// buffer method is used and we want the download to be
+						// broken we don't mind too much
+						o.html_template.display(peerconn,
+							(*url).toCharArray(),
+							(*checkme).whatIsNaughty.c_str(),
+							(*checkme).whatIsNaughtyLog.c_str(), (*checkme).whatIsNaughtyCategories.c_str(),
+							(*clientuser).c_str(), (*clientip).c_str(), String(filtergroup + 1), hashed.toCharArray());
 					}
-					if (headersent < 2) {
-						(*peerconn).writeString("Content-type: text/html\n\n");
-					}
-					// if the header has been sent then likely displaying the
-					// template will break the download, however as this is
-					// only going to be happening if the unsafe trickle
-					// buffer method is used and we want the download to be
-					// broken we don't mind too much
-					o.html_template.display(peerconn,
-								(*url).toCharArray(),
-								(*checkme).whatIsNaughty.c_str(),
-								(*checkme).whatIsNaughtyLog.c_str(), (*checkme).whatIsNaughtyCategories.c_str(),
-								(*clientuser).c_str(), (*clientip).c_str(), String(filtergroup + 1), hashed.toCharArray());
 				}
 			}
 		}
@@ -1471,6 +1499,9 @@ void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * heade
 {
 	proxysock->checkForInput(120);
 	if (docheader->isCompressed()) {
+#ifdef DGDEBUG
+		std::cout << "Decompressing as we go....." << std::endl;
+#endif
 		docbody->setDecompress(docheader->contentEncoding());
 	}
 #ifdef DGDEBUG
