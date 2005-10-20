@@ -363,6 +363,16 @@ bool String::startsWith(const String s)
 	return false;
 }
 
+// does this string start with the given text after conversion to lowercase?
+bool String::startsWithLower(const String s)
+{
+	for (int i = 0; i < s.sl; i++) {
+		if (tolower(data[i]) != tolower(s.data[i]))
+			return false;
+	}
+	return true;
+}
+
 // does this string end with the given text?
 bool String::endsWith(const String s)
 {

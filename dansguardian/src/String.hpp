@@ -59,7 +59,7 @@ public:
 	
 	// stream output operator
 	friend ostream & operator <<(ostream & out, const String & s);
-	// concatenation operator(s) (checkme on the second one)
+	// concatenation operator(s) ("checkme:" on the second one)
 	friend String operator+(const String & lhs, const String & s);
 	String operator+(const String & s);
 	// concatenate & assign
@@ -92,6 +92,8 @@ public:
 	// does the string start/end with this text?
 	bool startsWith(const String s);
 	bool endsWith(const String s);
+	// does this string start with the given text after conversion to lowercase?
+	bool startsWithLower(const String s);
 	// does it contain this text?
 	bool contains(const char *s);
 	// index operator mark 2
