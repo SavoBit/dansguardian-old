@@ -32,6 +32,7 @@
 "606","Bypass URL exception."
 "607","Bypass cookie exception."
 "608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 
 "700","Web upload is banned."
 "701","Web upload limit exceeded."
@@ -43,6 +44,7 @@
 "1000","PICS labeling level exceeded on the above site."
 
 "1100","Virus or bad content detected."
+"1101","Advert blocked"
 
 "1200","Please wait - downloading to be scanned..."
 "1210","Download Complete.  Starting scan..."
