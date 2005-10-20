@@ -301,8 +301,37 @@ void HTTPHeader::removeEncoding(int newlen)
 		if (header[i].startsWith("Content-Length:")) {
 			header[i] = "Content-Length: " + String(newlen);
 		}
+		// this may all be overkill. since we strip everything out of the outgoing
+		// accept-encoding header that we don't support, we won't be getting anything
+		// back again that we don't support, in theory. leave new code commented
+		// unless it proves to be necessary further down the line. PRA 20-10-2005
 		if (header[i].startsWith("Content-Encoding:")) {
-			header[i] = "X-DansGuardian-Removed: Content-Encoding";
+/*#ifdef DGDEBUG
+			std::cout << std::endl << "Stripping Content-Encoding header" <<std::endl;
+			std::cout << "Old: " << header[i] <<std::endl;
+#endif
+			// only strip supported compression types
+			String temp = header[i].after(":");
+			temp.removeWhiteSpace();
+			String newheader;
+			// iterate over comma-separated list of encodings
+			while (temp.length() != 0) {
+				if (!(temp.startsWith("gzip") || temp.startsWith("deflate"))) {
+					// add other, unstripped encoding types back into the header
+					if (newheader.length() != 0)
+						newheader += ", ";
+					newheader += (temp.before(",").length() != 0 ? temp.before(",") : temp);
+				}
+				temp = temp.after(",");
+				temp.removeWhiteSpace();
+			}
+			if (newheader.length() == 0)*/
+				header[i] = "X-DansGuardian-Removed: Content-Encoding";
+/*			else
+				header[i] = "Content-Encoding: "+newheader;
+#ifdef DGDEBUG
+			std::cout << "New: " << header[i] << std::endl << std::endl;
+#endif*/
 		}
 	}
 }
@@ -548,6 +577,7 @@ bool HTTPHeader::isPostUpload()
 }
 
 // fix bugs in certain web servers that don't obey standards
+// checkme: this could do with getting much cleverer. we need a case-insensitive startsWith.
 void HTTPHeader::checkheader()
 {
 	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in
@@ -566,6 +596,9 @@ void HTTPHeader::checkheader()
 		}
 		else if (header[i].startsWith("Content-encoding:")) {
 			header[i] = "Content-Encoding:" + header[i].after("Content-encoding:");
+		}
+		else if (header[i].startsWith("content-encoding:")) {
+			header[i] = "Content-Encoding:" + header[i].after("content-encoding:");
 		}
 		else if (header[i].startsWith("Accept-encoding:")) {
 			header[i] = "Accept-Encoding:" + header[i].after("Accept-encoding:");
