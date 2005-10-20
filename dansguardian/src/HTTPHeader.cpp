@@ -580,50 +580,47 @@ bool HTTPHeader::isPostUpload()
 // checkme: this could do with getting much cleverer. we need a case-insensitive startsWith.
 void HTTPHeader::checkheader()
 {
-	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in
-		// the header
-		if (header[i].startsWith("Content-length:")) {
-			header[i] = "Content-Length:" + header[i].after("Content-length:");
+	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the headers
+		if (header[i].startsWithLower("Content-length:")) {
+			header[i] = "Content-Length:" + header[i].after(":");
 		}
-		else if (header[i].startsWith("x-forwarded-for:")) {
-			header[i] = "X-Forwarded-For:" + header[i].after("x-forwarded-for:");
+		else if (header[i].startsWithLower("x-forwarded-for:")) {
+			header[i] = "X-Forwarded-For:" + header[i].after(":");
 		}
-		else if (header[i].startsWith("Content-type:")) {
-			header[i] = "Content-Type:" + header[i].after("Content-type:");
+		else if (header[i].startsWithLower("Content-type:")) {
+			header[i] = "Content-Type:" + header[i].after(":");
 		}
-		else if (header[i].startsWith("Content-disposition:")) {
-			header[i] = "Content-Disposition:" + header[i].after("Content-disposition:");
+		else if (header[i].startsWithLower("Content-disposition:")) {
+			header[i] = "Content-Disposition:" + header[i].after(":");
 		}
-		else if (header[i].startsWith("Content-encoding:")) {
-			header[i] = "Content-Encoding:" + header[i].after("Content-encoding:");
+		else if (header[i].startsWithLower("Content-encoding:")) {
+			header[i] = "Content-Encoding:" + header[i].after(":");
 		}
-		else if (header[i].startsWith("content-encoding:")) {
+		/*else if (header[i].startsWith("content-encoding:")) {
 			header[i] = "Content-Encoding:" + header[i].after("content-encoding:");
-		}
-		else if (header[i].startsWith("Accept-encoding:")) {
-			header[i] = "Accept-Encoding:" + header[i].after("Accept-encoding:");
+		}*/
+		else if (header[i].startsWithLower("Accept-encoding:")) {
+			header[i] = "Accept-Encoding:" + header[i].after(":");
 			header[i] = modifyEncodings(header[i]) + "\r";
 		}
-		else if (header[i].startsWith("Accept-Encoding:")) {
+		/*else if (header[i].startsWith("Accept-Encoding:")) {
 			header[i] = modifyEncodings(header[i]) + "\r";
-		}
+		}*/
 		// Need to force HTTP/1.1 clients and servers to use non persistant connections
-		else if (header[i].startsWith("Connection: keep-alive")) {
-			//header[i] = "Connection: Keep-Alive" + header[i].after("Connection: keep-alive");
+		else if (header[i].startsWithLower("Connection: keep-alive")) {
 			header[i] = "Connection: Close\r";
 		}
-		else if (header[i].startsWith("Connection: Keep-Alive")) {
+		/*else if (header[i].startsWith("Connection: Keep-Alive")) {
 			header[i] = "Connection: Close\r";// ditto
-		}
-		else if (header[i].startsWith("Proxy-Connection: Keep-Alive")) {
+		}*/
+		else if (header[i].startsWithLower("Proxy-Connection: Keep-Alive")) {
 			header[i] = "Proxy-Connection: Close\r";
 		}
-		else if (header[i].startsWith("Proxy-Connection: keep-alive")) {
-			//header[i] = "Proxy-Connection: Keep-Alive" + header[i].after("Proxy-Connection: keep-alive");
+		/*else if (header[i].startsWith("Proxy-Connection: keep-alive")) {
 			header[i] = "Proxy-Connection: Close\r";
-		}
-		else if (header[i].startsWith("Proxy-authorization:")) {
-			header[i] = "Proxy-Authorization:" + header[i].after("Proxy-authorization:");
+		}*/
+		else if (header[i].startsWithLower("Proxy-authorization:")) {
+			header[i] = "Proxy-Authorization:" + header[i].after(":");
 		}
 #ifdef DGDEBUG
 		std::cout << header[i] << std::endl;
