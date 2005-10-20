@@ -103,6 +103,7 @@ public:
 	int no_logger;
 	int max_logitem_length;
     int anonymise_logs;
+    int log_ad_blocks;
 	int soft_restart;
 	std::string daemon_user;
 	std::string daemon_group;

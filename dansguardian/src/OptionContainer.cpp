@@ -371,9 +371,13 @@ bool OptionContainer::read(const char *filename, int type)
 		}
 		if (findoptionS("anonymizelogs") == "on") {
 			anonymise_logs = 1;
-		}
-		else {
+		} else {
 			anonymise_logs = 0;
+		}
+		if (findoptionS("logadblocks") == "on") {
+			log_ad_blocks = 1;
+		} else {
+			log_ad_blocks = 0;
 		}
 
 		if (findoptionS("showweightedfound") == "on") {
