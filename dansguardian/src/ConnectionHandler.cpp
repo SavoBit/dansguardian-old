@@ -592,11 +592,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 
 		if ((isourwebserver || isexception || iscookiebypass)
-		    // don't filter exception and local web server
-		    // Cookie bypass so don't need to add cookie so just CONNECT
-		    && !o.inBannedIPList(&clientip)	 // bad users pc
-		    && !o.inBannedUserList(&clientuser)	 // bad user
-		    && !(runav && o.content_scan_exceptions))
+			// don't filter exception and local web server
+			// Cookie bypass so don't need to add cookie so just CONNECT
+			&& !o.inBannedIPList(&clientip)	 // bad users pc
+			&& !o.inBannedUserList(&clientuser)	 // bad user
+			&& !(runav && o.content_scan_exceptions))
 		{
 			proxysock.readyForOutput(10);  // exception on timeout or error
 			header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
@@ -657,7 +657,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				docsize = fdt.throughput;
 				String rtype = header.requestType();
 				doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
-					       cachehit, 200, mimetype, wasinfected, wasscanned);
+						   cachehit, 200, mimetype, wasinfected, wasscanned);
 			}
 			catch(exception & e) {
 			}
@@ -726,7 +726,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					}
 				} else {
 					if (!tempurl.contains("?")) {
-//                        i = o.inBannedExtensionList(tempurl);
+//						i = o.inBannedExtensionList(tempurl);
 						if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempurl)) != NULL) {
 							checkme.whatIsNaughty = o.language_list.getTranslation(900);
 							// Banned extension:
@@ -1239,6 +1239,43 @@ void ConnectionHandler::requestChecks(HTTPHeader * header, NaughtyFilter * check
 				(*checkme).whatIsNaughtyCategories = "Web upload.";
 				(*checkme).isItNaughty = true;
 				(*ispostblock) = true;
+			}
+		}
+	}
+	// look for URLs within URLs - ban, for example, images originating from banned sites during a Google image search.
+	if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).deep_url_analysis == 1) {
+#ifdef DGDEBUG
+		std::cout << "starting deep analysis" << std::endl;
+#endif
+		String deepurl = temp.after("p://");
+		while (deepurl.contains(":")) {
+			deepurl = deepurl.after(":");
+			while (deepurl.startsWith(":") || deepurl.startsWith("/")) {
+				deepurl.lop();
+			}
+#ifdef DGDEBUG
+			std::cout << "deep analysing:" << deepurl << std::endl;
+#endif
+			if (!igsl && !igul && ((i = (*o.fg[filtergroup]).inBannedSiteList(deepurl)) != NULL)) {
+				(*checkme).whatIsNaughty = o.language_list.getTranslation(500); // banned site
+				(*checkme).whatIsNaughty += i;
+				(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+				(*checkme).isItNaughty = true;
+				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_site_list]).lastcategory.toCharArray();
+#ifdef DGDEBUG
+				std::cout << "deep site:" << deepurl << std::endl;
+#endif
+			}
+			else if (!igsl && !igul && ((i = (*o.fg[filtergroup]).inBannedURLList(deepurl)) != NULL)) {
+				(*checkme).whatIsNaughty = o.language_list.getTranslation(501);
+				 // Banned URL:
+				(*checkme).whatIsNaughty += i;
+				(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+				(*checkme).isItNaughty = true;
+				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_url_list]).lastcategory.toCharArray();
+#ifdef DGDEBUG
+				std::cout << "deep url:" << deepurl << std::endl;
+#endif
 			}
 		}
 	}
