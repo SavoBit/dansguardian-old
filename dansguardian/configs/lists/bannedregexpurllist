@@ -40,3 +40,7 @@
 
 #AGRESSIVE blocking of all URLs containing proxy - WARNING - this WILL overblock!!
 #(proxy)
+
+# WARNING: This is part of the URL for the dansguardian.org sample virus archive.
+# You probably don't want to go there unintentionally.
+(Variants/AVTest)
