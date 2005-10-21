@@ -111,7 +111,7 @@ int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 	// file, and tell users to make sure the daemongroup option is friendly to
 	// the AV daemon's group membership.
 	// chmod can error with EINTR, ignore this?
-	if (chmod(filename, S_IRGRP) != 0) {
+	if (chmod(filename, S_IRGRP|S_IRUSR) != 0) {
 		syslog(LOG_ERR, "Could not change file ownership to give kavd read access: %s", strerror(errno));
 		return DGCS_SCANERROR;
 	};
