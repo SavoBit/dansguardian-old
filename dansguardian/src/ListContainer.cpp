@@ -1364,27 +1364,38 @@ int ListContainer::greaterThanSW(const char *a, const char *b)
 {
 	int alen = strlen(a);
 	int blen = strlen(b);
+
+	// if the banned URL is longer than the URL we're checking, the two
+	// can't possibly match.
+	if (blen > alen)
+		return -1;
+
 	int maxlen = alen < blen ? alen : blen;
-	char *apos = (char *) a;
-	char *bpos = (char *) b;
-	int i = 0;  // this used to be set to 1 - I don't know why
+	int i = maxlen-1;  // this used to be set to 1 - I don't know why
 	unsigned char achar;
 	unsigned char bchar;
-	while (i < maxlen) {
-		achar = apos[0];
-		bchar = bpos[0];
+	// compare from the end of the URL backwards; then if we find a mismatch,
+	// look for shorter or alphabetically different URLs
+	while (i > -1) {
+		achar = a[i];
+		bchar = b[i];
 		if (achar > bchar) {
 			return 1;
 		}
 		if (achar < bchar) {
 			return -1;
 		}
-		i++;
-		apos++;
-		bpos++;
+		i--;
 	}
-	if (blen > alen)
-		return -1;
+	
+	// if the URLs didn't match and the one the user is browsing to is longer
+	// than what we just compared against, we need to compare against longer URLs,
+	// but only if the next character is actually part of a folder name rather than a separator.
+	// ('cos if it *is* a separator, it doesn't matter that the overall URL is longer, the
+	// beginning of it matches a banned URL.)
+	if ((alen > blen) && !(a[blen] == '/' || a[blen]=='?' || a[blen]=='&' || a[blen]=='='))
+		return 1;
+
 	return 0;  // both equal
 }
 
