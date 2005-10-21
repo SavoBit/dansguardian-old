@@ -160,7 +160,7 @@ void NaughtyFilter::checkme(DataBuffer * body)
 			if (endhead == NULL)
 				endhead = bodylc+bodylen;
 
-			char* bodymeta = new char[endhead - bodylc];
+			char* bodymeta = new char[(endhead - bodylc) + 128 + 1];
 			
 			// initialisation for removal of duplicate non-alphanumeric characters
 			j = 1;
