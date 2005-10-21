@@ -19,8 +19,6 @@ picsfile = '@DGCONFDIR@/lists/pics'
 contentregexplist = '@DGCONFDIR@/lists/contentregexplist'
 urlregexplist = '@DGCONFDIR@/lists/urlregexplist'
 
-
-
 # Naughtyness limit
 # This the limit over which the page will be blocked.  Each weighted phrase is given
 # a value either positive or negative and the values added up.  Phrases to do with
@@ -29,8 +27,6 @@ urlregexplist = '@DGCONFDIR@/lists/urlregexplist'
 # As a guide:
 # 50 is for young children,  100 for old children,  160 for young adults.
 naughtynesslimit = 50
-
-
 
 # Temporary Denied Page Bypass
 # It provides a link on the denied page to bypass the ban for a few minutes.  To be
@@ -50,11 +46,17 @@ bypass = 0
 # '76b42abc1cd0fdcaf6e943dcbc93b826' = an example
 bypasskey = ''
 
-
-
 # Disable content scanning
 # If you enable this option you will disable content scanning for this group.
 # Content scanning primarily is AV scanning (if enabled) but could include
 # other types.
 # (on|off) default = off.
 disablecontentscan = off
+
+# Enable Deep URL Analysis
+# When enabled, DG looks for URLs within URLs, checking against the bannedsitelist and
+# bannedurllist. This can be used, for example, to block images originating from banned
+# sites from appearing in Google Images search results, as the original URLs are
+# embedded in the thumbnail GET requests.
+# (on|off) default = off
+deepurlanalysis = off

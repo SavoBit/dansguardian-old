@@ -498,9 +498,16 @@ nodaemon = off
 # on|off ( defaults to off )
 nologger = off
 
+# Enable logging of "ADs" category blocks
+# on|off ( defaults to off )
+logadblocks = off
+
 # Daemon runas user and group
 # This is the user that DansGuardian runs as.  Normally the user/group nobody.
 # Uncomment to use.  Defaults to the user set at compile time.
+# Temp files created during virus scanning are given owner and group read
+# permissions; to use content scanners based on external processes, such as
+# clamdscan, the two processes must run with either the same group or user ID.
 # daemonuser = '@DGPROXYUSER@'
 # daemongroup = '@DGPROXYGROUP@'
 
