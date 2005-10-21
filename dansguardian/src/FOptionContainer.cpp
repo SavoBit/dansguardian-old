@@ -197,6 +197,12 @@ bool FOptionContainer::read(const char *filename)
 			enable_PICS = 1;
 		}
 
+		if (findoptionS("deepurlanalysis") == "on") {
+			deep_url_analysis = 1;
+		} else {
+			deep_url_analysis = 0;
+		}
+
 		if (findoptionS("disablecontentscan") == "on") {
 			disable_content_scan = 1;
 		} else {
@@ -740,6 +746,7 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 							unsigned char c = url[fl];
 							if (c == '/' || c == '?' || c == '&' || c == '=') {
 								return i;  // matches /blah/ or /blah/foo
+								// (or /blah?foo etc.)
 								// but not /blahfoo
 							}
 						} else {
@@ -761,7 +768,7 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 			std::cout << "url:" << url << fl << std::endl;
 #endif
 			if (url.length() > fl) {
-				if (url[fl] == '/') {
+				if (url[fl] == '/' || url[fl] == '?' || url[fl] == '&' || url[fl] == '=') {
 					return i;  // matches /blah/ or /blah/foo but not /blahfoo
 				}
 			} else {
@@ -786,7 +793,7 @@ bool FOptionContainer::inGreyURLList(String url)
 #ifdef DGDEBUG
 	std::cout<<"inGreyURLList"<<std::endl;
 #endif
-	return inURLList(url, banned_url_list) != NULL;
+	return inURLList(url, grey_url_list) != NULL;
 }
 
 bool FOptionContainer::inExceptionURLList(String url)

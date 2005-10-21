@@ -49,6 +49,7 @@ public:
 	int naughtyness_limit;
 	int createlistcachefiles;
 	int enable_PICS;
+	int deep_url_analysis;
 	int blanketblock;
 	int blanket_ip_block;
 	int reverse_lookups;
