@@ -57,6 +57,7 @@ public:
 	std::string custom_banned_image_file;
 	int reverse_lookups;
 	int reverse_client_ip_lookups;
+	int log_client_hostnames;
 	int use_xforwardedfor;
 	int uim_proxyauth;
 	int uim_ntlm;
@@ -151,13 +152,13 @@ public:
 	void deleteCSPlugins();
 	void deleteDMPlugins();
 	bool loadCSPlugins();
-	bool inExceptionIPList(const std::string * ip);
-	bool inExceptionUserList(const std::string * user);
-	bool inBannedIPList(const std::string * ip);
-	bool inBannedUserList(const std::string * user);
+	bool inExceptionIPList(const std::string *ip, std::string *&host);
+	bool inExceptionUserList(const std::string *user);
+	bool inBannedIPList(const std::string *ip, std::string *&host);
+	bool inBannedUserList(const std::string *user);
 	bool readFilterGroupConf();
 	// public so fc_controlit can reload filter group config files
-	bool doReadItemList(const char* filename, ListContainer* lc, const char* fname, bool swsort);
+	bool doReadItemList(const char *filename, ListContainer *lc, const char *fname, bool swsort);
 
 private:
 	std::deque<std::string> conffile;
@@ -171,7 +172,7 @@ private:
 	bool readAnotherFilterGroupConf(const char *filename);
 	std::deque<String> findoptionM(const char *option);
 
-	bool inIPList(const std::string *ip, ListContainer& list);
+	bool inIPList(const std::string *ip, ListContainer& list, std::string *&host);
 };
 
 #endif

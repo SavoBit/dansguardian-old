@@ -452,6 +452,11 @@ bool OptionContainer::read(const char *filename, int type)
 		} else {
 			reverse_client_ip_lookups = 0;
 		}
+		if (findoptionS("logclienthostnames") == "on") {
+			log_client_hostnames = 1;
+		} else {
+			log_client_hostnames = 0;
+		}
 
 
 		if (findoptionS("usexforwardedfor") == "on") {
@@ -603,7 +608,7 @@ bool OptionContainer::inBannedUserList(const std::string *user)
 	return banned_user_list.inList((char *) (*user).c_str());
 }
 
-bool OptionContainer::inIPList(const std::string *ip, ListContainer& list)
+bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::string *&host)
 {
 	if ((*ip).length() < 1) {
 		return false;
@@ -619,6 +624,14 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list)
 	for (unsigned int i = 0; i < hostnames.size(); i++) {
 		result = list.inList(hostnames[i].toCharArray());
 		if (result) {
+			// return the matched host name for logging purposes
+			if (log_client_hostnames == 1) {
+				delete host;
+				host = new std::string(hostnames[i].toCharArray());
+#ifdef DGDEBUG
+				std::cout<<"Found hostname: "<<(*host)<<std::endl;
+#endif
+			}
 			return true;
 		}
 	}
@@ -627,14 +640,14 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list)
 
 // checkme: remove these and make inIPList public?
 
-bool OptionContainer::inExceptionIPList(const std::string *ip)
+bool OptionContainer::inExceptionIPList(const std::string *ip, std::string *&host)
 {
-	return inIPList(ip, exception_ip_list);
+	return inIPList(ip, exception_ip_list, host);
 }
 
-bool OptionContainer::inBannedIPList(const std::string *ip)
+bool OptionContainer::inBannedIPList(const std::string *ip, std::string *&host)
 {
-	return inIPList(ip, banned_ip_list);
+	return inIPList(ip, banned_ip_list, host);
 }
 
 
