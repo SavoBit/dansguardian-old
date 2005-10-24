@@ -18,4 +18,5 @@
 
 # Fix Firefox <= 1.0.7 DoS
 # http://www.whitedust.net/speaks/1432/
-"((<source)|(</source))text>"->"$1dosremovedtext"
+# This requires dansguardian to be built with PCRE support, as it uses a backreference
+#"((<source)|(</source))text>"->"$1dosremovedtext"
