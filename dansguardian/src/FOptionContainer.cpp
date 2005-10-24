@@ -95,7 +95,7 @@ void FOptionContainer::reset()
 // listname is used in error messages.
 bool FOptionContainer::readFile(const char *filename, unsigned int* whichlist, bool sortsw, bool cache, const char *listname)
 {
-	int res = o.lm.newItemList(filename, true, 1, true);
+	int res = o.lm.newItemList(filename, sortsw, 1, true);
 	if (res < 0) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening " << listname << std::endl;
