@@ -7,7 +7,7 @@ DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists
 SUBDIRS = phraselists . contentscanners blacklists
 
 WLISTS = bannedextensionlist bannediplist bannedmimetypelist \
-	 bannedregexpurllist banneduserlist \
+	 bannedregexpurllist banneduserlist bannedsitelist bannedurllist \
 	 contentregexplist exceptioniplist exceptionsitelist \
 	 exceptionurllist exceptionuserlist filtergroupslist greysitelist \
 	 greyurllist pics bannedphraselist weightedphraselist \
@@ -15,7 +15,7 @@ WLISTS = bannedextensionlist bannediplist bannedmimetypelist \
 	 exceptionregexpurllist
 
 EXTRA_DIST = bannedextensionlist bannediplist bannedmimetypelist \
-	 bannedregexpurllist banneduserlist \
+	 bannedregexpurllist banneduserlist bannedsitelist.in bannedurllist.in \
 	 contentregexplist exceptioniplist exceptionsitelist \
 	 exceptionurllist exceptionuserlist filtergroupslist greysitelist \
 	 greyurllist pics bannedphraselist.in weightedphraselist.in \
