@@ -180,6 +180,25 @@ fi], [
 AC_FINALIZE_VAR(DGLOGLOCATION,"$logdir")
 AC_SUBST(DGLOGLOCATION)
 
+# asking user if they want PCRE support
+AC_MSG_CHECKING(for PCRE support)
+AC_ARG_ENABLE(
+pcre,
+[  --enable-pcre=[[yes]]  Enable support for the PCRE library],
+[ if test "x$enableval" = "xyes"; then
+	pcre=true
+	AC_MSG_RESULT(yes)
+else
+	pcre=false
+	AC_MSG_RESULT(no)
+fi
+],
+[ # enable by default
+	pcre=true
+	AC_MSG_RESULT(yes)
+]
+)
+if test "x$pcre" = "xtrue"; then
 	AC_CHECK_PROG(
 		      PCRE,
 		      pcre-config,
@@ -194,6 +213,8 @@ AC_SUBST(DGLOGLOCATION)
 	LIBPCRE_CFLAGS="-I${PCRE_PREFIX}/include"
 	AC_SUBST([LIBPCRE_LIBS])
 	AC_SUBST([LIBPCRE_CFLAGS])
+fi
+AM_CONDITIONAL(HAVE_PCRE, test "x$pcre" = "xtrue")
 
 # asking user if they want clamav support
 AC_MSG_CHECKING(for libclamav support)

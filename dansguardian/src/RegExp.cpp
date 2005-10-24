@@ -51,7 +51,11 @@ RegExp::RegExp(const RegExp & r)
 	wascompiled = r.wascompiled;
 	searchstring = r.searchstring;
 	if (wascompiled == true) {
-		if (regcomp(&reg, searchstring.c_str(), REG_ICASE | REG_EXTENDED /*| REG_DOTALL*/) != 0 ) {
+#ifdef __PCRE
+		if (regcomp(&reg, searchstring.c_str(), REG_ICASE | REG_EXTENDED | REG_DOTALL) != 0 ) {
+#else
+		if (regcomp(&reg, searchstring.c_str(), REG_ICASE | REG_EXTENDED) != 0 ) {
+#endif
 			regfree(&reg);
 			imatched = false;
 			wascompiled = false;
@@ -118,7 +122,11 @@ bool RegExp::comp(const char *exp)
 	offsets.clear();
 	lengths.clear();
 	imatched = false;
-	if (regcomp(&reg, exp, REG_ICASE | REG_EXTENDED /*| REG_DOTALL*/) != 0) {	// compile regex
+#ifdef __PCRE
+	if (regcomp(&reg, exp, REG_ICASE | REG_EXTENDED | REG_DOTALL) != 0) {	// compile regex
+#else
+	if (regcomp(&reg, exp, REG_ICASE | REG_EXTENDED) != 0) {
+#endif
 		regfree(&reg);
 
 		return false;  // need exception?

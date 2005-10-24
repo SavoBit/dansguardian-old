@@ -28,8 +28,13 @@
 #include "platform.h"
 
 #include <sys/types.h>		// needed for size_t used in regex.h
-//#include <regex.h>
+
+#ifdef __PCRE
 #include <pcreposix.h>
+#else
+#include <regex.h>
+#endif
+
 #include <string>
 #include <deque>
 

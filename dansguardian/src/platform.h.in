@@ -51,6 +51,10 @@
 	#define __FANCYDM
 #endif
 
+#ifdef HAVE_PCRE
+	#define __PCRE
+#endif
+
 #ifdef HAVE_KAVCLIENT
 	#define __KAVAV
 #endif
