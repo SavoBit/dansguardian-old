@@ -184,7 +184,7 @@ AC_SUBST(DGLOGLOCATION)
 AC_MSG_CHECKING(for PCRE support)
 AC_ARG_ENABLE(
 pcre,
-[  --enable-pcre=[[yes]]  Enable support for the PCRE library],
+[  --enable-pcre=[[no]]  Enable support for the PCRE library],
 [ if test "x$enableval" = "xyes"; then
 	pcre=true
 	AC_MSG_RESULT(yes)
@@ -193,9 +193,9 @@ else
 	AC_MSG_RESULT(no)
 fi
 ],
-[ # enable by default
-	pcre=true
-	AC_MSG_RESULT(yes)
+[ # disable by default
+	pcre=false
+	AC_MSG_RESULT(no)
 ]
 )
 if test "x$pcre" = "xtrue"; then
@@ -211,6 +211,7 @@ if test "x$pcre" = "xtrue"; then
 	LIBPCRE_LIBS=`pcre-config --libs`
 	PCRE_PREFIX=`pcre-config --prefix`
 	LIBPCRE_CFLAGS="-I${PCRE_PREFIX}/include"
+	AC_DEFINE([HAVE_PCRE],[],[Define to enable PCRE support])
 	AC_SUBST([LIBPCRE_LIBS])
 	AC_SUBST([LIBPCRE_CFLAGS])
 fi
