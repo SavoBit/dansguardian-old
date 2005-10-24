@@ -37,14 +37,20 @@
 class ConnectionHandler
 {
 public:
+	ConnectionHandler():clienthost(NULL) {};
+	~ConnectionHandler() { delete clienthost; };
+
 	// pass data between proxy and client, filtering as we go.
 	void handleConnection(Socket &peerconn, String &ip, int port);
 
 private:
+	std::string *clienthost;
+
 	// write a log entry containing the given data (if required)
 	void doLog(std::string &who, std::string &from, String &where, unsigned int &port,
 		std::string &what, String &how, int &size, std::string *cat, int &loglevel, bool isnaughty,
-		bool isexception, int logexceptions, bool istext, struct timeval *thestart, bool cachehit, int code, std::string &mimetype, bool wasinfected, bool wasscanned);
+		bool isexception, int logexceptions, bool istext, struct timeval *thestart, bool cachehit, int code,
+		std::string &mimetype, bool wasinfected, bool wasscanned);
 
 	// perform URL encoding on a string
 	std::string miniURLEncode(std::string s);
@@ -55,30 +61,31 @@ private:
 	void addToClean(String url);
 
 	// check the request header is OK (client host/user/IP allowed to browse, site not banned, upload not too big)
-	void requestChecks(HTTPHeader * header, NaughtyFilter * checkme, String * urld, std::string * clientip, std::string * clientuser, int filtergroup, bool * ispostblock);
+	void requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld, std::string *clientip,
+		std::string *clientuser, int filtergroup, bool *ispostblock);
 
 	// strip the URL down to just the IP/hostname, then do an isIPHostname on the result
 	bool isIPHostnameStrip(String url);
 
 	// determine the filter group of the given user
-	int determineGroup(std::string * user);
+	int determineGroup(std::string *user);
 
 	// show the relevant banned page depending upon the report level settings, request type, etc.
-	bool denyAccess(Socket * peerconn, Socket * proxysock, HTTPHeader * header, HTTPHeader * docheader,
-		String * url, NaughtyFilter * checkme, std::string * clientuser, std::string * clientip, int filtergroup, bool ispostblock, int headersent);
+	bool denyAccess(Socket *peerconn, Socket *proxysock, HTTPHeader *header, HTTPHeader *docheader,
+		String *url, NaughtyFilter *checkme, std::string *clientuser, std::string *clientip, int filtergroup, bool ispostblock, int headersent);
 
 	// create temporary ban bypass URLs/cookies
-	String hashedURL(String * url, int filtergroup, std::string * clientip);
-	String hashedCookie(String * url, int filtergroup, std::string * clientip, int bypasstimestamp);
+	String hashedURL(String *url, int filtergroup, std::string *clientip);
+	String hashedCookie(String *url, int filtergroup, std::string *clientip, int bypasstimestamp);
 
 	// do content scanning (AV filtering) and naughty filtering
-	void contentFilter(HTTPHeader * docheader, HTTPHeader * header, DataBuffer * docbody, Socket * proxysock,
-		Socket * peerconn, int *headersent, bool * pausedtoobig, int *docsize, NaughtyFilter * checkme, bool runav,
-		bool wasclean, bool cachehit, int filtergroup, std::deque<bool > *sendtoscanner, std::string * clientuser,
-		std::string * clientip, bool * wasinfected, bool * wasscanned);
+	void contentFilter(HTTPHeader *docheader, HTTPHeader *header, DataBuffer *docbody, Socket *proxysock,
+		Socket *peerconn, int *headersent, bool *pausedtoobig, int *docsize, NaughtyFilter *checkme, bool runav,
+		bool wasclean, bool cachehit, int filtergroup, std::deque<bool > *sendtoscanner, std::string *clientuser,
+		std::string *clientip, bool *wasinfected, bool *wasscanned);
 
 	// send a file to the client - used during bypass of blocked downloads
-	unsigned int sendFile(Socket * peerconn, String & filename, String & filemime, String & filedis);
+	unsigned int sendFile(Socket *peerconn, String & filename, String & filemime, String & filedis);
 };
 
 #endif

@@ -372,6 +372,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	Ident ident;  // for holding
 
 	std::string clientip = ip.toCharArray();  // hold the clients ip
+	delete clienthost;
+	clienthost = NULL;  // and the hostname, if available
 
 #ifdef DGDEBUG			// debug stuff surprisingly enough
 	std::cout << "got connection" << std::endl;
@@ -491,7 +493,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			std::cout << "Bypass activated!" << std::endl;
 #endif
 		}
-		else if (o.inExceptionIPList(&clientip)) {	// admin pc
+		else if (o.inExceptionIPList(&clientip, clienthost)) {	// admin pc
 			isexception = true;
 			exceptionreason = o.language_list.getTranslation(600);
 			// Exception client IP match.
@@ -594,7 +596,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		if ((isourwebserver || isexception || iscookiebypass)
 			// don't filter exception and local web server
 			// Cookie bypass so don't need to add cookie so just CONNECT
-			&& !o.inBannedIPList(&clientip)	 // bad users pc
+			&& !o.inBannedIPList(&clientip, clienthost)	 // bad users pc
 			&& !o.inBannedUserList(&clientuser)	 // bad user
 			&& !(runav && o.content_scan_exceptions))
 		{
@@ -949,7 +951,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 // decide whether or not to perform logging, categorise the log entry, and write it.
 void ConnectionHandler::doLog(std::string &who, std::string &from, String &where, unsigned int &port,
 		std::string &what, String &how, int &size, std::string *cat, int &loglevel, bool isnaughty,
-		bool isexception, int logexceptions, bool istext, struct timeval *thestart, bool cachehit, int code, std::string &mimetype, bool wasinfected, bool wasscanned)
+		bool isexception, int logexceptions, bool istext, struct timeval *thestart, bool cachehit,
+		int code, std::string &mimetype, bool wasinfected, bool wasscanned)
 {
 	// don't log if logging disabled entirely, or if it's an ad block and ad logging is disabled
 	if ((loglevel == 0) || ((cat != NULL) && (o.log_ad_blocks == 0) && (strstr(cat->c_str(),"ADs") != NULL))) {
@@ -1067,9 +1070,22 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 				ssize = ssize.substr(0, o.max_logitem_length);*/
 		}
 		
+		// put client hostname in log if enabled.
+		// for denied & exception, we want to output exactly what was matched against,
+		// be it hostname or IP - therefore only do lookups here for standard requests,
+		// which we most likely won't have a cached hostname for.
+		if ((o.log_client_hostnames == 1) && !(isexception || isnaughty)) {
+			std::deque<String> names = o.fg[0]->ipToHostname(from.c_str());
+			if (names.size() > 0) {
+				delete clienthost;
+				clienthost = new std::string(names[0].toCharArray());
+			}
+		}
+		
 		switch (o.log_file_format) {
 		case 4:
-			logline = when + "\t" + who + "\t" + from + "\t" + where.toCharArray() + "\t" + what + "\t" + how.toCharArray() + "\t" + ssize + "\t" + (cat ? (*cat) : "N/A") + "\n";
+			logline = when + "\t" + who + "\t" + (clienthost ? *clienthost : from) + "\t" + where.toCharArray() + "\t" + what
+				+ "\t" + how.toCharArray() + "\t" + ssize + "\t" + (cat ? (*cat) : "N/A") + "\n";
 			break;
 		case 3:
 			{
@@ -1122,14 +1138,17 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 						hitmiss = hitmiss.substr(0, o.max_logitem_length);
 				}*/
 
-				logline = utime + " " + duration + " " + from + " " + hitmiss + " " + ssize + " " + how.toCharArray() + " " + where.toCharArray() + " " + who + " " + hier + " " + mimetype + "\n";
+				logline = utime + " " + duration + " " + (clienthost ? *clienthost : from) + " " + hitmiss + " " + ssize + " "
+					+ how.toCharArray() + " " + where.toCharArray() + " " + who + " " + hier + " " + mimetype + "\n";
 				break;
 			}
 		case 2:
-			logline = "\"" + when + "\",\"" + who + "\",\"" + from + "\",\"" + where.toCharArray() + "\",\"" + what + "\",\"" + how.toCharArray() + "\",\"" + ssize + "\"\n";
+			logline = "\"" + when + "\",\"" + who + "\",\"" + (clienthost ? *clienthost : from) + "\",\"" + where.toCharArray()
+				+ "\",\"" + what + "\",\"" + how.toCharArray() + "\",\"" + ssize + "\"\n";
 			break;
 		default:
-			logline = when + " " + who + " " + from + " " + where.toCharArray() + " " + what + " " + how.toCharArray() + " " + ssize + " " + (cat ? (*cat) : "N/A") + "\n";
+			logline = when + " " + who + " " + (clienthost ? *clienthost : from) + " " + where.toCharArray() + " " + what + " "
+				+ how.toCharArray() + " " + ssize + " " + (cat ? (*cat) : "N/A") + "\n";
 		}
 
 		// connect to dedicated logging proc
@@ -1149,8 +1168,8 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 }
 
 // check the request header is OK (client host/user/IP allowed to browse, site not banned, upload not too big)
-void ConnectionHandler::requestChecks(HTTPHeader * header, NaughtyFilter * checkme, String * urld,
-	std::string * clientip, std::string * clientuser, int filtergroup, bool * ispostblock)
+void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld,
+	std::string *clientip, std::string *clientuser, int filtergroup, bool *ispostblock)
 {
 	char *i;
 	int j;
@@ -1166,11 +1185,11 @@ void ConnectionHandler::requestChecks(HTTPHeader * header, NaughtyFilter * check
 		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
 		(*checkme).whatIsNaughtyCategories = "Blanket Block";
 	}
-	else if (o.inBannedIPList(clientip)) {
+	else if (o.inBannedIPList(clientip,clienthost)) {
 		(*checkme).isItNaughty = true;
 		(*checkme).whatIsNaughtyLog = o.language_list.getTranslation(100);
 		// Your IP address is not allowed to web browse:
-		(*checkme).whatIsNaughtyLog += (*clientip);
+		(*checkme).whatIsNaughtyLog += clienthost ? *clienthost : *clientip;
 		(*checkme).whatIsNaughty = o.language_list.getTranslation(101);
 		// Your IP address is not allowed to web browse.
 		(*checkme).whatIsNaughtyCategories = "Banned Client IP";
