@@ -1,9 +1,10 @@
 MAINTAINERCLEANFILES = Makefile.in \
-		       weightedphraselist bannedphraselist exceptionphraselist
+		       weightedphraselist bannedphraselist exceptionphraselist \
+		       bannedsitelist bannedurllist
 
 DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists
 
-SUBDIRS = phraselists . contentscanners
+SUBDIRS = phraselists . contentscanners blacklists
 
 WLISTS = bannedextensionlist bannediplist bannedmimetypelist \
 	 bannedregexpurllist bannedsitelist bannedurllist banneduserlist \
