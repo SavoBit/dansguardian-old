@@ -663,7 +663,8 @@ bool ListContainer::createCacheFile()
 		f += "\n";
 		listfile.write(f.toCharArray(), f.length());
 	}
-	if (category.length() > 4) {	// no point in writing corrupt short one
+	if (category.length() > 2) {	// no point in writing corrupt short one
+		// lengthened from 4 to allow "ADs" category to be preserved in processed files
 		f = "#listcategory:\"";
 		f += category;
 		f += "\"\n";
@@ -1365,18 +1366,13 @@ int ListContainer::greaterThanSW(const char *a, const char *b)
 	int alen = strlen(a);
 	int blen = strlen(b);
 
-	// if the banned URL is longer than the URL we're checking, the two
-	// can't possibly match.
-	if (blen > alen)
-		return -1;
-
 	int maxlen = alen < blen ? alen : blen;
-	int i = maxlen-1;  // this used to be set to 1 - I don't know why
+	int i = 0;  // this used to be set to 1 - I don't know why
 	unsigned char achar;
 	unsigned char bchar;
-	// compare from the end of the URL backwards; then if we find a mismatch,
+	// compare from the front of the URL forwards; then if we find a mismatch,
 	// look for shorter or alphabetically different URLs
-	while (i > -1) {
+	while (i < maxlen) {
 		achar = a[i];
 		bchar = b[i];
 		if (achar > bchar) {
@@ -1385,7 +1381,7 @@ int ListContainer::greaterThanSW(const char *a, const char *b)
 		if (achar < bchar) {
 			return -1;
 		}
-		i--;
+		i++;
 	}
 	
 	// if the URLs didn't match and the one the user is browsing to is longer
@@ -1395,6 +1391,11 @@ int ListContainer::greaterThanSW(const char *a, const char *b)
 	// beginning of it matches a banned URL.)
 	if ((alen > blen) && !(a[blen] == '/' || a[blen]=='?' || a[blen]=='&' || a[blen]=='='))
 		return 1;
+
+	// if the banned URL is longer than the URL we're checking, the two
+	// can't possibly match.
+	if (blen > alen)
+		return -1;
 
 	return 0;  // both equal
 }
