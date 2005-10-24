@@ -357,10 +357,13 @@ AC_CONFIG_FILES([Makefile
 	        configs/Makefile
 	        configs/lists/Makefile
 	        configs/lists/phraselists/Makefile
+	        configs/lists/blacklists/Makefile
 	        configs/lists/contentscanners/Makefile
 	        configs/lists/weightedphraselist
 	        configs/lists/exceptionphraselist
 	        configs/lists/bannedphraselist
+		configs/lists/bannedurllist
+		configs/lists/bannedsitelist
 	        configs/downloadmanagers/Makefile
 	        configs/downloadmanagers/default.conf
 	        configs/downloadmanagers/fancy.conf
