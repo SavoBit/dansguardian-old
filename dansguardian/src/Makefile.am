@@ -92,6 +92,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        HTMLTemplate.cpp HTMLTemplate.hpp \
                        LanguageContainer.cpp LanguageContainer.hpp \
                        DynamicURLList.cpp DynamicURLList.hpp \
+		       DynamicIPList.cpp DynamicIPList.hpp \
                        ImageContainer.cpp ImageContainer.hpp \
                        OptionContainer.cpp OptionContainer.hpp \
                        FOptionContainer.cpp FOptionContainer.hpp \
