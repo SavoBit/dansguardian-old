@@ -20,6 +20,8 @@
 #ifndef __HPP_DYNAMICURLLIST
 #define __HPP_DYNAMICURLLIST
 
+#include "platform.h"
+
 // dynamic URL lists - used to cache known clean URLs so filtering can be bypassed
 class DynamicURLList
 {

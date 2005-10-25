@@ -20,8 +20,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include "DynamicURLList.hpp"
 #include "OptionContainer.hpp"
 

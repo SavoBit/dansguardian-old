@@ -37,7 +37,7 @@ public:
 	UDSocket();
 	// create socket from pre-existing FD (address structs will be empty!)
 	UDSocket(int fd);
-	// create socket from FD & local path (checkme - is it actually local that gets passed?)
+	// create socket from FD & local path (checkme: is it actually local that gets passed?)
 	UDSocket(int newfd, struct sockaddr_un myadr);
 	
 	// connect socket to given server (following default constructor)

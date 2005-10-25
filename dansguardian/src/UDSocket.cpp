@@ -63,7 +63,7 @@ UDSocket::UDSocket(int fd):BaseSocket(fd)
 	peer_adr.sun_family = AF_UNIX;
 }
 
-// create socket from given FD & local address (checkme - is it local or remote that gets passed in here?)
+// create socket from given FD & local address (checkme: is it local or remote that gets passed in here?)
 UDSocket::UDSocket(int newfd, struct sockaddr_un myadr):BaseSocket(newfd)
 {
 	my_adr = myadr;
