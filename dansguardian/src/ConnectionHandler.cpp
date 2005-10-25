@@ -64,13 +64,13 @@ bool ConnectionHandler::isIPHostnameStrip(String url)
 }
 
 // perform URL encoding on a string
-std::string ConnectionHandler::miniURLEncode(std::string s)
+std::string ConnectionHandler::miniURLEncode(const char *s)
 {
 	std::string encoded;
 	//char *buf = new char[16];  // way longer than needed
 	char *buf = new char[2];
 	unsigned char c;
-	for (int i = 0; i < (signed) s.length(); i++) {
+	for (int i = 0; i < (signed) strlen(s); i++) {
 		c = s[i];
 		// allowed characters in a url that have non special meaning
 		if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
@@ -87,7 +87,7 @@ std::string ConnectionHandler::miniURLEncode(std::string s)
 }
 
 // create a temporary bypass URL for the banned page
-String ConnectionHandler::hashedURL(String * url, int filtergroup, std::string * clientip)
+String ConnectionHandler::hashedURL(String *url, int filtergroup, std::string *clientip)
 {
 	String timecode(time(NULL) + (*o.fg[filtergroup]).bypass_mode);
 	String magic = (*o.fg[filtergroup]).magic.c_str();
@@ -164,10 +164,41 @@ int ConnectionHandler::determineGroup(std::string * user)
 	return -1;
 }
 
+// when using IP address counting - have we got any remaining free IPs?
+bool ConnectionHandler::gotIPs(char *ipstr) {
+	UDSocket ipcsock;
+	if (ipcsock.getFD() < 0) {
+		syslog(LOG_ERR, "%s","Error creating ipc socket to IP cache");
+		return false;
+	}
+	// TODO: put in proper file name check
+	if (ipcsock.connect((char*) o.ipipc_filename.c_str()) < 0) {  // connect to dedicated ip list proc
+		syslog(LOG_ERR, "%s","Error connecting via ipc to IP cache");
+		return false;
+	}
+	char reply;
+	ipstr[strlen(ipstr)] = '\n';
+	try {
+		ipcsock.writeToSockete(ipstr, strlen(ipstr)+1, 0, 6);
+		ipcsock.readFromSocket(&reply, 1, 0, 6);  // throws on err
+	}
+	catch (exception& e) {
+#ifdef DGDEBUG
+		std::cerr << "Exception with IP cache" << std::endl;
+		std::cerr << e.what() << std::endl;
+#endif
+		syslog(LOG_ERR, "Exception with IP cache");
+		syslog(LOG_ERR, e.what());
+	}
+	ipstr[strlen(ipstr)] = '\0';
+	ipcsock.close();
+	return reply == 'Y';
+}
+
 // check the URL cache to see if we've already flagged an address as clean
-bool ConnectionHandler::wasClean(String url)
+bool ConnectionHandler::wasClean(String &url)
 {
-	url = url.after("://");
+	String myurl = url.after("://");
 	UDSocket ipcsock;
 	if (ipcsock.getFD() < 0) {
 		syslog(LOG_ERR, "%s", "Error creating ipc socket to url cache");
@@ -178,70 +209,64 @@ bool ConnectionHandler::wasClean(String url)
 		ipcsock.close();
 		return false;
 	}
-	url += "\n";
-	char *reply = new char[8];
+	char reply;
 #ifdef DGDEBUG
-	std::cout << "sending clean request:" << url.toCharArray() << std::endl;
+	std::cout << "sending clean request:" << myurl.toCharArray() << std::endl;
 #endif
+	myurl += "\n";
 	try {
-		ipcsock.writeString(url.toCharArray());  // throws on err
+		ipcsock.writeString(myurl.toCharArray());  // throws on err
 	}
 	catch(exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception writing to url cache" << std::endl;
 		std::cerr << e.what() << std::endl;
 #endif
-		syslog(LOG_ERR, "%s", "Exception writing to url cache");
-		syslog(LOG_ERR, "%s", e.what());
+		syslog(LOG_ERR, "Exception writing to url cache");
+		syslog(LOG_ERR, e.what());
 	}
 	try {
-		ipcsock.getLine(reply, 7, 6);  // throws on err
+		ipcsock.readFromSocket(&reply, 1, 0, 6);  // throws on err
 	}
 	catch(exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception reading from url cache" << std::endl;
 		std::cerr << e.what() << std::endl;
 #endif
-		syslog(LOG_ERR, "%s", "Exception reading from url cache");
-		syslog(LOG_ERR, "%s", e.what());
+		syslog(LOG_ERR, "Exception reading from url cache");
+		syslog(LOG_ERR, e.what());
 	}
 	ipcsock.close();
-	if (reply[0] == 'Y') {
-		delete[]reply;
-		return true;
-	}
-	delete[]reply;
-	return false;
+	return reply == 'Y';
 }
 
 // add a known clean URL to the cache
-void ConnectionHandler::addToClean(String url)
+void ConnectionHandler::addToClean(String &url)
 {
-	url = url.after("://");
+	String myurl = url.after("://");
 	UDSocket ipcsock;
 	if (ipcsock.getFD() < 0) {
 		syslog(LOG_ERR, "%s", "Error creating ipc socket to url cache");
 		return;
 	}
 	if (ipcsock.connect((char *) o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
-		syslog(LOG_ERR, "%s", "Error connecting via ipc to url cache");
+		syslog(LOG_ERR, "Error connecting via ipc to url cache");
 #ifdef DGDEBUG
 		std::cout << "Error connecting via ipc to url cache" << std::endl;
 #endif
 		return;
 	}
-	url += "\n";
-	url = "A " + url;
+	myurl = "A" + myurl;
 	try {
-		ipcsock.writeString(url.toCharArray());  // throws on err
+		ipcsock.writeString(myurl.toCharArray());  // throws on err
 	}
 	catch(exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception adding to url cache" << std::endl;
 		std::cerr << e.what() << std::endl;
 #endif
-		syslog(LOG_ERR, "%s", "Exception adding to url cache");
-		syslog(LOG_ERR, "%s", e.what());
+		syslog(LOG_ERR, "Exception adding to url cache");
+		syslog(LOG_ERR, e.what());
 	}
 	ipcsock.close();
 }
@@ -251,7 +276,7 @@ unsigned int ConnectionHandler::sendFile(Socket * peerconn, String & filename, S
 {
 	int fd = open(filename.toCharArray(), O_RDONLY);
 	if (fd < 0) {		// file access error
-		syslog(LOG_ERR, "%s", "Error reading file to send");
+		syslog(LOG_ERR, "Error reading file to send");
 #ifdef DGDEBUG
 		std::cout << "Error reading file to send:" << filename << std::endl;
 #endif
@@ -622,6 +647,17 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 		NaughtyFilter checkme;  // our filter object
 		checkme.filtergroup = filtergroup;
+
+		if ((o.max_ips > 0) && (!gotIPs((char*)clientip.c_str()))) {
+#ifdef DGDEBUG
+			std::cout << "no client IP slots left" << std::endl;
+#endif
+			checkme.whatIsNaughty = "IP limit exceeded.  There is a ";
+			checkme.whatIsNaughty += String(o.max_ips).toCharArray();
+			checkme.whatIsNaughty += " IP limit set.";
+			checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+			checkme.whatIsNaughtyCategories = "IP Limit";
+		}
 		
 		// URL regexp search and replace
 		if (header.urlRegExp(filtergroup)) {
@@ -1048,19 +1084,12 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		// truncate long log items
 		if (o.max_logitem_length > 0) {
 			where.limitLength(o.max_logitem_length);
-
-			// don't output gigantic category lists.
-			// now that we detect & reject duplicate categories to begin with, is this really necessary?
-			//int truncto = (o.max_logitem_length > 3000 ? o.max_logitem_length : 3000);
-			std::cout<<"Cat: "<<(*cat)<<std::endl;
 			if ((cat != NULL) && (cat->length() > o.max_logitem_length)) {
 				(*cat) = cat->substr(0, o.max_logitem_length);
 			}
-			std::cout<<"Cat: "<<(*cat)<<std::endl;
 			if (what.length() > o.max_logitem_length) {
 				what = what.substr(0, o.max_logitem_length);
 			}
-
 			/*if (who.length() > o.max_logitem_length)
 				who = who.substr(0, o.max_logitem_length);
 			if (from.length() > o.max_logitem_length)
@@ -1465,7 +1494,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				writestring += "::USER==";
 				writestring += (*clientuser).c_str();
 				writestring += "::CATEGORIES==";
-				writestring += miniURLEncode((*checkme).whatIsNaughtyCategories).c_str();
+				writestring += miniURLEncode((*checkme).whatIsNaughtyCategories.c_str()).c_str();
 				if ((*o.fg[filtergroup]).bypass_mode != 0 && !ispostblock) {
 					//String timecode(time(NULL) + 300);
 					// String hashed = (*url).md5(std::string((*o.fg[filtergroup]).magic + timecode.toCharArray()).c_str());
@@ -1482,7 +1511,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				writestring += "&USER=";
 				writestring += (*clientuser).c_str();
 				writestring += "&CATEGORIES=";
-				writestring += miniURLEncode((*checkme).whatIsNaughtyCategories).c_str();
+				writestring += miniURLEncode((*checkme).whatIsNaughtyCategories.c_str()).c_str();
 				if ((*o.fg[filtergroup]).bypass_mode != 0 && !ispostblock) {
 					//String timecode(time(NULL) + 300);
 					//String hashed = (*url).md5(std::string((*o.fg[filtergroup]).magic + timecode.toCharArray()).c_str());
@@ -1493,9 +1522,9 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				writestring += "&REASON=";
 			}
 			if (o.reporting_level == 1) {
-				writestring += miniURLEncode((*checkme).whatIsNaughty).c_str();
+				writestring += miniURLEncode((*checkme).whatIsNaughty.c_str()).c_str();
 			} else {
-				writestring += miniURLEncode((*checkme).whatIsNaughtyLog).c_str();
+				writestring += miniURLEncode((*checkme).whatIsNaughtyLog.c_str()).c_str();
 			}
 			writestring += "\n\n";
 			(*peerconn).writeString(writestring.toCharArray());
