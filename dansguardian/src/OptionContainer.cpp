@@ -154,6 +154,9 @@ bool OptionContainer::read(const char *filename, int type)
 			if ((urlipc_filename = findoptionS("urlipcfilename")) == "")
 				urlipc_filename = "/tmp/.dguardianurlipc";
 
+			if ((ipipc_filename = findoptionS("ipipcfilename")) == "")
+				ipipc_filename = "/tmp/.dguardianipipc";
+
 			if ((pid_filename = findoptionS("pidfilename")) == "") {
 				pid_filename = __PIDDIR;
 				pid_filename += "dansguardian.pid";
@@ -230,6 +233,11 @@ bool OptionContainer::read(const char *filename, int type)
 		if (!realitycheck(String(maxage_children), 1, 6, "children")) {
 			return false;
 		}		// check its a reasonable value
+
+		max_ips = findoptionI("maxips");
+		if (!realitycheck(String(max_ips), 1, 5, "maxips")) {
+			return false;
+		}
 
 		max_upload_size = findoptionI("maxuploadsize") * 1024;
 		if (!realitycheck(String(max_upload_size), 1, 8, "maxuploadsize")) {
@@ -625,13 +633,16 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::
 		result = list.inList(hostnames[i].toCharArray());
 		if (result) {
 			// return the matched host name for logging purposes
-			if (log_client_hostnames == 1) {
+			// hey.. since the lookup is the hard part, not the logging,
+			// why not always return a hostname if it wasn't a straight IP
+			// that triggered the match?
+			//if (log_client_hostnames == 1) {
 				delete host;
 				host = new std::string(hostnames[i].toCharArray());
 #ifdef DGDEBUG
 				std::cout<<"Found hostname: "<<(*host)<<std::endl;
 #endif
-			}
+			//}
 			return true;
 		}
 	}
