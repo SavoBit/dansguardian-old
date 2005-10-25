@@ -652,6 +652,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 			std::cout << "no client IP slots left" << std::endl;
 #endif
+			checkme.isItNaughty = true;
 			checkme.whatIsNaughty = "IP limit exceeded.  There is a ";
 			checkme.whatIsNaughty += String(o.max_ips).toCharArray();
 			checkme.whatIsNaughty += " IP limit set.";
