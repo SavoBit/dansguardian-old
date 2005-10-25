@@ -53,12 +53,15 @@ private:
 		std::string &mimetype, bool wasinfected, bool wasscanned);
 
 	// perform URL encoding on a string
-	std::string miniURLEncode(std::string s);
+	std::string miniURLEncode(const char *s);
 
 	// check the URL cache to see if we've already flagged an address as clean
-	bool wasClean(String url);
+	bool wasClean(String &url);
 	// add a known clean URL to the cache
-	void addToClean(String url);
+	void addToClean(String &url);
+
+	// when using IP address counting - have we got any remaining free IPs?
+	bool gotIPs(char *ipstr);
 
 	// check the request header is OK (client host/user/IP allowed to browse, site not banned, upload not too big)
 	void requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld, std::string *clientip,
