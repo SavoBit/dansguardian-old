@@ -1,11 +1,11 @@
-#IP addresses of client machines to
-#disallow web access to
+# IP addresses of client machines to
+# disallow web access to.
 #
-#Only put IP addresses here,
-#not host names
+# Hostnames are also allowed here, provided you
+# enable the reverseclientlookups option.
 #
-#This is not the IP of web servers
-#you want to filter.
+# This is not the IP of web servers
+# you want to filter.
 
 #192.168.0.1
 #192.168.0.2
