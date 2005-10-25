@@ -219,10 +219,21 @@ reverseaddresslookups = off
 # If set to on, DansGuardian will look up the forward DNS for the IP
 # of the connecting computer.  This means you can put in hostnames in
 # the exceptioniplist and bannediplist.
+# If a client computer is matched against an IP given in the lists, then the
+# IP will be recorded in any log entries; if forward DNS is successful and a
+# match occurs against a hostname, the hostname will be logged instead.
 # It will reduce searching speed somewhat so unless you have a local DNS server, 
 # leave it off.
 reverseclientiplookups = off
 
+
+# Perform reverse lookups on client IPs for successful requests.
+# If set to on, DansGuardian will look up the forward DNS for the IP
+# of the connecting computer, and log host names (where available) rather than
+# IPs against successful HTTP requests.
+# This is not dependent on reverseclientiplookups being enabled, and does not
+# affect logging behaviour for banned/exception requests.
+logclienthostnames = off
 
 
 # Build bannedsitelist and bannedurllist cache files.
@@ -466,6 +477,12 @@ maxsparechildren = 32
 maxagechildren = 500
 
 
+# Sets the maximum number client IP addresses allowed to connect at once.
+# Use this to set a hard limit on the number of users allowed to concurrently
+# browse the web. Set to 0 for no limit, and to disable the IP cache process.
+maxips = 0
+
+
 
 # Process options
 # (Change these only if you really know what you are doing).
@@ -482,6 +499,12 @@ ipcfilename = '/tmp/.dguardianipc'
 # Defines URL list IPC server directory and filename used to communicate with the URL
 # cache process.
 urlipcfilename = '/tmp/.dguardianurlipc'
+
+# IP list IPC filename
+#
+# Defines IP list IPC server directory and filename, for communicating with the client
+# IP cache process.
+ipipcfilename = '/tmp/.dguardianipipc'
 
 # PID filename
 # 
