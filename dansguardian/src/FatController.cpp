@@ -25,6 +25,7 @@
 #include "FatController.hpp"
 #include "ConnectionHandler.hpp"
 #include "DynamicURLList.hpp"
+#include "DynamicIPList.hpp"
 #include "String.hpp"
 #include "SocketArray.hpp"
 #include "UDSocket.hpp"
@@ -54,9 +55,9 @@
 // any time, and therefore value reading on them does not get optimised. since
 // the values can get altered by outside influences, this is useful.
 static volatile bool ttg = false;
-/*static*/ volatile bool reloadconfig = false;
 static volatile bool gentlereload = false;
 static volatile bool sig_term_killall = false;
+volatile bool reloadconfig = false;
 
 extern OptionContainer o;
 extern bool is_daemonised;
@@ -72,8 +73,9 @@ UDSocket **childsockets;
 int failurecount;
 int serversocketcount;
 SocketArray serversockets;  // the sockets we will listen on for connections
-UDSocket ipcsock;  // the unix domain socket to be used for ipc with the forked children
+UDSocket loggersock;  // the unix domain socket to be used for ipc with the forked children
 UDSocket urllistsock;
+UDSocket iplistsock;
 Socket *peersock = NULL;  // the socket which will contain the connection
 
 String peersockip;  // which will contain the connection ip
@@ -247,7 +249,7 @@ void flush_urlcache()
 #endif
 		return;
 	}
-	String request = "F \n";
+	String request = "F\n";
 	try {
 		fipcsock.writeString(request.toCharArray());  // throws on err
 	}
@@ -629,6 +631,8 @@ void kill_allchildren()
 			kill(childrenpids[i], SIGTERM);
 			childrenstates[i] = -2;  // dieing
 			numchildren--;
+			delete childsockets[i];
+			pids[i].fd = -1;
 		}
 	}
 }
@@ -781,7 +785,7 @@ void tellchild_accept(int num, int whichsock)
 
 // *
 // *
-// * logger and URL cache main loops
+// * logger, IP list and URL cache main loops
 // *
 // *
 
@@ -807,7 +811,7 @@ int log_listener(std::string log_location, int logconerror)
 		return 1;  // return with error
 	}
 
-	ipcsockfd = ipcsock.getFD();
+	ipcsockfd = loggersock.getFD();
 
 	fd_set fdSet;  // our set of fds (only 1) that select monitors for us
 	fd_set fdcpy;  // select modifes the set so we need to use a copy
@@ -838,7 +842,7 @@ int log_listener(std::string log_location, int logconerror)
 #ifdef DGDEBUG
 			std::cout << "received a log request" << std::endl;
 #endif
-			ipcpeersock = ipcsock.accept();
+			ipcpeersock = loggersock.accept();
 			if (ipcpeersock->getFD() < 0) {
 				ipcpeersock->close();
 				if (logconerror == 1) {
@@ -889,7 +893,7 @@ int url_list_listener(int logconerror)
 	UDSocket* ipcpeersock;  // the socket which will contain the ipc connection
 	int rc, ipcsockfd;
 	char *logline = new char[32000];
-	String reply;
+	char reply;
 	DynamicURLList urllist;
 #ifdef DGDEBUG
 	std::cout << "setting url list size-age:" << o.url_cache_number << "-" << o.url_cache_age << std::endl;
@@ -949,15 +953,15 @@ int url_list_listener(int logconerror)
 				ipcpeersock->close();  // close the connection
 				if (logconerror == 1) {
 #ifdef DGDEBUG
-					std::cout << "Error reading ip ipc. (Ignorable)" << std::endl;
+					std::cout << "Error reading url ipc. (Ignorable)" << std::endl;
 					std::cerr << e.what() << std::endl;
 #endif
-					syslog(LOG_ERR, "%s", "Error reading ip ipc. (Ignorable)");
+					syslog(LOG_ERR, "%s", "Error reading url ipc. (Ignorable)");
 					syslog(LOG_ERR, "%s", e.what());
 				}
 				continue;
 			}
-			if (logline[0] == 'F' && logline[1] == ' ') {
+			if (logline[0] == 'F') {
 				ipcpeersock->close();  // close the connection
 				urllist.flush();
 #ifdef DGDEBUG
@@ -965,9 +969,9 @@ int url_list_listener(int logconerror)
 #endif
 				continue;
 			}
-			if (logline[0] == 'A' && logline[1] == ' ') {
+			if (logline[0] == 'A') {
 				ipcpeersock->close();  // close the connection
-				urllist.addEntry(logline + 2);
+				urllist.addEntry(logline + 1);
 #ifdef DGDEBUG
 				std::cout << "url add request:" << logline << std::endl;
 #endif
@@ -977,12 +981,12 @@ int url_list_listener(int logconerror)
 			std::cout << "url search request:" << logline << std::endl;
 #endif
 			if (urllist.inURLList(logline)) {
-				reply = "Y\n";
+				reply = 'Y';
 			} else {
-				reply = "N\n";
+				reply = 'N';
 			}
 			try {
-				ipcpeersock->writeString(reply.toCharArray());
+				ipcpeersock->writeToSockete(&reply, 1, 0, 6);
 			}
 			catch(exception & e) {
 				ipcpeersock->close();  // close the connection
@@ -1005,10 +1009,133 @@ int url_list_listener(int logconerror)
 	return 1;  // It is only possible to reach here with an error
 }
 
+int ip_list_listener(int logconerror) {
+#ifdef DGDEBUG
+	std::cout << "ip listener started" << std::endl;
+#endif
+	if (!drop_priv_completely()) {
+		return 1;  //error
+	}
+	UDSocket *ipcpeersock;
+	int rc, ipcsockfd;
+	char* inbuff = new char[16];
+
+	// pass in size of list, and max. age of entries (4 hours, apparently)
+	DynamicIPList iplist(o.max_ips, 14399);
+
+	ipcsockfd = iplistsock.getFD();
+
+	unsigned long int ip;
+	char reply;
+	struct in_addr inaddr;
+
+	struct timeval sleep;  // used later on for a short sleep
+	sleep.tv_sec = 180;
+	sleep.tv_usec = 0; // = 10ms = 0.01sec
+	struct timeval scopy;  // copy to use as select() can modify
+
+	fd_set fdSet;  // our set of fds (only 1) that select monitors for us
+	fd_set fdcpy;  // select modifes the set so we need to use a copy
+	FD_ZERO(&fdSet);  // clear the set
+	FD_SET(ipcsockfd, &fdSet);  // add ipcsock to the set
+
+#ifdef DGDEBUG
+	std::cout << "ip listener entering select()" << std::endl;
+#endif
+	scopy = sleep;
+	// loop, essentially, for ever
+	while (true) {
+		fdcpy = fdSet;  // take a copy
+		rc = select(ipcsockfd + 1, &fdcpy, NULL, NULL, &scopy);  // block until something happens
+#ifdef DGDEBUG
+		std::cout << "ip listener select returned" << rc << std::endl;
+#endif
+		if (rc < 0) {  // was an error
+			if (errno == EINTR) {
+				continue;  // was interupted by a signal so restart
+			}
+			if (logconerror == 1) {
+				syslog(LOG_ERR, "ip ipc rc<0. (Ignorable)");
+			}
+			continue;
+		}
+		if (rc == 0) {
+#ifdef DGDEBUG
+		   std::cout << "ips in list:" << iplist.getNumberOfItems() << std::endl;
+		   std::cout << "purging old ip entries" << std::endl;
+		   std::cout << "ips in list:" << iplist.getNumberOfItems() << std::endl;
+#endif
+		   // should only get here after a timeout
+		   iplist.purgeOldEntries();
+		   scopy = sleep;
+		   continue;
+		}
+		if (FD_ISSET(ipcsockfd, &fdcpy)) {
+#ifdef DGDEBUG
+			std::cout << "received an ip request" << std::endl;
+#endif
+			ipcpeersock = iplistsock.accept();
+			if (ipcpeersock->getFD() < 0) {
+				ipcpeersock->close();
+				if (logconerror == 1) {
+#ifdef DGDEBUG
+					std::cout << "Error accepting ip ipc. (Ignorable)" << std::endl;
+#endif
+					syslog(LOG_ERR, "Error accepting ip ipc. (Ignorable)");
+				}
+				continue; // if the fd of the new socket < 0 there was error
+						  // but we ignore it as its not a problem
+			}
+			try {
+				rc = ipcpeersock->getLine(inbuff, 16, 3);  // throws on err
+			} catch (exception& e) {
+				ipcpeersock->close();
+				if (logconerror == 1) {
+#ifdef DGDEBUG
+					std::cout << "Error reading ip ipc. (Ignorable)" << std::endl;
+#endif
+					syslog(LOG_ERR, "Error reading ip ipc. (Ignorable)");
+				}
+				continue;
+			}
+#ifdef DGDEBUG
+			std::cout << "recieved ip:" << inbuff << std::endl;
+#endif
+			inet_aton(inbuff, &inaddr);
+			ip = inaddr.s_addr;
+			// is the ip in our list? this also takes care of adding it if not.
+			if (iplist.inList(ip))
+				reply = 'Y';
+			else
+				reply = 'N';
+			try {
+				ipcpeersock->writeToSockete(&reply, 1, 0, 6);
+			} catch (exception& e) {
+				ipcpeersock->close();
+				if (logconerror == 1) {
+#ifdef DGDEBUG
+					std::cout << "Error writing ip ipc. (Ignorable)" << std::endl;
+#endif
+					syslog(LOG_ERR, "Error writing ip ipc. (Ignorable)");
+				}
+				continue;
+			}
+			ipcpeersock->close();  // close the connection
+#ifdef DGDEBUG
+			std::cout << "ip list reply: " << reply << std::endl;
+#endif
+			continue;  // go back to listening
+		}
+	}
+	delete[] inbuff;
+	iplistsock.close();  // be nice and neat
+	return 1; // It is only possible to reach here with an error
+}
+
 
 // *
 // *
-// * end logger and URL cache code
+// * end logger, IP list and URL cache code
 // *
 // *
 
@@ -1040,17 +1167,27 @@ int fc_controlit()
 
 
 	if (o.no_logger == 0) {
-		ipcsock.reset();
+		loggersock.reset();
 	} else {
-		ipcsock.close();
+		loggersock.close();
 	}
-	urllistsock.reset();
+	if (o.url_cache_number > 0) {
+		urllistsock.reset();
+	} else {
+		urllistsock.close();
+	}
+	if (o.max_ips > 0) {
+		iplistsock.reset();
+	} else {
+		iplistsock.close();
+	}
 
 	pid_t loggerpid = 0;  // to hold the logging process pid
-	pid_t urllistpid = 0;  // to hold the logging process pid (zero to stop warning)
+	pid_t urllistpid = 0;  // url cache process id
+	pid_t iplistpid = 0; // ip cache process id
 
 	if (o.no_logger == 0) {
-		if (ipcsock.getFD() < 0) {
+		if (loggersock.getFD() < 0) {
 			if (!is_daemonised) {
 				std::cerr << "Error creating ipc socket" << std::endl;
 			}
@@ -1128,20 +1265,29 @@ int fc_controlit()
 	//}
 
 	// Needs deleting if its there
-	rc = unlink(o.ipc_filename.c_str());  // this would normally be in a -r situation.
-// disabled as requested by Christopher Weimann <csw@k12hq.com>
-// Fri, 11 Feb 2005 15:42:28 -0500
-// re-enabled temporarily
+	unlink(o.ipc_filename.c_str());  // this would normally be in a -r situation.
+	// disabled as requested by Christopher Weimann <csw@k12hq.com>
+	// Fri, 11 Feb 2005 15:42:28 -0500
+	// re-enabled temporarily
+	unlink(o.urlipc_filename.c_str());
+	unlink(o.ipipc_filename.c_str());
 
-	// Needs deleting if its there
-	rc = unlink(o.urlipc_filename.c_str());  // this would normally be in a -r situation.
+	// checkme: why can't we output the actual filenames in the syslog? answer: we can, so do.
 
 	if (o.no_logger == 0) {
-		if (ipcsock.bind((char *) o.ipc_filename.c_str())) {	// bind to file
+		if (loggersock.bind((char *) o.ipc_filename.c_str())) {	// bind to file
 			if (!is_daemonised) {
 				std::cerr << "Error binding ipc server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm " << o.ipc_filename << "')." << std::endl;
 			}
 			syslog(LOG_ERR, "%s", "Error binding ipc server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm /tmp/.dguardianipc' or whatever you have it configured to).");
+			return 1;
+		}
+		if (loggersock.listen(256)) {	// set it to listen mode with a kernel
+			// queue of 256 backlog connections
+			if (!is_daemonised) {
+				std::cerr << "Error listening to ipc server file" << std::endl;
+			}
+			syslog(LOG_ERR, "%s", "Error listening to ipc server file");
 			return 1;
 		}
 	}
@@ -1154,30 +1300,6 @@ int fc_controlit()
 			syslog(LOG_ERR, "%s", "Error binding urllistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm /tmp/.dguardianurlipc' or whatever you have it configured to).");
 			return 1;
 		}
-	}
-
-
-	if (serversockets.listenAll(256)) {	// set it to listen mode with a kernel
-		// queue of 256 backlog connections
-		if (!is_daemonised) {
-			std::cerr << "Error listening to server socket" << std::endl;
-		}
-		syslog(LOG_ERR, "Error listening to server socket");
-		return 1;
-	}
-
-	if (o.no_logger == 0) {
-		if (ipcsock.listen(256)) {	// set it to listen mode with a kernel
-			// queue of 256 backlog connections
-			if (!is_daemonised) {
-				std::cerr << "Error listening to ipc server file" << std::endl;
-			}
-			syslog(LOG_ERR, "%s", "Error listening to ipc server file");
-			return 1;
-		}
-	}
-
-	if (o.url_cache_number > 0) {
 		if (urllistsock.listen(256)) {	// set it to listen mode with a kernel
 			// queue of 256 backlog connections
 			if (!is_daemonised) {
@@ -1186,6 +1308,33 @@ int fc_controlit()
 			syslog(LOG_ERR, "%s", "Error listening to url ipc server file");
 			return 1;
 		}
+	}
+	
+	if (o.max_ips > 0) {
+		if (iplistsock.bind((char*) o.ipipc_filename.c_str())) {	// bind to file
+			if (!is_daemonised) {
+				std::cerr << "Error binding iplistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm " << o.ipipc_filename << "')." << std::endl;
+			}
+			syslog(LOG_ERR, "%s", "Error binding iplistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm /tmp/.dguardianurlipc' or whatever you have it configured to).");
+			return 1;
+		}
+		if (iplistsock.listen(256)) {	// set it to listen mode with a kernel
+			// queue of 256 backlog connections
+			if (!is_daemonised) {
+				std::cerr << "Error listening to ip ipc server file" << std::endl;
+			}
+			syslog(LOG_ERR, "%s", "Error listening to ip ipc server file");
+			return 1;
+		}
+	}
+
+	if (serversockets.listenAll(256)) {	// set it to listen mode with a kernel
+		// queue of 256 backlog connections
+		if (!is_daemonised) {
+			std::cerr << "Error listening to server socket" << std::endl;
+		}
+		syslog(LOG_ERR, "Error listening to server socket");
+		return 1;
 	}
 
 	if (!daemonise()) {	// become a detached daemon
@@ -1225,14 +1374,13 @@ int fc_controlit()
 	// handle incoming TCP connections from the clients and one to handle
 	// incoming UDS ipc from our forked children.  This helps reduce
 	// bottlenecks by not having only one select() loop.
-
 	if (o.no_logger == 0) {
 
 		loggerpid = fork();  // make a child processes copy of self to be logger
 
 		if (loggerpid == 0) {	// ma ma!  i am the child
 			serversockets.deleteAll();  // we don't need our copy of this so close it
-			delete serversockfds;
+			delete[] serversockfds;
 			urllistsock.close();  // we don't need our copy of this so close it
 			log_listener(o.log_location, o.logconerror);
 #ifdef DGDEBUG
@@ -1242,16 +1390,15 @@ int fc_controlit()
 		}
 	}
 
+	// Same for URL list listener
 	if (o.url_cache_number > 0) {
-		urllistpid = fork();  // make a child processes copy of self to be logger
-
+		urllistpid = fork();
 		if (urllistpid == 0) {	// ma ma!  i am the child
 			serversockets.deleteAll(); // we don't need our copy of this so close it
-			delete serversockfds;
+			delete[] serversockfds;
 			if (o.no_logger == 0) {
-				ipcsock.close();  // we don't need our copy of this so close it
+				loggersock.close();  // we don't need our copy of this so close it
 			}
-
 			url_list_listener(o.logconerror);
 #ifdef DGDEBUG
 			std::cout << "URL List listener exiting" << std::endl;
@@ -1259,18 +1406,38 @@ int fc_controlit()
 			_exit(0);  // is reccomended for child and daemons to use this instead
 		}
 	}
+	
+	// and for IP list listener
+	if (o.max_ips > 0) {
+		iplistpid = fork();
+		if (iplistpid == 0) {	// ma ma!  i am the child
+			serversockets.deleteAll(); // we don't need our copy of this so close it
+			delete[] serversockfds;
+			if (o.no_logger == 0) {
+				loggersock.close();  // we don't need our copy of this so close it
+			}
+			ip_list_listener(o.logconerror);
+#ifdef DGDEBUG
+			std::cout << "URL List listener exiting" << std::endl;
+#endif
+			_exit(0);  // is reccomended for child and daemons to use this instead
+		}
+	}
+
 	// I am the parent process here onwards.
 
 #ifdef DGDEBUG
 	std::cout << "Parent process created children" << std::endl;
 #endif
 
-
 	if (o.url_cache_number > 0) {
 		urllistsock.close();  // we don't need our copy of this so close it
 	}
 	if (o.no_logger == 0) {
-		ipcsock.close();  // we don't need our copy of this so close it
+		loggersock.close();  // we don't need our copy of this so close it
+	}
+	if (o.max_ips > 0) {
+		iplistsock.close();
 	}
 
 	memset(&sa, 0, sizeof(sa));
@@ -1514,7 +1681,11 @@ int fc_controlit()
 				cullchildren(freechildren - o.maxspare_children);
 			}
 		}
-
+		
+		// yield CPU for a while. this loop does not explicitly sleep other
+		// than when polling FDs; when connections are coming in at a rate of
+		// knots, it effectively turns into a busy loop. this should help.
+		usleep(1000);
 	}
 	cullchildren(numchildren);  // remove the fork pool of spare children
 	for (int i = 0; i < o.max_children; i++) {
@@ -1552,9 +1723,6 @@ int fc_controlit()
 
 	serversockets.deleteAll();
 	delete serversockfds; // be nice and neat
-	if (o.url_cache_number > 0) {
-		urllistsock.close();
-	}
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = SIG_DFL;
@@ -1605,23 +1773,14 @@ int fc_controlit()
 		sigaction(SIGTERM, &oldsa, NULL);  // restore prev state
 	}
 
-	if (reloadconfig) {
-		if (o.no_logger == 0) {
+	if (reloadconfig || ttg) {
+		if (o.no_logger == 0)
 			::kill(loggerpid, SIGTERM);  // get rid of logger
-		}
-		if (o.url_cache_number > 0) {
+		if (o.url_cache_number > 0)
 			::kill(urllistpid, SIGTERM);  // get rid of url cache
-		}
-		return 2;
-	}
-	if (ttg) {
-		if (o.no_logger == 0) {
-			::kill(loggerpid, SIGTERM);  // get rid of logger
-		}
-		if (o.url_cache_number > 0) {
-			::kill(urllistpid, SIGTERM);  // get rid of url cache
-		}
-		return 0;
+		if (o.max_ips > 0)
+			::kill(iplistpid, SIGTERM); // get rid of iplist
+		return reloadconfig ? 2 : 0;
 	}
 	if (o.logconerror == 1) {
 		syslog(LOG_ERR, "%s", "Main parent process exiting.");
