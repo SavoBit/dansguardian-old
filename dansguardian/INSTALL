@@ -18,6 +18,12 @@ with an earlier version.  If you do not want to upgrade zlib on
 your system see the notes at the end about compiling in zlib
 statically.
 
+As of 2.9.1.0, DansGuardian can optionally be compiled and linked
+against PCRE instead of the standard GNU regular expression library.
+This overcomes certain limitations of the standard library, allowing
+- for example - character negations ([^w]). PCRE support is disabled
+by default; version 6.0 or above is required.
+
 
 1.	Run the configure (./configure --help) script with
 	the help option to see the user selectable settings.
@@ -66,6 +72,7 @@ You may change with the configure options:
   enable-icap      (enable support for ICAP-compatible av scanner)
   enable-kavd      (enable support for kaspersky av daemon scanner)
   enable-fancydm   (enable support for the 'fancy' download manager)
+  enable-pcre      (enable support for PCRE instead of GNU regex library)
   
 See ./configure --help for more details.
 
