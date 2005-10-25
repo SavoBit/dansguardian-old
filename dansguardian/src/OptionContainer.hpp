@@ -87,6 +87,8 @@ public:
 	int proxy_user;
 	int proxy_group;
 	int root_user;
+	
+	int max_ips;
 
 	std::string filter_groups_list_location;
 	std::string html_template_location;
@@ -99,12 +101,13 @@ public:
 	std::string log_location;
 	std::string ipc_filename;
 	std::string urlipc_filename;
+	std::string ipipc_filename;
 	std::string pid_filename;
 	int no_daemon;
 	int no_logger;
 	int max_logitem_length;
-    int anonymise_logs;
-    int log_ad_blocks;
+	int anonymise_logs;
+	int log_ad_blocks;
 	int soft_restart;
 	std::string daemon_user;
 	std::string daemon_group;
