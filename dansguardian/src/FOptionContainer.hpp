@@ -204,10 +204,11 @@ public:
 	char *inBannedExtensionList(String url);
 	bool isIPHostname(String url);
 
-	std::deque<String > ipToHostname(const char *ip);
+	std::deque<String> &ipToHostname(const char *ip);
 
 private:
 	std::deque<std::string > conffile;
+
 	bool precompileregexps();
 	bool readbplfile(const char *banned, const char *exception, const char *weighted);
 	bool readFile(const char *filename, unsigned int* whichlist, bool sortsw, bool cache, const char *listname);
@@ -217,12 +218,12 @@ private:
 		std::deque<String> &list_source, std::deque<unsigned int> &list_ref);
 	bool readRegExListFile(const char *filename, const char *listname, unsigned int listid,
 	std::deque<String> &list_rep, std::deque<RegExp> &list_comp);
-	/*void bwlfilehelper(String &line, int index);
-	void bwlfilehelperhelper(String &line, int index);*/
+
 	int findoptionI(const char *option);
 	std::string findoptionS(const char *option);
 	bool realitycheck(String s, int minl, int maxl, char *emessage);
 	int inRegExpURLList(String &url, std::deque<RegExp> &list_comp);
+
 	char *inURLList(String &url, unsigned int list);
 	char *inSiteList(String &url, unsigned int list);
 };

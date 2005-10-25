@@ -575,73 +575,6 @@ bool FOptionContainer::readRegExListFile(const char *filename, const char *listn
 // checkme: there's an awful lot of removing whitespace, PTP, etc. going on here.
 // perhaps connectionhandler could keep a suitably modified version handy to prevent repitition of work?
 
-// is there any particular reason for these not to use inSiteList and inURLList for these?
-/*bool FOptionContainer::inexceptions(String url)
-{
-	if (iswebserver(url)) {	// don't filter our web server
-		return true;
-	}
-	url.removeWhiteSpace();  // just in case of weird browser crap
-	url.toLower();
-	url.removePTP();  // chop off the ht(f)tp(s)://
-	if (url.contains("/")) {
-		url = url.before("/");  // chop off any path after the domain
-	}
-	char *i;
-	while (url.contains(".")) {
-		i = (*o.lm.l[exception_site_list]).findInList(url.toCharArray());
-		if (i != NULL) {
-			return true;  // exact match
-		}
-		url = url.after(".");  // check for being in higher level domains
-	}
-	if (url.length() > 1) {	// allows matching of .tld
-		url = "." + url;
-		i = (*o.lm.l[exception_site_list]).findInList(url.toCharArray());
-		if (i != NULL) {
-			return i;  // exact match
-		}
-	}
-	return false;  // and our survey said "UUHH UURRGHH"
-}
-bool FOptionContainer::inurlexceptions(String url)
-{
-	int fl;
-	char *i;
-	String foundurl;
-	url.removeWhiteSpace();  // just in case of weird browser crap
-	url.toLower();
-	url.removePTP();  // chop off the ht(f)tp(s)://
-	if (url.contains("/")) {
-		String tpath = "/";
-		tpath += url.after("/");
-		url = url.before("/");
-		tpath.hexDecode();
-		tpath.realPath();
-		url += tpath;  // will resolve ../ and %2e2e/ and // etc
-	}
-	if (url.endsWith("/")) {
-		url.chop();  // chop off trailing / if any
-	}
-	while (url.before("/").contains(".")) {
-		i = (*o.lm.l[exception_url_list]).findStartsWith(url.toCharArray());
-		if (i != NULL) {
-			foundurl = i;
-			fl = foundurl.length();
-			if (url.length() > fl) {
-				unsigned char c = url[fl];
-				if (c == '/' || c == '?' || c == '&' || c == '=') {
-					return true;  // matches /blah/ or /blah/foo but not /blahfoo
-				}
-			} else {
-				return true;  // exact match
-			}
-		}
-		url = url.after(".");  // check for being in higher level domains
-	}
-	return false;
-}*/
-
 char *FOptionContainer::inSiteList(String &url, unsigned int list)
 {
 	url.removeWhiteSpace();  // just in case of weird browser crap
@@ -690,7 +623,6 @@ char *FOptionContainer::inBannedSiteList(String url)
 {
 	return inSiteList(url, banned_site_list);
 }
-
 
 bool FOptionContainer::inGreySiteList(String url)
 {
@@ -856,21 +788,21 @@ int FOptionContainer::inExceptionRegExpURLList(String url)
 }
 
 // reverse DNS lookup on IP. be aware that this can return multiple results, unlike a standard lookup.
-std::deque<String > FOptionContainer::ipToHostname(const char *ip)
+std::deque<String> &FOptionContainer::ipToHostname(const char *ip)
 {
-	std::deque<String > result;
+	std::deque<String> *result = new std::deque<String>;
 	struct in_addr address, **addrptr;
 	if (inet_aton(ip, &address)) {	// convert to in_addr
 		struct hostent *answer;
 		answer = gethostbyaddr((char *) &address, sizeof(address), AF_INET);
 		if (answer) {	// sucess in reverse dns
-			result.push_back(String(answer->h_name));
+			result->push_back(String(answer->h_name));
 			for (addrptr = (struct in_addr **) answer->h_addr_list; *addrptr; addrptr++) {
-				result.push_back(String(inet_ntoa(**addrptr)));
+				result->push_back(String(inet_ntoa(**addrptr)));
 			}
 		}
 	}
-	return result;
+	return *result;
 }
 
 bool FOptionContainer::isIPHostname(String url)
