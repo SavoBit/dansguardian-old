@@ -87,8 +87,9 @@ public:
 	int proxy_user;
 	int proxy_group;
 	int root_user;
-	
+
 	int max_ips;
+	bool recheck_replaced_urls;
 
 	std::string filter_groups_list_location;
 	std::string html_template_location;

@@ -466,6 +466,11 @@ bool OptionContainer::read(const char *filename, int type)
 			log_client_hostnames = 0;
 		}
 
+		if (findoptionS("recheckreplacedurls") == "on") {
+			recheck_replaced_urls = 1;
+		} else {
+			recheck_replaced_urls = 0;
+		}
 
 		if (findoptionS("usexforwardedfor") == "on") {
 			use_xforwardedfor = 1;

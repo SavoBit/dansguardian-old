@@ -528,7 +528,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			exceptionreason = o.language_list.getTranslation(601);
 			// Exception client user match.
 		}
-		//else if ((*o.fg[filtergroup]).inexceptions(urld)) {	// allowed site
 		else if ((*o.fg[filtergroup]).inExceptionSiteList(urld)) {	// allowed site
 			if ((*o.fg[0]).isOurWebserver(url)) {
 				isourwebserver = true;
@@ -538,7 +537,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// Exception site match.
 			}
 		}
-		//else if ((*o.fg[filtergroup]).inurlexceptions(urld)) {	// allowed url
 		else if ((*o.fg[filtergroup]).inExceptionURLList(urld)) {	// allowed url
 			isexception = true;
 			exceptionreason = o.language_list.getTranslation(603);
@@ -664,6 +662,34 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		if (header.urlRegExp(filtergroup)) {
 			url = header.url();
 			urld = header.decode(url);
+			// if the user wants, re-check the exception site, URL and regex lists after modification.
+			// this allows you to, for example, force safe search on Google URLs, then flag the
+			// request as an exception, to prevent questionable language in returned site summaries
+			// from blocking the entire request.
+			// this could be achieved with exception phrases (which are, of course, always checked
+			// after the URL) too, but there are cases for both, and flexibility is good.
+			if (o.recheck_replaced_urls == 1) {
+				if ((*o.fg[filtergroup]).inExceptionSiteList(urld)) {	// allowed site
+					if ((*o.fg[0]).isOurWebserver(url)) {
+						isourwebserver = true;
+					} else {
+						isexception = true;
+						exceptionreason = o.language_list.getTranslation(602);
+						// Exception site match.
+					}
+				}
+				else if ((*o.fg[filtergroup]).inExceptionURLList(urld)) {	// allowed url
+					isexception = true;
+					exceptionreason = o.language_list.getTranslation(603);
+					// Exception url match.
+				}
+				else if ((rc = (*o.fg[filtergroup]).inExceptionRegExpURLList(urld)) > -1) {
+					isexception = true;
+					// exception regular expression url match:
+					exceptionreason = o.language_list.getTranslation(609);
+					exceptionreason += (*o.fg[filtergroup]).exception_regexpurl_list_source[rc].toCharArray();
+				}
+			}
 		}
 
 		// if o.content_scan_exceptions is on then exceptions have to

@@ -421,6 +421,19 @@ preemptivebanning = on
 
 
 
+# Re-check replaced URLs
+# As a matter of course, URLs undergo regular expression search/replace (urlregexplist)
+# *after* checking the exception site/URL/regexpURL lists, but *before* checking against
+# the banned site/URL lists, allowing certain requests that would be matched against the
+# latter in their original state to effectively be converted into grey requests.
+# With this option enabled, the exception site/URL/regexpURL lists are also re-checked
+# after replacement, making it possible for URL replacement to trigger exceptions based
+# on them.
+# Defaults to off.
+recheckreplacedurls = off
+
+
+
 # Misc settings
 
 # if on it adds an X-Forwarded-For: <clientip> to the HTTP request
