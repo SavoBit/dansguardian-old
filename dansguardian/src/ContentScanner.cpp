@@ -229,8 +229,7 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 	int fl;
 	if (urld.contains("/")) {
 		domain = urld.before("/");
-		String path = "/";
-		path += urld.after("/");
+		path = "/" + urld.after("/");
 		path.hexDecode();
 		path.realPath();
 	} else {
@@ -273,7 +272,7 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 		tempurl = tempurl.after(".");  // check for being in higher level domains
 	}
 	if (tempurl.length() > 1) {	// allows matching of .tld
-		tmepurl = "." + tempurl;
+		tempurl = "." + tempurl;
 		i = exceptionvirussitelist.findInList(tempurl.toCharArray());
 		if (i != NULL) {
 			return DGCS_NOSCAN;  // exact match
