@@ -62,25 +62,32 @@ DMPlugin::DMPlugin(ConfigVar &definition):cv(definition), alwaysmatchua(false)
 }
 
 // default initialisation procedure
-int DMPlugin::init()
+int DMPlugin::init(bool lastplugin)
 {
-	// compile regex for matching supported user agents
-	String r = cv["useragentregexp"];
-	if (r.length() > 0) {
-#ifdef DGDEBUG
-		std::cout<<"useragent regexp: "<<r<<std::endl;
-#endif
-		ua_match.comp(r.toCharArray());
-	} else {
-		// no useragent regex? then default to .*
-#ifdef DGDEBUG
-		std::cout<<"no useragent regular expression; defaulting to .*"<<std::endl;
-#endif
-		alwaysmatchua = true;
+	if (!lastplugin) {
+		// compile regex for matching supported user agents
+		String r = cv["useragentregexp"];
+		if (r.length() > 0) {
+	#ifdef DGDEBUG
+			std::cout<<"useragent regexp: "<<r<<std::endl;
+	#endif
+			ua_match.comp(r.toCharArray());
+		} else {
+			// no useragent regex? then default to .*
+	#ifdef DGDEBUG
+			std::cout<<"no useragent regular expression; defaulting to .*"<<std::endl;
+	#endif
+			alwaysmatchua = true;
+		}
+		if (!readStandardLists())
+			return -1;
+
 	}
-	if (!readStandardLists())
-		return -1;
-	return 0;
+#ifdef DGDEBUG
+	else
+		std::cout<<"Fallback DM plugin; no matching options loaded"<<std::endl;
+#endif
+	return 0;	
 }
 
 // default method for deciding whether we will handle a request

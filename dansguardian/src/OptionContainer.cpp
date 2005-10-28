@@ -879,7 +879,7 @@ bool OptionContainer::loadDMPlugins()
 			return false;
 		}
 
-		int rc = dmpp->init();
+		int rc = dmpp->init(i == (numplugins - 1));
 		if (rc < 0) {
 			if (!is_daemonised) {
 				std::cerr << "Download manager plugin init returned error value:" << rc << std::endl;

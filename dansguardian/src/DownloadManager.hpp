@@ -54,8 +54,10 @@ public:
 	virtual int in(DataBuffer *d, Socket *sock, Socket *peersock,
 		HTTPHeader *requestheader, HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) = 0;
 	
-	
-	virtual int init();
+	// plugin initialise/quit routines.
+	// if lastplugin is true, this is being loaded as the fallback option,
+	// and needn't load in purely request matching related options.
+	virtual int init(bool lastplugin);
 	virtual int quit() { return 0; };
 
 	// will this download manager handle this request?
