@@ -218,31 +218,31 @@ bool DataBuffer::in(Socket * sock, Socket * peersock, HTTPHeader * requestheader
 	// squid so later, if allowed, we can send the rest
 	bool toobig = false;
 
-	// match user agent to download manager so browsers potentially can have a prettier version
-	// and software updates can have a compatible version
-	String useragent = requestheader->userAgent();
-#ifdef DGDEBUG
-	std::cerr << "User agent:" << useragent << std::endl;
-#endif
-
+	// match request to download manager so browsers potentially can have a prettier version
+	// and software updates, stream clients, etc. can have a compatible version.
 	int rc = 0;
-	for (unsigned int i = 0; i < o.dmplugins_regexp.size(); i++) {
-		if ((i + 1) == o.dmplugins_regexp.size()) {
+# ifdef DGDEBUG
+	int j = 0;
+#endif
+	for (std::deque<DMPlugin *>::iterator i = o.dmplugins.begin(); i != o.dmplugins.end(); i++) {
+		if ((i + 1) == o.dmplugins.end()) {
 #ifdef DGDEBUG
 			std::cerr << "Got to final download manager so defaulting to always match." << std::endl;
 #endif
-			rc = o.dmplugins[i]->in(this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
+			rc = (*i)->in(this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
 			break;
 		} else {
+			if ((*i)->willHandle(requestheader, docheader)) {
 #ifdef DGDEBUG
-			std::cerr << "Matching download manager number:" << i << std::endl;
+				std::cerr << "Matching download manager number: " << j << std::endl;
 #endif
-			o.dmplugins_regexp[i].match(useragent.toCharArray());
-			if (o.dmplugins_regexp[i].matched()) {
-				rc = o.dmplugins[i]->in(this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
+				rc = (*i)->in(this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
 				break;
 			}
 		}
+#ifdef DGDEBUG
+		j++;
+#endif
 	}
 	// we should check rc and log on error/warn
 	// note for later - Tue 16th November 2004
