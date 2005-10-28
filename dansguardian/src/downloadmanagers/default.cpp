@@ -44,8 +44,8 @@ public:
 		HTTPHeader * docheader, bool wantall, int *headersent, bool * toobig);
 
 	// default plugin is as basic as you can get - no initialisation, always matches requests.
-	int init() { return 0; };
-	bool willHandle(HTTPHeader *requestheader, HTTPHeader *docheader) { return true; };
+	/*int init() { return 0; };
+	bool willHandle(HTTPHeader *requestheader, HTTPHeader *docheader) { return true; };*/
 };
 
 
