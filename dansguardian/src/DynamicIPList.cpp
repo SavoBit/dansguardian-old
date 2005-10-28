@@ -25,6 +25,8 @@
 #include <syslog.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <time.h>
+#include <stdio.h>
 
 #ifdef DGDEBUG
 #include <iostream>
