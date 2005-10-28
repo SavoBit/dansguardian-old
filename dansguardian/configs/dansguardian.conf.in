@@ -341,21 +341,26 @@ trickledelay = 10
 # for example to AV, the browser may timeout or the user may get
 # confused so the download manager has to do some sort of
 # 'keep alive'.
+#
 # There are various methods possible but not all are included.
 # The author does not have the time to write them all so I have
 # included a plugin systam.  Also, not all methods work with all
 # browsers and clients.  Specifically some fancy methods don't
-# work with software that downloads updates.  To solve this you
-# can specify a regular expression to match browser identity
-# for each method (plugin).
-# See the individual plugin conf file for more options (if any).
-# The plugins are matched in the order you specify and the last
-# one is forced to match as the default.  This is one of the
-# few places you can have multiple options of the same name.
-# 'mozilla' will match most browsers including IE.
+# work with software that downloads updates.  To solve this,
+# each plugin can support a regular expression for matching
+# the client's user-agent string, and lists of the mime types
+# and extensions it should manage.
 #
-downloadmanager = 'mozilla','@DGCONFDIR@/downloadmanagers/fancy.conf'
-downloadmanager = '.*','@DGCONFDIR@/downloadmanagers/default.conf'
+# Note that these are the matching methods provided by the base plugin
+# code, and individual plugins may override or add to them.
+# See the individual plugin conf files for supported options.
+#
+# The plugins are matched in the order you specify and the last
+# one is forced to match as the default, regardless of user agent
+# and other matching mechanisms.
+#
+downloadmanager = '@DGCONFDIR@/downloadmanagers/fancy.conf'
+downloadmanager = '@DGCONFDIR@/downloadmanagers/default.conf'
 
 
 
