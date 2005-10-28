@@ -135,7 +135,6 @@ public:
 
 	std::deque<DMPluginLoader> dmpluginloaders;
 	std::deque<DMPlugin *> dmplugins;
-	std::deque<RegExp> dmplugins_regexp;
 	std::deque<CSPluginLoader> cspluginloaders;
 	std::deque<CSPlugin *> csplugins;
 

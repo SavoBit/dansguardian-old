@@ -108,7 +108,6 @@ void OptionContainer::deleteDMPlugins()
 	}
 	dmplugins.clear();
 	dmpluginloaders.clear();
-	dmplugins_regexp.clear();
 }
 
 
@@ -851,21 +850,12 @@ bool OptionContainer::loadDMPlugins()
 		syslog(LOG_ERR, "%s", "There must be at least one download manager option");
 		return false;
 	}
-	String match, config;
-	RegExp reefer;
+	String config;
 	for (unsigned int i = 0; i < numplugins; i++) {
-		if (i == (numplugins - 1)) {
-			match = ".*";
-		} else {
-			match = dq[i].before("','");
-		}
-
+		config = dq[i];
 #ifdef DGDEBUG
-		std::cout << "loading download manager config for match:" << match << std::endl;
+		std::cout << "loading download manager config: " << config << std::endl;
 #endif
-
-		config = dq[i].after("','");
-		// worth adding some input checking on config and match
 
 		DMPluginLoader dmpl(config.toCharArray());
 		DMPlugin *dmpp;
@@ -878,8 +868,8 @@ bool OptionContainer::loadDMPlugins()
 			syslog(LOG_ERR, "%s", config.toCharArray());
 			return false;
 		}
-		dmpp = dmpl.create();
 
+		dmpp = dmpl.create();
 		if (dmpp == NULL) {
 			if (!is_daemonised) {
 				std::cerr << "dmpl.create() returned NULL pointer with config file:" << config << std::endl;
@@ -890,7 +880,6 @@ bool OptionContainer::loadDMPlugins()
 		}
 
 		int rc = dmpp->init();
-
 		if (rc < 0) {
 			if (!is_daemonised) {
 				std::cerr << "Download manager plugin init returned error value:" << rc << std::endl;
@@ -907,16 +896,6 @@ bool OptionContainer::loadDMPlugins()
 
 		dmpluginloaders.push_back(dmpl);
 		dmplugins.push_back(dmpp);
-
-		dmplugins_regexp.push_back(reefer);
-		if (!dmplugins_regexp[dmplugins_regexp.size() - 1].comp(match.toCharArray())) {
-			if (!is_daemonised) {
-				std::cerr << "Error compiling download manager RegExp:" << match << std::endl;
-			}
-			syslog(LOG_ERR, "%s", "Error compiling download manager RegExp:");
-			syslog(LOG_ERR, "%s", match.toCharArray());
-			return false;
-		}
 	}
 	return true;
 }
@@ -929,14 +908,13 @@ bool OptionContainer::loadCSPlugins()
 	if (numplugins < 1) {
 		return true;  // to have one is optional
 	}
-	String match, config;
-	RegExp reefer;
+	String config;
 	for (unsigned int i = 0; i < numplugins; i++) {
 
 		config = dq[i];
 		// worth adding some input checking on config
 #ifdef DGDEBUG
-		std::cout << "loading config for:" << config << std::endl;
+		std::cout << "loading content scanner config: " << config << std::endl;
 #endif
 
 		CSPluginLoader cspl(config.toCharArray());
