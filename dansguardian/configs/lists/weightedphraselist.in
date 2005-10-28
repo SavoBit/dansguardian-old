@@ -37,6 +37,7 @@
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general>
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_news>
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general_danish>
+.Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general_dutch>
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general_portuguese>
 
 #Pornography
