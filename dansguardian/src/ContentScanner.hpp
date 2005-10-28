@@ -66,8 +66,8 @@ public:
 	String lastvirusname;
 
 	// empty constructor & constructor with CS plugin configuration passed in
-	CSPlugin() {};
-	CSPlugin( ConfigVar & definition );
+	//CSPlugin() {};
+	CSPlugin(ConfigVar &definition);
 
 	virtual ~CSPlugin() {};
 	
@@ -92,18 +92,12 @@ private:
 	ListContainer exceptionvirusextensionlist;
 	ListContainer exceptionvirussitelist;
 	ListContainer exceptionvirusurllist;
-	// configuration file names
-	String exceptionvirusmimetypelist_location;
-	String exceptionvirusextensionlist_location;
-	String exceptionvirussitelist_location;
-	String exceptionvirusurllist_location;
 
 protected:
 	// the following are unlikely to need to be overridden
 	
 	// read in scan exception lists
 	virtual bool readStandardLists();
-	virtual bool readListFile(String *filename, ListContainer *list, bool startswith);
 	// make & write to temp files, primarily for plugins with no direct memory scanning capability (e.g. clamdscan)
 	virtual int makeTempFile(String *filename);
 	virtual int writeMemoryTempFile(const char *object, unsigned int objectsize, String *filename);
