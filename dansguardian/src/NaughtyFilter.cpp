@@ -33,7 +33,25 @@
 
 extern OptionContainer o;
 
-//using namespace std;
+
+// DECLARATIONS
+
+// category list entry class - stores category index & weight of all phrases
+// found so far that fall under this category. also includes a less-than
+// operator so that the STL sort algorithm can be applied to lists of these.
+class listent {
+public:
+	listent(const int& c, const int& w) {
+		weight = w;
+		cat = c;
+	};
+	int cat;
+	int weight;
+	int operator < (const listent &a) const {
+		// sort in descending order of score
+		return weight > a.weight ? 1 : 0;
+	};
+};
 
 
 // IMPLEMENTATION
@@ -292,6 +310,7 @@ void NaughtyFilter::checkme(DataBuffer * body)
 		checkphrase(bodynohtml, bodynohtmllen);
 	}
 	catch(exception & e) {
+		std::cout<<"BAD!"<<e.what()<<std::endl;
 	}
 	delete[]bodynohtml;
 	delete[]bodylc;
@@ -304,36 +323,40 @@ void NaughtyFilter::checkphrase(char *file, int l)
 	std::string weightedphrase = "";
 	std::string exceptionphrase = "";
 	int weighting = 0;
-	int numfound;
-	int i, j, cat;
+	int cat;
 
 	// this line here searches for phrases contained in the list - the rest of the code is all sorting
 	// through it to find the categories, weightings, types etc. of what has actually been found.
 	std::deque<unsigned int> found = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).graphSearch(file, l);
-	int combisize = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).combilist.size();
 
-	std::deque<int> listedcategories;
-	numfound = found.size();
+	std::deque<listent> listcategories;
+	String bannedcategory;
 	int type, index, weight;
-	bool allcmatched = true;
+	bool allcmatched = true, bannedcombi = false;
 	bool isfound, wasbefore, catfound;
 	std::string s1;
+	
+	// cache reusable iterators
+	std::deque<unsigned int>::iterator foundtop = found.begin();
+	std::deque<unsigned int>::iterator foundend = found.end();
+	std::deque<unsigned int>::iterator foundcurrent;
+	std::deque<unsigned int>::iterator alreadyfound;
+
+	std::deque<listent>::iterator cattop = listcategories.begin();
+	std::deque<listent>::iterator catcurrent;
+	
+	std::deque<int>::iterator combicurrent = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.begin();
 
 	// look for combinations first
-
 	//if banned must wait for exception later
-
-	bool bannedcombifound = false;
 	std::string combifound = "";
 	std::string combisofar = "";
-	std::string categories = "";
-	std::string noncombicategories = "";
 
-	for (i = 0; i < combisize; i++) {
-		index = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).combilist[i];
+	while (combicurrent != o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.end()) {
+		index = *combicurrent;
 		if (index == -2) {
 			if (allcmatched) {
-				type = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).combilist[i + 1];
+				type = *(++combicurrent);
 				if (type == -1) {	// combination exception
 					isItNaughty = false;
 					isException = true;
@@ -344,31 +367,29 @@ void NaughtyFilter::checkphrase(char *file, int l)
 					return;
 				}
 				else if (type == 1) {	// combination weighting
-					weight = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).combilist[i + 2];
+					weight = *(++combicurrent);
 					weighting += weight;
 					if (weight > 0) {
-						catfound = false;
-						cat = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).combilist[i + 3];
+						cat = *(++combicurrent);
 						//category index -1 indicates an uncategorised list
 						if (cat >= 0) {
 							//don't output duplicate categories
-							for (j = 0; j < listedcategories.size(); j++) {
-								if (listedcategories[j] == cat) {
+							catcurrent = cattop;
+							catfound = false;
+							while (catcurrent != listcategories.end()) {
+								if (catcurrent->cat == cat) {
 									catfound = true;
+									catcurrent->weight += weight;
 									break;
 								}
+								catcurrent++;
 							}
-							if (!catfound) {
-								s1 = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAtD(cat).toCharArray();
-								if (s1.length() > 0) {
-									if (categories.length() > 0) {
-										categories += ", ";
-									}
-									categories += s1;
-								}
-								listedcategories.push_back(cat);
-							}
+							if (!catfound)
+								listcategories.push_back(listent(cat,weight));
 						}
+					} else {
+						// skip past category for negatively weighted phrases
+						combicurrent++;
 					}
 					if (weightedphrase.length() > 0) {
 						weightedphrase += "+";
@@ -384,40 +405,23 @@ void NaughtyFilter::checkphrase(char *file, int l)
 					combisofar = "";
 				}
 				else if (type == 0) {	// combination banned
-					bannedcombifound = true;
+					bannedcombi = true;
 					combifound = combisofar;
-					catfound = false;
-					cat = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).combilist[i + 3];
-					if (cat >= 0) {
-						for (j = 0; j < listedcategories.size(); j++) {
-							if (listedcategories[j] == cat) {
-								catfound = true;
-								break;
-							}
-						}
-						if (!catfound) {
-							s1 = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAtD(cat).toCharArray();
-							if (s1.length() > 0) {
-								if (categories.length() > 0) {
-									categories += ", ";
-								}
-								categories += s1;
-							}
-							listedcategories.push_back(cat);
-						}
-					}
+					combicurrent += 2;
+					cat = *(combicurrent);
+					bannedcategory = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat);
 				}
-				i += 3;
 			} else {
 				allcmatched = true;
-				i += 3;
+				combicurrent += 3;
 			}
 		} else {
 			if (allcmatched) {
 				isfound = false;
-				s1 = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(index);
-				for (j = 0; j < numfound; j++) {
-					if (s1 == (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(found[j])) {
+				s1 =(*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(index);
+				foundcurrent = foundtop;
+				while (foundcurrent != foundend) {
+					if (s1 == (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*(foundcurrent++))) {
 						isfound = true;
 						break;
 					}
@@ -433,57 +437,57 @@ void NaughtyFilter::checkphrase(char *file, int l)
 				}
 			}
 		}
+		combicurrent++;
 	}
 
-	for (i = 0; i < numfound; i++) {
+	// even if we already found a combi ban, we must still wait; there may be non-combi exceptions to follow
 
-		type = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getTypeAt(found[i]);
+	// now check non-combi phrases
+	foundcurrent = foundtop;
+	while (foundcurrent != foundend) {
+		type = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getTypeAt(*foundcurrent);
 		// 0=banned, 1=weighted, -1=exception, 2=combi, 3=weightedcombi
 		if (type == 0) {
-			isItNaughty = true;
-			bannedphrase = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(found[i]);
-			catfound = false;
-			s1 = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(found[i], &cat).toCharArray();
-			if (cat >= 0) {
-				for (j = 0; j < listedcategories.size(); j++) {
-					if (listedcategories[j] == cat) {
-						catfound = true;
-						break;
-					}
-				}
-				if (!catfound) {
-					if (s1.length() > 0) {
-						if (noncombicategories.length() > 0) {
-							noncombicategories += ", ";
-						}
-						noncombicategories += s1;
-					}
-					listedcategories.push_back(cat);
-				}
+			// if we already found a combi ban, we don't need to know this stuff
+			if (!bannedcombi) {
+				isItNaughty = true;
+				bannedphrase = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent);
+				bannedcategory = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(*foundcurrent, &cat);
 			}
 		}
 		else if (type == 1) {
-			if (o.weighted_phrase_mode == 1) {
-				//normal mode - count all instances; i.e., multiple instances of word on one page all get counted.
-				weight = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getWeightAt(found[i]);
-				weighting += weight;
-				catfound = false;
-				s1 = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(found[i], &cat).toCharArray();
-				if (cat >= 0) {
-					for (j = 0; j < listedcategories.size(); j++) {
-						if (listedcategories[j] == cat) {
-							catfound = true;
-							break;
-						}
+			wasbefore = false;
+			if (o.weighted_phrase_mode == 2) {
+				// check for duplicates & ignore them
+				alreadyfound = foundtop;
+				while (alreadyfound != foundcurrent) {
+					if (*alreadyfound == *foundcurrent) {
+						wasbefore = true;
+						break;
 					}
-					if (!catfound) {
-						if (s1.length() > 0) {
-							if (noncombicategories.length() > 0) {
-								noncombicategories += ", ";
+					alreadyfound++;
+				}
+			}
+			if ((o.weighted_phrase_mode == 1) || ((o.weighted_phrase_mode == 2) && !wasbefore)) {
+				//normal mode - count all instances; i.e., multiple instances of word on one page all get counted.
+				weight = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getWeightAt(*foundcurrent);
+				weighting += weight;
+				if (weight > 0) {
+					(*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(*foundcurrent, &cat);
+					if (cat >= 0) {
+						//don't output duplicate categories
+						catcurrent = cattop;
+						catfound = false;
+						while (catcurrent != listcategories.end()) {
+							if (catcurrent->cat == cat) {
+								catfound = true;
+								catcurrent->weight += weight;
+								break;
 							}
-							noncombicategories += s1;
+							catcurrent++;
 						}
-						listedcategories.push_back(cat);
+						if (!catfound)
+							listcategories.push_back(listent(cat,weight));
 					}
 				}
 
@@ -495,78 +499,39 @@ void NaughtyFilter::checkphrase(char *file, int l)
 						weightedphrase += "-";
 					}
 
-					weightedphrase += (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(found[i]);
+					weightedphrase += (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent);
 				}
 #ifdef DGDEBUG
-				std::cout << "found weighted phrase (1):" << (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(found[i]) << std::endl;
+				std::cout << "found weighted phrase ("<< o.weighted_phrase_mode << "):"
+					<< (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent) << std::endl;
 #endif
-			}
-			else if ((*o.fg[filtergroup]).weighted_phrase_mode == 2) {
-				//singular mode - each phrase counts once per page, so perform a search to see if we have found a phrase once before.
-				wasbefore = false;
-				for (j = 0; j < i; j++) {
-					if (found[i] == found[j]) {
-						wasbefore = true;
-						break;
-					}
-				}
-				if (!wasbefore) {
-					weight = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getWeightAt(found[i]);
-					weighting += weight;
-
-					if (o.show_weighted_found == 1) {
-						if (weightedphrase.length() > 0) {
-							weightedphrase += "+";
-						}
-						if (weight < 0) {
-							weightedphrase += "-";
-						}
-
-						weightedphrase += (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(found[i]);
-					}
-
-					if (weight > 0) {
-						catfound = false;
-						s1 = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(found[i], &cat).toCharArray();
-						if (cat >= 0) {
-							for (j = 0; j < listedcategories.size(); j++) {
-								if (listedcategories[j] == cat) {
-									catfound = true;
-									break;
-								}
-							}
-							if (!catfound) {
-								if (s1.length() > 0) {
-									if (noncombicategories.length() > 0) {
-										noncombicategories += ", ";
-									}
-									noncombicategories += s1;
-								}
-								listedcategories.push_back(cat);
-							}
-						}
-					}
-#ifdef DGDEBUG
-					std::cout << "found weighted phrase (2):" << (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(found[i]) << std::endl;
-#endif
-				}
 			}
 		}
 		else if (type == -1) {
-			exceptionphrase = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(found[i]);
 			isException = true;
-			break;  // no point in going further
+			isItNaughty = false;
+			whatIsNaughtyLog = o.language_list.getTranslation(604);
+			// Exception phrase found:
+			whatIsNaughtyLog += (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent);
+			whatIsNaughty = "";
+			return;  // no point in going further
 		}
+		foundcurrent++;
 	}
 #ifdef DGDEBUG
 	std::cout << "WEIGHTING: " << weighting << std::endl;
 #endif
-	if (isException) {
-		isItNaughty = false;
-		whatIsNaughtyLog = o.language_list.getTranslation(604);
-		// Exception phrase found:
-		whatIsNaughtyLog += exceptionphrase;
-		whatIsNaughty = "";
+
+	// *now* we can safely get down to the whole banning business!
+
+	if (bannedcombi) {
+		isItNaughty = true;
+		whatIsNaughtyLog = o.language_list.getTranslation(400);
+		// Banned combination phrase found:
+		whatIsNaughtyLog += combifound;
+		whatIsNaughty = o.language_list.getTranslation(401);
+		// Banned combination phrase found.
+		whatIsNaughtyCategories = bannedcategory.toCharArray();
 		return;
 	}
 
@@ -576,7 +541,7 @@ void NaughtyFilter::checkphrase(char *file, int l)
 		whatIsNaughtyLog += bannedphrase;
 		whatIsNaughty = o.language_list.getTranslation(301);
 		// Banned phrase found.
-		whatIsNaughtyCategories = noncombicategories;
+		whatIsNaughtyCategories = bannedcategory.toCharArray();
 		return;
 	}
 
@@ -594,23 +559,21 @@ void NaughtyFilter::checkphrase(char *file, int l)
 		}
 		whatIsNaughty = o.language_list.getTranslation(403);
 		// Weighted phrase limit exceeded.
-		if (categories.length() > 0) {
-			whatIsNaughtyCategories = categories;
-			if (noncombicategories.length() > 0) {
-				whatIsNaughtyCategories += ", ";
+		// Generate category list, sorted with highest scoring first.
+		bool nonempty = false;
+		String tempcat, categories;
+		std::sort(listcategories.begin(), listcategories.end());
+		std::deque<listent>::iterator k = listcategories.begin();
+		while (k != listcategories.end()) {
+			tempcat = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD((*k).cat);
+			if (tempcat.length() > 0) {
+				if (nonempty) categories += ", ";
+				categories += tempcat;
+				nonempty = true;
 			}
+			k++;
 		}
-		whatIsNaughtyCategories += noncombicategories;
-		return;
-	}
-	if (bannedcombifound) {
-		isItNaughty = true;
-		whatIsNaughtyLog = o.language_list.getTranslation(400);
-		// Banned combination phrase found:
-		whatIsNaughtyLog += combifound;
-		whatIsNaughty = o.language_list.getTranslation(401);
-		// Banned combination phrase found.
-		whatIsNaughtyCategories = categories;
+		whatIsNaughtyCategories = categories.toCharArray();
 		return;
 	}
 	// whatIsNaughty is what is displayed in the browser
