@@ -39,15 +39,13 @@ extern OptionContainer o;
 class dminstance:public DMPlugin
 {
 public:
-	dminstance(ConfigVar & definition);
+	dminstance(ConfigVar & definition):DMPlugin(definition) {};
 	int in(DataBuffer * d, Socket * sock, Socket * peersock, HTTPHeader * requestheader,
 		HTTPHeader * docheader, bool wantall, int *headersent, bool * toobig);
-// uncomment these if you wish to replace the default inherited functions
-//      int init(int dgversion);
-//      int quit(void);
-//      add class variables for storage here
-private:
-	  ConfigVar cv;
+
+	// default plugin is as basic as you can get - no initialisation, always matches requests.
+	int init() { return 0; };
+	bool willHandle(HTTPHeader *requestheader, HTTPHeader *docheader) { return true; };
 };
 
 
@@ -70,12 +68,6 @@ void defaultdmdestroy(DMPlugin * p)
 #endif
 	delete p;
 }
-
-dminstance::dminstance(ConfigVar & definition):DMPlugin(definition)
-{
-	cv = definition;
-	return;
-};
 
 // end of Class factory
 
