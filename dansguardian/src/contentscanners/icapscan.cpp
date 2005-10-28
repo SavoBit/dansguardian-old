@@ -46,7 +46,7 @@ extern OptionContainer o;
 class icapinstance:public CSPlugin
 {
 public:
-	icapinstance(ConfigVar & definition);
+	icapinstance(ConfigVar & definition):CSPlugin(definition) {};
 
 	int scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
 		const char *ip, const char *object, unsigned int objectsize);
@@ -72,12 +72,6 @@ private:
 // IMPLEMENTATION
 
 // class factory code *MUST* be included in every plugin
-
-icapinstance::icapinstance(ConfigVar & definition):CSPlugin(definition)
-{
-	cv = definition;
-	return;
-};
 
 CSPlugin *icapcreate(ConfigVar & definition)
 {

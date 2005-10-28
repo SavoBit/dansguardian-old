@@ -42,7 +42,7 @@ extern OptionContainer o;
 class clamdinstance:public CSPlugin
 {
 public:
-	clamdinstance(ConfigVar & definition);
+	clamdinstance(ConfigVar & definition):CSPlugin(definition) {};
 
 	// we are not replacing scanTest or scanMemory
 	// but for scanFile and the default scanMemory to work, we need a working scanFile implementation
@@ -60,12 +60,6 @@ private:
 // IMPLEMENTATION
 
 // class factory code *MUST* be included in every plugin
-
-clamdinstance::clamdinstance(ConfigVar & definition):CSPlugin(definition)
-{
-	cv = definition;
-	return;
-};
 
 CSPlugin *clamdcreate(ConfigVar & definition)
 {

@@ -41,7 +41,7 @@ extern OptionContainer o;
 class clamavinstance:public CSPlugin
 {
 public:
-	clamavinstance(ConfigVar & definition);
+	clamavinstance(ConfigVar & definition):CSPlugin(definition) {};
 
 	// we are replacing the inherited scanMemory as it has support for it
 	int scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
@@ -69,12 +69,6 @@ private:
 // IMPLEMENTATION
 
 // class factory code *MUST* be included in every plugin
-
-clamavinstance::clamavinstance(ConfigVar & definition):CSPlugin(definition)
-{
-	cv = definition;
-	return;
-};
 
 CSPlugin *clamavcreate(ConfigVar & definition)
 {

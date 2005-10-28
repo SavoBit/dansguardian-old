@@ -44,7 +44,7 @@ extern OptionContainer o;
 class kavdinstance:public CSPlugin
 {
 public:
-	kavdinstance(ConfigVar & definition);
+	kavdinstance(ConfigVar & definition):CSPlugin(definition) {};
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
 		const char *ip, const char *filename);
 
@@ -56,12 +56,6 @@ private:
 };
 
 // class factory code *MUST* be included in every plugin
-
-kavdinstance::kavdinstance(ConfigVar & definition):CSPlugin(definition)
-{
-	cv = definition;
-	return;
-};
 
 CSPlugin *kavdcreate(ConfigVar & definition)
 {
