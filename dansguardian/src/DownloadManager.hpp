@@ -75,6 +75,9 @@ protected:
 	// standard lists
 	ListContainer mimetypelist;
 	ListContainer extensionlist;
+	// .. and their enable flags
+	bool mimelistenabled;
+	bool extensionlistenabled;
 
 	// read managedmimetypelist and managedextensionlist
 	bool readStandardLists();

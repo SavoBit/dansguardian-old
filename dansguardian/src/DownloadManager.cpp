@@ -93,44 +93,53 @@ bool DMPlugin::willHandle(HTTPHeader *requestheader, HTTPHeader *docheader)
 	// then check standard lists (mimetypes & extensions)
 
 	// mimetypes
+	String mimetype = "";
+	if (mimelistenabled) {
+		mimetype = docheader->getContentType();
 #ifdef DGDEBUG
-	std::cout<<"mimetype: "<<docheader->getContentType()<<std::endl;
+		std::cout<<"mimetype: "<<mimetype<<std::endl;
 #endif
-	String mimetype = docheader->getContentType();
-	if (mimetypelist.findInList(mimetype.toCharArray()) != NULL)
-		return true;
+		if (mimetypelist.findInList(mimetype.toCharArray()) == NULL)
+			return false;
+	}
 	
-	// determine the extension
-	String path = requestheader->decode(requestheader->url());
-	path.removeWhiteSpace();
-	path.toLower();
-	path.removePTP();
-	path = path.after("/");
-	path.hexDecode();
-	path.realPath();
-	String disposition = docheader->disposition();
-	String extension;
-	if (disposition.length() > 2) {
-		extension = disposition;
-	} else {
-		if (!path.contains("?")) {
-			extension = path;
-		}
-		else if (mimetype.contains("application/")) {
-			extension = path;
-			if (extension.contains("?")) {
-				extension = extension.before("?");
+	if (extensionlistenabled) {
+		// determine the extension
+		String path = requestheader->decode(requestheader->url());
+		path.removeWhiteSpace();
+		path.toLower();
+		path.removePTP();
+		path = path.after("/");
+		path.hexDecode();
+		path.realPath();
+		String disposition = docheader->disposition();
+		String extension;
+		if (disposition.length() > 2) {
+			extension = disposition;
+		} else {
+			if (!path.contains("?")) {
+				extension = path;
+			}
+			else {
+				if (mimetype.length() == 0)
+					mimetype = docheader->getContentType();
+				if (mimetype.contains("application/")) {
+					extension = path;
+					if (extension.contains("?")) {
+						extension = extension.before("?");
+					}
+				}
 			}
 		}
+	#ifdef DGDEBUG
+		std::cout<<"extension: "<<extension<<std::endl;
+	#endif
+		// check the extension list
+		if (extension.contains(".") && (extensionlist.findEndsWith(extension.toCharArray()) == NULL))
+				return false;
 	}
-#ifdef DGDEBUG
-	std::cout<<"extension: "<<extension<<std::endl;
-#endif
-	// check the extension list
-	if (extension.contains(".") && (extensionlist.findEndsWith(extension.toCharArray()) != NULL))
-			return true;
 
-	return false;
+	return true;
 }
 
 // read in all the lists of various things we wish to handle
@@ -139,22 +148,36 @@ bool DMPlugin::readStandardLists()
 	mimetypelist.reset();  // incase this is a reload
 	extensionlist.reset();
 
-	if (!mimetypelist.readItemList(cv["managedmimetypelist"].toCharArray(), false, 0)) {
-		if (!is_daemonised) {
-			std::cerr << "Error opening managedmimetypelist" << std::endl;
+	String filename = cv["managedmimetypelist"];
+	if (filename.length() > 0) {
+		if (!mimetypelist.readItemList(filename.toCharArray(), false, 0)) {
+			if (!is_daemonised) {
+				std::cerr << "Error opening managedmimetypelist" << std::endl;
+			}
+			syslog(LOG_ERR, "Error opening managedmimetypelist");
+			return false;
 		}
-		syslog(LOG_ERR, "Error opening managedmimetypelist");
-		return false;
+		mimetypelist.endsWithSort();
+		mimelistenabled = true;
+	} else {
+		mimelistenabled = false;
 	}
-	mimetypelist.endsWithSort();
-	if (!extensionlist.readItemList(cv["managedextensionlist"].toCharArray(), false, 0)) {
-		if (!is_daemonised) {
-			std::cerr << "Error opening managedextensionlist" << std::endl;
+	
+	filename = cv["managedextensionlist"];
+	if (filename.length() > 0) {
+		if (!extensionlist.readItemList(filename.toCharArray(), false, 0)) {
+			if (!is_daemonised) {
+				std::cerr << "Error opening managedextensionlist" << std::endl;
+			}
+			syslog(LOG_ERR, "Error opening managedextensionlist");
+			return false;
 		}
-		syslog(LOG_ERR, "Error opening managedextensionlist");
-		return false;
+		extensionlist.endsWithSort();
+		extensionlistenabled = true;
+	} else {
+		extensionlistenabled = false;
 	}
-	extensionlist.endsWithSort();
+	
 	return true;
 }
 
