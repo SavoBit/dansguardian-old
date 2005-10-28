@@ -11,43 +11,43 @@
 #listcategory: "Peer-to-peer"
 
 #Applications
-<appleJuice><20>
-<Ares><20>
-<Areslite><20>
-<Azureus><20>
-<BearShare><20>
-<BitComet><20>
-<Dshare><20>
-< Direct Connect ><20>
-<eDonkey><20>
-<eMule><20>
-<Grobster><20>
-<Grokster><20>
-<Gnotella><20>
-<Gnucleus><20>
-<iMesh><20>
-<Kademlia><20>
-<KazaaLiteRessurection><20>
-<Kazaa><20>
-<KazaaLite><20>
-<KLite><20>
-<LimeWire><20>
-<Morpheus><20>
-<Mutella><20>
-<Phex><20>
-<Qtella><20>
-<Shareaza><20>
-<Soulseek><20>
-<Swapper><20>
-<Toad Node><20>
-<WinMX><20>
-<XoloX><20>
+<applejuice><20>
+< ares><20>
+<areslite><20>
+<azureus><20>
+<bearshare><20>
+<bitcomet><20>
+<dshare><20>
+< direct connect ><20>
+<edonkey><20>
+<emule><20>
+<grobster><20>
+<grokster><20>
+<gnotella><20>
+<gnucleus><20>
+<imesh><20>
+<kademlia><20>
+<kazaaliteressurection><20>
+<kazaa><20>
+<kazaalite><20>
+<klite><20>
+<limewire><20>
+<morpheus><20>
+<mutella><20>
+< phex><20>
+<qtella><20>
+<shareaza><20>
+<soulseek><20>
+<swapper><20>
+<toad node><20>
+<winmx><20>
+<xolox><20>
 
 #Networks
-<eD2K ><20>
-<Direct-Connect><20>
-< FastTrack ><20>
-<Gnutella ><20>
-<Kad ><20>
-<Opennap><20>
+<ed2k ><20>
+<direct-connect><20>
+< fasttrack ><20>
+<gnutella ><20>
+<kad ><20>
+<opennap><20>
 <overnet><20>
