@@ -71,7 +71,9 @@ extern csdestroy_t kavddestroy;
 // CSPlugin class
 
 CSPlugin::CSPlugin(ConfigVar & definition)
-{}
+{
+	cv = definition;
+}
 
 // start the plugin - i.e. read in the configuration
 int CSPlugin::init()
@@ -89,12 +91,6 @@ int CSPlugin::reload()
 		return init();
 	}
 	return DGCS_ERROR;
-}
-
-// read in the given item list
-bool CSPlugin::readListFile(String * filename, ListContainer * list, bool startswith)
-{
-	return list->readItemList(filename->toCharArray(), startswith, 0);
 }
 
 // make a temporary file for storing data which is to be scanned
@@ -172,15 +168,11 @@ int CSPlugin::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, con
 // read in all the lists of various things we do not wish to scan
 bool CSPlugin::readStandardLists()
 {
-	exceptionvirusmimetypelist_location = cv["exceptionvirusmimetypelist"];
-	exceptionvirusextensionlist_location = cv["exceptionvirusextensionlist"];
-	exceptionvirussitelist_location = cv["exceptionvirussitelist"];
-	exceptionvirusurllist_location = cv["exceptionvirusurllist"];
 	exceptionvirusmimetypelist.reset();  // incase this is a reload
 	exceptionvirusextensionlist.reset();
 	exceptionvirussitelist.reset();
 	exceptionvirusurllist.reset();
-	if (!readListFile(&exceptionvirusmimetypelist_location, &exceptionvirusmimetypelist, false)) {
+	if (!exceptionvirusmimetypelist.readItemList(cv["exceptionvirusmimetypelist"].toCharArray(), false, 0)) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening exceptionvirusmimetypelist" << std::endl;
 		}
@@ -188,7 +180,7 @@ bool CSPlugin::readStandardLists()
 		return false;
 	}
 	exceptionvirusmimetypelist.endsWithSort();
-	if (!readListFile(&exceptionvirusextensionlist_location, &exceptionvirusextensionlist, false)) {
+	if (!exceptionvirusextensionlist.readItemList(cv["exceptionvirusextensionlist"].toCharArray(), false, 0)) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening exceptionvirusextensionlist" << std::endl;
 		}
@@ -196,7 +188,7 @@ bool CSPlugin::readStandardLists()
 		return false;
 	}
 	exceptionvirusextensionlist.endsWithSort();
-	if (!readListFile(&exceptionvirussitelist_location, &exceptionvirussitelist, false)) {
+	if (!exceptionvirussitelist.readItemList(cv["exceptionvirussitelist"].toCharArray(), false, 0)) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening exceptionvirussitelist" << std::endl;
 		}
@@ -204,7 +196,7 @@ bool CSPlugin::readStandardLists()
 		return false;
 	}
 	exceptionvirussitelist.endsWithSort();
-	if (!readListFile(&exceptionvirusurllist_location, &exceptionvirusurllist, false)) {
+	if (!exceptionvirusurllist.readItemList(cv["exceptionvirusurllist"].toCharArray(), true, 0)) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening exceptionvirusurllist" << std::endl;
 		}
@@ -218,7 +210,15 @@ bool CSPlugin::readStandardLists()
 // test whether or not a request should be scanned based on sent & received headers
 int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip)
 {
+	char *i;
+
+	//exceptionvirusmimetypelist
 	String mimetype = docheader->getContentType();
+	i = exceptionvirusmimetypelist.findInList(mimetype.toCharArray());
+	if (i != NULL) {
+		return DGCS_NOSCAN;  // match
+	}
+
 	String disposition = docheader->disposition();
 	String url = requestheader->url();
 	String urld = requestheader->decode(url);
@@ -227,34 +227,14 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 	urld.removePTP();
 	String domain, tempurl, foundurl, path, extension;
 	int fl;
-	char *i;
 	if (urld.contains("/")) {
 		domain = urld.before("/");
 		String path = "/";
 		path += urld.after("/");
-		urld = urld.before("/");
 		path.hexDecode();
 		path.realPath();
-		urld += path;  // will resolve ../ and %2e2e/ and // etc
 	} else {
 		domain = urld;
-	}
-
-	if (disposition.length() > 2) {
-		extension = disposition;
-	} else {
-		if (!path.contains("?")) {
-			extension = path;
-			while (extension.contains("/")) {
-				extension = extension.after("/");
-			}
-		}
-		else if (mimetype.contains("application/")) {
-			extension = path;
-			if (extension.contains("?")) {
-				extension = extension.before("?");
-			}
-		}
 	}
 
 	// don't scan our web server
@@ -263,17 +243,24 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 	}
 
 	//exceptionvirusextensionlist
+	if (disposition.length() > 2) {
+		extension = disposition;
+	} else {
+		if (!path.contains("?")) {
+			extension = path;
+		}
+		else if (mimetype.contains("application/")) {
+			extension = path;
+			if (extension.contains("?")) {
+				extension = extension.before("?");
+			}
+		}
+	}
 	if (extension.contains(".")) {
 		i = exceptionvirusextensionlist.findEndsWith(extension.toCharArray());
 		if (i != NULL) {
 			return DGCS_NOSCAN;  // match
 		}
-	}
-
-	//exceptionvirusmimetypelist
-	i = exceptionvirusmimetypelist.findInList(mimetype.toCharArray());
-	if (i != NULL) {
-		return DGCS_NOSCAN;  // match
 	}
 
 	// exceptionvirussitelist
@@ -286,7 +273,7 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 		tempurl = tempurl.after(".");  // check for being in higher level domains
 	}
 	if (tempurl.length() > 1) {	// allows matching of .tld
-		tempurl = "." + tempurl;
+		tmepurl = "." + tempurl;
 		i = exceptionvirussitelist.findInList(tempurl.toCharArray());
 		if (i != NULL) {
 			return DGCS_NOSCAN;  // exact match
@@ -294,7 +281,7 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 	}
 
 	// exceptionvirusurllist
-	tempurl = url;  // exceptionvirusurllist
+	tempurl = domain + path;
 	if (tempurl.endsWith("/")) {
 		tempurl.chop();  // chop off trailing / if any
 	}
