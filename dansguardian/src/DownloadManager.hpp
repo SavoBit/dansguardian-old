@@ -30,6 +30,7 @@
 #include "DataBuffer.hpp"
 #include "Socket.hpp"
 #include "HTTPHeader.hpp"
+#include "ListContainer.hpp"
 
 #include <stdexcept>
 
@@ -46,17 +47,37 @@ typedef void dmdestroy_t(DMPlugin *);
 class DMPlugin
 {
 public:
-	DMPlugin() {};
-	DMPlugin(ConfigVar & definition) {};
+	DMPlugin(ConfigVar &definition);
 	virtual ~ DMPlugin() {};
 	
 	// download the body for the given request
-	virtual int in(class DataBuffer *d, Socket *sock, Socket *peersock,
-		class HTTPHeader *requestheader, class HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) = 0;
+	virtual int in(DataBuffer *d, Socket *sock, Socket *peersock,
+		HTTPHeader *requestheader, HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) = 0;
 	
 	
-	virtual int init() { return 0; };
+	virtual int init();
 	virtual int quit() { return 0; };
+
+	// will this download manager handle this request?
+	virtual bool willHandle(HTTPHeader *requestheader, HTTPHeader *docheader);
+
+private:
+	// regular expression for matching supported user agents
+	RegExp ua_match;
+	// if there isn't one, set this flag
+	bool alwaysmatchua;
+
+protected:
+	// our configuration values
+	// derived classes could definitely have a use for these
+	ConfigVar cv;
+
+	// standard lists
+	ListContainer mimetypelist;
+	ListContainer extensionlist;
+
+	// read managedmimetypelist and managedextensionlist
+	bool readStandardLists();
 };
 
 // Class which takes in a plugin name and configuration path, and can build a configured instance of the correct DMPlugin descendent

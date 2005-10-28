@@ -25,6 +25,7 @@
 #include "DownloadManager.hpp"
 #include "ConfigVar.hpp"
 #include "OptionContainer.hpp"
+#include "RegExp.hpp"
 
 #include <iostream>
 #include <unistd.h>
@@ -50,6 +51,116 @@ extern dmdestroy_t fancydmdestroy;
 
 
 // IMPLEMENTATION
+
+//
+// DMPlugin
+//
+
+// constructor
+DMPlugin::DMPlugin(ConfigVar &definition):cv(definition), alwaysmatchua(false)
+{
+}
+
+// default initialisation procedure
+int DMPlugin::init()
+{
+	// compile regex for matching supported user agents
+	String r = cv["useragentregexp"];
+	if (r.length() > 0) {
+#ifdef DGDEBUG
+		std::cout<<"useragent regexp: "<<r<<std::endl;
+#endif
+		ua_match.comp(r.toCharArray());
+	} else {
+		// no useragent regex? then default to .*
+#ifdef DGDEBUG
+		std::cout<<"no useragent regular expression; defaulting to .*"<<std::endl;
+#endif
+		alwaysmatchua = true;
+	}
+	if (!readStandardLists())
+		return -1;
+	return 0;
+}
+
+// default method for deciding whether we will handle a request
+bool DMPlugin::willHandle(HTTPHeader *requestheader, HTTPHeader *docheader)
+{
+	// match user agent first (quick)
+	if (!(alwaysmatchua || ua_match.match(requestheader->userAgent().toCharArray())))
+		return false;
+	
+	// then check standard lists (mimetypes & extensions)
+
+	// mimetypes
+#ifdef DGDEBUG
+	std::cout<<"mimetype: "<<docheader->getContentType()<<std::endl;
+#endif
+	String mimetype = docheader->getContentType();
+	if (mimetypelist.findInList(mimetype.toCharArray()) != NULL)
+		return true;
+	
+	// determine the extension
+	String path = requestheader->decode(requestheader->url());
+	path.removeWhiteSpace();
+	path.toLower();
+	path.removePTP();
+	path = path.after("/");
+	path.hexDecode();
+	path.realPath();
+	String disposition = docheader->disposition();
+	String extension;
+	if (disposition.length() > 2) {
+		extension = disposition;
+	} else {
+		if (!path.contains("?")) {
+			extension = path;
+		}
+		else if (mimetype.contains("application/")) {
+			extension = path;
+			if (extension.contains("?")) {
+				extension = extension.before("?");
+			}
+		}
+	}
+#ifdef DGDEBUG
+	std::cout<<"extension: "<<extension<<std::endl;
+#endif
+	// check the extension list
+	if (extension.contains(".") && (extensionlist.findEndsWith(extension.toCharArray()) != NULL))
+			return true;
+
+	return false;
+}
+
+// read in all the lists of various things we wish to handle
+bool DMPlugin::readStandardLists()
+{
+	mimetypelist.reset();  // incase this is a reload
+	extensionlist.reset();
+
+	if (!mimetypelist.readItemList(cv["managedmimetypelist"].toCharArray(), false, 0)) {
+		if (!is_daemonised) {
+			std::cerr << "Error opening managedmimetypelist" << std::endl;
+		}
+		syslog(LOG_ERR, "Error opening managedmimetypelist");
+		return false;
+	}
+	mimetypelist.endsWithSort();
+	if (!extensionlist.readItemList(cv["managedextensionlist"].toCharArray(), false, 0)) {
+		if (!is_daemonised) {
+			std::cerr << "Error opening managedextensionlist" << std::endl;
+		}
+		syslog(LOG_ERR, "Error opening managedextensionlist");
+		return false;
+	}
+	extensionlist.endsWithSort();
+	return true;
+}
+
+//
+// DMPluginLoader
+//
 
 // constructor
 DMPluginLoader::DMPluginLoader()
