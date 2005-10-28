@@ -37,11 +37,9 @@ extern OptionContainer o;
 class fancydm:public DMPlugin
 {
 public:
-	fancydm(ConfigVar & definition);
+	fancydm(ConfigVar & definition):DMPlugin(definition) {};
 	int in(DataBuffer * d, Socket * sock, Socket * peersock, HTTPHeader * requestheader,
 		HTTPHeader * docheader, bool wantall, int *headersent, bool * toobig);
-private:
-	ConfigVar cv;
 };
 
 
@@ -64,12 +62,6 @@ void fancydmdestroy(DMPlugin * p)
 #endif
 	delete p;
 }
-
-fancydm::fancydm(ConfigVar & definition):DMPlugin(definition)
-{
-	cv = definition;
-	return;
-};
 
 // end of Class factory
 
