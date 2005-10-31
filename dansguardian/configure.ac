@@ -52,7 +52,7 @@ AC_FUNC_MEMCMP
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_STAT
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([dup2 gethostbyaddr gettimeofday inet_ntoa memset regcomp select])
+AC_CHECK_FUNCS([dup2 gethostbyaddr gettimeofday inet_ntoa memset select])
 AC_CHECK_FUNCS([socket strerror strstr strtol])
 AC_CHECK_FUNCS([setuid setgid umask seteuid setreuid setlocale strdup])
 
@@ -211,9 +211,22 @@ if test "x$pcre" = "xtrue"; then
 	LIBPCRE_LIBS=`pcre-config --libs`
 	PCRE_PREFIX=`pcre-config --prefix`
 	LIBPCRE_CFLAGS="-I${PCRE_PREFIX}/include"
+
+	AC_MSG_CHECKING([for REG_DOTALL in pcreposix.h])
+	AC_LANG_PUSH(C)
+	AC_COMPILE_IFELSE([
+#include "${PCRE_PREFIX}/include/pcreposix.h"
+#ifndef REG_DOTALL
+	a syntax error
+#endif
+		], AC_MSG_RESULT(yes), AC_MSG_FAILURE([pcreposix.h does not define REG_DOTALL. Do you have PCRE version 6.0 or above?]))
+	AC_LANG_POP(C)
+
 	AC_DEFINE([HAVE_PCRE],[],[Define to enable PCRE support])
 	AC_SUBST([LIBPCRE_LIBS])
 	AC_SUBST([LIBPCRE_CFLAGS])
+else
+	AC_CHECK_FUNCS([regcomp])
 fi
 AM_CONDITIONAL(HAVE_PCRE, test "x$pcre" = "xtrue")
 
@@ -233,7 +246,7 @@ clamav,
 	#pkg_check_modules requires pkg-config to be installed which seems an overkill
 	#and extra work - maybe better to let the user choose with a configure option?
 	#Thu 10th February 2005 - DB
-
+	AC_MSG_RESULT(yes)
 	AC_CHECK_PROG(
 		      CLAMAV,
 		      clamav-config,
@@ -251,7 +264,6 @@ clamav,
 	AC_SUBST([LIBCLAMAV_LIBS])
 	AC_SUBST([LIBCLAMAV_CFLAGS])
 	clamav=true
-	AC_MSG_RESULT(yes)
 else
 	clamav=false
 	AC_MSG_RESULT(no)
