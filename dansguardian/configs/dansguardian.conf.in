@@ -73,8 +73,16 @@ proxyip = 127.0.0.1
 proxyport = 3128
 
 # accessdeniedaddress is the address of your web server to which the cgi
-# dansguardian reporting script was copied
-# Do NOT change from the default if you are not using the cgi.
+# dansguardian reporting script was copied. Only used in reporting levels 1 and 2.
+#
+# This webserver must be either:
+#  1. Non-proxied. Either a machine on the local network, or listed as an exception
+#     in your browser's proxy configuration.
+#  2. Added to the exceptionsitelist. Option 1 is preferable; this option is
+#     only for users using both transparent proxying and a non-local server
+#     to host this script.
+#
+# Individual filter groups can override this setting in their own configuration.
 #
 accessdeniedaddress = 'http://YOURSERVER.YOURDOMAIN/cgi-bin/dansguardian.pl'
 
@@ -230,9 +238,9 @@ reverseclientiplookups = off
 # Perform reverse lookups on client IPs for successful requests.
 # If set to on, DansGuardian will look up the forward DNS for the IP
 # of the connecting computer, and log host names (where available) rather than
-# IPs against successful HTTP requests.
-# This is not dependent on reverseclientiplookups being enabled, and does not
-# affect logging behaviour for banned/exception requests.
+# IPs against requests.
+# This is not dependent on reverseclientiplookups being enabled; however, if it
+# is, enabling this option does not incur any additional forward DNS requests.
 logclienthostnames = off
 
 
