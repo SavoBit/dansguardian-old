@@ -300,7 +300,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 		(*d).dontsendbody = true;
 	}
 
-	if (!toobig && !swappedtodisk) {	// won't deflate stuff swapped to disk
+	if (!(*toobig) && !swappedtodisk) {	// won't deflate stuff swapped to disk
 		if (d->decompress.contains("deflate")) {
 #ifdef DGDEBUG
 			std::cout << "zlib format" << std::endl;

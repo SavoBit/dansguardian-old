@@ -227,7 +227,7 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 		}
 	}
 
-	if (!toobig && !swappedtodisk) {	// won't deflate stuff swapped to disk
+	if (!(*toobig) && !swappedtodisk) {	// won't deflate stuff swapped to disk
 		if (d->decompress.contains("deflate")) {
 #ifdef DGDEBUG
 			std::cout << "zlib format" << std::endl;
