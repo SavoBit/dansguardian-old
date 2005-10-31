@@ -91,6 +91,7 @@ public:
 	int max_ips;
 	bool recheck_replaced_urls;
 
+	std::string languagepath;
 	std::string filter_groups_list_location;
 	std::string html_template_location;
 	std::string banned_ip_list_location;
@@ -142,8 +143,8 @@ public:
 	FOptionContainer **fg;
 	int numfg;
 
-	// access denied address (when using the CGI)
-	String ada;
+	// access denied domain (when using the CGI)
+	String access_denied_domain;
 
 	//...and the functions that read them
 

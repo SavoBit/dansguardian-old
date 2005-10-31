@@ -400,7 +400,8 @@ bool OptionContainer::read(const char *filename, int type)
 		if (!realitycheck(String(reporting_level), 1, 2, "reportinglevel")) {
 			return false;
 		}
-		html_template_location = findoptionS("languagedir") + "/" + findoptionS("language") + "/template.html";
+		languagepath = findoptionS("languagedir") + "/" + findoptionS("language") + "/";
+		html_template_location = languagepath + "template.html";
 
 		if (findoptionS("forwardedfor") == "on") {
 			forwarded_for = 1;
@@ -513,21 +514,21 @@ bool OptionContainer::read(const char *filename, int type)
 		banned_user_list_location = findoptionS("banneduserlist");
 		exceptions_user_list_location = findoptionS("exceptionuserlist");
 		exceptions_ip_list_location = findoptionS("exceptioniplist");
-		language_list_location = findoptionS("languagedir") + "/" + findoptionS("language") + "/messages";
-		access_denied_address = findoptionS("accessdeniedaddress");
-		ada = access_denied_address.c_str();
-		ada = ada.after("://");
-		ada.removeWhiteSpace();
-		if (ada.contains("/")) {
-			ada = ada.before("/");  // ada now contains the FQ host nom of the
-			// server that serves the accessdenied.html
-			// file
-		}
-		if (ada.contains(":")) {
-			ada = ada.before(":");  // chop off the port number if any
-		}
+		language_list_location = languagepath + "messages";
 		if (reporting_level == 1 || reporting_level == 2) {
-			if (ada.length() < 4) {
+			access_denied_address = findoptionS("accessdeniedaddress");
+			access_denied_domain = access_denied_address.c_str();
+			access_denied_domain = access_denied_domain.after("://");
+			access_denied_domain.removeWhiteSpace();
+			if (access_denied_domain.contains("/")) {
+				access_denied_domain = access_denied_domain.before("/");  // access_denied_domain now contains the FQ host nom of the
+				// server that serves the accessdenied.html
+				// file
+			}
+			if (access_denied_domain.contains(":")) {
+				access_denied_domain = access_denied_domain.before(":");  // chop off the port number if any
+			}
+			if (access_denied_domain.length() < 4) {
 				if (!is_daemonised) {
 					cerr << "accessdeniedaddress setting appears to be wrong." << endl;
 				}
@@ -560,9 +561,9 @@ bool OptionContainer::read(const char *filename, int type)
 		if (reporting_level == 3) {	// only if reporting set to HTML templ
 			if (!html_template.readTemplateFile(html_template_location.c_str())) {
 				if (!is_daemonised) {
-					std::cerr << "Error reading HTML Template file:" << html_template_location << std::endl;
+					std::cerr << "Error reading HTML Template file: " << html_template_location << std::endl;
 				}
-				syslog(LOG_ERR, "%s", "Error reading HTML Template file.");
+				syslog(LOG_ERR, "Error reading HTML Template file: %s", html_template_location.c_str());
 				return false;
 				// HTML template file
 			}
@@ -625,30 +626,33 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::
 	if ((*ip).length() < 1) {
 		return false;
 	}
-	if (reverse_client_ip_lookups != 1) {
-		return list.inList((char *) (*ip).c_str());
-	}
 	if (list.inList((char *) (*ip).c_str())) {
+		delete host;
+		host = NULL;
 		return true;
 	}
-	std::deque<String > hostnames = (*fg[0]).ipToHostname((*ip).c_str());
-	bool result;
-	for (unsigned int i = 0; i < hostnames.size(); i++) {
-		result = list.inList(hostnames[i].toCharArray());
-		if (result) {
-			// return the matched host name for logging purposes
-			// hey.. since the lookup is the hard part, not the logging,
-			// why not always return a hostname if it wasn't a straight IP
-			// that triggered the match?
-			//if (log_client_hostnames == 1) {
-				delete host;
-				host = new std::string(hostnames[i].toCharArray());
-#ifdef DGDEBUG
-				std::cout<<"Found hostname: "<<(*host)<<std::endl;
-#endif
-			//}
-			return true;
+	else if (reverse_client_ip_lookups == 1) {
+		std::deque<String > hostnames = (*fg[0]).ipToHostname((*ip).c_str());
+		bool result;
+		for (unsigned int i = 0; i < hostnames.size(); i++) {
+			result = list.inList(hostnames[i].toCharArray());
+			if (result) {
+				// return the matched host name for logging purposes
+				// hey.. since the lookup is the hard part, not the logging,
+				// why not always return a hostname if it wasn't a straight IP
+				// that triggered the match?
+				//if (log_client_hostnames == 1) {
+					delete host;
+					host = new std::string(hostnames[i].toCharArray());
+	#ifdef DGDEBUG
+					std::cout<<"Found hostname: "<<(*host)<<std::endl;
+	#endif
+				//}
+				return true;
+			}
 		}
+		if ((log_client_hostnames == 1) && (host == NULL))
+				host = new std::string(hostnames.front().toCharArray());
 	}
 	return false;
 }
@@ -820,7 +824,10 @@ bool OptionContainer::readAnotherFilterGroupConf(const char *filename)
 	(*fg[numfg]).force_quick_search = force_quick_search;
 	(*fg[numfg]).createlistcachefiles = createlistcachefiles;
 	(*fg[numfg]).reverse_lookups = reverse_lookups;
-	(*fg[numfg]).ada = ada;
+	
+	// pass in default access denied address - can be overidden
+	(*fg[numfg]).access_denied_domain = access_denied_domain;
+	(*fg[numfg]).access_denied_address = access_denied_address;
 
 #ifdef DGDEBUG
 	std::cout << "passed variables to filter group" << numfg << " " << filename << std::endl;
