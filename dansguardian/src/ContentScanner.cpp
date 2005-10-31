@@ -237,7 +237,7 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 	}
 
 	// don't scan our web server
-	if (domain.startsWith(o.ada.toCharArray())) {
+	if (domain.startsWith(o.fg[filtergroup]->access_denied_domain.toCharArray())) {
 		return DGCS_NOSCAN;
 	}
 
