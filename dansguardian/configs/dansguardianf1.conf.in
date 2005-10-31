@@ -60,3 +60,31 @@ disablecontentscan = off
 # embedded in the thumbnail GET requests.
 # (on|off) default = off
 deepurlanalysis = off
+
+# accessdeniedaddress is the address of your web server to which the cgi
+# dansguardian reporting script was copied. Only used in reporting levels 1 and 2.
+#
+# This webserver must be either:
+#  1. Non-proxied. Either a machine on the local network, or listed as an exception
+#     in your browser's proxy configuration.
+#  2. Added to the exceptionsitelist. Option 1 is preferable; this option is
+#     only for users using both transparent proxying and a non-local server
+#     to host this script.
+#
+# If defined, this overrides the setting in dansguardian.conf for members of this
+# filter group.
+#
+#accessdeniedaddress = 'http://YOURSERVER.YOURDOMAIN/cgi-bin/dansguardian.pl'
+
+# HTML Template override
+# If defined, this specifies a custom HTML template file for members of this filter
+# group. This is only used in reporting level 3.
+#
+# The default template file path is <languagedir>/<language>/template.html
+# e.g. @DGDATADIR@/languages/ukenglish/template.html when using 'ukenglish'
+# language.
+#
+# This option generates a file path of the form <languagedir>/<language>/<htmltemplate>
+# e.g. @DGDATADIR@/languages/ukenglish/custom.html
+#
+#htmltemplate = 'custom.html'
