@@ -185,14 +185,16 @@ public:
 	RegExp pics1;
 	RegExp pics2;
 	RegExp isiphost;
-	String ada;
+	
+	// access denied address & domain - if they override the defaults
+	std::string access_denied_address;
+	String access_denied_domain;
 
+	FOptionContainer():banned_page(NULL) {};
 	~FOptionContainer();
 	bool read(const char *filename);
 	void reset();
-	//bool inexceptions(String url);
 	bool isOurWebserver(String url);
-	//bool inurlexceptions(String url);
 	char *inBannedSiteList(String url);
 	char *inBannedURLList(String url);
 	bool inGreySiteList(String url);
@@ -205,8 +207,14 @@ public:
 	bool isIPHostname(String url);
 
 	std::deque<String> &ipToHostname(const char *ip);
+	
+	// get HTML template for this group
+	HTMLTemplate *getHTMLTemplate();
 
 private:
+	// HTML template - if it overrides the default
+	HTMLTemplate *banned_page;
+
 	std::deque<std::string > conffile;
 
 	bool precompileregexps();

@@ -59,6 +59,7 @@ FOptionContainer::~FOptionContainer()
 	o.lm.deRefList(exception_regexpurl_list);
 	o.lm.deRefList(content_regexp_list);
 	o.lm.deRefList(url_regexp_list);
+	delete banned_page;
 }
 
 void FOptionContainer::reset()
@@ -88,6 +89,16 @@ void FOptionContainer::reset()
 	exception_regexpurl_list_comp.clear();
 	exception_regexpurl_list_source.clear();
 	exception_regexpurl_list_ref.clear();
+	delete banned_page;
+	banned_page = NULL;
+}
+
+// grab this FG's HTML template
+HTMLTemplate* FOptionContainer::getHTMLTemplate()
+{
+	if (banned_page)
+		return banned_page;
+	return &(o.html_template);
 }
 
 // read in the given file, write the list's ID into the given identifier,
@@ -207,6 +218,44 @@ bool FOptionContainer::read(const char *filename)
 			disable_content_scan = 1;
 		} else {
 			disable_content_scan = 0;
+		}
+
+		// override default access denied address
+		if (o.reporting_level == 1 || o.reporting_level == 2) {
+			String temp_ada, temp_add;
+			temp_ada = findoptionS("accessdeniedaddress");
+			if (temp_ada != "") {
+				access_denied_address = temp_ada.toCharArray();
+				access_denied_domain = access_denied_address.c_str();
+				access_denied_domain = access_denied_domain.after("://");
+				access_denied_domain.removeWhiteSpace();
+				if (access_denied_domain.contains("/")) {
+					access_denied_domain = access_denied_domain.before("/");
+					// access_denied_domain now contains the FQ host name of the
+					// server that serves the accessdenied.html file
+				}
+				if (access_denied_domain.contains(":")) {
+					access_denied_domain = access_denied_domain.before(":");  // chop off the port number if any
+				}
+			}
+		}
+
+		// override default banned page
+		
+		if (o.reporting_level == 3) {
+			String html_template = findoptionS("htmltemplate");
+			if (html_template != "") {
+				html_template = o.languagepath + html_template;
+				banned_page = new HTMLTemplate;
+				if (!(banned_page->readTemplateFile(html_template.toCharArray()))) {
+					if (!is_daemonised) {
+						std::cerr << "Error reading HTML Template file: " << html_template << std::endl;
+					}
+					syslog(LOG_ERR, "Error reading HTML Template file: %s", html_template.toCharArray());
+					return false;
+					// HTML template file
+				}
+			}
 		}
 
 		naughtyness_limit = findoptionI("naughtynesslimit");
@@ -914,15 +963,17 @@ bool FOptionContainer::precompileregexps()
 
 bool FOptionContainer::isOurWebserver(String url)
 {
-	url.removeWhiteSpace();  // just in case of weird browser crap
-	url.toLower();
-	url.removePTP();  // chop off the ht(f)tp(s)://
-	if (url.contains("/")) {
-		url = url.before("/");  // chop off any path after the domain
-	}
-	if (url.startsWith(ada.toCharArray())) {	// don't filter our web
-		// server
-		return true;
+	// reporting levels 0 and 3 don't use the CGI
+	if (o.reporting_level == 1 || o.reporting_level == 2) {
+		url.removeWhiteSpace();  // just in case of weird browser crap
+		url.toLower();
+		url.removePTP();  // chop off the ht(f)tp(s)://
+		if (url.contains("/")) {
+			url = url.before("/");  // chop off any path after the domain
+		}
+		if (url.startsWith(access_denied_domain)) {	// don't filter our web server
+			return true;
+		}
 	}
 	return false;
 }
