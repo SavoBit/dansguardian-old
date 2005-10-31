@@ -399,6 +399,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	std::string clientip = ip.toCharArray();  // hold the clients ip
 	delete clienthost;
 	clienthost = NULL;  // and the hostname, if available
+	matchedip = false;
 
 #ifdef DGDEBUG			// debug stuff surprisingly enough
 	std::cout << "got connection" << std::endl;
@@ -518,7 +519,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			std::cout << "Bypass activated!" << std::endl;
 #endif
 		}
-		else if (o.inExceptionIPList(&clientip, clienthost)) {	// admin pc
+		if (o.inExceptionIPList(&clientip, clienthost)) {	// admin pc
+			matchedip = clienthost == NULL;
 			isexception = true;
 			exceptionreason = o.language_list.getTranslation(600);
 			// Exception client IP match.
@@ -616,12 +618,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		std::cerr << "runav = no thanks" << std::endl;
 #endif
 
-		if ((isourwebserver || isexception || iscookiebypass)
+		if (((isexception || iscookiebypass)
 			// don't filter exception and local web server
 			// Cookie bypass so don't need to add cookie so just CONNECT
 			&& !o.inBannedIPList(&clientip, clienthost)	 // bad users pc
 			&& !o.inBannedUserList(&clientuser)	 // bad user
 			&& !(runav && o.content_scan_exceptions))
+			// bad people still need to be able to access the banned page
+			|| isourwebserver)
 		{
 			proxysock.readyForOutput(10);  // exception on timeout or error
 			header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
@@ -688,6 +692,29 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					// exception regular expression url match:
 					exceptionreason = o.language_list.getTranslation(609);
 					exceptionreason += (*o.fg[filtergroup]).exception_regexpurl_list_source[rc].toCharArray();
+				}
+				// don't filter exception and local web server
+				if ((isexception
+					&& !(runav && o.content_scan_exceptions))
+					|| isourwebserver)
+				{
+					proxysock.readyForOutput(10);  // exception on timeout or error
+					header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
+					try {
+						FDTunnel fdt;  // make a tunnel object
+						// tunnel from client to proxy and back
+						fdt.tunnel(proxysock, peerconn);  // not expected to exception
+						docsize = fdt.throughput;
+						if (!isourwebserver) {	// don't log requests to the web server
+							String rtype = header.requestType();
+							doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception,
+								o.log_exception_hits, false, &thestart, cachehit, 200, mimetype, wasinfected, wasscanned);
+						}
+					}
+					catch(exception & e) {
+					}
+					proxysock.close();  // close connection to proxy
+					return;  // connection dealt with so exit
 				}
 			}
 		}
@@ -1127,21 +1154,22 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		}
 		
 		// put client hostname in log if enabled.
-		// for denied & exception, we want to output exactly what was matched against,
-		// be it hostname or IP - therefore only do lookups here for standard requests,
-		// which we most likely won't have a cached hostname for.
-		if ((o.log_client_hostnames == 1) && !(isexception || isnaughty)) {
+		// for banned & exception IP/hostname matches, we want to output exactly what was matched against,
+		// be it hostname or IP - therefore only do lookups here when we don't already have a cached hostname,
+		// and we don't have a straight IP match agaisnt the banned or exception IP lists.
+		if ((o.log_client_hostnames == 1) && (clienthost == NULL) && !matchedip) {
+#ifdef DGDEBUG
+			std::cout<<"logclienthostnames enabled but reverseclientiplookups disabled; lookup forced."<<std::endl;
+#endif
 			std::deque<String> names = o.fg[0]->ipToHostname(from.c_str());
-			if (names.size() > 0) {
-				delete clienthost;
-				clienthost = new std::string(names[0].toCharArray());
-			}
+			if (names.size() > 0)
+				clienthost = new std::string(names.front().toCharArray());
 		}
 		
 		switch (o.log_file_format) {
 		case 4:
 			logline = when + "\t" + who + "\t" + (clienthost ? *clienthost : from) + "\t" + where.toCharArray() + "\t" + what
-				+ "\t" + how.toCharArray() + "\t" + ssize + "\t" + (cat ? (*cat) : "N/A") + "\n";
+				+ "\t" + how.toCharArray() + "\t" + ssize + "\t" + mimetype + "\t" + (cat ? (*cat) : "N/A") + "\n";
 			break;
 		case 3:
 			{
@@ -1200,11 +1228,11 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 			}
 		case 2:
 			logline = "\"" + when + "\",\"" + who + "\",\"" + (clienthost ? *clienthost : from) + "\",\"" + where.toCharArray()
-				+ "\",\"" + what + "\",\"" + how.toCharArray() + "\",\"" + ssize + "\"\n";
+				+ "\",\"" + what + "\",\"" + how.toCharArray() + "\",\"" + ssize + "\",\"" + mimetype + "\",\"" + (cat ? (*cat) : "N/A") + "\"\n";
 			break;
 		default:
 			logline = when + " " + who + " " + (clienthost ? *clienthost : from) + " " + where.toCharArray() + " " + what + " "
-				+ how.toCharArray() + " " + ssize + " " + (cat ? (*cat) : "N/A") + "\n";
+				+ how.toCharArray() + " " + ssize + " " + mimetype + " " + (cat ? (*cat) : "N/A") + "\n";
 		}
 
 		// connect to dedicated logging proc
@@ -1242,6 +1270,7 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 		(*checkme).whatIsNaughtyCategories = "Blanket Block";
 	}
 	else if (o.inBannedIPList(clientip,clienthost)) {
+		matchedip = clienthost == NULL;
 		(*checkme).isItNaughty = true;
 		(*checkme).whatIsNaughtyLog = o.language_list.getTranslation(100);
 		// Your IP address is not allowed to web browse:
@@ -1489,11 +1518,10 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 						// only going to be happening if the unsafe trickle
 						// buffer method is used and we want the download to be
 						// broken we don't mind too much
-						o.html_template.display(peerconn,
-							(*url).toCharArray(),
-							(*checkme).whatIsNaughty.c_str(),
-							(*checkme).whatIsNaughtyLog.c_str(), (*checkme).whatIsNaughtyCategories.c_str(),
-							(*clientuser).c_str(), (*clientip).c_str(), String(filtergroup + 1), hashed.toCharArray());
+						o.fg[filtergroup]->getHTMLTemplate()->display(peerconn,
+							url, (*checkme).whatIsNaughty,
+							(*checkme).whatIsNaughtyLog, (*checkme).whatIsNaughtyCategories,
+							clientuser, clientip, clienthost, filtergroup + 1, hashed);
 					}
 				}
 			}
@@ -1511,7 +1539,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 			}
 			String writestring = "HTTP/1.0 302 Redirect\n";
 			writestring += "Location: ";
-			writestring += o.access_denied_address.c_str();
+			writestring += o.fg[filtergroup]->access_denied_address;
 
 			if (o.non_standard_delimiter == 1) {
 				writestring += "?DENIEDURL==";
@@ -1520,12 +1548,13 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				writestring += (*clientip).c_str();
 				writestring += "::USER==";
 				writestring += (*clientuser).c_str();
+				if (clienthost != NULL) {
+					writestring += "::HOST==";
+					writestring += clienthost->c_str();
+				}
 				writestring += "::CATEGORIES==";
 				writestring += miniURLEncode((*checkme).whatIsNaughtyCategories.c_str()).c_str();
 				if ((*o.fg[filtergroup]).bypass_mode != 0 && !ispostblock) {
-					//String timecode(time(NULL) + 300);
-					// String hashed = (*url).md5(std::string((*o.fg[filtergroup]).magic + timecode.toCharArray()).c_str());
-					//hashed += timecode;
 					writestring += "::HASH==";
 					writestring += hashedURL(url, filtergroup, clientip).after("GBYPASS=").toCharArray();
 				}
@@ -1537,12 +1566,13 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				writestring += (*clientip).c_str();
 				writestring += "&USER=";
 				writestring += (*clientuser).c_str();
+				if (clienthost != NULL) {
+					writestring += "&HOST=";
+					writestring += clienthost->c_str();
+				}
 				writestring += "&CATEGORIES=";
 				writestring += miniURLEncode((*checkme).whatIsNaughtyCategories.c_str()).c_str();
 				if ((*o.fg[filtergroup]).bypass_mode != 0 && !ispostblock) {
-					//String timecode(time(NULL) + 300);
-					//String hashed = (*url).md5(std::string((*o.fg[filtergroup]).magic + timecode.toCharArray()).c_str());
-					//hashed += timecode;
 					writestring += "&HASH=";
 					writestring += hashedURL(url, filtergroup, clientip).after("GBYPASS=").toCharArray();
 				}
