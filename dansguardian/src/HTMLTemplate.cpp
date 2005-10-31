@@ -65,7 +65,7 @@ bool HTMLTemplate::readTemplateFile(const char *filename)
 	std::string linebuffer;
 	RegExp re;
 	// compile regexp for matching supported placeholders
-	re.comp("-URL-|-REASONGIVEN-|-REASONLOGGED-|-USER-|-IP-|-FILTERGROUP-|-BYPASS-|-CATEGORIES-");
+	re.comp("-URL-|-REASONGIVEN-|-REASONLOGGED-|-USER-|-IP-|-HOST-|-FILTERGROUP-|-BYPASS-|-CATEGORIES-");
 	unsigned int offset;
 	String result;
 	String line;
@@ -114,7 +114,8 @@ bool HTMLTemplate::readTemplateFile(const char *filename)
 }
 
 // fill in placeholders with the given information and send the resulting page to the client
-void HTMLTemplate::display(Socket *s, String url, String reason, String logreason, String categories, String user, String ip, String filtergroup, String hashed)
+void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::string &logreason, std::string &categories,
+		std::string *user, std::string *ip, std::string *host, int filtergroup, String &hashed)
 {
 #ifdef DGDEBUG
 	std::cout << "Displaying TEMPLATE" << std::endl;
@@ -127,7 +128,7 @@ void HTMLTemplate::display(Socket *s, String url, String reason, String logreaso
 		line = html[i];
 		// look for placeholders (split onto their own line by readTemplateFile) and replace them
 		if (line == "-URL-") {
-			line = url;
+			line = *url;
 		}
 		else if (line == "-REASONGIVEN-") {
 			line = reason;
@@ -136,13 +137,16 @@ void HTMLTemplate::display(Socket *s, String url, String reason, String logreaso
 			line = logreason;
 		}
 		else if (line == "-USER-") {
-			line = user;
+			line = *user;
 		}
 		else if (line == "-IP-") {
-			line = ip;
+			line = *ip;
+		}
+		else if (line == "-HOST-") {
+			line = (host != NULL ? *host : "");
 		}
 		else if (line == "-FILTERGROUP-") {
-			line = filtergroup;
+			line = String(filtergroup);
 		}
 		else if (line == "-CATEGORIES-") {
 			if (categories.length() > 0) {
@@ -153,13 +157,14 @@ void HTMLTemplate::display(Socket *s, String url, String reason, String logreaso
 		}
 		else if (line == "-BYPASS-") {
 			if (hashed.length() > 0) {
-				if (!url.after("://").contains("/")) {
-					url += "/";
+				line = *url;
+				if (!(url->after("://").contains("/"))) {
+					line += "/";
 				}
-				if (url.contains("?")) {
-					line = url + "&" + hashed;
+				if (url->contains("?")) {
+					line += "&" + hashed;
 				} else {
-					line = url + "?" + hashed;
+					line += "?" + hashed;
 				}
 			} else {
 				line = "";

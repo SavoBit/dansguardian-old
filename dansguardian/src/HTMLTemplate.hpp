@@ -42,7 +42,8 @@ public:
 	// load in a template from the given file, looking for placeholder strings (reason, URL, category etc.)
 	bool readTemplateFile(const char *filename);
 	// fill in the template with the given info and send it to the client over the given socket
-	void display(Socket *s, String url, String reason, String logreason, String categories, String user, String ip, String filtergroup, String hashed);
+	void display(Socket *s, String *url, std::string &reason, std::string &logreason, std::string &categories,
+		std::string *user, std::string *ip, std::string *host, int filtergroup, String &hashed);
 
 private:
 	// string list for holding the template
