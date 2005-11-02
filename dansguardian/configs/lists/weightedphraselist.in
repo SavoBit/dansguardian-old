@@ -49,6 +49,7 @@
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_italian>
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_portuguese>
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_spanish> #ALPHA#
+.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_russian> #ALPHA#
 .Include<@DGCONFDIR@/lists/phraselists/nudism/weighted>
 
 #Bad Words - swearing

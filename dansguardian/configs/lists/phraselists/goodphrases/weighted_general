@@ -391,10 +391,13 @@
 <xxx>,<drought><-20>
 <you shall not>,<material>,<violates><-10>
 
-<flight><-10>
-<airline<-10>
-<chicken>,<breast><-50>
-<turkey>,<breast><-50>
-<museum><-30>
+< flight><-10>
+< airline><-10>
+< chicken>,<breast><-50>
+< turkey>,<breast><-50>
+< museum><-30>
 <librar><-30>
+< marriage><-30>
+< lawyer><-30>
+< vacation><-5>
 
