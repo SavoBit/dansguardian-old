@@ -1,7 +1,7 @@
 # Please don't delete platform.h.in. it's not very nice.
 MAINTAINERCLEANFILES = Makefile.in #platform.h.in
 
-clean_SUBDIRS= . downloadmanagers contentscanners 
+clean_SUBDIRS= . downloadmanagers contentscanners authplugins
 
 # A MASSIVE thank you to Lawrence Manning for pointing out the
 # -export-dynamic option was needed to solve a long problem
@@ -72,6 +72,9 @@ else
 FANCYDM_SOURCE =
 endif
 
+PROXYAUTH_SOURCE = authplugins/proxy.cpp
+IDENTAUTH_SOURCE = authplugins/ident.cpp
+
 sbin_PROGRAMS = dansguardian 
 
 dansguardian_SOURCES = String.cpp String.hpp \
@@ -88,7 +91,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        UDSocket.cpp UDSocket.hpp \
                        SysV.cpp SysV.hpp \
                        ListContainer.cpp ListContainer.hpp \
-                       Ident.cpp Ident.hpp \
+                       Auth.cpp Auth.hpp \
                        HTMLTemplate.cpp HTMLTemplate.hpp \
                        LanguageContainer.cpp LanguageContainer.hpp \
                        DynamicURLList.cpp DynamicURLList.hpp \
@@ -104,10 +107,12 @@ dansguardian_SOURCES = String.cpp String.hpp \
 		       SocketArray.cpp SocketArray.hpp \
                        platform.h \
                        dansguardian.cpp \
+		       Plugin.hpp \
 		       $(CLAMAV_SOURCE) $(ICAPSCAN_SOURCE) \
 		       $(KAVDSCAN_SOURCE) $(CLAMDSCAN_SOURCE) \
 		       $(DEFAULTDM_SOURCE) $(FANCYDM_SOURCE) \
-		       $(KAVAV_SOURCES)
+		       $(KAVAV_SOURCES) $(PROXYAUTH_SOURCE) \
+		       $(IDENTAUTH_SOURCE)
 
 dansguardian_LDADD = $(PCRE_LDFLAGS) $(ZLIB) $(CLAMAV_LDFLAGS) $(KAVAV_LDFLAGS)
 
