@@ -42,10 +42,6 @@ public:
 	dminstance(ConfigVar & definition):DMPlugin(definition) {};
 	int in(DataBuffer * d, Socket * sock, Socket * peersock, HTTPHeader * requestheader,
 		HTTPHeader * docheader, bool wantall, int *headersent, bool * toobig);
-
-	// default plugin is as basic as you can get - no initialisation, always matches requests.
-	/*int init() { return 0; };
-	bool willHandle(HTTPHeader *requestheader, HTTPHeader *docheader) { return true; };*/
 };
 
 
@@ -61,29 +57,7 @@ DMPlugin *defaultdmcreate(ConfigVar & definition)
 	return new dminstance(definition);
 }
 
-void defaultdmdestroy(DMPlugin * p)
-{
-#ifdef DGDEBUG
-	std::cout << "Destroying default DM" << std::endl;
-#endif
-	delete p;
-}
-
 // end of Class factory
-
-
-// uncomment these if you wish to replace the default inherited functions
-
-// < 0 = error
-// = 0 = ok
-// > 0 = warning
-
-//int dminstance::init(int dgversion) {
-//      return 0;
-//}
-//int dminstance::quit(void) {
-//      return 0;
-//}
 
 // download body for this request
 int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHeader * requestheader,
