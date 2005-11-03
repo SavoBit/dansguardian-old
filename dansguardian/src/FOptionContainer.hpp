@@ -46,6 +46,7 @@ class FOptionContainer
 public:
 	int disable_content_scan;
 	int weighted_phrase_mode;
+	int group_mode;
 	int naughtyness_limit;
 	int createlistcachefiles;
 	int enable_PICS;
@@ -190,7 +191,7 @@ public:
 	std::string access_denied_address;
 	String access_denied_domain;
 
-	FOptionContainer():banned_page(NULL) {};
+	FOptionContainer():banned_page(NULL),blanketblock(0),blanket_ip_block(0) {};
 	~FOptionContainer();
 	bool read(const char *filename);
 	void reset();
