@@ -55,14 +55,6 @@ DMPlugin *fancydmcreate(ConfigVar & definition)
 	return new fancydm(definition);
 }
 
-void fancydmdestroy(DMPlugin * p)
-{
-#ifdef DGDEBUG
-	std::cout << "Destroying fancy DM" << std::endl;
-#endif
-	delete p;
-}
-
 // end of Class factory
 
 // download body for this request
