@@ -53,6 +53,10 @@ public:
 	
 	// content regexp replacement - checkme: not implemented
 	//void contentRegExp(DataBuffer * body);
+	
+	// highest positive (or lowest negative) weighting out of
+	// both phrase filtering passes (smart/raw)
+	int naughtiness;
 
 private:
 	// check the banned, weighted & exception lists

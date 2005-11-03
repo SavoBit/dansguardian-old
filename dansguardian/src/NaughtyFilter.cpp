@@ -58,7 +58,7 @@ public:
 
 // constructor - set up defaults
 NaughtyFilter::NaughtyFilter()
-:	isItNaughty(false), isException(false), filtergroup(0), whatIsNaughty(""), whatIsNaughtyLog(""), whatIsNaughtyCategories("")
+:	isItNaughty(false), isException(false), filtergroup(0), whatIsNaughty(""), whatIsNaughtyLog(""), whatIsNaughtyCategories(""), naughtiness(0)
 {
 }
 
@@ -520,6 +520,15 @@ void NaughtyFilter::checkphrase(char *file, int l)
 	}
 #ifdef DGDEBUG
 	std::cout << "WEIGHTING: " << weighting << std::endl;
+#endif
+
+	// store the lowest negative weighting or highest positive weighting out of all filtering runs, preferring to store positive weightings.
+	if ((weighting < 0 && naughtiness <= 0 && weighting < naughtiness) || (naughtiness >= 0 && weighting > naughtiness) || (naughtiness < 0 && weighting > 0) ) {
+		naughtiness = weighting;
+	}
+
+#ifdef DGDEBUG
+	std::cout << "NAUGHTINESS: " << naughtiness << std::endl;
 #endif
 
 	// *now* we can safely get down to the whole banning business!
