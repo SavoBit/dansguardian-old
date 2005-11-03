@@ -9,6 +9,9 @@ $user = $in{'USER'};
 $ip = $in{'IP'};
 $cats = $in{'CATEGORIES'};
 
+# originating hostname - can be undefined
+$host = $in{'HOST'};
+
 print "Content-type: text/html\n\n";
 print '<HTML><HEAD><TITLE>DansGuardian - Access Denied</TITLE></HEAD>';
 print '<BODY><CENTER><H2>ACCESS HAS BEEN DENIED</H2>';
