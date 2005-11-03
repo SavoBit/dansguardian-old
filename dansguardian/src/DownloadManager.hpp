@@ -1,4 +1,4 @@
-//Defines the DMPlugin base class, and the DMPluginLoader, which arbitrates between the DM config files and the available DMPlugin descendents
+//Defines the DMPlugin base class, and dm_plugin_loader function
 
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
@@ -31,6 +31,7 @@
 #include "Socket.hpp"
 #include "HTTPHeader.hpp"
 #include "ListContainer.hpp"
+#include "Plugin.hpp"
 
 #include <stdexcept>
 
@@ -40,15 +41,14 @@
 class DMPlugin;
 
 // class factory functions for DM plugins
-typedef DMPlugin & dmcreate_t(ConfigVar &);
-typedef void dmdestroy_t(DMPlugin *);
+typedef DMPlugin* dmcreate_t(ConfigVar &);
 
 // the DMPlugin interface - inherit & implement this to make download managers
-class DMPlugin
+class DMPlugin:public Plugin
 {
 public:
 	DMPlugin(ConfigVar &definition);
-	virtual ~ DMPlugin() {};
+	virtual ~DMPlugin() {};
 	
 	// download the body for the given request
 	virtual int in(DataBuffer *d, Socket *sock, Socket *peersock,
@@ -57,7 +57,7 @@ public:
 	// plugin initialise/quit routines.
 	// if lastplugin is true, this is being loaded as the fallback option,
 	// and needn't load in purely request matching related options.
-	virtual int init(bool lastplugin);
+	virtual int init(void* args);
 	virtual int quit() { return 0; };
 
 	// will this download manager handle this request?
@@ -85,29 +85,7 @@ protected:
 	bool readStandardLists();
 };
 
-// Class which takes in a plugin name and configuration path, and can build a configured instance of the correct DMPlugin descendent
-class DMPluginLoader
-{
-public:
-	ConfigVar cv;
-	bool is_good;
-
-	DMPluginLoader();
-	// constructor with plugin configuration
-	DMPluginLoader(const char *pluginConfigPath);
-	// copy constructor
-	DMPluginLoader(const DMPluginLoader &a);
-
-	~DMPluginLoader() {};
-
-	// create/destroy the DMPlugin itself
-	DMPlugin *create();
-	void destroy(DMPlugin *object);
-
-private:
-	dmcreate_t *create_it;  // used to create said plugin
-	dmdestroy_t *destroy_it;  // to destroy (delete) it
-
-};
+// create an instance of the plugin given in the configuration file
+DMPlugin* dm_plugin_load(const char *pluginConfigPath);
 
 #endif
