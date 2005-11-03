@@ -1,4 +1,4 @@
-// Implements CSPlugin and CSPluginLoader classes
+// Implements CSPlugin class and cs_plugin_loader base class
 
 //Please refer to http://dansguardian.org/?page=copyright2
 //for the license for this code.
@@ -42,27 +42,22 @@ extern OptionContainer o;
 
 #ifdef __CLAMD
 extern cscreate_t clamdcreate;
-extern csdestroy_t clamddestroy;
 #endif
 
 #ifdef __CLAMAV
 extern cscreate_t clamavcreate;
-extern csdestroy_t clamavdestroy;
 #endif
 
 #ifdef __ICAP
 extern cscreate_t icapcreate;
-extern csdestroy_t icapdestroy;
 #endif
 
 #ifdef __KAVAV
 extern cscreate_t kavavcreate;
-extern csdestroy_t kavavdestroy;
 #endif
 
 #ifdef __KAVD
 extern cscreate_t kavdcreate;
-extern csdestroy_t kavddestroy;
 #endif
 
 
@@ -76,21 +71,12 @@ CSPlugin::CSPlugin(ConfigVar & definition)
 }
 
 // start the plugin - i.e. read in the configuration
-int CSPlugin::init()
+int CSPlugin::init(void* args)
 {
 	if (!readStandardLists()) {	//always
 		return DGCS_ERROR;  //include
 	}			// these
 	return DGCS_OK;
-}
-
-// reload the configuration
-int CSPlugin::reload()
-{				//assumes init has been run sucessfully
-	if (quit() == DGCS_OK) {
-		return init();
-	}
-	return DGCS_ERROR;
 }
 
 // make a temporary file for storing data which is to be scanned
@@ -308,59 +294,17 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 	return DGCS_NEEDSCAN;
 }
 
-// CSPluginLoader class
-
-CSPluginLoader::CSPluginLoader()
+// take in a configuration file, find the CSPlugin class associated with the plugname variable, and return an instance
+CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 {
-	create_it = NULL;
-	destroy_it = NULL;
-	is_good = false;
-}
-
-// copy constructor
-CSPluginLoader::CSPluginLoader(const CSPluginLoader & a)
-{
-	create_it = a.create_it;  // used to create said plugin
-	destroy_it = a.destroy_it;  // to destroy (delete) it
-	is_good = a.is_good;
-}
-
-CSPluginLoader::~CSPluginLoader()
-{
-	return;
-}
-
-// call the class factory create func of the found CS plugin
-CSPlugin *CSPluginLoader::create()
-{
-	if (create_it) {
-		return create_it(cv);
-	}
-	return NULL;
-}
-
-// call the class factory destroy func of the found CS plugin
-void CSPluginLoader::destroy(CSPlugin * object)
-{
-	if (object) {
-		if (destroy_it) {
-			destroy_it(object);
-		}
-	}
-	return;
-}
-
-// take in a configuration file, find the CSPlugin class associated with the plugname variable, and look up its class factory funcs
-CSPluginLoader::CSPluginLoader(const char *pluginConfigPath)
-{
-	is_good = false;
+	ConfigVar cv;
 
 	if (cv.readVar(pluginConfigPath, "=") > 0) {
 		if (!is_daemonised) {
 			std::cerr << "Unable to load plugin config: " << pluginConfigPath << std::endl;
 		}
-		syslog(LOG_ERR, "Unable to load plugin config %s\n", pluginConfigPath);
-		return;
+		syslog(LOG_ERR, "Unable to load plugin config %s", pluginConfigPath);
+		return NULL;
 	}
 
 	String plugname = cv["plugname"];
@@ -368,8 +312,8 @@ CSPluginLoader::CSPluginLoader(const char *pluginConfigPath)
 		if (!is_daemonised) {
 			std::cerr << "Unable read plugin config plugname variable: " << pluginConfigPath << std::endl;
 		}
-		syslog(LOG_ERR, "Unable read plugin config plugname variable %s\n", pluginConfigPath);
-		return;
+		syslog(LOG_ERR, "Unable read plugin config plugname variable %s", pluginConfigPath);
+		return NULL;
 	}
 
 #ifdef __CLAMD
@@ -377,10 +321,7 @@ CSPluginLoader::CSPluginLoader(const char *pluginConfigPath)
 #ifdef DGDEBUG
 		std::cout << "Enabling ClamDscan CS plugin" << std::endl;
 #endif
-		create_it = (cscreate_t *) clamdcreate;
-		destroy_it = (csdestroy_t *) clamddestroy;
-		is_good = true;
-		return;
+		return clamdcreate(cv);
 	}
 #endif
 
@@ -389,10 +330,7 @@ CSPluginLoader::CSPluginLoader(const char *pluginConfigPath)
 #ifdef DGDEBUG
 		std::cout << "Enabling ClamAV CS plugin" << std::endl;
 #endif
-		create_it = (cscreate_t *) clamavcreate;
-		destroy_it = (csdestroy_t *) clamavdestroy;
-		is_good = true;
-		return;
+		return clamavcreate(cv);
 	}
 #endif
 
@@ -401,10 +339,7 @@ CSPluginLoader::CSPluginLoader(const char *pluginConfigPath)
 #ifdef DGDEBUG
 		std::cout << "Enabling KAVClient CS plugin" << std::endl;
 #endif
-		create_it = (cscreate_t *) kavavcreate;
-		destroy_it = (csdestroy_t *) kavavdestroy;
-		is_good = true;
-		return;
+		return kavavcreate(cv);
 	}
 #endif
 
@@ -413,10 +348,7 @@ CSPluginLoader::CSPluginLoader(const char *pluginConfigPath)
 #ifdef DGDEBUG
 		std::cout << "Enabling KAVDscan CS plugin" << std::endl;
 #endif
-		create_it = (cscreate_t *) kavdcreate;
-		destroy_it = (csdestroy_t *) kavddestroy;
-		is_good = true;
-		return;
+		return kavdcreate(cv);
 	}
 #endif
 
@@ -425,18 +357,13 @@ CSPluginLoader::CSPluginLoader(const char *pluginConfigPath)
 #ifdef DGDEBUG
 		std::cout << "Enabling ICAPscan CS plugin" << std::endl;
 #endif
-		create_it = (cscreate_t *) icapcreate;
-		destroy_it = (csdestroy_t *) icapdestroy;
-		is_good = true;
-		return;
+		return icapcreate(cv);
 	}
 #endif
 
-	create_it = NULL;
-	destroy_it = NULL;
 	if (!is_daemonised) {
 		std::cerr << "Unable to load plugin: " << pluginConfigPath << std::endl;
 	}
 	syslog(LOG_ERR, "Unable to load plugin %s\n", pluginConfigPath);
-	return;
+	return NULL;
 }

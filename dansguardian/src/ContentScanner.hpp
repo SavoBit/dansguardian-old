@@ -31,6 +31,8 @@
 #include "HTTPHeader.hpp"
 #include "ListContainer.hpp"
 #include "FDFuncs.hpp"
+#include "Plugin.hpp"
+
 #include <stdexcept>
 
 
@@ -56,17 +58,16 @@ class CSPlugin;
 
 // class factory functions for CS plugins
 typedef CSPlugin* cscreate_t(ConfigVar &);
-typedef void csdestroy_t(CSPlugin*);
 
 // CS plugin interface proper - to be implemented by plugins themselves
-class CSPlugin {
+class CSPlugin: public Plugin
+{
 public:
 	ConfigVar cv;
 	String lastmessage;
 	String lastvirusname;
 
-	// empty constructor & constructor with CS plugin configuration passed in
-	//CSPlugin() {};
+	//constructor with CS plugin configuration passed in
 	CSPlugin(ConfigVar &definition);
 
 	virtual ~CSPlugin() {};
@@ -82,8 +83,7 @@ public:
 	virtual String getLastVirusName() {return lastvirusname;};
 
 	// start, restart and stop the plugin
-	virtual int init();
-	virtual int reload();
+	virtual int init(void* args);
 	virtual int quit() {return DGCS_OK;};
 
 private:
@@ -103,24 +103,7 @@ protected:
 	virtual int writeMemoryTempFile(const char *object, unsigned int objectsize, String *filename);
 };
 
-// Class which takes in a plugin name and configuration path, and can build a configured instance of the correct CSPlugin descendent
-class CSPluginLoader {
-public:
-	bool is_good;
-	ConfigVar cv;
-
-	CSPluginLoader();
-	CSPluginLoader( const char *pluginConfigPath );
-	// copy constructor
-	CSPluginLoader( const CSPluginLoader &a );
-	~CSPluginLoader();
-
-	CSPlugin *create();
-	void destroy( CSPlugin *object );
-
-private:
-	cscreate_t *create_it;  // used to create said plugin
-	csdestroy_t *destroy_it;  // to destroy (delete) it
-};
+// Return an instance of the plugin defined in the given configuration file
+CSPlugin* cs_plugin_load( const char *pluginConfigPath );
 
 #endif
