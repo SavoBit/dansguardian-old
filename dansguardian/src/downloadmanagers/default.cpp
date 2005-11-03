@@ -42,6 +42,11 @@ public:
 	dminstance(ConfigVar & definition):DMPlugin(definition) {};
 	int in(DataBuffer * d, Socket * sock, Socket * peersock, HTTPHeader * requestheader,
 		HTTPHeader * docheader, bool wantall, int *headersent, bool * toobig);
+
+	// default plugin is as basic as you can get - no initialisation, and uses the default
+	// set of matching mechanisms. uncomment and implement these to override default behaviour.
+	//int init(void* args);
+	//bool willHandle(HTTPHeader *requestheader, HTTPHeader *docheader);
 };
 
 
@@ -58,6 +63,18 @@ DMPlugin *defaultdmcreate(ConfigVar & definition)
 }
 
 // end of Class factory
+
+// uncomment these if you wish to replace the default inherited functions
+// < 0 = error
+// = 0 = ok
+// > 0 = warning
+
+//int dminstance::init(void* args) {
+//	return 0;
+//}
+//int dminstance::quit(void) {
+//	return 0;
+//}
 
 // download body for this request
 int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHeader * requestheader,
