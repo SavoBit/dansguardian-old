@@ -430,7 +430,7 @@ usernameidmethodident = off
 # ideal.  So you can optionally disable it.  Default is on.
 # As a side effect disabling this makes AD image replacement work better as the mime
 # type is know.
-preemptivebanning = on
+#preemptivebanning = off
 
 
 
