@@ -50,8 +50,8 @@ public:
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
 		const char *ip, const char *filename);
 
-	int init();
-	int quit(void);
+	int init(void* args);
+	int quit();
 
 private:
 	// KAV daemon connection?
@@ -71,15 +71,10 @@ CSPlugin *kavavcreate(ConfigVar & definition)
 	return new kavavinstance(definition);
 }
 
-void kavavdestroy(CSPlugin * p)
-{
-	delete p;
-}
-
 // end of Class factory
 
 // destroy plugin
-int kavavinstance::quit(void)
+int kavavinstance::quit()
 {
 	if (kavcon != NULL) {
 		kav_free(kavcon);  // return to kavcon 5 ;-)
@@ -112,7 +107,7 @@ int kavavinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 }
 
 // initialise plugin
-int kavavinstance::init(int dgversion)
+int kavavinstance::init(void* args)
 {
 	// always include these lists
 	if (!readStandardLists()) {

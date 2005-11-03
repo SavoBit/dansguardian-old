@@ -53,7 +53,7 @@ public:
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
 		const char *ip, const char *filename);
 
-	int init();
+	int init(void* args);
 
 private:
 	// ICAP server IP and port
@@ -78,15 +78,10 @@ CSPlugin *icapcreate(ConfigVar & definition)
 	return new icapinstance(definition);
 }
 
-void icapdestroy(CSPlugin * p)
-{
-	delete p;
-}
-
 // end of Class factory
 
 // initialise the plugin - determine icap ip, port & url
-int icapinstance::init()
+int icapinstance::init(void* args)
 {
 	// always include these lists
 	if (!readStandardLists()) {

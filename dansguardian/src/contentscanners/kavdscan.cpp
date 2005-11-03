@@ -48,7 +48,7 @@ public:
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
 		const char *ip, const char *filename);
 
-	int init();
+	int init(void* args);
 
 private:
 	// UNIX domain socket path for KAVD
@@ -62,15 +62,10 @@ CSPlugin *kavdcreate(ConfigVar & definition)
 	return new kavdinstance(definition);
 }
 
-void kavddestroy(CSPlugin * p)
-{
-	delete p;
-}
-
 // end of Class factory
 
 // initialise plugin
-int kavdinstance::init()
+int kavdinstance::init(void* args)
 {
 	// always include these lists
 	if (!readStandardLists()) {

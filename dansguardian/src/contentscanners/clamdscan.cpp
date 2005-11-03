@@ -49,7 +49,7 @@ public:
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
 		const char *ip, const char *filename);
 
-	int init();
+	int init(void* args);
 
 private:
 	// ClamD UNIX domain socket path
@@ -66,15 +66,10 @@ CSPlugin *clamdcreate(ConfigVar & definition)
 	return new clamdinstance(definition);
 }
 
-void clamddestroy(CSPlugin * p)
-{
-	delete p;
-}
-
 // end of Class factory
 
 // initialise the plugin
-int clamdinstance::init()
+int clamdinstance::init(void* args)
 {
 	// always include these lists
 	if (!readStandardLists()) {

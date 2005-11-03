@@ -52,7 +52,7 @@ public:
 	// could be useful, but doesn't yet do anything - see comments on implementation
 	//int scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip);
 
-	int init();
+	int init(void* args);
 	int quit();
 
 private:
@@ -73,11 +73,6 @@ private:
 CSPlugin *clamavcreate(ConfigVar & definition)
 {
 	return new clamavinstance(definition);
-}
-
-void clamavdestroy(CSPlugin * p)
-{
-	delete p;
 }
 
 // end of Class factory
@@ -142,7 +137,7 @@ int clamavinstance::doRC(int rc, const char *vn)
 }
 
 // initialise libclamav
-int clamavinstance::init()
+int clamavinstance::init(void* args)
 {
 	// always include these lists
 	if (!readStandardLists()) {
