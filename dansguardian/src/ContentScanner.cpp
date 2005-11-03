@@ -200,12 +200,18 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 
 	//exceptionvirusmimetypelist
 	String mimetype = docheader->getContentType();
+#ifdef DGDEBUG
+	std::cout<<"mimetype: "<<mimetype<<std::endl;
+#endif
 	i = exceptionvirusmimetypelist.findInList(mimetype.toCharArray());
 	if (i != NULL) {
 		return DGCS_NOSCAN;  // match
 	}
 
 	String disposition = docheader->disposition();
+#ifdef DGDEBUG
+	std::cout<<"disposition: "<<disposition<<std::endl;
+#endif
 	String url = requestheader->url();
 	String urld = requestheader->decode(url);
 	urld.removeWhiteSpace();
@@ -241,6 +247,9 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 			}
 		}
 	}
+#ifdef DGDEBUG
+	std::cout<<"extension: "<<extension<<std::endl;
+#endif
 	if (extension.contains(".")) {
 		i = exceptionvirusextensionlist.findEndsWith(extension.toCharArray());
 		if (i != NULL) {
@@ -250,6 +259,9 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 
 	// exceptionvirussitelist
 	tempurl = domain;
+#ifdef DGDEBUG
+	std::cout<<"domain: "<<domain<<std::endl;
+#endif
 	while (tempurl.contains(".")) {
 		i = exceptionvirussitelist.findInList(tempurl.toCharArray());
 		if (i != NULL) {
