@@ -470,6 +470,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		bool isbannedip = o.inBannedIPList(&clientip, clienthost);
 		if (isbannedip)
 			matchedip = clienthost == NULL;
+		// checkme: isbannedip and isbanneduser could perhaps be amalgamated into a single flag,
+		// for the purposes of everything except requestChecks.
 
 		if (o.forwarded_for == 1) {
 			header.addXForwardedFor(clientip);  // add squid-like entry
@@ -510,11 +512,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 		}
 
-		if (isbypass) {
 #ifdef DGDEBUG
+		if (isbypass) {
 			std::cout << "Bypass activated!" << std::endl;
-#endif
 		}
+#endif
+
 		// being a banned user/IP overrides the fact that a site may be in the exception lists
 		if (!(isbanneduser || isbannedip)) {
 			if ((o.fg[filtergroup]->group_mode == 2)) {	// admin user
@@ -585,51 +588,18 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			return;  // connection dealt with so exit
 		}
 
-		// don't run scanTest on exceptions or bypasses if contentscanexceptions is off
-		if (((*o.fg[filtergroup]).disable_content_scan != 1) && !((isexception || isbypass) && !o.content_scan_exceptions)) {
-#ifdef DGDEBUG
-			std::cerr << "cs plugins:" << o.csplugins.size() << std::endl;
-#endif
-			//send header to plugin here needed
-			//also send user and group
-			int csrc = 0;
-#ifdef DGDEBUG
-			int j = 0;
-#endif
-			for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
-#ifdef DGDEBUG
-				std::cerr << "running scanTest " << j << std::endl;
-#endif
-				csrc = ((CSPlugin*)(*i))->scanTest(&header, &docheader, clientuser.c_str(), filtergroup, clientip.c_str());
-#ifdef DGDEBUG
-				std::cerr << "scanTest " << j << " returned: " << csrc << std::endl;
-#endif
-				if (csrc > 0) {
-					sendtoscanner.push_back(true);
-					runav = true;
-				} else {
-					if (csrc < 0)
-						syslog(LOG_ERR, "scanTest returned error: %d", csrc);
-					sendtoscanner.push_back(false);
-				}
-#ifdef DGDEBUG
-				j++;
-#endif
-			}
-		}
+		// don't run scanTest on exceptions if contentscanexceptions is off
+		runav = ((*o.fg[filtergroup]).disable_content_scan != 1) && !(isexception && !o.content_scan_exceptions);
 #ifdef DGDEBUG
 		std::cerr << "runav = " << runav << std::endl;
 #endif
 
-		// checkme: inBannedIPList and inBannedUserList seem to be run an excessive number of times.
-		// would it be wiser to simply call them once and cache the results?
-
 		if (((isexception || iscookiebypass)
 			// don't filter exception and local web server
-			// Cookie bypass so don't need to add cookie so just CONNECT
+			// Cookie bypass so don't need to add cookie so just CONNECT (unless should virus scan)
 			&& !isbannedip	 // bad users pc
 			&& !isbanneduser	 // bad user
-			&& !(runav && o.content_scan_exceptions))
+			&& !runav)  // needs virus scanning
 			// bad people still need to be able to access the banned page
 			|| isourwebserver)
 		{
@@ -704,7 +674,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					// even after regex URL replacement, we still don't want banned IPs/users viewing exception sites
 					&& !isbannedip	 // bad users pc
 					&& !isbanneduser	 // bad user
-					&& !(runav && o.content_scan_exceptions))
+					&& !runav)
 					|| isourwebserver)
 				{
 					proxysock.readyForOutput(10);  // exception on timeout or error
@@ -738,7 +708,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 		// Improved IF structure as suggested by AFN
 
-		if ((/*!forceauthrequest ||*/ header.requestType().startsWith("CONNECT")) && !isbypass && !isexception) {
+		if (header.requestType().startsWith("CONNECT") && !isbypass && !isexception) {
 			// if its a connect and we don't do filtering on it now then
 			// it will get tunneled and not filtered.  We can't tunnel later
 			// as its ssl so we can't see the return header etc
@@ -792,6 +762,47 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 				docheader.setCookie("GBYPASS", hashedCookie(&urldomain, filtergroup, &clientip, bypasstimestamp).toCharArray());
 			}
+
+			// now that we have the proxy's header too, we can make a better informed decision on whether or not to scan.
+			// this used to be done before we'd grabbed the proxy's header, rendering exceptionvirusmimetypelist useless,
+			// and exceptionvirusextensionlist less effective, because we didn't have a Content-Disposition header.
+			// checkme: split scanTest into two parts? we can check the site & URL lists long before we get here, then
+			// do the rest of the checks later.
+			if (runav) {
+				runav = false;
+#ifdef DGDEBUG
+				std::cerr << "cs plugins:" << o.csplugins.size() << std::endl;
+#endif
+				//send header to plugin here needed
+				//also send user and group
+				int csrc = 0;
+#ifdef DGDEBUG
+				int j = 0;
+#endif
+				for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
+#ifdef DGDEBUG
+					std::cerr << "running scanTest " << j << std::endl;
+#endif
+					csrc = ((CSPlugin*)(*i))->scanTest(&header, &docheader, clientuser.c_str(), filtergroup, clientip.c_str());
+#ifdef DGDEBUG
+					std::cerr << "scanTest " << j << " returned: " << csrc << std::endl;
+#endif
+					if (csrc > 0) {
+						sendtoscanner.push_back(true);
+						runav = true;
+					} else {
+						if (csrc < 0)
+							syslog(LOG_ERR, "scanTest returned error: %d", csrc);
+						sendtoscanner.push_back(false);
+					}
+#ifdef DGDEBUG
+					j++;
+#endif
+				}
+			}
+#ifdef DGDEBUG
+			std::cerr << "runav = " << runav << std::endl;
+#endif
 
 			// no need to check bypass mode, exception mode, auth required headers, or banned ip/user (the latter get caught by requestChecks later)
 			if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.authRequired())
@@ -871,13 +882,13 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			}
 
 			// check received header from proxy
-			if (!isbypass && !isexception && !checkme.isItNaughty && /*forceauthrequest &&*/ !docheader.authRequired()) {
+			if (!isbypass && !isexception && !checkme.isItNaughty && !docheader.authRequired()) {
 				requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup, &ispostblock, isbanneduser, isbannedip);
 			}
 
-			// check body from proxy - only check bypass mode if contentscanexceptions is enabled
+			// check body from proxy
 			// checkme: still need some way to explicitly tell contentfilter that bypass shouldn't be phrase filtered?
-			if (!checkme.isItNaughty && !(isbypass && !o.content_scan_exceptions)) {
+			if (!checkme.isItNaughty) {
 				if (docheader.isContentType("text") || runav) {
 					if (o.url_cache_number > 0 && !(!o.scan_clean_cache && runav)) {
 						if (wasClean(urld)) {
@@ -912,7 +923,18 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			}
 		}
 
-		if (checkme.isItNaughty && !isbypass) {	// then we deny, unless we were told to bypass the block
+		// then we deny. previously, this checked the isbypass flag too; now, since bypass requests only undergo the same checking
+		// as exceptions, it needn't. and in fact it mustn't, if bypass requests are to be virus scanned/blocked in the same manner as exceptions.
+		// the only way to download an infected file is to be in a "disablecontentscan" filtergroup, or disable contentscanexceptions.
+		// checkme:
+		// 1. might it be useful in future to have another bypass mode, specifically for downloading infected files? (per-group option, obviously)
+		//    the link generation would presumably occur in denyAccess, so the wasinfected flag would need passing in. requests coming in on
+		//    infectedbypass links would be tunnelled, and would not generate any kind of cookie. params would be similar to existing scanbypass URLs.
+		// 2. until the above is decided, a "known bug" is that you can repeatedly click the "bypass" link on an infected file block page,
+		//    and append more and more GSBYPASS parameters. chop these off, or not provide valid links for infected files?
+		//
+		// PRA 3-11-2005
+		if (checkme.isItNaughty) {
 			String rtype = header.requestType();
 			std::cout<<"Category: "<<checkme.whatIsNaughtyCategories<<std::endl;
 			doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
@@ -1739,6 +1761,7 @@ void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * heade
 						checkme->whatIsNaughtyCategories = "Content scanning";
 						checkme->isItNaughty = true;
 						checkme->isException = false;
+						(*wasinfected) = true;
 						break;
 					}
 					else if (csrc > 0) {
