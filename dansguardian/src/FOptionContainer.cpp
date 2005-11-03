@@ -168,50 +168,6 @@ bool FOptionContainer::read(const char *filename)
 		std::cout << "Read conf into memory: " << filename << std::endl;
 #endif
 
-		// the dansguardian.conf and pics files get amalgamated into one
-		// deque.  They are only seperate files for clarity.
-
-		if (findoptionS("enablepics") == "off") {
-			enable_PICS = 0;
-		} else {
-			enable_PICS = 1;
-		}
-
-		if (enable_PICS == 1) {
-			linebuffer = findoptionS("picsfile");
-			ifstream picsfiles(linebuffer.c_str(), ios::in);  // pics file
-			if (!picsfiles.good()) {
-				if (!is_daemonised) {
-					std::cerr << "Error reading PICS file: " << linebuffer << std::endl;
-				}
-				syslog(LOG_ERR, "Error reading PICS file: %s", linebuffer.c_str());
-				return false;
-			}
-			while (!picsfiles.eof()) {
-				getline(picsfiles, linebuffer);
-				if (!picsfiles.eof() && linebuffer.length() != 0) {
-					if (linebuffer[0] != '#') {	// i.e. not commented out
-						temp = (char *) linebuffer.c_str();
-						if (temp.contains("#")) {
-							temp = temp.before("#");
-						}
-						while (temp.endsWith(" ")) {
-							temp.chop();  // get rid of spaces at end of line
-						}
-						linebuffer = temp.toCharArray();
-						conffile.push_back(linebuffer);  // stick option in deque
-					}
-				}
-			}
-			picsfiles.close();
-
-#ifdef DGDEBUG
-			std::cout << "Read PICS into memory" << std::endl;
-		} else {
-			std::cout << "PICS disabled" << std::endl;
-#endif
-		}
-
 		if (findoptionS("deepurlanalysis") == "on") {
 			deep_url_analysis = 1;
 		} else {
@@ -275,6 +231,51 @@ bool FOptionContainer::read(const char *filename)
 #endif
 
 		if (group_mode == 1) {
+
+			// the dansguardian.conf and pics files get amalgamated into one
+			// deque.  They are only seperate files for clarity.
+
+			if (findoptionS("enablepics") == "off") {
+				enable_PICS = 0;
+			} else {
+				enable_PICS = 1;
+			}
+
+			if (enable_PICS == 1) {
+				linebuffer = findoptionS("picsfile");
+				ifstream picsfiles(linebuffer.c_str(), ios::in);  // pics file
+				if (!picsfiles.good()) {
+					if (!is_daemonised) {
+						std::cerr << "Error reading PICS file: " << linebuffer << std::endl;
+					}
+					syslog(LOG_ERR, "Error reading PICS file: %s", linebuffer.c_str());
+					return false;
+				}
+				while (!picsfiles.eof()) {
+					getline(picsfiles, linebuffer);
+					if (!picsfiles.eof() && linebuffer.length() != 0) {
+						if (linebuffer[0] != '#') {	// i.e. not commented out
+							temp = (char *) linebuffer.c_str();
+							if (temp.contains("#")) {
+								temp = temp.before("#");
+							}
+							while (temp.endsWith(" ")) {
+								temp.chop();  // get rid of spaces at end of line
+							}
+							linebuffer = temp.toCharArray();
+							conffile.push_back(linebuffer);  // stick option in deque
+						}
+					}
+				}
+				picsfiles.close();
+
+#ifdef DGDEBUG
+				std::cout << "Read PICS into memory" << std::endl;
+			} else {
+				std::cout << "PICS disabled" << std::endl;
+#endif
+			}
+
 			naughtyness_limit = findoptionI("naughtynesslimit");
 			if (!realitycheck(String(naughtyness_limit), 1, 4, "naughtynesslimit")) {
 				return false;
