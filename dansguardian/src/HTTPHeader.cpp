@@ -811,7 +811,7 @@ bool HTTPHeader::isBypassCookie(String * url, const char *magic, const char *cli
 	time_t timeu = cookietime.toLong();
 	if (timeu < timen) {
 #ifdef DGDEBUG
-		std::cout << "Cookie GBYPASS expired" << std::endl;
+		std::cout << "Cookie GBYPASS expired: " << timeu << " " << timen << std::endl;
 #endif
 		return false;
 	}
@@ -838,7 +838,7 @@ int HTTPHeader::isBypassURL(String * url, const char *magic, const char *clienti
 	String url_hash = url_right.subString(0, 32);
 	String url_time = url_right.after(url_hash.toCharArray());
 #ifdef DGDEBUG
-	std::cout << "URL: " << url_left << ", HASH: " << url_hash << "TIME: " << url_time << std::endl;
+	std::cout << "URL: " << url_left << ", HASH: " << url_hash << ", TIME: " << url_time << std::endl;
 #endif
 
 	String mymagic = magic;
