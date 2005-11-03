@@ -1568,7 +1568,7 @@ int fc_controlit()
 				if (!o.doReadItemList(o.filter_groups_list_location.c_str(),&(o.filter_groups_list),"filtergroupslist",true)) {
 					reloadconfig = true;  // filter groups problem...
 				} else {
-					o.deleteCSPlugins();
+					o.deletePlugins(o.csplugins);
 					if (!o.loadCSPlugins()) {
 						reloadconfig = true;  // content scan plugs problem
 					} else {
