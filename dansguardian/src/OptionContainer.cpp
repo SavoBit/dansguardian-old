@@ -42,26 +42,28 @@ extern bool is_daemonised;
 
 // IMPLEMENTATION
 
-OptionContainer::OptionContainer():numfg(0)
+OptionContainer::OptionContainer():numfg(0), auth_plugin(NULL)
 {
 }
 
 OptionContainer::~OptionContainer()
 {
 	deleteFilterGroups();
-	deleteDMPlugins();
-	deleteCSPlugins();
+	deletePlugins(dmplugins);
+	deletePlugins(csplugins);
+	auth_plugin->quit();
+	delete auth_plugin;
 }
 
 void OptionContainer::reset()
 {
 	deleteFilterGroups();
-	deleteDMPlugins();
-	deleteCSPlugins();
-	exception_user_list.reset();
+	deletePlugins(dmplugins);
+	deletePlugins(csplugins);
+	auth_plugin->quit();
+	delete auth_plugin;
 	exception_ip_list.reset();
 	banned_ip_list.reset();
-	banned_user_list.reset();
 	html_template.reset();
 	language_list.reset();
 	conffile.clear();
@@ -83,38 +85,22 @@ void OptionContainer::deleteFilterGroups()
 	}
 }
 
-void OptionContainer::deleteCSPlugins()
+void OptionContainer::deletePlugins(std::deque<Plugin*> &list)
 {
-	for (unsigned int i = 0; i < csplugins.size(); i++) {
-		if (csplugins[i] != NULL && cspluginloaders.size() < i) {
-			csplugins[i]->quit();
-			cspluginloaders[i].destroy(csplugins[i]);
-			csplugins[i] = NULL;
+	for (std::deque<Plugin*>::iterator i = list.begin(); i != list.end(); i++) {
+		if ((*i) != NULL) {
+			(*i)->quit();
+			delete (*i);
 		}
 	}
-	csplugins.clear();
-	cspluginloaders.clear();
+	list.clear();
 }
-
-
-void OptionContainer::deleteDMPlugins()
-{
-	for (unsigned int i = 0; i < dmplugins.size(); i++) {
-		if (dmplugins[i] != NULL && dmpluginloaders.size() < i) {
-			dmplugins[i]->quit();
-			dmpluginloaders[i].destroy(dmplugins[i]);
-			dmplugins[i] = NULL;
-		}
-	}
-	dmplugins.clear();
-	dmpluginloaders.clear();
-}
-
 
 bool OptionContainer::read(const char *filename, int type)
 {
 	conffilename = filename;
-	try {			// all sorts of exceptions could occur reading conf files
+	// all sorts of exceptions could occur reading conf files
+	try {
 		std::string linebuffer;
 		String temp;  // for tempory conversion and storage
 		int j;  // counter
@@ -428,7 +414,8 @@ bool OptionContainer::read(const char *filename, int type)
 		} else {
 			logconerror = 0;
 		}
-		if (findoptionS("usernameidmethodproxyauth") == "on") {
+		
+		/*if (findoptionS("usernameidmethodproxyauth") == "on") {
 			uim_proxyauth = 1;
 		} else {
 			uim_proxyauth = 0;
@@ -442,12 +429,45 @@ bool OptionContainer::read(const char *filename, int type)
 			uim_ident = 1;
 		} else {
 			uim_ident = 0;
-		}
+		}*/
 
-		if (findoptionS("preemptivebanning") == "off") {
-			preemptive_banning = 0;
-		} else {
-			preemptive_banning = 1;
+		// load the Auth plugin
+		String amethod = findoptionS("authplugin");
+		if (amethod.length() > 0) {
+			auth_plugin = auth_plugin_load(amethod.toCharArray());
+			if (auth_plugin == NULL) {
+				if (!is_daemonised) {
+					std::cerr << "auth_plugin_load() returned NULL pointer with config file: " << amethod << std::endl;
+				}
+				syslog(LOG_ERR, "auth_plugin_load() returned NULL pointer with config file: %s", amethod.toCharArray());
+				return false;
+			}
+#ifdef DGDEBUG
+			std::cout << "Auth plugin is good" << std::endl;
+#endif
+			int rc = auth_plugin->init(NULL);
+#ifdef DGDEBUG
+			std::cout << "Auth plugin init called" << std::endl;
+#endif
+			if (rc < 0) {
+				if (!is_daemonised) {
+					std::cerr << "Auth plugin init returned error value: " << rc << std::endl;
+				}
+				syslog(LOG_ERR, "Auth plugin init returned error value: %d", rc);
+				return false;
+			}
+			else if (rc > 0) {
+				if (!is_daemonised) {
+					std::cerr << "Auth plugin init returned warning value:" << rc << std::endl;
+				}
+				syslog(LOG_ERR, "Auth plugin init returned warning value: %d", rc);
+			}
+
+			/*if (findoptionS("preemptivebanning") == "off") {
+				preemptive_banning = 0;
+			} else {
+				preemptive_banning = 1;
+			}*/
 		}
 
 		if (findoptionS("reverseaddresslookups") == "on") {
@@ -511,8 +531,6 @@ bool OptionContainer::read(const char *filename, int type)
 
 		filter_groups_list_location = findoptionS("filtergroupslist");
 		banned_ip_list_location = findoptionS("bannediplist");
-		banned_user_list_location = findoptionS("banneduserlist");
-		exceptions_user_list_location = findoptionS("exceptionuserlist");
 		exceptions_ip_list_location = findoptionS("exceptioniplist");
 		language_list_location = languagepath + "messages";
 		if (reporting_level == 1 || reporting_level == 2) {
@@ -544,15 +562,9 @@ bool OptionContainer::read(const char *filename, int type)
 		if (!doReadItemList(banned_ip_list_location.c_str(),&banned_ip_list,"bannediplist",true)) {
 			return false;
 		}		// read banned ip list
-		if (!doReadItemList(banned_user_list_location.c_str(),&banned_user_list,"banneduserlist",true)) {
-			return false;
-		}		// read banned user list
 		if (!doReadItemList(exceptions_ip_list_location.c_str(),&exception_ip_list,"exceptioniplist",false)) {
 			return false;
 		}		// ip exceptions
-		if (!doReadItemList(exceptions_user_list_location.c_str(),&exception_user_list,"exceptionuserlist",false)) {
-			return false;
-		}		// site exceptions
 
 		if (!language_list.readLanguageList(language_list_location.c_str())) {
 			return false;
@@ -603,22 +615,6 @@ bool OptionContainer::doReadItemList(const char* filename, ListContainer* lc, co
 	else
 		lc->endsWithSort();
 	return true;
-}
-
-bool OptionContainer::inExceptionUserList(const std::string *user)
-{
-	if ((*user).length() < 1) {
-		return false;
-	}
-	return exception_user_list.inList((char *) (*user).c_str());
-}
-
-bool OptionContainer::inBannedUserList(const std::string *user)
-{
-	if ((*user).length() < 1) {
-		return false;
-	}
-	return banned_user_list.inList((char *) (*user).c_str());
 }
 
 bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::string *&host)
@@ -863,50 +859,36 @@ bool OptionContainer::loadDMPlugins()
 #ifdef DGDEBUG
 		std::cout << "loading download manager config: " << config << std::endl;
 #endif
-
-		DMPluginLoader dmpl(config.toCharArray());
-		DMPlugin *dmpp;
-
-		if (!dmpl.is_good) {
-			if (!is_daemonised) {
-				std::cerr << "Error starting download manager plugin loader with config file:" << config << std::endl;
-			}
-			syslog(LOG_ERR, "%s", "Error starting download manager plugin loader with config file:");
-			syslog(LOG_ERR, "%s", config.toCharArray());
-			return false;
-		}
-
-		dmpp = dmpl.create();
+		DMPlugin *dmpp = dm_plugin_load(config.toCharArray());
 		if (dmpp == NULL) {
 			if (!is_daemonised) {
-				std::cerr << "dmpl.create() returned NULL pointer with config file:" << config << std::endl;
+				std::cerr << "dm_plugin_load() returned NULL pointer with config file: " << config << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "dmpl.create() returned NULL pointer with config file:");
-			syslog(LOG_ERR, "%s", config.toCharArray());
+			syslog(LOG_ERR, "dm_plugin_load() returned NULL pointer with config file: ", config.toCharArray());
 			return false;
 		}
-
-		int rc = dmpp->init(i == (numplugins - 1));
+		bool lastplugin = (i == (numplugins - 1));
+		int rc = dmpp->init(&lastplugin);
 		if (rc < 0) {
 			if (!is_daemonised) {
-				std::cerr << "Download manager plugin init returned error value:" << rc << std::endl;
+				std::cerr << "Download manager plugin init returned error value: " << rc << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Download manager plugin init returned error value.");
+			syslog(LOG_ERR, "Download manager plugin init returned error value: %d", rc);
 			return false;
 		}
 		else if (rc > 0) {
 			if (!is_daemonised) {
-				std::cerr << "Download manager plugin init returned warning value:" << rc << std::endl;
+				std::cerr << "Download manager plugin init returned warning value: " << rc << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Download manager plugin init returned warning value.");
+			syslog(LOG_ERR, "Download manager plugin init returned warning value: %d", rc);
 		}
-
-		dmpluginloaders.push_back(dmpl);
 		dmplugins.push_back(dmpp);
 	}
+	// cache reusable iterators
+	dmplugins_begin = dmplugins.begin();
+	dmplugins_end = dmplugins.end();
 	return true;
 }
-
 
 bool OptionContainer::loadCSPlugins()
 {
@@ -917,71 +899,43 @@ bool OptionContainer::loadCSPlugins()
 	}
 	String config;
 	for (unsigned int i = 0; i < numplugins; i++) {
-
 		config = dq[i];
 		// worth adding some input checking on config
 #ifdef DGDEBUG
 		std::cout << "loading content scanner config: " << config << std::endl;
 #endif
-
-		CSPluginLoader cspl(config.toCharArray());
-
-#ifdef DGDEBUG
-		std::cout << "CSPluginLoader created" << std::endl;
-#endif
-
-		CSPlugin *cspp;
-
-		if (!cspl.is_good) {
-			if (!is_daemonised) {
-				std::cerr << "Error starting content scanner plugin loader with config file:" << config << std::endl;
-			}
-			syslog(LOG_ERR, "%s", "Error starting content scanner plugin loader with config file:");
-			syslog(LOG_ERR, "%s", config.toCharArray());
-			return false;
-		}
-#ifdef DGDEBUG
-		std::cout << "Content scanner plugin loader is good" << std::endl;
-#endif
-		cspp = cspl.create();
-#ifdef DGDEBUG
-		std::cout << "Content scanner plugin loader created plugin" << std::endl;
-#endif
-
+		CSPlugin *cspp = cs_plugin_load(config.toCharArray());
 		if (cspp == NULL) {
 			if (!is_daemonised) {
-				std::cerr << "cspl.create() returned NULL pointer with config file:" << config << std::endl;
+				std::cerr << "cs_plugin_load() returned NULL pointer with config file: " << config << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "cspl.create() returned NULL pointer with config file:");
-			syslog(LOG_ERR, "%s", config.toCharArray());
+			syslog(LOG_ERR, "cs_plugin_load() returned NULL pointer with config file: %s", config.toCharArray());
 			return false;
 		}
 #ifdef DGDEBUG
 		std::cout << "Content scanner plugin is good" << std::endl;
 #endif
-
-		int rc = cspp->init();
-
+		int rc = cspp->init(NULL);
 #ifdef DGDEBUG
 		std::cout << "Content scanner plugin init called" << std::endl;
 #endif
-
 		if (rc < 0) {
 			if (!is_daemonised) {
-				std::cerr << "Content scanner plugin init returned error value:" << rc << std::endl;
+				std::cerr << "Content scanner plugin init returned error value: " << rc << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Content scanner plugin init returned error value.");
+			syslog(LOG_ERR, "Content scanner plugin init returned error value: %d", rc);
 			return false;
 		}
 		else if (rc > 0) {
 			if (!is_daemonised) {
 				std::cerr << "Content scanner plugin init returned warning value:" << rc << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Content scanner plugin init returned warning value.");
+			syslog(LOG_ERR, "Content scanner plugin init returned warning value: %d", rc);
 		}
-
-		cspluginloaders.push_back(cspl);
 		csplugins.push_back(cspp);
 	}
+	// cache reusable iterators
+	csplugins_begin = csplugins.begin();
+	csplugins_end = csplugins.end();
 	return true;
 }

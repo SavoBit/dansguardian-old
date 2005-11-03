@@ -35,6 +35,7 @@
 #include "LanguageContainer.hpp"
 #include "ImageContainer.hpp"
 #include "RegExp.hpp"
+#include "Auth.hpp"
 
 #include <deque>
 
@@ -59,10 +60,7 @@ public:
 	int reverse_client_ip_lookups;
 	int log_client_hostnames;
 	int use_xforwardedfor;
-	int uim_proxyauth;
-	int uim_ntlm;
-	int uim_ident;
-	int preemptive_banning;
+	//int preemptive_banning;
 	int logconerror;
 	int url_cache_number;
 	int url_cache_age;
@@ -95,8 +93,6 @@ public:
 	std::string filter_groups_list_location;
 	std::string html_template_location;
 	std::string banned_ip_list_location;
-	std::string banned_user_list_location;
-	std::string exceptions_user_list_location;
 	std::string exceptions_ip_list_location;
 	std::string language_list_location;
 	std::string access_denied_address;
@@ -127,17 +123,18 @@ public:
 
 	HTMLTemplate html_template;
 	ListContainer filter_groups_list;
-	ListContainer exception_user_list;
 	ListContainer exception_ip_list;
 	ListContainer banned_ip_list;
-	ListContainer banned_user_list;
 	LanguageContainer language_list;
 	ImageContainer banned_image;
 
-	std::deque<DMPluginLoader> dmpluginloaders;
-	std::deque<DMPlugin *> dmplugins;
-	std::deque<CSPluginLoader> cspluginloaders;
-	std::deque<CSPlugin *> csplugins;
+	AuthPlugin* auth_plugin;
+	std::deque<Plugin*> dmplugins;
+	std::deque<Plugin*> csplugins;
+	std::deque<Plugin*>::iterator dmplugins_begin;
+	std::deque<Plugin*>::iterator dmplugins_end;
+	std::deque<Plugin*>::iterator csplugins_begin;
+	std::deque<Plugin*>::iterator csplugins_end;
 
 	ListManager lm;
 	FOptionContainer **fg;
@@ -146,20 +143,18 @@ public:
 	// access denied domain (when using the CGI)
 	String access_denied_domain;
 
+	bool loadCSPlugins();
+	void deletePlugins(std::deque<Plugin*> &list);
+	void deleteFilterGroups();
+
 	//...and the functions that read them
 
 	OptionContainer();
 	~OptionContainer();
 	bool read(const char *filename, int type);
 	void reset();
-	void deleteFilterGroups();
-	void deleteCSPlugins();
-	void deleteDMPlugins();
-	bool loadCSPlugins();
 	bool inExceptionIPList(const std::string *ip, std::string *&host);
-	bool inExceptionUserList(const std::string *user);
 	bool inBannedIPList(const std::string *ip, std::string *&host);
-	bool inBannedUserList(const std::string *user);
 	bool readFilterGroupConf();
 	// public so fc_controlit can reload filter group config files
 	bool doReadItemList(const char *filename, ListContainer *lc, const char *fname, bool swsort);
@@ -167,6 +162,7 @@ public:
 private:
 	std::deque<std::string> conffile;
 	String conffilename;
+
 	bool loadDMPlugins();
 
 	bool precompileregexps();
