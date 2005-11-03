@@ -24,7 +24,7 @@
 #include "ConnectionHandler.hpp"
 #include "DataBuffer.hpp"
 #include "UDSocket.hpp"
-#include "Ident.hpp"
+#include "Auth.hpp"
 #include "FDTunnel.hpp"
 #include "ImageContainer.hpp"
 #include "FDFuncs.hpp"
@@ -49,6 +49,7 @@
 
 // GLOBALS
 extern OptionContainer o;
+extern bool is_daemonised;
 
 
 // IMPLEMENTATION
@@ -119,49 +120,6 @@ String ConnectionHandler::hashedCookie(String * url, int filtergroup, std::strin
 	std::cout << "hashedCookie=" << res << std::endl;
 #endif
 	return res;
-}
-
-// determine what filter group the given username is in
-int ConnectionHandler::determineGroup(std::string * user)
-{
-	String u = (*user).c_str();
-
-	if (u.length() < 1 || u == "-") {
-
-		return -1;
-	}
-	String ue = u;
-	ue += "=";
-
-	char *i = o.filter_groups_list.findStartsWithPartial(ue.toCharArray());
-
-	if (i == NULL) {
-#ifdef DGDEBUG
-		std::cout << "User not in filter groups list:" << ue << std::endl;
-#endif
-		return -1;
-	}
-#ifdef DGDEBUG
-	std::cout << "User found:" << i << std::endl;
-#endif
-	ue = i;
-	if (ue.before("=") == u) {
-		ue = ue.after("=filter");
-		int l = ue.length();
-		if (l < 1 || l > 2) {
-			return -1;
-		}
-		int g = ue.toInteger();
-		if (g > o.numfg) {
-			return -1;
-		}
-		if (g > 0) {
-			g--;
-		}
-		return g;
-	}
-
-	return -1;
 }
 
 // when using IP address counting - have we got any remaining free IPs?
@@ -366,7 +324,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	bool isourwebserver = false;
 	bool wasclean = false;
 	bool cachehit = false;
-	bool forceauthrequest = false;
+	//bool forceauthrequest = false;
 	bool isbypass = false;
 	bool iscookiebypass = false;
 	int bypasstimestamp = 0;
@@ -380,9 +338,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	int headersent = 0;  // 0=none,1=first line,2=all
 	std::deque<bool > sendtoscanner;
 
-	if (o.preemptive_banning == 0) {
+	/*if (o.preemptive_banning == 0) {
 		forceauthrequest = true;
-	}
+	}*/
 
 	std::string mimetype = "-";
 
@@ -394,9 +352,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 	int docsize = 0;  // to store the size of the returned document for loggin
 
-	Ident ident;  // for holding
+	//Auth ident;  // for holding
 
-	std::string clientip = ip.toCharArray();  // hold the clients ip
+	std::string clientip(ip.toCharArray());  // hold the clients ip
 	delete clienthost;
 	clienthost = NULL;  // and the hostname, if available
 	matchedip = false;
@@ -456,23 +414,62 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 		}
 
-		std::string clientuser = ident.getUsername(&header, &clientip, port);
-		// extract username
-
 #ifdef DGDEBUG
-		std::cout << "About to determine group" << std::endl;
+		std::cout << "About to determine username/group" << std::endl;
 #endif
 
-		int filtergroup = determineGroup(&clientuser);
-		if (filtergroup < 0) {
-			filtergroup = determineGroup(&clientip);
-		}
-		if (filtergroup < 0) {
-			filtergroup = 0;  //default group - one day configurable?
-		}
+		std::string clientuser;
+		int filtergroup;
+		
+		if (o.auth_plugin) {
+			rc = o.auth_plugin->identify(port, clientip, header, filtergroup, clientuser);
+			if (rc == DGAUTH_REDIRECT) {
+				// ident plugin told us to redirect to a login page
+				proxysock.close();
+				String writestring = "HTTP/1.0 302 Redirect\nLocation: ";
+				writestring += clientuser;
+				writestring += "\n\n";
+				peerconn.writeString(writestring.toCharArray());
+				return;
+			}
+			else if (rc != DGAUTH_OK) {
+				// got some other error
+				clientuser = "-";
+				filtergroup = 0;  //default group - one day configurable?
+				if (rc < 0) {
+					if (!is_daemonised)
+						std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
+					syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
+					proxysock.close();
+					return;
+				}
+				//checkme: add IP passing to ident plugins, and add DGAUTH_CONTINUE code.
+				//or should ident plugins be passed connections, and handle the continuing themselves?
+				//can we have multiple plugins chained together; checking for bans & exceptions in modes of the returned groups?
 #ifdef DGDEBUG
-		std::cout << "filtergroup:" << filtergroup << std::endl;
+				if (rc == DGAUTH_NOMATCH) std::cout<<"Auth plugin did not find necessary info"<<std::endl;
+				if (rc == DGAUTH_CONTINUE) std::cout<<"Auth plugin wants us to pass the headers on"<<std::endl;
 #endif
+			}
+		} else {
+#ifdef DGDEBUG
+			std::cout << "No ident plugin loaded; using defaults" << std::endl;
+#endif
+			clientuser = "-";
+			filtergroup = 0;
+		}
+
+#ifdef DGDEBUG
+		std::cout << "username: " << clientuser << std::endl;
+		std::cout << "filtergroup: " << filtergroup << std::endl;
+		std::cout << "groupmode: " << o.fg[filtergroup]->group_mode << std::endl;
+#endif
+
+		// filter group modes are: 0 = banned, 1 = filtered, 2 = exception.
+		bool isbanneduser = (o.fg[filtergroup]->group_mode == 0);
+		bool isbannedip = o.inBannedIPList(&clientip, clienthost);
+		if (isbannedip)
+			matchedip = clienthost == NULL;
 
 		if (o.forwarded_for == 1) {
 			header.addXForwardedFor(clientip);  // add squid-like entry
@@ -482,7 +479,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 			std::cout << "Scan Bypass URL match" << std::endl;
 #endif
-
 			isscanbypass = true;
 			isbypass = true;
 			exceptionreason = o.language_list.getTranslation(608);
@@ -519,36 +515,39 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			std::cout << "Bypass activated!" << std::endl;
 #endif
 		}
-		if (o.inExceptionIPList(&clientip, clienthost)) {	// admin pc
-			matchedip = clienthost == NULL;
-			isexception = true;
-			exceptionreason = o.language_list.getTranslation(600);
-			// Exception client IP match.
-		}
-		else if (o.inExceptionUserList(&clientuser)) {	// admin user
-			isexception = true;
-			exceptionreason = o.language_list.getTranslation(601);
-			// Exception client user match.
-		}
-		else if ((*o.fg[filtergroup]).inExceptionSiteList(urld)) {	// allowed site
-			if ((*o.fg[0]).isOurWebserver(url)) {
-				isourwebserver = true;
-			} else {
+		// being a banned user/IP overrides the fact that a site may be in the exception lists
+		if (!(isbanneduser || isbannedip)) {
+			if ((o.fg[filtergroup]->group_mode == 2)) {	// admin user
 				isexception = true;
-				exceptionreason = o.language_list.getTranslation(602);
-				// Exception site match.
+				exceptionreason = o.language_list.getTranslation(601);
+				// Exception client user match.
 			}
-		}
-		else if ((*o.fg[filtergroup]).inExceptionURLList(urld)) {	// allowed url
-			isexception = true;
-			exceptionreason = o.language_list.getTranslation(603);
-			// Exception url match.
-		}
-		else if ((rc = (*o.fg[filtergroup]).inExceptionRegExpURLList(urld)) > -1) {
-			isexception = true;
-			// exception regular expression url match:
-			exceptionreason = o.language_list.getTranslation(609);
-			exceptionreason += (*o.fg[filtergroup]).exception_regexpurl_list_source[rc].toCharArray();
+			else if (o.inExceptionIPList(&clientip, clienthost)) {	// admin pc
+				matchedip = clienthost == NULL;
+				isexception = true;
+				exceptionreason = o.language_list.getTranslation(600);
+				// Exception client IP match.
+			}
+			else if ((*o.fg[filtergroup]).inExceptionSiteList(urld)) {	// allowed site
+				if ((*o.fg[0]).isOurWebserver(url)) {
+					isourwebserver = true;
+				} else {
+					isexception = true;
+					exceptionreason = o.language_list.getTranslation(602);
+					// Exception site match.
+				}
+			}
+			else if ((*o.fg[filtergroup]).inExceptionURLList(urld)) {	// allowed url
+				isexception = true;
+				exceptionreason = o.language_list.getTranslation(603);
+				// Exception url match.
+			}
+			else if ((rc = (*o.fg[filtergroup]).inExceptionRegExpURLList(urld)) > -1) {
+				isexception = true;
+				// exception regular expression url match:
+				exceptionreason = o.language_list.getTranslation(609);
+				exceptionreason += (*o.fg[filtergroup]).exception_regexpurl_list_source[rc].toCharArray();
+			}
 		}
 
 
@@ -574,7 +573,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 				doLog(clientuser, clientip, url, header.port, exceptionreason,
 					rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
-					cachehit, 200, mimetype, wasinfected, wasscanned);
+					cachehit, 200, mimetype, wasinfected, wasscanned, 0);
 
 				if (o.delete_downloaded_temp_files == 1) {
 					unlink(tempfilename.toCharArray());
@@ -586,43 +585,50 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			return;  // connection dealt with so exit
 		}
 
-		if ((*o.fg[filtergroup]).disable_content_scan != 1) {
+		// don't run scanTest on exceptions or bypasses if contentscanexceptions is off
+		if (((*o.fg[filtergroup]).disable_content_scan != 1) && !((isexception || isbypass) && !o.content_scan_exceptions)) {
 #ifdef DGDEBUG
 			std::cerr << "cs plugins:" << o.csplugins.size() << std::endl;
 #endif
 			//send header to plugin here needed
 			//also send user and group
 			int csrc = 0;
-			for (unsigned int i = 0; i < o.csplugins.size(); i++) {
-				sendtoscanner.push_back(false);
 #ifdef DGDEBUG
-				std::cerr << "running scanTest " << i << std::endl;
+			int j = 0;
 #endif
-				csrc = o.csplugins[i]->scanTest(&header, &docheader, clientuser.c_str(), filtergroup, clientip.c_str());
+			for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
 #ifdef DGDEBUG
-				std::cerr << "scanTest " << i << " returned:" << csrc << std::endl;
+				std::cerr << "running scanTest " << j << std::endl;
 #endif
-				if (csrc < 0) {
-					syslog(LOG_ERR, "%s", "scanTest returned error");
-				}
-				else if (csrc > 0) {
-					sendtoscanner[i] = true;
+				csrc = ((CSPlugin*)(*i))->scanTest(&header, &docheader, clientuser.c_str(), filtergroup, clientip.c_str());
+#ifdef DGDEBUG
+				std::cerr << "scanTest " << j << " returned: " << csrc << std::endl;
+#endif
+				if (csrc > 0) {
+					sendtoscanner.push_back(true);
 					runav = true;
-#ifdef DGDEBUG
-					std::cerr << "runav=true" << std::endl;
-#endif
+				} else {
+					if (csrc < 0)
+						syslog(LOG_ERR, "scanTest returned error: %d", csrc);
+					sendtoscanner.push_back(false);
 				}
+#ifdef DGDEBUG
+				j++;
+#endif
 			}
 		}
 #ifdef DGDEBUG
-		std::cerr << "runav = no thanks" << std::endl;
+		std::cerr << "runav = " << runav << std::endl;
 #endif
+
+		// checkme: inBannedIPList and inBannedUserList seem to be run an excessive number of times.
+		// would it be wiser to simply call them once and cache the results?
 
 		if (((isexception || iscookiebypass)
 			// don't filter exception and local web server
 			// Cookie bypass so don't need to add cookie so just CONNECT
-			&& !o.inBannedIPList(&clientip, clienthost)	 // bad users pc
-			&& !o.inBannedUserList(&clientuser)	 // bad user
+			&& !isbannedip	 // bad users pc
+			&& !isbanneduser	 // bad user
 			&& !(runav && o.content_scan_exceptions))
 			// bad people still need to be able to access the banned page
 			|| isourwebserver)
@@ -637,7 +643,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				if (!isourwebserver) {	// don't log requests to the web server
 					String rtype = header.requestType();
 					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception,
-						o.log_exception_hits, false, &thestart, cachehit, 200, mimetype, wasinfected, wasscanned);
+						o.log_exception_hits, false, &thestart, cachehit, 200, mimetype, wasinfected, wasscanned, 0);
 				}
 
 			}
@@ -672,7 +678,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			// from blocking the entire request.
 			// this could be achieved with exception phrases (which are, of course, always checked
 			// after the URL) too, but there are cases for both, and flexibility is good.
-			if (o.recheck_replaced_urls == 1) {
+			if ((o.recheck_replaced_urls == 1) && !(isbanneduser || isbannedip)) {
 				if ((*o.fg[filtergroup]).inExceptionSiteList(urld)) {	// allowed site
 					if ((*o.fg[0]).isOurWebserver(url)) {
 						isourwebserver = true;
@@ -695,6 +701,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				}
 				// don't filter exception and local web server
 				if ((isexception
+					// even after regex URL replacement, we still don't want banned IPs/users viewing exception sites
+					&& !isbannedip	 // bad users pc
+					&& !isbanneduser	 // bad user
 					&& !(runav && o.content_scan_exceptions))
 					|| isourwebserver)
 				{
@@ -708,7 +717,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						if (!isourwebserver) {	// don't log requests to the web server
 							String rtype = header.requestType();
 							doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception,
-								o.log_exception_hits, false, &thestart, cachehit, 200, mimetype, wasinfected, wasscanned);
+								o.log_exception_hits, false, &thestart, cachehit, 200, mimetype, wasinfected, wasscanned, checkme.naughtiness);
 						}
 					}
 					catch(exception & e) {
@@ -729,13 +738,13 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 		// Improved IF structure as suggested by AFN
 
-		if ((!forceauthrequest || header.requestType().startsWith("CONNECT")) && !isbypass && !isexception) {
+		if ((/*!forceauthrequest ||*/ header.requestType().startsWith("CONNECT")) && !isbypass && !isexception) {
 			// if its a connect and we don't do filtering on it now then
 			// it will get tunneled and not filtered.  We can't tunnel later
 			// as its ssl so we can't see the return header etc
 			// So preemptive banning is forced on with ssl unfortunately.
 			// It is unlikely to cause many problems though.
-			requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup, &ispostblock);
+			requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup, &ispostblock, isbanneduser, isbannedip);
 		}
 
 		if (!checkme.isItNaughty && header.requestType().startsWith("CONNECT")) {
@@ -748,8 +757,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				fdt.tunnel(proxysock, peerconn);  // not expected to exception
 				docsize = fdt.throughput;
 				String rtype = header.requestType();
-				doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
-						   cachehit, 200, mimetype, wasinfected, wasscanned);
+				doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false,
+					isexception, o.log_exception_hits, false, &thestart,
+					cachehit, 200, mimetype, wasinfected, wasscanned, checkme.naughtiness);
 			}
 			catch(exception & e) {
 			}
@@ -774,52 +784,50 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 			wasrequested = true;  // so we know where we are later
 
-			if (isbypass) {
+			// if we're not careful, we can end up accidentally setting the bypass cookie twice.
+			// because of the code flow, this second cookie ends up with timestamp 0, and is always disallowed.
+			if (isbypass && !iscookiebypass) {
+#ifdef DGDEBUG
+				std::cout<<"Setting GBYPASS cookie; bypasstimestamp = "<<bypasstimestamp<<std::endl;
+#endif
 				docheader.setCookie("GBYPASS", hashedCookie(&urldomain, filtergroup, &clientip, bypasstimestamp).toCharArray());
 			}
 
-			mimetype = docheader.getContentType().toCharArray();
-			if (!isexception) {
-				unsigned int p = (*o.fg[filtergroup]).banned_mimetype_list;
-				if ((i = (*o.lm.l[p]).findInList((char *) mimetype.c_str())) != NULL) {
-					checkme.whatIsNaughty = o.language_list.getTranslation(800);
-					// Banned MIME Type:
-					checkme.whatIsNaughty += i;
-					checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
-					checkme.isItNaughty = true;
-					checkme.whatIsNaughtyCategories = "Banned MIME Type.";
-				}
-#ifdef DGDEBUG
-				std::cout << mimetype.length() << std::endl;
-				std::cout << ":" << mimetype;
-				std::cout << ":" << std::endl;
-#endif
-			}
+			// no need to check bypass mode, exception mode, auth required headers, or banned ip/user (the latter get caught by requestChecks later)
+			if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.authRequired())
+			{
 
-			if (!isexception && !checkme.isItNaughty && !docheader.isRedirection()) {
-				// Can't ban file extensions of URLs that just redirect
-				String tempurl = urld;
-				String tempdispos = docheader.disposition();
-				if (tempdispos.length() > 1) {
-					// dispos filename must take presidense
-#ifdef DGDEBUG
-					std::cout << "Disposition filename:" << tempdispos << ":" << std::endl;
-#endif
-					// The function expects a url so we have to
-					// generate a psudo one.
-					tempdispos = "http://foo.bar/" + tempdispos;
-					if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempdispos)) != NULL) {
-						checkme.whatIsNaughty = o.language_list.getTranslation(900);
-						// Banned extension:
+				mimetype = docheader.getContentType().toCharArray();
+				/*if (!isexception) {*/
+					unsigned int p = (*o.fg[filtergroup]).banned_mimetype_list;
+					if ((i = (*o.lm.l[p]).findInList((char *) mimetype.c_str())) != NULL) {
+						checkme.whatIsNaughty = o.language_list.getTranslation(800);
+						// Banned MIME Type:
 						checkme.whatIsNaughty += i;
 						checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
 						checkme.isItNaughty = true;
-						checkme.whatIsNaughtyCategories = "Banned extension.";
+						checkme.whatIsNaughtyCategories = "Banned MIME Type.";
 					}
-				} else {
-					if (!tempurl.contains("?")) {
-//						i = o.inBannedExtensionList(tempurl);
-						if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempurl)) != NULL) {
+	#ifdef DGDEBUG
+					std::cout << mimetype.length() << std::endl;
+					std::cout << ":" << mimetype;
+					std::cout << ":" << std::endl;
+	#endif
+				//}
+
+				if (/*!isexception &&*/ !checkme.isItNaughty && !docheader.isRedirection()) {
+					// Can't ban file extensions of URLs that just redirect
+					String tempurl = urld;
+					String tempdispos = docheader.disposition();
+					if (tempdispos.length() > 1) {
+						// dispos filename must take presidense
+	#ifdef DGDEBUG
+						std::cout << "Disposition filename:" << tempdispos << ":" << std::endl;
+	#endif
+						// The function expects a url so we have to
+						// generate a psudo one.
+						tempdispos = "http://foo.bar/" + tempdispos;
+						if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempdispos)) != NULL) {
 							checkme.whatIsNaughty = o.language_list.getTranslation(900);
 							// Banned extension:
 							checkme.whatIsNaughty += i;
@@ -827,12 +835,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							checkme.isItNaughty = true;
 							checkme.whatIsNaughtyCategories = "Banned extension.";
 						}
-					}
-					else if (String(mimetype.c_str()).contains("application/")) {
-						while (tempurl.endsWith("?")) {
-							tempurl.chop();
-						}
-						while (tempurl.contains("/")) {	// no slash no url
+					} else {
+						if (!tempurl.contains("?")) {
 							if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempurl)) != NULL) {
 								checkme.whatIsNaughty = o.language_list.getTranslation(900);
 								// Banned extension:
@@ -840,24 +844,40 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 								checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
 								checkme.isItNaughty = true;
 								checkme.whatIsNaughtyCategories = "Banned extension.";
-								break;
 							}
-							while (tempurl.contains("/") && !tempurl.endsWith("?")) {
+						}
+						else if (String(mimetype.c_str()).contains("application/")) {
+							while (tempurl.endsWith("?")) {
 								tempurl.chop();
 							}
-							tempurl.chop();  // get rid of the ?
+							while (tempurl.contains("/")) {	// no slash no url
+								if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempurl)) != NULL) {
+									checkme.whatIsNaughty = o.language_list.getTranslation(900);
+									// Banned extension:
+									checkme.whatIsNaughty += i;
+									checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+									checkme.isItNaughty = true;
+									checkme.whatIsNaughtyCategories = "Banned extension.";
+									break;
+								}
+								while (tempurl.contains("/") && !tempurl.endsWith("?")) {
+									tempurl.chop();
+								}
+								tempurl.chop();  // get rid of the ?
+							}
 						}
 					}
 				}
 			}
 
 			// check received header from proxy
-			if (!isexception && !checkme.isItNaughty && forceauthrequest && !docheader.authRequired()) {
-				requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup, &ispostblock);
+			if (!isbypass && !isexception && !checkme.isItNaughty && /*forceauthrequest &&*/ !docheader.authRequired()) {
+				requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup, &ispostblock, isbanneduser, isbannedip);
 			}
 
-			// check body from proxy
-			if (!checkme.isItNaughty) {
+			// check body from proxy - only check bypass mode if contentscanexceptions is enabled
+			// checkme: still need some way to explicitly tell contentfilter that bypass shouldn't be phrase filtered?
+			if (!checkme.isItNaughty && !(isbypass && !o.content_scan_exceptions)) {
 				if (docheader.isContentType("text") || runav) {
 					if (o.url_cache_number > 0 && !(!o.scan_clean_cache && runav)) {
 						if (wasClean(urld)) {
@@ -872,7 +892,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					waschecked = true;
 					contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
 						&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
-						&wasinfected, &wasscanned);
+						&wasinfected, &wasscanned, isbypass);
 				}
 			}
 		}
@@ -897,7 +917,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			std::cout<<"Category: "<<checkme.whatIsNaughtyCategories<<std::endl;
 			doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
 				rtype, docsize, &checkme.whatIsNaughtyCategories, o.ll, true, false, 0, false, &thestart,
-				cachehit, 403, mimetype, wasinfected, wasscanned);
+				cachehit, 403, mimetype, wasinfected, wasscanned, checkme.naughtiness);
 			if (denyAccess(&peerconn, &proxysock, &header, &docheader, &url, &checkme, &clientuser, &clientip, filtergroup, ispostblock, headersent)) {
 				return;  // not stealth mode
 			}
@@ -932,7 +952,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				String rtype = header.requestType();
 				doLog(clientuser, clientip, url, header.port, exceptionreason,
 					rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits,
-					docheader.isContentType("text"), &thestart, cachehit, 200, mimetype, wasinfected, wasscanned);
+					docheader.isContentType("text"), &thestart, cachehit, 200, mimetype, wasinfected, wasscanned, checkme.naughtiness);
 			}
 
 			peerconn.readyForOutput(10);  // check for error/timeout needed
@@ -1003,7 +1023,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				String rtype = header.requestType();
 				doLog(clientuser, clientip, url, header.port, exceptionreason,
 					rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits,
-					docheader.isContentType("text"), &thestart, cachehit, 200, mimetype, wasinfected, wasscanned);
+					docheader.isContentType("text"), &thestart, cachehit, 200, mimetype, wasinfected, wasscanned, checkme.naughtiness);
 			}
 		} else {	// was not supposed to be checked
 			FDTunnel fdt;
@@ -1015,13 +1035,13 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			String rtype = header.requestType();
 			doLog(clientuser, clientip, url, header.port, exceptionreason,
 				rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, docheader.isContentType("text"),
-				&thestart, cachehit, 200, mimetype, wasinfected, wasscanned);
+				&thestart, cachehit, 200, mimetype, wasinfected, wasscanned, checkme.naughtiness);
 
 		}
 	}
 	catch(exception & e) {
 #ifdef DGDEBUG
-		std::cout << "connection handler caught an exception" << std::endl;
+		std::cout << "connection handler caught an exception" << e.what() << std::endl;
 #endif
 		proxysock.close();  // close connection to proxy
 		return;
@@ -1042,7 +1062,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 void ConnectionHandler::doLog(std::string &who, std::string &from, String &where, unsigned int &port,
 		std::string &what, String &how, int &size, std::string *cat, int &loglevel, bool isnaughty,
 		bool isexception, int logexceptions, bool istext, struct timeval *thestart, bool cachehit,
-		int code, std::string &mimetype, bool wasinfected, bool wasscanned)
+		int code, std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness)
 {
 	// don't log if logging disabled entirely, or if it's an ad block and ad logging is disabled
 	if ((loglevel == 0) || ((cat != NULL) && (o.log_ad_blocks == 0) && (strstr(cat->c_str(),"ADs") != NULL))) {
@@ -1098,7 +1118,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		}
 
 		// start making the log entry proper
-		std::string logline, year, month, day, hour, min, sec, when, ssize;
+		std::string logline, year, month, day, hour, min, sec, when, ssize, sweight;
 
 		// "when" not used in format 3
 		if (o.log_file_format != 3) {
@@ -1127,13 +1147,8 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 				when = when.substr(0, o.max_logitem_length);*/
 		}
 		
+		sweight = String(naughtiness).toCharArray();
 		ssize = String(size).toCharArray();
-		
-		// blank out IP and username if desired
-		if (o.anonymise_logs == 1) {
-			who = "";
-			from = "0.0.0.0";
-		}
 
 		// truncate long log items
 		if (o.max_logitem_length > 0) {
@@ -1157,7 +1172,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		// for banned & exception IP/hostname matches, we want to output exactly what was matched against,
 		// be it hostname or IP - therefore only do lookups here when we don't already have a cached hostname,
 		// and we don't have a straight IP match agaisnt the banned or exception IP lists.
-		if ((o.log_client_hostnames == 1) && (clienthost == NULL) && !matchedip) {
+		if ((o.log_client_hostnames == 1) && (clienthost == NULL) && !matchedip && (o.anonymise_logs != 1)) {
 #ifdef DGDEBUG
 			std::cout<<"logclienthostnames enabled but reverseclientiplookups disabled; lookup forced."<<std::endl;
 #endif
@@ -1165,11 +1180,19 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 			if (names.size() > 0)
 				clienthost = new std::string(names.front().toCharArray());
 		}
+
+		// blank out IP, hostname and username if desired
+		if (o.anonymise_logs == 1) {
+			who = "";
+			from = "0.0.0.0";
+			delete clienthost;
+			clienthost = NULL;
+		}
 		
 		switch (o.log_file_format) {
 		case 4:
 			logline = when + "\t" + who + "\t" + (clienthost ? *clienthost : from) + "\t" + where.toCharArray() + "\t" + what
-				+ "\t" + how.toCharArray() + "\t" + ssize + "\t" + mimetype + "\t" + (cat ? (*cat) : "N/A") + "\n";
+				+ "\t" + how.toCharArray() + "\t" + ssize + "\t" + mimetype + "\t" + sweight + "\t" + (cat ? (*cat) : "N/A") + "\n";
 			break;
 		case 3:
 			{
@@ -1228,11 +1251,12 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 			}
 		case 2:
 			logline = "\"" + when + "\",\"" + who + "\",\"" + (clienthost ? *clienthost : from) + "\",\"" + where.toCharArray()
-				+ "\",\"" + what + "\",\"" + how.toCharArray() + "\",\"" + ssize + "\",\"" + mimetype + "\",\"" + (cat ? (*cat) : "N/A") + "\"\n";
+				+ "\",\"" + what + "\",\"" + how.toCharArray() + "\",\"" + ssize + "\",\"" + mimetype + "\",\""
+				+ sweight + "\",\"" + (cat ? (*cat) : "N/A") + "\"\n";
 			break;
 		default:
 			logline = when + " " + who + " " + (clienthost ? *clienthost : from) + " " + where.toCharArray() + " " + what + " "
-				+ how.toCharArray() + " " + ssize + " " + mimetype + " " + (cat ? (*cat) : "N/A") + "\n";
+				+ how.toCharArray() + " " + ssize + " " + mimetype + " " + sweight + " " + (cat ? (*cat) : "N/A") + "\n";
 		}
 
 		// connect to dedicated logging proc
@@ -1253,24 +1277,10 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 
 // check the request header is OK (client host/user/IP allowed to browse, site not banned, upload not too big)
 void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld,
-	std::string *clientip, std::string *clientuser, int filtergroup, bool *ispostblock)
+	std::string *clientip, std::string *clientuser, int filtergroup, bool *ispostblock,
+	bool &isbanneduser, bool &isbannedip)
 {
-	char *i;
-	int j;
-	String temp;
-	temp = (*urld);
-	bool igsl = (*o.fg[filtergroup]).inGreySiteList(temp);
-	bool igul = (*o.fg[filtergroup]).inGreyURLList(temp);
-
-	if ((*o.fg[filtergroup]).blanketblock == 1 && !igsl && !igul) {
-		(*checkme).isItNaughty = true;
-		(*checkme).whatIsNaughty = o.language_list.getTranslation(502);
-		// Blanket Block is active and that site is not on the white list.
-		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-		(*checkme).whatIsNaughtyCategories = "Blanket Block";
-	}
-	else if (o.inBannedIPList(clientip,clienthost)) {
-		matchedip = clienthost == NULL;
+	if (isbannedip) {
 		(*checkme).isItNaughty = true;
 		(*checkme).whatIsNaughtyLog = o.language_list.getTranslation(100);
 		// Your IP address is not allowed to web browse:
@@ -1278,14 +1288,31 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 		(*checkme).whatIsNaughty = o.language_list.getTranslation(101);
 		// Your IP address is not allowed to web browse.
 		(*checkme).whatIsNaughtyCategories = "Banned Client IP";
+		return;
 	}
-	else if (o.inBannedUserList(clientuser)) {
+	else if (isbanneduser) {
 		(*checkme).isItNaughty = true;
 		(*checkme).whatIsNaughtyLog = o.language_list.getTranslation(102);
 		// Your username is not allowed to web browse:
 		(*checkme).whatIsNaughtyLog += (*clientuser);
 		(*checkme).whatIsNaughty = (*checkme).whatIsNaughtyLog;
 		(*checkme).whatIsNaughtyCategories = "Banned User";
+		return;
+	}
+
+	char *i;
+	int j;
+	String temp;
+	temp = (*urld);
+	bool igsl = (*o.fg[filtergroup]).inGreySiteList(temp);
+	bool igul = (*o.fg[filtergroup]).inGreyURLList(temp);
+
+	if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).blanketblock == 1 && !igsl && !igul) {
+		(*checkme).isItNaughty = true;
+		(*checkme).whatIsNaughty = o.language_list.getTranslation(502);
+		// Blanket Block is active and that site is not on the white list.
+		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+		(*checkme).whatIsNaughtyCategories = "Blanket Block";
 	}
 
 	if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).blanketblock == 0) {
@@ -1405,7 +1432,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				// if it's a CONNECT then headersent can't be set
 				// so we don't need to worry about it
 
-				if (o.preemptive_banning == 1) {
+				/*if (o.preemptive_banning == 1) {
 					String redirhttps = (*url).after("://");
 					if (!redirhttps.contains("/")) {
 						redirhttps += "/";
@@ -1423,7 +1450,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 					}
 					catch(exception & e) {
 					}
-				} else {
+				} else {*/
 
 					// if preemptive banning is not in place then a redirect
 					// is not guaranteed to ban the site so we have to write
@@ -1448,7 +1475,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 					}
 					catch(exception & e) {
 					}
-				}
+				//}
 			} else {
 				// we're dealing with a non-SSL'ed request, and have the option of using the custom banned image/page directly
 				bool replaceimage = false;
@@ -1637,7 +1664,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * header, DataBuffer * docbody, Socket * proxysock, Socket * peerconn,
 	int *headersent, bool * pausedtoobig, int *docsize, NaughtyFilter * checkme,
 	bool runav, bool wasclean, bool cachehit, int filtergroup, std::deque<bool> *sendtoscanner,
-	std::string * clientuser, std::string * clientip, bool * wasinfected, bool * wasscanned)
+	std::string * clientuser, std::string * clientip, bool * wasinfected, bool * wasscanned, bool isbypass)
 {
 	proxysock->checkForInput(120);
 	if (docheader->isCompressed()) {
@@ -1679,13 +1706,17 @@ void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * heade
 		if (runav && (isfile ? dblen <= o.max_content_filecache_scan_size : dblen <= o.max_content_ramcache_scan_size)) {
 			(*wasscanned) = true;
 			int csrc = 0;
-			for (unsigned int i = 0; i < o.csplugins.size(); i++) {
-				if ((*sendtoscanner)[i]) {
+			std::deque<bool>::iterator j = sendtoscanner->begin();
+#ifdef DGDEBUG
+			int k = 0;
+#endif
+			for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
+				if (*j) {
 					if (isfile) {
 #ifdef DGDEBUG
 						std::cout << "Running scanFile" << std::endl;
 #endif
-						csrc = o.csplugins[i]->scanFile(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->tempfilepath.toCharArray());
+						csrc = ((CSPlugin*)(*i))->scanFile(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->tempfilepath.toCharArray());
 						if (csrc != DGCS_OK) {
 							unlink(docbody->tempfilepath.toCharArray());
 							// delete infected (or unscanned due to error) file straight away
@@ -1694,17 +1725,17 @@ void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * heade
 #ifdef DGDEBUG
 						std::cout << "Running scanMemory" << std::endl;
 #endif
-						csrc = o.csplugins[i]->scanMemory(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->data, docbody->buffer_length);
+						csrc = ((CSPlugin*)(*i))->scanMemory(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->data, docbody->buffer_length);
 					}
 #ifdef DGDEBUG
-					std::cerr << "AV scan " << i << " returned:" << csrc << std::endl;
+					std::cerr << "AV scan " << k << " returned:" << csrc << std::endl;
 #endif
 					if (csrc < 0) {
-						syslog(LOG_ERR, "%s", "scanTest returned error");
+						syslog(LOG_ERR, "scanFile/Memory returned error: %d", csrc);
 						//TODO: have proper error checking/reporting here?
 						//at the very least, integrate with the translation system.
 						checkme->whatIsNaughty = "WARNING: Could not perform virus scan!";
-						checkme->whatIsNaughtyLog = o.csplugins[i]->getLastMessage().toCharArray();
+						checkme->whatIsNaughtyLog = ((CSPlugin*)(*i))->getLastMessage().toCharArray();
 						checkme->whatIsNaughtyCategories = "Content scanning";
 						checkme->isItNaughty = true;
 						checkme->isException = false;
@@ -1712,7 +1743,7 @@ void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * heade
 					}
 					else if (csrc > 0) {
 						checkme->whatIsNaughty = o.language_list.getTranslation(1100);
-						String virname = o.csplugins[i]->getLastVirusName();
+						String virname = ((CSPlugin*)(*i))->getLastVirusName();
 
 						if (virname.length() > 0) {
 							checkme->whatIsNaughty += " ";
@@ -1726,6 +1757,10 @@ void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * heade
 						break;
 					}
 				}
+				j++;
+#ifdef DGDEBUG
+				k++;
+#endif
 			}
 
 #ifdef DGDEBUG
@@ -1739,7 +1774,7 @@ void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * heade
 		}
 		system("date");
 #endif
-		if (!checkme->isItNaughty && !checkme->isException) {
+		if (!checkme->isItNaughty && !checkme->isException && !isbypass && !docheader->authRequired()) {
 			if (dblen <= o.max_content_filter_size) {
 				checkme->checkme(docbody);  // content filtering
 			}
@@ -1757,7 +1792,8 @@ void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * heade
 #endif
 	}
 
-	if (checkme->isException) {
+	// don't do phrase filtering or content replacement on exception/bypass accesses
+	if (checkme->isException || isbypass) {
 		return;
 	}
 
