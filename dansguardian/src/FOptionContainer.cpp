@@ -139,9 +139,9 @@ bool FOptionContainer::read(const char *filename)
 		ifstream conffiles(filename, ios::in);  // dansguardianfN.conf
 		if (!conffiles.good()) {
 			if (!is_daemonised) {
-				std::cerr << "error reading: " << filename << std::endl;
+				std::cerr << "Error reading: " << filename << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "error reading dansguardian.conf");
+			syslog(LOG_ERR, "Error reading %s", filename);
 			return false;
 		}
 		while (!conffiles.eof()) {
@@ -165,47 +165,51 @@ bool FOptionContainer::read(const char *filename)
 
 
 #ifdef DGDEBUG
-		std::cout << "read conf into memory" << filename << std::endl;
+		std::cout << "Read conf into memory: " << filename << std::endl;
 #endif
 
 		// the dansguardian.conf and pics files get amalgamated into one
 		// deque.  They are only seperate files for clarity.
 
-		linebuffer = findoptionS("picsfile");
-		ifstream picsfiles(linebuffer.c_str(), ios::in);  // pics file
-		if (!picsfiles.good()) {
-			if (!is_daemonised) {
-				std::cerr << "error reading: " << linebuffer << std::endl;
-			}
-			syslog(LOG_ERR, "%s", "error reading pics file");
-			return false;
-		}
-		while (!picsfiles.eof()) {
-			getline(picsfiles, linebuffer);
-			if (!picsfiles.eof() && linebuffer.length() != 0) {
-				if (linebuffer[0] != '#') {	// i.e. not commented out
-					temp = (char *) linebuffer.c_str();
-					if (temp.contains("#")) {
-						temp = temp.before("#");
-					}
-					while (temp.endsWith(" ")) {
-						temp.chop();  // get rid of spaces at end of line
-					}
-					linebuffer = temp.toCharArray();
-					conffile.push_back(linebuffer);  // stick option in deque
-				}
-			}
-		}
-		picsfiles.close();
-
-#ifdef DGDEBUG
-		std::cout << "read pics into memory" << filename << std::endl;
-#endif
-
-		if (findoptionS("enablePICS") == "off") {
+		if (findoptionS("enablepics") == "off") {
 			enable_PICS = 0;
 		} else {
 			enable_PICS = 1;
+		}
+
+		if (enable_PICS == 1) {
+			linebuffer = findoptionS("picsfile");
+			ifstream picsfiles(linebuffer.c_str(), ios::in);  // pics file
+			if (!picsfiles.good()) {
+				if (!is_daemonised) {
+					std::cerr << "Error reading PICS file: " << linebuffer << std::endl;
+				}
+				syslog(LOG_ERR, "Error reading PICS file: %s", linebuffer.c_str());
+				return false;
+			}
+			while (!picsfiles.eof()) {
+				getline(picsfiles, linebuffer);
+				if (!picsfiles.eof() && linebuffer.length() != 0) {
+					if (linebuffer[0] != '#') {	// i.e. not commented out
+						temp = (char *) linebuffer.c_str();
+						if (temp.contains("#")) {
+							temp = temp.before("#");
+						}
+						while (temp.endsWith(" ")) {
+							temp.chop();  // get rid of spaces at end of line
+						}
+						linebuffer = temp.toCharArray();
+						conffile.push_back(linebuffer);  // stick option in deque
+					}
+				}
+			}
+			picsfiles.close();
+
+#ifdef DGDEBUG
+			std::cout << "Read PICS into memory" << std::endl;
+		} else {
+			std::cout << "PICS disabled" << std::endl;
+#endif
 		}
 
 		if (findoptionS("deepurlanalysis") == "on") {
@@ -258,106 +262,192 @@ bool FOptionContainer::read(const char *filename)
 			}
 		}
 
-		naughtyness_limit = findoptionI("naughtynesslimit");
-		if (!realitycheck(String(naughtyness_limit), 1, 4, "naughtynesslimit")) {
+		// group mode: 0 = banned, 1 = filtered, 2 = exception
+		group_mode = findoptionI("groupmode");
+		if ((group_mode < 0) || (group_mode > 2)) {
+			if (!is_daemonised)
+				std::cerr<<"Invalid groupmode"<<std::endl;
+			syslog(LOG_ERR, "Invalid groupmode");
 			return false;
 		}
-		exception_phrase_list_location = findoptionS("exceptionphraselist");
-		weighted_phrase_list_location = findoptionS("weightedphraselist");
-		banned_phrase_list_location = findoptionS("bannedphraselist");
-		banned_extension_list_location = findoptionS("bannedextensionlist");
-		banned_mimetype_list_location = findoptionS("bannedmimetypelist");
-		banned_site_list_location = findoptionS("bannedsitelist");
-		banned_url_list_location = findoptionS("bannedurllist");
-		grey_site_list_location = findoptionS("greysitelist");
-		grey_url_list_location = findoptionS("greyurllist");
-		banned_regexpurl_list_location = findoptionS("bannedregexpurllist");
-		exception_regexpurl_list_location = findoptionS("exceptionregexpurllist");
-		content_regexp_list_location = findoptionS("contentregexplist");
-		url_regexp_list_location = findoptionS("urlregexplist");
-		exceptions_site_list_location = findoptionS("exceptionsitelist");
-		exceptions_url_list_location = findoptionS("exceptionurllist");
+#ifdef DGDEBUG
+		std::cout << "Group mode: " << group_mode << std::endl;
+#endif
 
-		pics_rsac_nudity = findoptionI("RSACnudity");
-		pics_rsac_language = findoptionI("RSAClanguage");
-		pics_rsac_sex = findoptionI("RSACsex");
-		pics_rsac_violence = findoptionI("RSACviolence");
-		pics_evaluweb_rating = findoptionI("evaluWEBrating");
-		pics_cybernot_sex = findoptionI("CyberNOTsex");
-		pics_cybernot_other = findoptionI("CyberNOTother");
-		pics_safesurf_agerange = findoptionI("SafeSurfagerange");
-		pics_safesurf_profanity = findoptionI("SafeSurfprofanity");
-		pics_safesurf_heterosexualthemes = findoptionI("SafeSurfheterosexualthemes");
-		pics_safesurf_homosexualthemes = findoptionI("SafeSurfhomosexualthemes");
-		pics_safesurf_nudity = findoptionI("SafeSurfnudity");
-		pics_safesurf_violence = findoptionI("SafeSurfviolence");
-		pics_safesurf_sexviolenceandprofanity = findoptionI("SafeSurfsexviolenceandprofanity");
-		pics_safesurf_intolerance = findoptionI("SafeSurfintolerance");
-		pics_safesurf_druguse = findoptionI("SafeSurfdruguse");
-		pics_safesurf_otheradultthemes = findoptionI("SafeSurfotheradultthemes");
-		pics_safesurf_gambling = findoptionI("SafeSurfgambling");
-		pics_icra_chat = findoptionI("ICRAchat");
-		pics_icra_moderatedchat = findoptionI("ICRAmoderatedchat");
-		pics_icra_languagesexual = findoptionI("ICRAlanguagesexual");
-		pics_icra_languageprofanity = findoptionI("ICRAlanguageprofanity");
-		pics_icra_languagemildexpletives = findoptionI("ICRAlanguagemildexpletives");
-		pics_icra_nuditygraphic = findoptionI("ICRAnuditygraphic");
-		pics_icra_nuditymalegraphic = findoptionI("ICRAnuditymalegraphic");
-		pics_icra_nudityfemalegraphic = findoptionI("ICRAnudityfemalegraphic");
-		pics_icra_nuditytopless = findoptionI("ICRAnuditytopless");
-		pics_icra_nuditybottoms = findoptionI("ICRAnuditybottoms");
-		pics_icra_nuditysexualacts = findoptionI("ICRAnuditysexualacts");
-		pics_icra_nudityobscuredsexualacts = findoptionI("ICRAnudityobscuredsexualacts");
-		pics_icra_nuditysexualtouching = findoptionI("ICRAnuditysexualtouching");
-		pics_icra_nuditykissing = findoptionI("ICRAnuditykissing");
-		pics_icra_nudityartistic = findoptionI("ICRAnudityartistic");
-		pics_icra_nudityeducational = findoptionI("ICRAnudityeducational");
-		pics_icra_nuditymedical = findoptionI("ICRAnuditymedical");
-		pics_icra_drugstobacco = findoptionI("ICRAdrugstobacco");
-		pics_icra_drugsalcohol = findoptionI("ICRAdrugsalcohol");
-		pics_icra_drugsuse = findoptionI("ICRAdrugsuse");
-		pics_icra_gambling = findoptionI("ICRAgambling");
-		pics_icra_weaponuse = findoptionI("ICRAweaponuse");
-		pics_icra_intolerance = findoptionI("ICRAintolerance");
-		pics_icra_badexample = findoptionI("ICRAbadexample");
-		pics_icra_pgmaterial = findoptionI("ICRApgmaterial");
-		pics_icra_violenceobjects = findoptionI("ICRAviolenceobjects");
-		pics_icra_violencerape = findoptionI("ICRAviolencerape");
-		pics_icra_violencetohumans = findoptionI("ICRAviolencetohumans");
-		pics_icra_violencetoanimals = findoptionI("ICRAviolencetoanimals");
-		pics_icra_violencetofantasy = findoptionI("ICRAviolencetofantasy");
-		pics_icra_violencekillinghumans = findoptionI("ICRAviolencekillinghumans");
-		pics_icra_violencekillinganimals = findoptionI("ICRAviolencekillinganimals");
-		pics_icra_violencekillingfantasy = findoptionI("ICRAviolencekillingfantasy");
-		pics_icra_violenceinjuryhumans = findoptionI("ICRAviolenceinjuryhumans");
-		pics_icra_violenceinjuryanimals = findoptionI("ICRAviolenceinjuryanimals");
-		pics_icra_violenceinjuryfantasy = findoptionI("ICRAviolenceinjuryfantasy");
-		pics_icra_violenceartisitic = findoptionI("ICRAviolenceartisitic");
-		pics_icra_violenceeducational = findoptionI("ICRAviolenceeducational");
-		pics_icra_violencemedical = findoptionI("ICRAviolencemedical");
-		pics_icra_violencesports = findoptionI("ICRAviolencesports");
-		pics_weburbia_rating = findoptionI("Weburbiarating");
-		pics_vancouver_multiculturalism = findoptionI("Vancouvermulticulturalism");
-		pics_vancouver_educationalcontent = findoptionI("Vancouvereducationalcontent");
-		pics_vancouver_environmentalawareness = findoptionI("Vancouverenvironmentalawareness");
-		pics_vancouver_tolerance = findoptionI("Vancouvertolerance");
-		pics_vancouver_violence = findoptionI("Vancouverviolence");
-		pics_vancouver_sex = findoptionI("Vancouversex");
-		pics_vancouver_profanity = findoptionI("Vancouverprofanity");
-		pics_vancouver_safety = findoptionI("Vancouversafety");
-		pics_vancouver_canadiancontent = findoptionI("Vancouvercanadiancontent");
-		pics_vancouver_commercialcontent = findoptionI("Vancouvercommercialcontent");
-		pics_vancouver_gambling = findoptionI("Vancouvergambling");
-		
-		// new Korean PICS support
-		pics_icec_rating = findoptionI("ICECrating");
-		pics_safenet_nudity = findoptionI("SafeNetnudity");
-		pics_safenet_language = findoptionI("SafeNetlanguage");
-		pics_safenet_sex = findoptionI("SafeNetsex");
-		pics_safenet_violence = findoptionI("SafeNetviolence");
-		pics_safenet_gambling = findoptionI("SafeNetgambling");
-		pics_safenet_alcoholtobacco = findoptionI("SafeNetalcoholtobacco");
+		if (group_mode == 1) {
+			naughtyness_limit = findoptionI("naughtynesslimit");
+			if (!realitycheck(String(naughtyness_limit), 1, 4, "naughtynesslimit")) {
+				return false;
+			}
+			exception_phrase_list_location = findoptionS("exceptionphraselist");
+			weighted_phrase_list_location = findoptionS("weightedphraselist");
+			banned_phrase_list_location = findoptionS("bannedphraselist");
+			banned_extension_list_location = findoptionS("bannedextensionlist");
+			banned_mimetype_list_location = findoptionS("bannedmimetypelist");
+			banned_site_list_location = findoptionS("bannedsitelist");
+			banned_url_list_location = findoptionS("bannedurllist");
+			grey_site_list_location = findoptionS("greysitelist");
+			grey_url_list_location = findoptionS("greyurllist");
+			banned_regexpurl_list_location = findoptionS("bannedregexpurllist");
+			exception_regexpurl_list_location = findoptionS("exceptionregexpurllist");
+			content_regexp_list_location = findoptionS("contentregexplist");
+			url_regexp_list_location = findoptionS("urlregexplist");
+			exceptions_site_list_location = findoptionS("exceptionsitelist");
+			exceptions_url_list_location = findoptionS("exceptionurllist");
 
+			if (enable_PICS == 1) {
+				pics_rsac_nudity = findoptionI("RSACnudity");
+				pics_rsac_language = findoptionI("RSAClanguage");
+				pics_rsac_sex = findoptionI("RSACsex");
+				pics_rsac_violence = findoptionI("RSACviolence");
+				pics_evaluweb_rating = findoptionI("evaluWEBrating");
+				pics_cybernot_sex = findoptionI("CyberNOTsex");
+				pics_cybernot_other = findoptionI("CyberNOTother");
+				pics_safesurf_agerange = findoptionI("SafeSurfagerange");
+				pics_safesurf_profanity = findoptionI("SafeSurfprofanity");
+				pics_safesurf_heterosexualthemes = findoptionI("SafeSurfheterosexualthemes");
+				pics_safesurf_homosexualthemes = findoptionI("SafeSurfhomosexualthemes");
+				pics_safesurf_nudity = findoptionI("SafeSurfnudity");
+				pics_safesurf_violence = findoptionI("SafeSurfviolence");
+				pics_safesurf_sexviolenceandprofanity = findoptionI("SafeSurfsexviolenceandprofanity");
+				pics_safesurf_intolerance = findoptionI("SafeSurfintolerance");
+				pics_safesurf_druguse = findoptionI("SafeSurfdruguse");
+				pics_safesurf_otheradultthemes = findoptionI("SafeSurfotheradultthemes");
+				pics_safesurf_gambling = findoptionI("SafeSurfgambling");
+				pics_icra_chat = findoptionI("ICRAchat");
+				pics_icra_moderatedchat = findoptionI("ICRAmoderatedchat");
+				pics_icra_languagesexual = findoptionI("ICRAlanguagesexual");
+				pics_icra_languageprofanity = findoptionI("ICRAlanguageprofanity");
+				pics_icra_languagemildexpletives = findoptionI("ICRAlanguagemildexpletives");
+				pics_icra_nuditygraphic = findoptionI("ICRAnuditygraphic");
+				pics_icra_nuditymalegraphic = findoptionI("ICRAnuditymalegraphic");
+				pics_icra_nudityfemalegraphic = findoptionI("ICRAnudityfemalegraphic");
+				pics_icra_nuditytopless = findoptionI("ICRAnuditytopless");
+				pics_icra_nuditybottoms = findoptionI("ICRAnuditybottoms");
+				pics_icra_nuditysexualacts = findoptionI("ICRAnuditysexualacts");
+				pics_icra_nudityobscuredsexualacts = findoptionI("ICRAnudityobscuredsexualacts");
+				pics_icra_nuditysexualtouching = findoptionI("ICRAnuditysexualtouching");
+				pics_icra_nuditykissing = findoptionI("ICRAnuditykissing");
+				pics_icra_nudityartistic = findoptionI("ICRAnudityartistic");
+				pics_icra_nudityeducational = findoptionI("ICRAnudityeducational");
+				pics_icra_nuditymedical = findoptionI("ICRAnuditymedical");
+				pics_icra_drugstobacco = findoptionI("ICRAdrugstobacco");
+				pics_icra_drugsalcohol = findoptionI("ICRAdrugsalcohol");
+				pics_icra_drugsuse = findoptionI("ICRAdrugsuse");
+				pics_icra_gambling = findoptionI("ICRAgambling");
+				pics_icra_weaponuse = findoptionI("ICRAweaponuse");
+				pics_icra_intolerance = findoptionI("ICRAintolerance");
+				pics_icra_badexample = findoptionI("ICRAbadexample");
+				pics_icra_pgmaterial = findoptionI("ICRApgmaterial");
+				pics_icra_violenceobjects = findoptionI("ICRAviolenceobjects");
+				pics_icra_violencerape = findoptionI("ICRAviolencerape");
+				pics_icra_violencetohumans = findoptionI("ICRAviolencetohumans");
+				pics_icra_violencetoanimals = findoptionI("ICRAviolencetoanimals");
+				pics_icra_violencetofantasy = findoptionI("ICRAviolencetofantasy");
+				pics_icra_violencekillinghumans = findoptionI("ICRAviolencekillinghumans");
+				pics_icra_violencekillinganimals = findoptionI("ICRAviolencekillinganimals");
+				pics_icra_violencekillingfantasy = findoptionI("ICRAviolencekillingfantasy");
+				pics_icra_violenceinjuryhumans = findoptionI("ICRAviolenceinjuryhumans");
+				pics_icra_violenceinjuryanimals = findoptionI("ICRAviolenceinjuryanimals");
+				pics_icra_violenceinjuryfantasy = findoptionI("ICRAviolenceinjuryfantasy");
+				pics_icra_violenceartisitic = findoptionI("ICRAviolenceartisitic");
+				pics_icra_violenceeducational = findoptionI("ICRAviolenceeducational");
+				pics_icra_violencemedical = findoptionI("ICRAviolencemedical");
+				pics_icra_violencesports = findoptionI("ICRAviolencesports");
+				pics_weburbia_rating = findoptionI("Weburbiarating");
+				pics_vancouver_multiculturalism = findoptionI("Vancouvermulticulturalism");
+				pics_vancouver_educationalcontent = findoptionI("Vancouvereducationalcontent");
+				pics_vancouver_environmentalawareness = findoptionI("Vancouverenvironmentalawareness");
+				pics_vancouver_tolerance = findoptionI("Vancouvertolerance");
+				pics_vancouver_violence = findoptionI("Vancouverviolence");
+				pics_vancouver_sex = findoptionI("Vancouversex");
+				pics_vancouver_profanity = findoptionI("Vancouverprofanity");
+				pics_vancouver_safety = findoptionI("Vancouversafety");
+				pics_vancouver_canadiancontent = findoptionI("Vancouvercanadiancontent");
+				pics_vancouver_commercialcontent = findoptionI("Vancouvercommercialcontent");
+				pics_vancouver_gambling = findoptionI("Vancouvergambling");
+				
+				// new Korean PICS support
+				pics_icec_rating = findoptionI("ICECrating");
+				pics_safenet_nudity = findoptionI("SafeNetnudity");
+				pics_safenet_language = findoptionI("SafeNetlanguage");
+				pics_safenet_sex = findoptionI("SafeNetsex");
+				pics_safenet_violence = findoptionI("SafeNetviolence");
+				pics_safenet_gambling = findoptionI("SafeNetgambling");
+				pics_safenet_alcoholtobacco = findoptionI("SafeNetalcoholtobacco");
+			}
+	#ifdef DGDEBUG
+			else
+				std::cout << "PICS disabled; options skipped" << std::endl;
+	#endif
+
+	#ifdef DGDEBUG
+			std::cout << "Read settings into memory" << std::endl;
+			std::cout << "Reading phrase, URL and site lists into memory" << std::endl;
+	#endif
+
+			if (!readbplfile(banned_phrase_list_location.c_str(), exception_phrase_list_location.c_str(), weighted_phrase_list_location.c_str())) {
+				return false;
+			}		// read banned, exception, weighted phrase list
+			if (!readFile(exceptions_site_list_location.c_str(),&exception_site_list,false,true,"exceptionsitelist")) {
+				return false;
+			}		// site exceptions
+			if (!readFile(exceptions_url_list_location.c_str(),&exception_url_list,true,true,"exceptionurllist")) {
+				return false;
+			}		// url exceptions
+			if (!readFile(banned_extension_list_location.c_str(),&banned_extension_list,false,false,"bannedextensionlist")) {
+				return false;
+			}		// file extensions
+			if (!readFile(banned_mimetype_list_location.c_str(),&banned_mimetype_list,false,true,"bannedmimetypelist")) {
+				return false;
+			}		// mime types
+			if (!readFile(banned_site_list_location.c_str(),&banned_site_list,false,true,"bannedsitelist")) {
+				return false;
+			}		// banned domains
+			if (!readFile(banned_url_list_location.c_str(),&banned_url_list,true,true,"bannedurllist")) {
+				return false;
+			}		// banned urls
+			if (!readFile(grey_site_list_location.c_str(),&grey_site_list,false,true,"greysitelist")) {
+				return false;
+			}		// grey domains
+			if (!readFile(grey_url_list_location.c_str(),&grey_url_list,true,true,"greyurllist")) {
+				return false;
+			}		// grey urls
+
+			if (!readRegExURLFile(banned_regexpurl_list_location.c_str(),"bannedregexpurllist",banned_regexpurl_list,
+				banned_regexpurl_list_comp, banned_regexpurl_list_source, banned_regexpurl_list_ref))
+			{
+				return false;
+			}		// banned reg exp urls
+
+			if (!readRegExURLFile(exception_regexpurl_list_location.c_str(),"exceptionregexpurllist",exception_regexpurl_list,
+				exception_regexpurl_list_comp, exception_regexpurl_list_source, exception_regexpurl_list_ref))
+			{
+				return false;
+			}		// exception reg exp urls
+
+			if (!readRegExListFile(content_regexp_list_location.c_str(),"contentregexplist",content_regexp_list,content_regexp_list_rep,content_regexp_list_comp)) {
+				return false;
+			}		// content replacement regular expressions
+
+			if (!readRegExListFile(url_regexp_list_location.c_str(),"urlregexplist",url_regexp_list,url_regexp_list_rep,url_regexp_list_comp)) {
+				return false;
+			}  // url replacement regular expressions
+	#ifdef DGDEBUG
+			std::cout << "Lists in memory" << std::endl;
+	#endif
+
+			if ((*o.lm.l[banned_site_list]).inList("**")) {
+				blanketblock = 1;
+			}
+			if ((*o.lm.l[banned_site_list]).inList("*ip")) {
+				blanket_ip_block = 1;
+			}
+		}
+
+		if (!precompileregexps()) {
+			return false;
+		}		// precompiled reg exps for speed
 
 		bypass_mode = findoptionI("bypass");
 		if (!realitycheck(String(bypass_mode), 1, 4, "bypass")) {
@@ -381,82 +471,7 @@ bool FOptionContainer::read(const char *filename)
 				cookie_magic[i] = (rand() % 26) + 'A';
 			}
 		}
-		// Most of the readfoofiles could be amalgamated into one fuction
-		// and will be one day.  So it's a bit messy at the moment.
 
-#ifdef DGDEBUG
-		std::cout << "settings into memory" << filename << std::endl;
-#endif
-
-		if (!readbplfile(banned_phrase_list_location.c_str(), exception_phrase_list_location.c_str(), weighted_phrase_list_location.c_str())) {
-			return false;
-		}		// read banned, exception, weighted phrase list
-#ifdef DGDEBUG
-		std::cout << "read phrase lists into memory" << filename << std::endl;
-#endif
-		if (!readFile(exceptions_site_list_location.c_str(),&exception_site_list,false,true,"exceptionsitelist")) {
-			return false;
-		}		// site exceptions
-
-		if (!readFile(exceptions_url_list_location.c_str(),&exception_url_list,true,true,"exceptionurllist")) {
-			return false;
-		}		// url exceptions
-		if (!readFile(banned_extension_list_location.c_str(),&banned_extension_list,false,false,"bannedextensionlist")) {
-			return false;
-		}		// file extensions
-		if (!readFile(banned_mimetype_list_location.c_str(),&banned_mimetype_list,false,true,"bannedmimetypelist")) {
-			return false;
-		}		// mime types
-		if (!readFile(banned_site_list_location.c_str(),&banned_site_list,false,true,"bannedsitelist")) {
-			return false;
-		}		// banned domains
-		if (!readFile(banned_url_list_location.c_str(),&banned_url_list,true,true,"bannedurllist")) {
-			return false;
-		}		// banned urls
-		if (!readFile(grey_site_list_location.c_str(),&grey_site_list,false,true,"greysitelist")) {
-			return false;
-		}		// grey domains
-		if (!readFile(grey_url_list_location.c_str(),&grey_url_list,true,true,"greyurllist")) {
-			return false;
-		}		// grey urls
-
-		if (!readRegExURLFile(banned_regexpurl_list_location.c_str(),"bannedregexpurllist",banned_regexpurl_list,
-			banned_regexpurl_list_comp, banned_regexpurl_list_source, banned_regexpurl_list_ref))
-		{
-			return false;
-		}		// banned reg exp urls
-
-		if (!readRegExURLFile(exception_regexpurl_list_location.c_str(),"exceptionregexpurllist",exception_regexpurl_list,
-			exception_regexpurl_list_comp, exception_regexpurl_list_source, exception_regexpurl_list_ref))
-		{
-			return false;
-		}		// exception reg exp urls
-
-		if (!readRegExListFile(content_regexp_list_location.c_str(),"contentregexplist",content_regexp_list,content_regexp_list_rep,content_regexp_list_comp)) {
-			return false;
-		}		// content replacement regular expressions
-
-		if (!readRegExListFile(url_regexp_list_location.c_str(),"urlregexplist",url_regexp_list,url_regexp_list_rep,url_regexp_list_comp)) {
-			return false;
-		}  // url replacement regular expressions
-
-#ifdef DGDEBUG
-		std::cout << "lists into memory" << filename << std::endl;
-#endif
-		if (!precompileregexps()) {
-			return false;
-		}		// precompiled reg exps for speed
-
-		if ((*o.lm.l[banned_site_list]).inList("**")) {
-			blanketblock = 1;
-		} else {
-			blanketblock = 0;
-		}
-		if ((*o.lm.l[banned_site_list]).inList("*ip")) {
-			blanket_ip_block = 1;
-		} else {
-			blanket_ip_block = 0;
-		}
 	}
 	catch(exception & e) {
 		if (!is_daemonised) {
