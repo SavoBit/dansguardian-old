@@ -36,7 +36,7 @@ extern bool is_daemonised;
 
 extern authcreate_t proxycreate;
 extern authcreate_t identcreate;
-
+extern authcreate_t ipcreate;
 
 // IMPLEMENTATION
 
@@ -56,11 +56,11 @@ int AuthPlugin::quit()
 }
 
 // determine what filter group the given username is in
-// these zeroes represent the default filter group - one day configurable?
+// return -1 when user not found
 int AuthPlugin::determineGroup(std::string &user)
 {
 	if (user.length() < 1 || user == "-") {
-		return 0;
+		return -1;
 	}
 	String u(user);
 	String ue(u);
@@ -72,7 +72,7 @@ int AuthPlugin::determineGroup(std::string &user)
 #ifdef DGDEBUG
 		std::cout << "User not in filter groups list: " << ue << std::endl;
 #endif
-		return 0;
+		return -1;
 	}
 #ifdef DGDEBUG
 	std::cout << "User found: " << i << std::endl;
@@ -82,18 +82,18 @@ int AuthPlugin::determineGroup(std::string &user)
 		ue = ue.after("=filter");
 		int l = ue.length();
 		if (l < 1 || l > 2) {
-			return 0;
+			return -1;
 		}
 		int g = ue.toInteger();
 		if (g > o.numfg) {
-			return 0;
+			return -1;
 		}
 		if (g > 0) {
 			g--;
 		}
 		return g;
 	}
-	return 0;
+	return -1;
 }
 
 // take in a configuration file, find the AuthPlugin class associated with the plugname variable, and return an instance
@@ -130,6 +130,13 @@ AuthPlugin* auth_plugin_load(const char *pluginConfigPath)
 		std::cout << "Enabling ident server auth plugin" << std::endl;
 #endif
 		return identcreate(cv);
+	}
+
+	if (plugname == "ip") {
+#ifdef DGDEBUG
+		std::cout << "Enabling IP-based auth plugin" << std::endl;
+#endif
+		return ipcreate(cv);
 	}
 
 	if (!is_daemonised) {

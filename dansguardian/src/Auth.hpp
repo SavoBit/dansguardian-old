@@ -38,15 +38,14 @@
 // success
 #define DGAUTH_OK 0
 
-// auth info required for this method not found
+// auth info required for this method not found (continue querying other plugins)
 #define DGAUTH_NOMATCH 1
 
-// redirect the user to a login page
-#define DGAUTH_REDIRECT 2
+// auth info found, but no such user in filtergroupslist (stop queyring plugins - use this code with caution!)
+#define DGAUTH_NOUSER 2
 
-// permit these headers to be transmitted & continue - for multi-step auth
-// like NTLM
-#define DGAUTH_CONTINUE 3
+// redirect the user to a login page
+#define DGAUTH_REDIRECT 3
 
 // any < 0 return code signifies error
 
@@ -63,15 +62,15 @@ public:
 
 	// return one of the codes defined above.
 	// OK - put group no. in filtergroup & username in string
-	// NOMATCH or CONTINUE - leave inputs alone
 	// REDIRECT - leave group no. alone, put redirect URL in string
-	virtual int identify(const int &clientport, std::string &clientip, HTTPHeader &h, int &fg, std::string &string) = 0;
-
-private:
-	ConfigVar cv;
+	virtual int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string) = 0;	
 
 protected:
+	ConfigVar cv;
+
 	// determine what filter group the given username is in
+	// queries the standard filtergroupslist
+	// returns -1 on failure, >= 0 on success
 	int determineGroup(std::string &user);
 };
 
