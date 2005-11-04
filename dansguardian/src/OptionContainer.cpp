@@ -51,7 +51,8 @@ OptionContainer::~OptionContainer()
 	deleteFilterGroups();
 	deletePlugins(dmplugins);
 	deletePlugins(csplugins);
-	auth_plugin->quit();
+	if (auth_plugin != NULL)
+		auth_plugin->quit();
 	delete auth_plugin;
 }
 
@@ -60,7 +61,8 @@ void OptionContainer::reset()
 	deleteFilterGroups();
 	deletePlugins(dmplugins);
 	deletePlugins(csplugins);
-	auth_plugin->quit();
+	if (auth_plugin != NULL)
+		auth_plugin->quit();
 	delete auth_plugin;
 	exception_ip_list.reset();
 	banned_ip_list.reset();
