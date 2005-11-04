@@ -74,6 +74,7 @@ endif
 
 PROXYAUTH_SOURCE = authplugins/proxy.cpp
 IDENTAUTH_SOURCE = authplugins/ident.cpp
+IPAUTH_SOURCE = authplugins/ip.cpp
 
 sbin_PROGRAMS = dansguardian 
 
@@ -112,7 +113,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
 		       $(KAVDSCAN_SOURCE) $(CLAMDSCAN_SOURCE) \
 		       $(DEFAULTDM_SOURCE) $(FANCYDM_SOURCE) \
 		       $(KAVAV_SOURCES) $(PROXYAUTH_SOURCE) \
-		       $(IDENTAUTH_SOURCE)
+		       $(IDENTAUTH_SOURCE) $(IPAUTH_SOURCE)
 
 dansguardian_LDADD = $(PCRE_LDFLAGS) $(ZLIB) $(CLAMAV_LDFLAGS) $(KAVAV_LDFLAGS)
 
