@@ -100,7 +100,9 @@ String HTTPHeader::disposition()
 		// the header
 		if (header[i].startsWith("Content-Disposition:")) {
 			// hmmm. see 3rd example format below.
-			filename = header[i]/*.after(";")*/.after("=");
+			filename = header[i]/*.after(";")*/.after("filename").after("=");
+			if (filename.contains(";"))
+				filename = filename.before(";");
 			filename.removeWhiteSpace();  // incase of trailing space
 			if (filename.contains("\"")) {
 				return filename.after("\"").before("\"");
