@@ -417,12 +417,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 		std::cout << "About to determine username/group" << std::endl;
 #endif
-
 		std::string clientuser;
 		int filtergroup;
-		
 		if (o.auth_plugin) {
-			rc = o.auth_plugin->identify(port, clientip, header, filtergroup, clientuser);
+			rc = o.auth_plugin->identify(peerconn, proxysock, header, filtergroup, clientuser);
 			if (rc == DGAUTH_REDIRECT) {
 				// ident plugin told us to redirect to a login page
 				proxysock.close();
@@ -443,12 +441,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					proxysock.close();
 					return;
 				}
-				//checkme: add IP passing to ident plugins, and add DGAUTH_CONTINUE code.
-				//or should ident plugins be passed connections, and handle the continuing themselves?
-				//can we have multiple plugins chained together; checking for bans & exceptions in modes of the returned groups?
+				//checkme: can we have multiple plugins chained together; checking for bans & exceptions in modes of the returned groups?
 #ifdef DGDEBUG
-				if (rc == DGAUTH_NOMATCH) std::cout<<"Auth plugin did not find necessary info"<<std::endl;
-				if (rc == DGAUTH_CONTINUE) std::cout<<"Auth plugin wants us to pass the headers on"<<std::endl;
+				if (rc == DGAUTH_NOMATCH) std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
+				if (rc == DGAUTH_NOUSER) std::cout<<"Auth plugin found username, but it is not recognised; not querying remaining plugins"<<std::endl;
 #endif
 			}
 		} else {
