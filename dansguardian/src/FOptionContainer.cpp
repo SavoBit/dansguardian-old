@@ -235,10 +235,10 @@ bool FOptionContainer::read(const char *filename)
 			// the dansguardian.conf and pics files get amalgamated into one
 			// deque.  They are only seperate files for clarity.
 
-			if (findoptionS("enablepics") == "off") {
-				enable_PICS = 0;
-			} else {
+			if (findoptionS("enablepics") == "on") {
 				enable_PICS = 1;
+			} else {
+				enable_PICS = 0;
 			}
 
 			if (enable_PICS == 1) {
@@ -377,15 +377,15 @@ bool FOptionContainer::read(const char *filename)
 				pics_safenet_gambling = findoptionI("SafeNetgambling");
 				pics_safenet_alcoholtobacco = findoptionI("SafeNetalcoholtobacco");
 			}
-	#ifdef DGDEBUG
+#ifdef DGDEBUG
 			else
 				std::cout << "PICS disabled; options skipped" << std::endl;
-	#endif
+#endif
 
-	#ifdef DGDEBUG
+#ifdef DGDEBUG
 			std::cout << "Read settings into memory" << std::endl;
 			std::cout << "Reading phrase, URL and site lists into memory" << std::endl;
-	#endif
+#endif
 
 			if (!readbplfile(banned_phrase_list_location.c_str(), exception_phrase_list_location.c_str(), weighted_phrase_list_location.c_str())) {
 				return false;
@@ -434,9 +434,9 @@ bool FOptionContainer::read(const char *filename)
 			if (!readRegExListFile(url_regexp_list_location.c_str(),"urlregexplist",url_regexp_list,url_regexp_list_rep,url_regexp_list_comp)) {
 				return false;
 			}  // url replacement regular expressions
-	#ifdef DGDEBUG
+#ifdef DGDEBUG
 			std::cout << "Lists in memory" << std::endl;
-	#endif
+#endif
 
 			if ((*o.lm.l[banned_site_list]).inList("**")) {
 				blanketblock = 1;

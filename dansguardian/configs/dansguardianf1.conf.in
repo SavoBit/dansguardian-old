@@ -47,9 +47,9 @@ naughtynesslimit = 50
 
 # Enable PICS rating support
 #
-# Defaults to enabled
+# Defaults to disabled
 # (on | off)
-enablepics = on
+enablepics = off
 
 # Temporary Denied Page Bypass
 # It provides a link on the denied page to bypass the ban for a few minutes.  To be
