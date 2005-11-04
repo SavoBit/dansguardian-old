@@ -119,12 +119,16 @@ AuthPlugin* auth_plugin_load(const char *pluginConfigPath)
 	}
 
 	if (plugname == "proxy") {
+#ifdef DGDEBUG
 		std::cout << "Enabling proxy auth plugin" << std::endl;
+#endif
 		return proxycreate(cv);
 	}
 
 	if (plugname == "ident") {
+#ifdef DGDEBUG
 		std::cout << "Enabling ident server auth plugin" << std::endl;
+#endif
 		return identcreate(cv);
 	}
 
