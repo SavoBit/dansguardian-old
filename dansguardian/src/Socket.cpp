@@ -79,6 +79,12 @@ int Socket::getPeerSourcePort()
 	return ntohs(peer_adr.sin_port);
 }
 
+// return the address of the client connecting to us
+unsigned long int Socket::getPeerSourceAddr()
+{
+	return (unsigned long int)ntohl(peer_adr.sin_addr.s_addr);
+}
+
 // close connection & wipe address structs
 void Socket::reset()
 {

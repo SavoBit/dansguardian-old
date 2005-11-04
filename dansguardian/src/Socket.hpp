@@ -57,6 +57,7 @@ public:
 	// get remote IP/port
 	std::string getPeerIP();
 	int getPeerSourcePort();
+	unsigned long int getPeerSourceAddr();
 
 private:
 	// local & remote addresses
