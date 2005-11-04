@@ -1,7 +1,7 @@
 MAINTAINERCLEANFILES = Makefile.in \
                        dansguardian.conf dansguardianf1.conf
 
-SUBDIRS = lists downloadmanagers contentscanners .
+SUBDIRS = lists downloadmanagers contentscanners authplugins .
 
 DATATOPDIR = $(sysconfdir)/$(PACKAGE_NAME)
 
