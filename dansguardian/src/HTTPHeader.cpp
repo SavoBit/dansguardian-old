@@ -99,15 +99,19 @@ String HTTPHeader::disposition()
 	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in
 		// the header
 		if (header[i].startsWith("Content-Disposition:")) {
-			filename = header[i].after(";").after("=");
+			// hmmm. see 3rd example format below.
+			filename = header[i]/*.after(";")*/.after("=");
 			filename.removeWhiteSpace();  // incase of trailing space
 			if (filename.contains("\"")) {
-				return header[i].after(";").after("\"").before("\"");
+				return filename.after("\"").before("\"");
 			}
 			return filename;
 			// example format:
 			// Content-Disposition: attachment; filename="filename.ext"
 			// Content-Disposition: attachment; filename=filename.ext
+			// Content-Disposition: filename="filename.ext"
+			// 3rd format encountered from download script on realVNC's
+			// website. notice it does not contain any semicolons! PRA 4-11-2005
 		}
 	}
 	return "";  // it finds the header proposed filename
