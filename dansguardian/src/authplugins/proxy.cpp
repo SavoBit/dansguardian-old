@@ -21,14 +21,8 @@
 // INCLUDES
 
 #include "../Auth.hpp"
-#include "../OptionContainer.hpp"
 
 #include <syslog.h>
-
-
-// GLOBALS
-
-extern OptionContainer o;
 
 
 // DECLARATIONS
@@ -38,7 +32,7 @@ class proxyinstance:public AuthPlugin
 {
 public:
 	proxyinstance(ConfigVar &definition):AuthPlugin(definition) {};
-	int identify(const int& clientport, std::string &clientip, HTTPHeader &h, int &fg, std::string &string);
+	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string);
 };
 
 
@@ -54,13 +48,16 @@ AuthPlugin *proxycreate(ConfigVar & definition)
 // end of Class factory
 
 // proxy auth header username extraction
-int proxyinstance::identify(const int &clientport, std::string &clientip, HTTPHeader &h, int &fg, std::string &string)
+int proxyinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string)
 {
 	// extract username
 	string = h.getAuthUser();
 	if (string.length() > 0) {
 		fg = determineGroup(string);
-		return DGAUTH_OK;
+		if (fg >= 0)
+			return DGAUTH_OK;
+		else
+			return DGAUTH_NOUSER;
 	}
 	return DGAUTH_NOMATCH;
 }

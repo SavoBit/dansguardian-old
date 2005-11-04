@@ -38,7 +38,7 @@ class identinstance:public AuthPlugin
 {
 public:
 	identinstance(ConfigVar &definition):AuthPlugin(definition) {};
-	int identify(const int& clientport, std::string &clientip, HTTPHeader &h, int &fg, std::string &string);
+	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string);
 };
 
 
@@ -55,8 +55,10 @@ AuthPlugin *identcreate(ConfigVar & definition)
 
 // ident server username extraction
 // checkme: needs better error reporting
-int identinstance::identify(const int &clientport, std::string &clientip, HTTPHeader &h, int &fg, std::string &string)
+int identinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string)
 {
+	std::string clientip = peercon.getPeerIP();
+	int clientport = peercon.getPeerSourcePort();
 #ifdef DGDEBUG
 	std::cout << "Connecting to: " << clientip << std::endl;
 	std::cout << "to ask about: " << clientport << std::endl;
@@ -112,8 +114,11 @@ int identinstance::identify(const int &clientport, std::string &clientip, HTTPHe
 	temp.removeWhiteSpace();
 	if (temp.length() > 0) {
 		string = temp.toCharArray();
-		determineGroup(string);
-		return DGAUTH_OK;
+		fg = determineGroup(string);
+		if (fg >= 0)
+			return DGAUTH_OK;
+		else
+			return DGAUTH_NOUSER;
 	}
 	return DGAUTH_NOMATCH;
 }
