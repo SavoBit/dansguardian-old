@@ -407,6 +407,7 @@ AC_CONFIG_FILES([Makefile
 	        configs/contentscanners/icapscan.conf
 	        configs/contentscanners/kavav.conf
 	        configs/contentscanners/kavdscan.conf
+		configs/authplugins/Makefile
                 src/Makefile
                 src/platform.h
 		])
