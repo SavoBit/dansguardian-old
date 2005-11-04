@@ -1813,6 +1813,8 @@ void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * heade
 
 	// don't do phrase filtering or content replacement on exception/bypass accesses
 	if (checkme->isException || isbypass) {
+		// don't forget to swap back to compressed!
+		docbody->swapbacktocompressed();
 		return;
 	}
 
