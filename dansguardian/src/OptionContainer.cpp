@@ -460,7 +460,7 @@ bool OptionContainer::read(const char *filename, int type)
 			}
 			else if (rc > 0) {
 				if (!is_daemonised) {
-					std::cerr << "Auth plugin init returned warning value:" << rc << std::endl;
+					std::cerr << "Auth plugin init returned warning value: " << rc << std::endl;
 				}
 				syslog(LOG_ERR, "Auth plugin init returned warning value: %d", rc);
 			}
@@ -930,7 +930,7 @@ bool OptionContainer::loadCSPlugins()
 		}
 		else if (rc > 0) {
 			if (!is_daemonised) {
-				std::cerr << "Content scanner plugin init returned warning value:" << rc << std::endl;
+				std::cerr << "Content scanner plugin init returned warning value: " << rc << std::endl;
 			}
 			syslog(LOG_ERR, "Content scanner plugin init returned warning value: %d", rc);
 		}
