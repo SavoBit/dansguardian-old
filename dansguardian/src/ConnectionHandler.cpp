@@ -1059,7 +1059,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	}
 	catch(exception & e) {
 #ifdef DGDEBUG
-		std::cout << "connection handler caught an exception" << e.what() << std::endl;
+		std::cout << "connection handler caught an exception: " << e.what() << std::endl;
 #endif
 		proxysock.close();  // close connection to proxy
 		return;
