@@ -229,14 +229,16 @@ bool DataBuffer::in(Socket * sock, Socket * peersock, HTTPHeader * requestheader
 #ifdef DGDEBUG
 			std::cerr << "Got to final download manager so defaulting to always match." << std::endl;
 #endif
-			rc = ((DMPlugin*)(*i))->in(this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
+			dm_plugin = (DMPlugin*)(*i);
+			rc = dm_plugin->in(this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
 			break;
 		} else {
 			if (((DMPlugin*)(*i))->willHandle(requestheader, docheader)) {
 #ifdef DGDEBUG
 				std::cerr << "Matching download manager number: " << j << std::endl;
 #endif
-				rc = ((DMPlugin*)(*i))->in(this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
+				dm_plugin = (DMPlugin*)(*i);
+				rc = dm_plugin->in(this, sock, peersock, requestheader, docheader, runav, headersent, &toobig);
 				break;
 			}
 		}

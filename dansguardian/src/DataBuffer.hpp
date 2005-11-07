@@ -25,6 +25,8 @@
 #include "String.hpp"
 #include "FDFuncs.hpp"
 
+class DMPlugin;
+
 class DataBuffer
 {
 public:
@@ -37,6 +39,9 @@ public:
 	String tempfilepath;
 	bool dontsendbody;  // used for fancy download manager for example
 	int tempfilefd;
+	
+	// the download manager we used during the last "in"
+	DMPlugin *dm_plugin;
 
 	DataBuffer();
 	~DataBuffer();
