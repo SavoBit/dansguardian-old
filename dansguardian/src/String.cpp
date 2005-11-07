@@ -152,6 +152,31 @@ String::String(const long num)
 }
 #endif
 
+// Bodge to handle GCC3.x - improvements very welcome!!!
+// Sun 1st December 2002 - daniel@ //jadeb.com
+#ifdef __GCCVER3
+String::String(const unsigned int num)
+{
+	std::ostringstream buf;
+	buf << num << std::ends;
+	std::string s = buf.str();
+	char *bs = (char *) s.c_str();
+	int l = strlen(bs);
+	data = new char[l + 1];
+	memcpy(data, bs, l);
+	sl = l;
+	data[sl] = '\0';
+}
+#else
+String::String(const unsigned int num)
+{
+	std::ostrstream buf;
+	buf << num << std::ends;
+	data = buf.str();  // with side effect: it calls buf.freeze()
+	sl = buf.pcount() - 1;
+}
+#endif
+
 // *
 // *
 // * Operators

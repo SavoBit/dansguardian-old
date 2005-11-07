@@ -51,6 +51,7 @@ public:
 	// construct string represenations of numbers
 	String(const int num);
 	String(const long num);
+	String(const unsigned int num);
 	// substring constructors
 	String(const char *bs, int len);
 	String(const char *bs, int start, int len);
