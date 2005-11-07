@@ -32,7 +32,6 @@
 #include <cstdio>
 #include <unistd.h>
 #include <syslog.h>
-//#include <istream.h>
 #include <istream>
 #include <iostream>
 #include <fstream>
@@ -59,13 +58,14 @@ void HTMLTemplate::push(String s)
 	}
 }
 
-// read in HTML template and find URL, readon, category etc. placeholders
-bool HTMLTemplate::readTemplateFile(const char *filename)
+// read in HTML template and find URL, reason, category etc. placeholders
+bool HTMLTemplate::readTemplateFile(const char *filename, const char *placeholders)
 {
 	std::string linebuffer;
 	RegExp re;
 	// compile regexp for matching supported placeholders
-	re.comp("-URL-|-REASONGIVEN-|-REASONLOGGED-|-USER-|-IP-|-HOST-|-FILTERGROUP-|-BYPASS-|-CATEGORIES-");
+	// allow optional custom placeholder string
+	re.comp(placeholders ? placeholders : "-URL-|-REASONGIVEN-|-REASONLOGGED-|-USER-|-IP-|-HOST-|-FILTERGROUP-|-BYPASS-|-CATEGORIES-");
 	unsigned int offset;
 	String result;
 	String line;
@@ -79,9 +79,6 @@ bool HTMLTemplate::readTemplateFile(const char *filename)
 	}
 	while (!templatefile.eof()) {
 		std::getline(templatefile, linebuffer);
-//        #ifdef DGDEBUG
-//            std::cout << linebuffer << std::endl;
-//        #endif
 		line = linebuffer.c_str();
 		// look for placeholders
 		re.match(line.toCharArray());
@@ -105,15 +102,11 @@ bool HTMLTemplate::readTemplateFile(const char *filename)
 		}
 	}
 	templatefile.close();
-//    #ifdef DGDEBUG
-//        for(unsigned int j = 0; j < html.size(); j++) {
-	//           std::cout << html[j] << std::endl;
-	//       }
-//    #endif
 	return true;
 }
 
 // fill in placeholders with the given information and send the resulting page to the client
+// only useful if you used the default set of placeholders
 void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::string &logreason, std::string &categories,
 		std::string *user, std::string *ip, std::string *host, int filtergroup, String &hashed)
 {
@@ -124,6 +117,7 @@ void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::str
 	bool newline;
 	unsigned int sz = html.size() - 1;  // the last line can have no thingy. erm... carriage return?
 	for (unsigned int i = 0; i < sz; i++) {
+		// preserve newlines from original file
 		newline = false;
 		line = html[i];
 		// look for placeholders (split onto their own line by readTemplateFile) and replace them
@@ -170,6 +164,9 @@ void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::str
 				line = "";
 			}
 		} else {
+			// if this line wasn't a placeholder, and neither is the
+			// next line, then output a newline, thus preserving line breaks
+			// from the original template file.
 			if (html[i + 1][0] != '-') {
 				newline = true;
 			}
