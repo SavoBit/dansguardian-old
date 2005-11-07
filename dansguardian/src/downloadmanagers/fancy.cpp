@@ -20,16 +20,19 @@
 
 #include "../DownloadManager.hpp"
 #include "../OptionContainer.hpp"
+#include "../HTMLTemplate.hpp"
 
 #include <syslog.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <iostream>
 
 
 // GLOBALS
 
 extern OptionContainer o;
+extern bool is_daemonised;
 
 
 // DECLARATIONS
@@ -40,6 +43,13 @@ public:
 	fancydm(ConfigVar & definition):DMPlugin(definition) {};
 	int in(DataBuffer * d, Socket * sock, Socket * peersock, HTTPHeader * requestheader,
 		HTTPHeader * docheader, bool wantall, int *headersent, bool * toobig);
+
+	int init(void* args);
+
+	void sendLink(Socket &peersock, String &linkurl, String &prettyurl);
+
+private:
+	HTMLTemplate progresspage;
 };
 
 
@@ -56,6 +66,33 @@ DMPlugin *fancydmcreate(ConfigVar & definition)
 }
 
 // end of Class factory
+
+// initialisation - load the template file
+int fancydm::init(void* args)
+{
+	// call inherited init
+	DMPlugin::init(args);
+
+	String fname = cv["template"];
+	if (fname.length() > 0) {
+		// read the template file, and return OK on success, error on failure.
+		fname = o.languagepath + fname;
+		return progresspage.readTemplateFile(fname.toCharArray(), "-FILENAME-|-FILESIZE-") ? 0 : -1;
+	} else {
+		// eek! there's no template option in our config.
+		if (!is_daemonised)
+			std::cerr << "Template not specified for fancy download manager" << std::endl;
+		syslog(LOG_ERR, "Template not specified for fancy download manager");
+		return -2;
+	}
+}
+
+// call template's downloadlink JavaScript function
+void fancydm::sendLink(Socket &peersock, String &linkurl, String &prettyurl)
+{
+	String mess = "<script language=\"javascript\">downloadlink(\""+linkurl+"\",\""+prettyurl+"\");</script>\n";
+	peersock.writeString(mess.toCharArray());
+}
 
 // download body for this request
 int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHeader * requestheader, class HTTPHeader * docheader, bool wantall, int *headersent, bool * toobig)
@@ -81,16 +118,13 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	unsigned int expectedsize = docheader->contentLength();
 	unsigned int bytessec = 0;
 	unsigned int bytesgot = 0;
-	unsigned int percentcomplete = 0;
-	unsigned int eta = 0;
 	int timeelapsed = 0;
 
 	bool initialsent = false;
 
 	String message, jsmessage;
 
-	char *block;  // buffer for storing a grabbed block from the
-	// input stream
+	char *block;  // buffer for storing a grabbed block from the input stream
 	char *temp;
 
 	bool swappedtodisk = false;
@@ -100,6 +134,17 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	struct timeval nowadays;
 	gettimeofday(&themdays, NULL);
 	gettimeofday(&starttime, NULL);
+
+	// determine downloaded filename
+	String filename = requestheader->disposition();
+	if (filename.length() == 0) {
+		filename = requestheader->url();
+		filename = requestheader->decode(filename);
+		if (filename.contains("?"))
+			filename = filename.before("?");
+		while (filename.contains("/"))
+			filename = filename.after("/");
+	}
 
 	while (true) {
 		// send text header to show status
@@ -119,20 +164,29 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 #ifdef DGDEBUG
 					std::cout << "sending header for text status" << std::endl;
 #endif
-					message = "HTTP/1.0 200 OK\nContent-Type: text/html\n\n<HTML><HEAD><TITLE>";
-					message += o.language_list.getTranslation(1200);
-					message += "</TITLE></HEAD><BODY>\r\n";
-					message += o.language_list.getTranslation(1200);
-					// "1200","Please wait - downloading to be scanned..."
-					if (expectedsize > 0) {
-						message +=
-							"<table align='center'><tr><td>\n<div style='font-size:8pt;padding:2px;border:solid black 1px'>\n<span id='progress1'>&nbsp; &nbsp;</span>\n<span id='progress2'>&nbsp; &nbsp;</span>\n<span id='progress3'>&nbsp; &nbsp;</span>\n<span id='progress4'>&nbsp; &nbsp;</span>\n<span id='progress5'>&nbsp; &nbsp;</span>\n<span id='progress6'>&nbsp; &nbsp;</span>\n<span id='progress7'>&nbsp; &nbsp;</span>\n<span id='progress8'>&nbsp; &nbsp;</span>\n<span id='progress9'>&nbsp; &nbsp;</span>\n<span id='progress10'>&nbsp; &nbsp;</span>\n<span id='progress11'>&nbsp; &nbsp;</span>\n<span id='progress12'>&nbsp; &nbsp;</span>\n<span id='progress13'>&nbsp; &nbsp;</span>\n<span id='progress14'>&nbsp; &nbsp;</span>\n<span id='progress15'>&nbsp; &nbsp;</span>\n<span id='progress16'>&nbsp; &nbsp;</span>\n</div>\n</td></tr></table>\n<script language='javascript'>for (var i = 1; i <= 16; i++) document.getElementById('progress'+i).style.backgroundColor = 'transparent';</script>\r\n";
+					message = "HTTP/1.0 200 OK\nContent-Type: text/html\n\n";
+					// Output initial template
+					std::deque<String>::iterator i = progresspage.html.begin();
+					std::deque<String>::iterator penultimate = progresspage.html.end()-1;
+					bool newline;
+					while (i != progresspage.html.end()) {
+						newline = false;
+						message = *i;
+						if (message == "-FILENAME-") {
+							message = filename;
+						}
+						else if (message == "-FILESIZE-") {
+							message = String(expectedsize);
+						}
+						else if ((i == penultimate) || ((*(i+1))[0] != '-')) {
+								newline = true;
+						}
+						peersock->writeString(message.toCharArray());
+						// preserve line breaks from the original template file
+						if (newline)
+							peersock->writeString("\n");
+						i++;
 					}
-
-					message += "<center><form name='statsform'><input type='text' name='stats' value=''></form></center>\r\n";
-
-					message += "<noscript><PRE></noscript>";
-					peersock->writeString(message.toCharArray());
 					(*headersent) = 2;
 				}
 #ifdef DGDEBUG
@@ -140,29 +194,11 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 #endif
 				message = "Downloading status: ";
 				if (expectedsize > 0) {
-					percentcomplete = bytesgot / (expectedsize / 100);
-					eta = (expectedsize - bytesgot) / bytessec;
-					message += String((signed) percentcomplete);
-					message += "%, ETA:";
-					message += String((signed) eta);
-					message += " sec, ";
-					jsmessage =
-						"<script language='javascript'>for (var i = 1; i <=" + String((signed) percentcomplete / (100 / 16)) + "; i++) document.getElementById('progress'+i).style.backgroundColor = 'blue';</script>";
+					// Output a call to template's JavaScript progressupdate function
+					jsmessage = "<script language='javascript'>progressupdate(" + String(bytesgot) + "," + String(bytessec) + ");</script>";
 					peersock->writeString(jsmessage.toCharArray());
 				}
-				message += String((signed) bytessec);
-				message += " bytes/sec, total downloaded ";
-				message += String((signed) bytesgot);
-				message += " bytes";
-				jsmessage = "<script language='javascript'>document.statsform.stats.value='" + message + "';document.statsform.stats.size='" + message.length() + "';</script>";
-				peersock->writeString(jsmessage.toCharArray());
-
-				message = "<noscript>" + message + "</noscript>\r\n";
-				peersock->writeString(message.toCharArray());
 				peersock->writeString("<!-- force flush -->\r\n");
-#ifdef DGDEBUG
-				std::cout << message << std::endl;
-#endif
 			}
 		}
 
@@ -247,7 +283,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 				writeEINTR(d->tempfilefd, d->data, rc);
 				d->tempfilesize += rc;
 #ifdef DGDEBUG
-				std::cout << "written to disk:" << rc << " total:" << d->tempfilesize << std::endl;
+				std::cout << "written to disk: " << rc << " total: " << d->tempfilesize << std::endl;
 #endif
 			}
 		}
@@ -277,17 +313,8 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 			}
 		}
 
-		message = o.language_list.getTranslation(1210);
-		// "1210","Download Complete.  Starting scan..."
-		jsmessage = "<script language='javascript'>document.statsform.stats.value='" + message + "';document.statsform.stats.size='" + message.length() + "';</script>";
-		peersock->writeString(jsmessage.toCharArray());
-		message = "<NOSCRIPT></PRE>" + message + "</NOSCRIPT>\r\n";
-		peersock->writeString(message.toCharArray());
-
-		if (expectedsize > 0) {
-			jsmessage = "<script language='javascript'>for (var i = 1; i <=16; i++) document.getElementById('progress'+i).style.backgroundColor = 'blue';</script>\r\n";
-			peersock->writeString(jsmessage.toCharArray());
-		}
+		// Output a call to template's JavaScript nowscanning function
+		peersock->writeString("<script language='javascript'>nowscanning();</script>\r\n");
 		(*d).preservetemp = true;
 		(*d).dontsendbody = true;
 	}
