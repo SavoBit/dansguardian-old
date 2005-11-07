@@ -1,0 +1,6 @@
+# IP-based auth plugin
+plugname = 'ip'
+
+# ipgroups file
+# List file assigning IP addresses, subnets and ranges to filter groups
+ipgroups = '@DGCONFDIR@/lists/authplugins/ipgroups'
