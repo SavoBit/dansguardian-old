@@ -408,6 +408,8 @@ AC_CONFIG_FILES([Makefile
 	        configs/contentscanners/kavav.conf
 	        configs/contentscanners/kavdscan.conf
 		configs/authplugins/Makefile
+		configs/authplugins/ip.conf
+		configs/lists/authplugins/Makefile
                 src/Makefile
                 src/platform.h
 		])
