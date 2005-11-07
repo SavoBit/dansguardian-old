@@ -50,10 +50,6 @@ public:
 	DMPlugin(ConfigVar &definition);
 	virtual ~DMPlugin() {};
 	
-	// download the body for the given request
-	virtual int in(DataBuffer *d, Socket *sock, Socket *peersock,
-		HTTPHeader *requestheader, HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) = 0;
-	
 	// plugin initialise/quit routines.
 	// if lastplugin is true, this is being loaded as the fallback option,
 	// and needn't load in purely request matching related options.
@@ -62,6 +58,13 @@ public:
 
 	// will this download manager handle this request?
 	virtual bool willHandle(HTTPHeader *requestheader, HTTPHeader *docheader);
+
+	// download the body for the given request
+	virtual int in(DataBuffer *d, Socket *sock, Socket *peersock,
+		HTTPHeader *requestheader, HTTPHeader *docheader, bool wantall, int *headersent, bool *toobig) = 0;
+
+	// send a download link to the client (the actual link, and the clean "display" version of the link)
+	virtual void sendLink(Socket &peersock, String &linkurl, String &prettyurl);
 
 private:
 	// regular expression for matching supported user agents

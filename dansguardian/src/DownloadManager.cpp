@@ -38,6 +38,7 @@
 // GLOBALS
 
 extern bool is_daemonised;
+extern OptionContainer o;
 
 extern dmcreate_t defaultdmcreate;
 
@@ -67,26 +68,34 @@ int DMPlugin::init(void* args)
 		// compile regex for matching supported user agents
 		String r = cv["useragentregexp"];
 		if (r.length() > 0) {
-	#ifdef DGDEBUG
+#ifdef DGDEBUG
 			std::cout<<"useragent regexp: "<<r<<std::endl;
-	#endif
+#endif
 			ua_match.comp(r.toCharArray());
 		} else {
 			// no useragent regex? then default to .*
-	#ifdef DGDEBUG
+#ifdef DGDEBUG
 			std::cout<<"no useragent regular expression; defaulting to .*"<<std::endl;
-	#endif
+#endif
 			alwaysmatchua = true;
 		}
 		if (!readStandardLists())
 			return -1;
-
 	}
 #ifdef DGDEBUG
 	else
 		std::cout<<"Fallback DM plugin; no matching options loaded"<<std::endl;
 #endif
 	return 0;	
+}
+
+// default method for sending the client a download link
+void DMPlugin::sendLink(Socket &peersock, String &linkurl, String &prettyurl)
+{
+	// 1220 "<p>Scan complete.</p><p>Click here to download: "
+	String message = o.language_list.getTranslation(1220);
+	message += "<a href=\"" + linkurl + "\">" + prettyurl + "</a></p></body></html>\n";
+	peersock.writeString(message.toCharArray());
 }
 
 // default method for deciding whether we will handle a request
