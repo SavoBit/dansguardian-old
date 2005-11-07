@@ -246,7 +246,7 @@ unsigned int ConnectionHandler::sendFile(Socket * peerconn, String & filename, S
 
 	unsigned int filesize = lseek(fd, 0, SEEK_END);
 	lseek(fd, 0, SEEK_SET);
-	String message = "HTTP/1.0 200 OK\nContent-Type: " + filemime + "\nContent-Length: " + String((signed) filesize);
+	String message = "HTTP/1.0 200 OK\nContent-Type: " + filemime + "\nContent-Length: " + String(filesize);
 	if (filedis.length() > 0) {
 		message += "\nContent-disposition: attachement; filename=" + filedis;
 	}
@@ -514,6 +514,36 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		}
 #endif
 
+		if (isscanbypass) {
+			//we need to decode the URL and send the temp file with the
+			//correct header to the client then delete the temp file
+			String tempfilename = url.after("GSBYPASS=").after("&N=");
+			String tempfilemime = tempfilename.after("&M=");
+			String tempfiledis = tempfilemime.after("&D=");
+			String rtype = header.requestType();
+			tempfilemime = tempfilemime.before("&D=");
+			tempfilename = o.download_dir + "/tf" + tempfilename.before("&M=");
+			try {
+				docsize = sendFile(&peerconn, tempfilename, tempfilemime, tempfiledis);
+
+				header.chopScanBypass(url);
+				url = header.url();
+				//urld = header.decode(url);  // unneeded really
+
+				doLog(clientuser, clientip, url, header.port, exceptionreason,
+					rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
+					cachehit, 200, mimetype, wasinfected, wasscanned, 0);
+
+				if (o.delete_downloaded_temp_files == 1) {
+					unlink(tempfilename.toCharArray());
+				}
+			}
+			catch(exception & e) {
+			}
+			proxysock.close();  // close connection to proxy
+			return;  // connection dealt with so exit
+		}
+
 		// being a banned user/IP overrides the fact that a site may be in the exception lists
 		if (!(isbanneduser || isbannedip)) {
 			if ((o.fg[filtergroup]->group_mode == 2)) {	// admin user
@@ -553,36 +583,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 		std::cout << "extracted url:" << urld << std::endl;
 #endif
-
-		if (isscanbypass) {
-			//we need to decode the URL and send the temp file with the
-			//correct header to the client then delete the temp file
-			String tempfilename = url.after("GSBYPASS=").after("&N=");
-			String tempfilemime = tempfilename.after("&M=");
-			String tempfiledis = tempfilemime.after("&D=");
-			String rtype = header.requestType();
-			tempfilemime = tempfilemime.before("&D=");
-			tempfilename = o.download_dir + "/tf" + tempfilename.before("&M=");
-			try {
-				docsize = sendFile(&peerconn, tempfilename, tempfilemime, tempfiledis);
-
-				header.chopScanBypass(url);
-				url = header.url();
-				//urld = header.decode(url);  // unneeded really
-
-				doLog(clientuser, clientip, url, header.port, exceptionreason,
-					rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
-					cachehit, 200, mimetype, wasinfected, wasscanned, 0);
-
-				if (o.delete_downloaded_temp_files == 1) {
-					unlink(tempfilename.toCharArray());
-				}
-			}
-			catch(exception & e) {
-			}
-			proxysock.close();  // close connection to proxy
-			return;  // connection dealt with so exit
-		}
 
 		// don't run scanTest on exceptions if contentscanexceptions is off
 		runav = ((*o.fg[filtergroup]).disable_content_scan != 1) && !(isexception && !o.content_scan_exceptions);
@@ -1009,11 +1009,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					sendurl = sendurl + "?GSBYPASS=" + hashed + "&N=";
 				}
 				sendurl += tempfilename + "&M=" + tempfilemime + "&D=" + tempfiledis;
-				String message = o.language_list.getTranslation(1220);
-				message += " <a href=\"" + sendurl + "\">" + url + "</a><P></BODY></HTML>\r\n";
-				// 1220 "Scan complete.<P>Click here to download:"
-
-				peerconn.writeString(message.toCharArray());
+				docbody.dm_plugin->sendLink(peerconn, sendurl, url);
 			} else {
 #ifdef DGDEBUG
 				std::cout << "sending body to client" << std::endl;
