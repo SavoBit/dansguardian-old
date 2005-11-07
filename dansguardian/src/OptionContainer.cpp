@@ -231,16 +231,16 @@ bool OptionContainer::read(const char *filename, int type)
 			return false;
 		}		// check its a reasonable value
 		max_content_filter_size = findoptionI("maxcontentfiltersize") * 1024;
-		if (!realitycheck(String((signed) max_content_filter_size), 1, 8, "maxcontentfiltersize")) {
+		if (!realitycheck(String(max_content_filter_size), 1, 8, "maxcontentfiltersize")) {
 			return false;
 		}		// check its a reasonable value
 		max_content_ramcache_scan_size = findoptionI("maxcontentramcachescansize") * 1024;
-		if (!realitycheck(String((signed) max_content_ramcache_scan_size), 1, 8, "maxcontentramcachescansize")) {
+		if (!realitycheck(String(max_content_ramcache_scan_size), 1, 8, "maxcontentramcachescansize")) {
 			return false;
 		}
 
 		max_content_filecache_scan_size = findoptionI("maxcontentfilecachescansize") * 1024;
-		if (!realitycheck(String((signed) max_content_filecache_scan_size), 1, 8, "maxcontentfilecachescansize")) {
+		if (!realitycheck(String(max_content_filecache_scan_size), 1, 8, "maxcontentfilecachescansize")) {
 			return false;
 		}
 		if (max_content_ramcache_scan_size == 0) {
