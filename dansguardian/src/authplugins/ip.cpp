@@ -244,6 +244,9 @@ int ipinstance::readIPMelangeList(const char *filename) {
 		if (!input.getline(buffer, sizeof( buffer ))) {
 			break;
 		}
+		// ignore comments
+		if (buffer[0] == '#')
+			continue;
 		line = buffer;
 		// split into key & value
 		if (line.contains("=")) {
