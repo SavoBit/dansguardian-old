@@ -20,3 +20,11 @@ useragentregexp = 'mozilla'
 # a request must match both lists.
 #managedmimetypelist = '@DGCONFDIR@/lists/downloadmanagers/managedmimetypes'
 #managedextensionlist = '@DGCONFDIR@/lists/downloadmanagers/managedextensions'
+
+# HTML/JavaScript Template
+# The contents of this file determine what is presented to the user during
+# and after downloading/scanning. It is essentially an HTML file, but must
+# define certain JavaScript functions -  called at various stages during
+# the process - allowing the page to be modified to reflect current progress.
+# This option generates a path of the form <languagedir>/<language>/<template>
+template = 'fancydmtemplate.html'
