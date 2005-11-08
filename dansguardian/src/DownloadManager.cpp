@@ -150,7 +150,7 @@ bool DMPlugin::willHandle(HTTPHeader *requestheader, HTTPHeader *docheader)
 		std::cout<<"extension: "<<extension<<std::endl;
 	#endif
 		// check the extension list
-		if (extension.contains(".") && (extensionlist.findEndsWith(extension.toCharArray()) == NULL))
+		if (!extension.contains(".") || (extensionlist.findEndsWith(extension.toCharArray()) == NULL))
 				return false;
 	}
 
