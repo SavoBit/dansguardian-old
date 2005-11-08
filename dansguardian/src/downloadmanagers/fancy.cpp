@@ -213,7 +213,6 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 					peersock->writeString(jsmessage.toCharArray());
 					// send text only version for non-JS-enabled browsers.
 					percentcomplete = bytesgot/(expectedsize/100);
-					std::cout<<"percentcomplete: "<<percentcomplete<<" bytesgot: "<<bytesgot<<" expectedsize: "<<expectedsize<<std::endl;
 					eta = (expectedsize-bytesgot)/bytessec;
 					// checkme: translation?
 					message = "<noscript><p>" + String(percentcomplete) + "%, ETA " + String(eta) + " sec, "
