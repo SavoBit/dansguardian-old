@@ -16,7 +16,7 @@
 "400","Combinaci&oacute;n de frases no permitida: "
 "401","Combinaci&oacute;n de frases no permitida."
 "402","L&iacute;mite de ponderaci&oacute;n de frases de "
-"403", L&iacute;mite de ponderaci&oacute;n de frases excedido"
+"403","L&iacute;mite de ponderaci&oacute;n de frases excedido"
 
 "500","Sitio no permitido: "
 "501","URL no permitida: "
@@ -49,5 +49,5 @@
 
 "1200","Please wait - downloading to be scanned..."
 "1210","Download Complete.  Starting scan..."
-"1220","Scan complete.<P>Click here to download:"
+"1220","Scan complete.</p><p>Click here to download:"
 "1230","File no longer available"

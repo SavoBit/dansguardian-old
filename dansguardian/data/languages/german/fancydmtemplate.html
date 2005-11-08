@@ -1,0 +1,94 @@
+<html>
+	<head>
+	<title>Downloading -FILENAME- (-FILESIZE- bytes)</title>
+	<script	language='javascript'>
+	<!--
+		function progressupdate(got, speed) {
+			var sofar = (got/-FILESIZE-)*16;
+			for (var i = 1; i <=sofar; i++)
+				document.getElementById('progress'+i).style.backgroundColor = 'blue';
+			var msg = Math.round((got/-FILESIZE-)*100)+"%, ETA "+Math.round((-FILESIZE--got)/speed)+" sec, "+speed+" bytes/sec, total downloaded "+got+" bytes";
+			document.statsform.stats.value = msg;
+			document.statsform.stats.size = msg.length;
+		}
+		function nowscanning() {
+			for (var i = 1; i <=16; i++)
+				document.getElementById('progress'+i).style.backgroundColor = 'blue';
+			var msg = "Download complete! Now scanning...";
+			document.statsform.stats.value = msg;
+			document.statsform.stats.size = msg.length;
+		}
+		function downloadlink(rawlink, prettylink) {
+			var msg = "File scanned";
+			document.statsform.stats.value = msg;
+			document.statsform.stats.size = msg.length;
+			document.write("<center><a href='"+rawlink+"'>"+prettylink+"</a></center></body></html>");
+		}
+		//-->
+	</script>
+	</head>
+<body>
+
+<center><b>Please send translations for non-English versions of this page to the developers!</b></center>
+
+<script language='javascript'>
+<!--
+document.write(unescape("\
+<table align='center'><tr><td>\
+<div style='font-size:8pt;padding:2px;border:solid black 1px'>\
+<span id='progress1'>%26nbsp; %26nbsp;</span> \
+<span id='progress2'>%26nbsp; %26nbsp;</span> \
+<span id='progress3'>%26nbsp; %26nbsp;</span> \
+<span id='progress4'>%26nbsp; %26nbsp;</span> \
+<span id='progress5'>%26nbsp; %26nbsp;</span> \
+<span id='progress6'>%26nbsp; %26nbsp;</span> \
+<span id='progress7'>%26nbsp; %26nbsp;</span> \
+<span id='progress8'>%26nbsp; %26nbsp;</span> \
+<span id='progress9'>%26nbsp; %26nbsp;</span> \
+<span id='progress10'>%26nbsp; %26nbsp;</span> \
+<span id='progress11'>%26nbsp; %26nbsp;</span> \
+<span id='progress12'>%26nbsp; %26nbsp;</span> \
+<span id='progress13'>%26nbsp; %26nbsp;</span> \
+<span id='progress14'>%26nbsp; %26nbsp;</span> \
+<span id='progress15'>%26nbsp; %26nbsp;</span> \
+<span id='progress16'>%26nbsp; %26nbsp;</span> \
+</div>\
+</td></tr></table>\
+<center><form name='statsform'><input type='text' name='stats' value='' readonly=true></input></form></center>"));
+//-->
+</script>
+
+<!--
+The available variables are as follows:
+- FILENAME- gives the name of the file being downloaded
+- FILESIZE- gives the size of the file in bytes
+
+You need to remove the space between the - and the variable to use them
+in your HTML.  They are there above so extra processing is not required.
+
+The following JavaScript functions must be defined:
+
+progressupdate(got, speed)
+	This is called when the page is initially displayed (i.e. after
+	initialtrickledelay has passed), and periodically afterwards to
+	update progress (once every trickledelay seconds).
+	Parameters:
+	got - how much of the file we have downloaded, in bytes.
+	speed - current estimate of download speed, in bytes per second.
+
+nowscanning()
+	This is called once downloading is complete, and scanning has
+	begin.
+
+downloadlink(rawlink, prettylink)
+	This is called after scanning has completed, and the file is
+	ready to be sent to the user.
+	Parameters:
+	rawlink - the URL from which the scanned file can be grabbed
+	prettylink - the original URL which triggered the fancy download manager
+
+Please note that the fancy download manager also outputs content contained in
+<noscript> tags, for browsers which disable or do not support javascript. If you
+customise this template, you may wish to test its behaviour and appearance in
+such circumstances.
+--!>
