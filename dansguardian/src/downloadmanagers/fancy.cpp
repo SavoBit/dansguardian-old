@@ -90,7 +90,13 @@ int fancydm::init(void* args)
 // call template's downloadlink JavaScript function
 void fancydm::sendLink(Socket &peersock, String &linkurl, String &prettyurl)
 {
-	String mess = "<script language=\"javascript\">downloadlink(\""+linkurl+"\",\""+prettyurl+"\");</script>\n";
+	String mess = "<script language='javascript'>\n<!--\ndownloadlink(\""+linkurl+"\",\""+prettyurl+"\");\n//-->\n</script>\n";
+	peersock.writeString(mess.toCharArray());
+	// send text-only version for non-JS-enabled browsers
+	// 1220 "Scan complete.</p><p>Click here to download: "
+	mess = "<noscript><p>";
+	mess += o.language_list.getTranslation(1220);
+	mess += "<a href=\"" + linkurl + "\">" + prettyurl + "</a></p></noscript></body></html>\n";
 	peersock.writeString(mess.toCharArray());
 }
 
@@ -118,6 +124,8 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	unsigned int expectedsize = docheader->contentLength();
 	unsigned int bytessec = 0;
 	unsigned int bytesgot = 0;
+	int percentcomplete = 0;
+	unsigned int eta = 0;
 	int timeelapsed = 0;
 
 	bool initialsent = false;
@@ -187,6 +195,12 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 							peersock->writeString("\n");
 						i++;
 					}
+					// send please wait message for non-JS-enabled browsers
+					// 1200 "Please wait - downloading to be scanned..."
+					message = "<noscript><p>";
+					message += o.language_list.getTranslation(1200);
+					message += "</p></noscript>\n";
+					peersock->writeString(message.toCharArray());
 					(*headersent) = 2;
 				}
 #ifdef DGDEBUG
@@ -195,8 +209,16 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 				message = "Downloading status: ";
 				if (expectedsize > 0) {
 					// Output a call to template's JavaScript progressupdate function
-					jsmessage = "<script language='javascript'>progressupdate(" + String(bytesgot) + "," + String(bytessec) + ");</script>";
+					jsmessage = "<script language='javascript'>\n<!--\nprogressupdate(" + String(bytesgot) + "," + String(bytessec) + ");\n//-->\n</script>";
 					peersock->writeString(jsmessage.toCharArray());
+					// send text only version for non-JS-enabled browsers.
+					percentcomplete = bytesgot/(expectedsize/100);
+					std::cout<<"percentcomplete: "<<percentcomplete<<" bytesgot: "<<bytesgot<<" expectedsize: "<<expectedsize<<std::endl;
+					eta = (expectedsize-bytesgot)/bytessec;
+					// checkme: translation?
+					message = "<noscript><p>" + String(percentcomplete) + "%, ETA " + String(eta) + " sec, "
+						+ String(bytessec) + " bytes/sec, total downloaded " + String(bytesgot) + "</p></noscript>\n";
+					peersock->writeString(message.toCharArray());
 				}
 				peersock->writeString("<!-- force flush -->\r\n");
 			}
@@ -314,7 +336,13 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 		}
 
 		// Output a call to template's JavaScript nowscanning function
-		peersock->writeString("<script language='javascript'>nowscanning();</script>\r\n");
+		peersock->writeString("<script language='javascript'>\n<!--\nnowscanning();\n//-->\n</script>\n");
+		// send text-only version
+		// 1210 "Download Complete.  Starting scan..."
+		message = "<noscript><p>";
+		message += o.language_list.getTranslation(1210);
+		message += "</p></noscript>\n";
+		peersock->writeString(message.toCharArray());
 		(*d).preservetemp = true;
 		(*d).dontsendbody = true;
 	}
