@@ -33,6 +33,10 @@
 
 extern OptionContainer o;
 
+#ifdef __PCRE
+extern RegExp absurl_re, relurl_re;
+#endif
+
 
 // DECLARATIONS
 
@@ -41,12 +45,14 @@ extern OptionContainer o;
 // operator so that the STL sort algorithm can be applied to lists of these.
 class listent {
 public:
-	listent(const int& c, const int& w) {
+	listent(const int& c, const int& w, String& s) {
 		weight = w;
 		cat = c;
+		string = s;
 	};
 	int cat;
 	int weight;
+	String string;
 	int operator < (const listent &a) const {
 		// sort in descending order of score
 		return weight > a.weight ? 1 : 0;
@@ -63,7 +69,7 @@ NaughtyFilter::NaughtyFilter()
 }
 
 // check the given document body for banned, weighted, and exception phrases (and PICS, and regexes, &c.)
-void NaughtyFilter::checkme(DataBuffer * body)
+void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 {
 	int bodylen = (*body).buffer_length;
 	char *rawbody = (*body).data;
@@ -256,7 +262,6 @@ void NaughtyFilter::checkme(DataBuffer * body)
 			return;
 		}
 
-
 		if ((*o.fg[filtergroup]).enable_PICS == 1) {
 			checkPICS(bodylc, bodylen);
 			if (isItNaughty) {
@@ -266,7 +271,7 @@ void NaughtyFilter::checkme(DataBuffer * body)
 		}
 
 		if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2) {
-			checkphrase(bodylc, bodylen);  // check raw
+			checkphrase(bodylc, bodylen, &url, &domain);  // check raw
 			if (isItNaughty || isException) {
 				delete[]bodylc;
 				return;  // Well there is no point in continuing is there?
@@ -310,47 +315,220 @@ void NaughtyFilter::checkme(DataBuffer * body)
 		checkphrase(bodynohtml, bodynohtmllen);
 	}
 	catch(exception & e) {
-		std::cout<<"BAD!"<<e.what()<<std::endl;
+#ifdef DGDEBUG
+		std::cerr<<"NaughtyFilter caught an exception: "<<e.what()<<std::endl;
+#endif
 	}
 	delete[]bodynohtml;
 	delete[]bodylc;
 }
 
 // check the phrase lists
-void NaughtyFilter::checkphrase(char *file, int l)
+void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 {
-	std::string bannedphrase = "";
-	std::string weightedphrase = "";
-	std::string exceptionphrase = "";
 	int weighting = 0;
 	int cat;
+	std::string weightedphrase = "";
+	bool isfound, wasbefore, catfound;
+	
+	// checkme: translate this?
+	String currcat("Embedded URLs");
+
+	// found categories list & reusable iterators
+	std::deque<listent> listcategories;
+	std::deque<listent>::iterator cattop = listcategories.begin();
+	std::deque<listent>::iterator catcurrent;
+
+	// check for embedded references to banned sites/URLs.
+	// have regexes that check for URLs in pages (look for attributes (src, href, javascript location)
+	// or look for protocol strings (in which case, incl. ftp)?) and extract them.
+	// then check the extracted list against the banned site/URL lists.
+	// ADs category lists do not want to add to the possibility of a site being banned.
+	// Exception lists are not checked.
+	// Do not do full-blown category retrieval/duplicate checking; simply add the
+	// "Embedded URLs" category.
+	// Put a warning next to the option in the config file that this will take lots of CPU.
+	// Support phrase mode 1/2 distinction (duplicate sites/URLs).
+	// Have weight configurable per filter group, not globally or with a list directive - 
+	//   a weight of 0 will disable the option, effectively making this functionality per-FG itself.
+
+	// todo: if checkphrase is passed the domain & existing URL, it can create full URLs from relative ones.
+	// if a src/href URL starts with a /, append it to the domain; otherwise, append it to the existing URL.
+	// chop off anything after a ?, run through realPath, then put through the URL lists.
+
+#ifdef __PCRE
+	// if weighted phrases are enabled, and we have been passed a URL and domain, and embedded URL checking is enabled...
+	// then check for embedded URLs!
+	if (o.weighted_phrase_mode != 0 && url != NULL && o.fg[filtergroup]->embedded_url_weight > 0) {
+		listent *ourcat = NULL;
+		std::deque<String> found;
+		std::deque<String>::iterator foundtop = found.begin();
+		std::deque<String>::iterator foundcurrent;
+		// we don't want any parameters on the end of the current URL, since we append to it directly
+		// when forming absolute URLs from relative ones. we do want a / on the end, too.
+		String currurl(*url);
+		if (currurl.contains("?"))
+			currurl = currurl.before("?");
+		if (currurl[currurl.length()-1] != '/')
+			currurl += "/";
+
+		String u;
+		char* j;
+
+		// check for absolute URLs
+		if (absurl_re.match(file)) {
+			// each match generates 2 results (because of the brackets), we're only interested in the first
+#ifdef DGDEBUG
+			std::cout << "Found " << absurl_re.numberOfMatches()/2 << " absolute URLs:" << std::endl;
+#endif
+			for (int i = 0; i < absurl_re.numberOfMatches(); i+=2) {
+				// chop off quotes
+				u = absurl_re.result(i);
+				u = u.subString(1,u.length()-2);
+#ifdef DGDEBUG
+				std::cout << u << std::endl;
+#endif
+				if ((((j = o.fg[filtergroup]->inBannedSiteList(u)) != NULL) && !(o.lm.l[o.fg[filtergroup]->banned_site_list]->lastcategory.contains("ADs")))
+					|| (((j = o.fg[filtergroup]->inBannedURLList(u)) != NULL) && !(o.lm.l[o.fg[filtergroup]->banned_url_list]->lastcategory.contains("ADs"))))
+				{
+					// duplicate checking
+					// checkme: this should really be being done *before* we search the lists.
+					// but because inBanned* methods do some cleaning up of their own, we don't know the form to check against.
+					// we actually want these cleanups do be done before passing to inBanned*/inException* - this would
+					// speed up ConnectionHandler a bit too.
+					isfound = false;
+					if (o.weighted_phrase_mode == 2) {
+						foundcurrent = foundtop;
+						while (foundcurrent != found.end()) {
+							if (*foundcurrent == j) {
+								isfound = true;
+								break;
+							}
+							foundcurrent++;
+						}
+					}
+					if (!isfound) {
+						// add the site to the found phrases list
+						if (weightedphrase.length() == 0)
+							weightedphrase = "[";
+						else
+							weightedphrase += " ";
+						weightedphrase += j;
+						if (ourcat == NULL) {
+							listcategories.push_back(listent(-1,o.fg[filtergroup]->embedded_url_weight,currcat));
+							ourcat = &(listcategories.back());
+						} else
+							ourcat->weight += o.fg[filtergroup]->embedded_url_weight;
+						if (o.weighted_phrase_mode == 2)
+							found.push_back(j);
+					}
+				}
+			}
+		}
+
+		found.clear();
+
+		// check for relative URLs
+		if (relurl_re.match(file)) {
+			// each match generates 2 results (because of the brackets), we're only interested in the first
+#ifdef DGDEBUG
+			std::cout << "Found " << relurl_re.numberOfMatches()/2 << " relative URLs:" << std::endl;
+#endif
+			for (int i = 0; i < relurl_re.numberOfMatches(); i+=2) {
+				u = relurl_re.result(i);
+				
+				// can't find a way to negate submatches in PCRE, so it is entirely possible
+				// that some absolute URLs have made their way into this list. we don't want them.
+				if (u.contains("://"))
+					continue;
+
+#ifdef DGDEBUG
+				std::cout << u << std::endl;
+#endif
+				// remove src/href & quotes
+				u = u.after("=");
+				u.removeWhiteSpace();
+				u = u.subString(1,u.length()-2);
+				
+				// create absolute URL
+				if (u[0] == '/')
+					u = (*domain) + u;
+				else
+					u = currurl + u;
+#ifdef DGDEBUG
+				std::cout << "absolute form: " << u << std::endl;
+#endif
+				if ((((j = o.fg[filtergroup]->inBannedSiteList(u)) != NULL) && !(o.lm.l[o.fg[filtergroup]->banned_site_list]->lastcategory.contains("ADs")))
+					|| (((j = o.fg[filtergroup]->inBannedURLList(u)) != NULL) && !(o.lm.l[o.fg[filtergroup]->banned_url_list]->lastcategory.contains("ADs"))))
+				{
+					// duplicate checking
+					// checkme: this should really be being done *before* we search the lists.
+					// but because inBanned* methods do some cleaning up of their own, we don't know the form to check against.
+					// we actually want these cleanups do be done before passing to inBanned*/inException* - this would
+					// speed up ConnectionHandler a bit too.
+					isfound = false;
+					if (o.weighted_phrase_mode == 2) {
+						foundcurrent = foundtop;
+						while (foundcurrent != found.end()) {
+							if (*foundcurrent == j) {
+								isfound = true;
+								break;
+							}
+							foundcurrent++;
+						}
+					}
+					if (!isfound) {
+						// add the site to the found phrases list
+						if (weightedphrase.length() == 0)
+							weightedphrase = "[";
+						else
+							weightedphrase += " ";
+						weightedphrase += j;
+						if (ourcat == NULL) {
+							listcategories.push_back(listent(-1,o.fg[filtergroup]->embedded_url_weight,currcat));
+							ourcat = &(listcategories.back());
+						} else
+							ourcat->weight += o.fg[filtergroup]->embedded_url_weight;
+						if (o.weighted_phrase_mode == 2)
+							found.push_back(j);
+					}
+				}
+			}
+		}
+		if (ourcat != NULL) {
+			weighting = ourcat->weight;
+			weightedphrase += "]";
+#ifdef DGDEBUG
+			std::cout << weightedphrase << std::endl;
+			std::cout << "score from embedded URLs: " << ourcat->weight << std::endl;
+#endif
+		}
+	}
+#endif
+
+	std::string bannedphrase = "";
+	std::string exceptionphrase = "";
+	String bannedcategory;
+	int type, index, weight;
+	bool allcmatched = true, bannedcombi = false;
+	std::string s1;
 
 	// this line here searches for phrases contained in the list - the rest of the code is all sorting
 	// through it to find the categories, weightings, types etc. of what has actually been found.
 	std::deque<unsigned int> found = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).graphSearch(file, l);
 
-	std::deque<listent> listcategories;
-	String bannedcategory;
-	int type, index, weight;
-	bool allcmatched = true, bannedcombi = false;
-	bool isfound, wasbefore, catfound;
-	std::string s1;
-	
 	// cache reusable iterators
 	std::deque<unsigned int>::iterator foundtop = found.begin();
 	std::deque<unsigned int>::iterator foundend = found.end();
 	std::deque<unsigned int>::iterator foundcurrent;
 	std::deque<unsigned int>::iterator alreadyfound;
 
-	std::deque<listent>::iterator cattop = listcategories.begin();
-	std::deque<listent>::iterator catcurrent;
-	
-	std::deque<int>::iterator combicurrent = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.begin();
-
 	// look for combinations first
 	//if banned must wait for exception later
 	std::string combifound = "";
 	std::string combisofar = "";
+
+	std::deque<int>::iterator combicurrent = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.begin();
 
 	while (combicurrent != o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.end()) {
 		index = *combicurrent;
@@ -384,8 +562,10 @@ void NaughtyFilter::checkphrase(char *file, int l)
 								}
 								catcurrent++;
 							}
-							if (!catfound)
-								listcategories.push_back(listent(cat,weight));
+							if (!catfound) {
+								currcat = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat);
+								listcategories.push_back(listent(cat,weight,currcat));
+							}
 						}
 					} else {
 						// skip past category for negatively weighted phrases
@@ -473,7 +653,7 @@ void NaughtyFilter::checkphrase(char *file, int l)
 				weight = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getWeightAt(*foundcurrent);
 				weighting += weight;
 				if (weight > 0) {
-					(*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(*foundcurrent, &cat);
+					currcat = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(*foundcurrent, &cat);
 					if (cat >= 0) {
 						//don't output duplicate categories
 						catcurrent = cattop;
@@ -487,7 +667,7 @@ void NaughtyFilter::checkphrase(char *file, int l)
 							catcurrent++;
 						}
 						if (!catfound)
-							listcategories.push_back(listent(cat,weight));
+							listcategories.push_back(listent(cat,weight,currcat));
 					}
 				}
 
@@ -570,14 +750,13 @@ void NaughtyFilter::checkphrase(char *file, int l)
 		// Weighted phrase limit exceeded.
 		// Generate category list, sorted with highest scoring first.
 		bool nonempty = false;
-		String tempcat, categories;
+		String categories;
 		std::sort(listcategories.begin(), listcategories.end());
 		std::deque<listent>::iterator k = listcategories.begin();
 		while (k != listcategories.end()) {
-			tempcat = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD((*k).cat);
-			if (tempcat.length() > 0) {
+			if (k->string.length() > 0) {
 				if (nonempty) categories += ", ";
-				categories += tempcat;
+				categories += k->string;
 				nonempty = true;
 			}
 			k++;
