@@ -49,10 +49,7 @@ public:
 	std::string whatIsNaughtyCategories;
 
 	NaughtyFilter();
-	void checkme(DataBuffer * body);
-	
-	// content regexp replacement - checkme: not implemented
-	//void contentRegExp(DataBuffer * body);
+	void checkme(DataBuffer * body, String &url, String &domain);
 	
 	// highest positive (or lowest negative) weighting out of
 	// both phrase filtering passes (smart/raw)
@@ -60,7 +57,11 @@ public:
 
 private:
 	// check the banned, weighted & exception lists
-	void checkphrase(char *file, int l);
+	// pass in both URL & domain to activate embedded URL checking
+	// (this is made optional in this manner because it's pointless
+	// trying to look for links etc. in "smart" filtering mode, i.e.
+	// after HTML has been removed.)
+	void checkphrase(char *file, int l, String *url = NULL, String *domain = NULL);
 	
 	// check PICS ratings
 	void checkPICS(char *file, int l);
