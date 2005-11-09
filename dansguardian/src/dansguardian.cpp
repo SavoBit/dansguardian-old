@@ -50,6 +50,10 @@ bool is_daemonised;
 // we want it compiled once, not every time it's used, so do so on startup
 RegExp urldecode_re;
 
+#ifdef __PCRE
+// regexes used for embedded URL extraction by NaughtyFilter
+RegExp absurl_re, relurl_re;
+#endif
 
 // DECLARATIONS
 
@@ -240,6 +244,13 @@ int main(int argc, char *argv[])
 	}
 
 	urldecode_re.comp("%[0-9a-fA-F][0-9a-fA-F]");  // regexp for url decoding
+
+#ifdef __PCRE
+	// todo: these only work with PCRE enabled (non-greedy matching).
+	// change them, or make them a feature for which you need PCRE?
+	absurl_re.comp("[\"'](http|ftp)://.*?[\"']");  // find absolute URLs in quotes
+	relurl_re.comp("(href|src)\\s*=\\s*[\"'].*?[\"']");  // find relative URLs in quotes
+#endif
 
 	// this is no longer a class, but the comment has been retained for historical reasons. PRA 03-10-2005
 	//FatController f;  // Thomas The Tank Engine
