@@ -638,6 +638,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		if (header.urlRegExp(filtergroup)) {
 			url = header.url();
 			urld = header.decode(url);
+			if (url.after("://").contains("/")) {
+				urldomain = url.after("//").before("/");
+			} else {
+				urldomain = url.after("//");
+			}
 			// if the user wants, re-check the exception site, URL and regex lists after modification.
 			// this allows you to, for example, force safe search on Google URLs, then flag the
 			// request as an exception, to prevent questionable language in returned site summaries
@@ -899,7 +904,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					waschecked = true;
 					contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
 						&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
-						&wasinfected, &wasscanned, isbypass);
+						&wasinfected, &wasscanned, isbypass, urld, urldomain);
 				}
 			}
 		}
@@ -1055,7 +1060,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	}
 	catch(exception & e) {
 #ifdef DGDEBUG
-		std::cout << "connection handler caught an exception: " << e.what() << std::endl;
+		std::cerr << "connection handler caught an exception: " << e.what() << std::endl;
 #endif
 		proxysock.close();  // close connection to proxy
 		return;
@@ -1678,7 +1683,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * header, DataBuffer * docbody, Socket * proxysock, Socket * peerconn,
 	int *headersent, bool * pausedtoobig, int *docsize, NaughtyFilter * checkme,
 	bool runav, bool wasclean, bool cachehit, int filtergroup, std::deque<bool> *sendtoscanner,
-	std::string * clientuser, std::string * clientip, bool * wasinfected, bool * wasscanned, bool isbypass)
+	std::string * clientuser, std::string * clientip, bool * wasinfected, bool * wasscanned, bool isbypass, String &url, String &domain)
 {
 	proxysock->checkForInput(120);
 	if (docheader->isCompressed()) {
@@ -1791,7 +1796,7 @@ void ConnectionHandler::contentFilter(HTTPHeader * docheader, HTTPHeader * heade
 #endif
 		if (!checkme->isItNaughty && !checkme->isException && !isbypass && !docheader->authRequired()) {
 			if (dblen <= o.max_content_filter_size) {
-				checkme->checkme(docbody);  // content filtering
+				checkme->checkme(docbody, url, domain);  // content filtering
 			}
 #ifdef DGDEBUG
 			else {
