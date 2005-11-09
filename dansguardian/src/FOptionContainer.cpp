@@ -232,6 +232,11 @@ bool FOptionContainer::read(const char *filename)
 
 		if (group_mode == 1) {
 
+			embedded_url_weight = findoptionI("embeddedurlweight");
+#ifdef DGDEBUG
+			std::cout << "Embedded URL Weight: " << embedded_url_weight << std::endl;
+#endif
+
 			// the dansguardian.conf and pics files get amalgamated into one
 			// deque.  They are only seperate files for clarity.
 

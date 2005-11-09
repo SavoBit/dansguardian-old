@@ -47,6 +47,7 @@ public:
 	int disable_content_scan;
 	int weighted_phrase_mode;
 	int group_mode;
+	int embedded_url_weight;
 	int naughtyness_limit;
 	int createlistcachefiles;
 	int enable_PICS;
