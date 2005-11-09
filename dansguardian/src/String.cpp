@@ -261,8 +261,7 @@ String operator+(const String & lhs, const String & s)
 }
 
 // index operator
-char String::operator [] (int i)
-const // checkme: er... what's this const doing here?
+char String::operator [] (int i) const
 {
 	return (data[i]);
 }
