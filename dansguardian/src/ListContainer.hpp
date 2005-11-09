@@ -49,8 +49,8 @@ public:
 	int exceptionpfiledate;
 	int weightedpfiledate;
 	String sourcefile;  // used for non-phrase lists only
-	String category;  // used for phrase lists only
-	String lastcategory;  // used for phrase lists only
+	String category;
+	String lastcategory;
 	std::deque<unsigned int> morelists;  // has to be non private as reg exp compiler needs to access these
 
 	ListContainer();
@@ -115,11 +115,13 @@ private:
 	std::deque<int > weight;
 	std::deque<int > itemtype;  // 0=banned, 1=weighted, -1=exception
 	int force_quick_search;
-	//time-limited lists
+	
+	//time-limited lists - only items (sites, URLs), not phrases
 	unsigned int sthour, stmin, endhour, endmin;
 	String days, timetag;
 	bool istimelimited;
-	//categorised lists
+
+	//categorised lists - both phrases & items
 	std::deque<String > listcategory;
 	std::deque<int > categoryindex;
 
