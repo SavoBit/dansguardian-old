@@ -364,20 +364,13 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 		std::deque<String> found;
 		std::deque<String>::iterator foundtop = found.begin();
 		std::deque<String>::iterator foundcurrent;
-		// we don't want any parameters on the end of the current URL, since we append to it directly
-		// when forming absolute URLs from relative ones. we do want a / on the end, too.
-		String currurl(*url);
-		if (currurl.contains("?"))
-			currurl = currurl.before("?");
-		if (currurl[currurl.length()-1] != '/')
-			currurl += "/";
 
 		String u;
 		char* j;
 
 		// check for absolute URLs
 		if (absurl_re.match(file)) {
-			// each match generates 2 results (because of the brackets), we're only interested in the first
+			// each match generates 2 results (because of the brackets in the regex), we're only interested in the first
 #ifdef DGDEBUG
 			std::cout << "Found " << absurl_re.numberOfMatches()/2 << " absolute URLs:" << std::endl;
 #endif
@@ -430,7 +423,15 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 
 		// check for relative URLs
 		if (relurl_re.match(file)) {
-			// each match generates 2 results (because of the brackets), we're only interested in the first
+			// we don't want any parameters on the end of the current URL, since we append to it directly
+			// when forming absolute URLs from relative ones. we do want a / on the end, too.
+			String currurl(*url);
+			if (currurl.contains("?"))
+				currurl = currurl.before("?");
+			if (currurl[currurl.length()-1] != '/')
+				currurl += "/";
+
+			// each match generates 2 results (because of the brackets in the regex), we're only interested in the first
 #ifdef DGDEBUG
 			std::cout << "Found " << relurl_re.numberOfMatches()/2 << " relative URLs:" << std::endl;
 #endif
