@@ -45,6 +45,19 @@ urlregexplist = '@DGCONFDIR@/lists/urlregexplist'
 # 50 is for young children,  100 for old children,  160 for young adults.
 naughtynesslimit = 50
 
+# Embedded URL weighting
+# When set to something greater than zero, this option causes URLs embedded within a
+# page's HTML (from links, image tags, etc.) to be extracted and checked against the
+# bannedsitelist and bannedurllist. Each link to a banned page causes the amount set
+# here to be added to the page's weighting.
+# The behaviour of this option with regards to multiple occurrences of a site/URL is
+# affected by the weightedphrasemode setting.
+#
+# Set to 0 to disable.
+# Defaults to 0.
+# WARNING: This option is highly CPU intensive!
+embeddedurlweight = 0
+
 # Enable PICS rating support
 #
 # Defaults to disabled
