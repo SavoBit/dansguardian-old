@@ -50,10 +50,15 @@ AuthPlugin *proxycreate(ConfigVar & definition)
 // proxy auth header username extraction
 int proxyinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string)
 {
+	// don't match for non-basic auth types
+	String t = h.getAuthType();
+	t.toLower();
+	if (t != "basic")
+		return DGAUTH_NOMATCH;
 	// extract username
 	string = h.getAuthData();
 	if (string.length() > 0) {
-		string = string.substr(0,string.find_first_of(':'));
+		string = string.substr(0, string.find_first_of(':'));
 		fg = determineGroup(string);
 		if (fg >= 0)
 			return DGAUTH_OK;
