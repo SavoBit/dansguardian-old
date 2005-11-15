@@ -52,7 +52,7 @@ public:
 	// network communication funcs
 
 	void setTimeout(int t);
-	void in(Socket *sock);
+	void in(Socket *sock, bool allowpersistent = false);
 	void out(Socket *sock, int sendflag) throw(exception);
 	
 	// header value and type checks
@@ -72,15 +72,18 @@ public:
 	std::string getXForwardedForIP();
 	// check HTTP message code to see if it's a redirect
 	bool isRedirection();
-	std::string getAuthUser();
 	// see if content-type is something other than "identity"
 	bool isCompressed();
 	String contentEncoding();
+	// grab the contents of Proxy-Authorization header
+	// returns base64-decoding of the chunk of data after the auth type string
+	std::string getAuthData();
 
 	// detailed value/type checks
 
 	bool malformedURL(String url);
 	bool isPostUpload();
+	String getAuthType();
 	String url();
 
 	// header modifications
@@ -92,6 +95,8 @@ public:
 	// regexp search and replace
 	// urlRegExp Code originally from from Ton Gorter 2004
 	bool urlRegExp(int filtergroup);
+	// make a connection persistent
+	void makePersistent();
 
 	// do URL decoding (%xx) on string
 	String decode(String s);
@@ -115,11 +120,7 @@ private:
 	int timeout;
 
 	// check & fix headers from servers that don't obey standards
-	void checkheader();
-
-	// grab the contents of Proxy-Authorization header
-	// returns base64-decoded un & pw if using Basic, empty string if otherwise
-	String getAuth();
+	void checkheader(bool allowpersistent);
 
 	// convert %xx back to original character
 	String hexToChar(String n);
