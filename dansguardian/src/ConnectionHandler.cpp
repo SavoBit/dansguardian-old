@@ -432,7 +432,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			}
 			else if (rc != DGAUTH_OK) {
 				// got some other error
-				clientuser = "-";
+				if (rc != DGAUTH_NOUSER)
+					clientuser = "-";
 				filtergroup = 0;  //default group - one day configurable?
 				if (rc < 0) {
 					if (!is_daemonised)
@@ -919,7 +920,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		}
 
 		if (o.url_cache_number > 0) {
-			if (!wasclean && !checkme.isItNaughty && (docheader.isContentType("text") || (runav && o.scan_clean_cache)) && header.requestType() == "GET") {
+			if (!wasclean && !checkme.isItNaughty
+				&& (docheader.isContentType("text") || (runav && o.scan_clean_cache))
+				&& header.requestType() == "GET" && !docheader.authRequired())
+			{
 				addToClean(urld);
 			}
 		}
