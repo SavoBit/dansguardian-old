@@ -79,6 +79,19 @@ int HTTPHeader::contentLength()
 	return 0;  // it finds the length of the POST data
 }
 
+// grab the auth type
+String HTTPHeader::getAuthType()
+{
+	String temp;
+	for (int i = 0; i < (signed) header.size(); i++) {
+		if (header[i].startsWith("Proxy-Authorization:")) {
+			temp = header[i].after(" ").before(" ");
+			return temp;
+		}
+	}
+	return "";
+}
+
 // check the request's return code to see if it's an auth required message
 bool HTTPHeader::authRequired()
 {
@@ -198,33 +211,18 @@ bool HTTPHeader::isRedirection()
 	return false;
 }
 
-// If basic authentication is enabled DG is able to decode the username
-// and password from the header - however we are only interested in the
-// username
-
-// grab the username from a decoded basic auth header
-std::string HTTPHeader::getAuthUser()
-{
-	String t = getAuth();
-	t = t.before(":");
-	t.toLower();
-	return std::string(t.toCharArray());
-}
-
-// grab the contents of the Proxy-Authorization header, and if using
-// basic auth, base64 decode the username & password.
-String HTTPHeader::getAuth()
+// grab the contents of Proxy-Authorization header
+// returns base64-decoding of the chunk of data after the auth type string
+std::string HTTPHeader::getAuthData()
 {
 	String line;
 	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("Proxy-Authorization: Basic ")
-			|| header[i].startsWith("Proxy-Authorization: basic ")) {
-			line = header[i].after("asic ");
-			line = decodeb64(line).c_str();  // its base64 MIME encoded
-			break;
+		if (header[i].startsWithLower("Proxy-Authorization:")) {
+			line = header[i].after(" ").after(" ");
+			return decodeb64(line);  // it's base64 MIME encoded
 		}
 	}
-	return line;
+	return "";
 }
 
 // do we have a non-identity content encoding? this means body is compressed
@@ -271,6 +269,26 @@ void HTTPHeader::addXForwardedFor(std::string clientip)
 {
 	std::string line = "X-Forwarded-For: " + clientip + "\r";
 	header.push_back(String(line.c_str()));
+}
+
+// set content length header to report given lenth
+void HTTPHeader::setContentLength(int newlen)
+{
+	for (int i = 0; i < (signed) header.size(); i++) {
+		if (header[i].startsWith("Content-Length:")) {
+			header[i] = "Content-Length: " + String(newlen);
+		}
+	}
+}
+
+// set the proxy-connection header to allow persistence
+void HTTPHeader::makePersistent()
+{
+	for (int i = 0; i < (signed) header.size(); i++) {
+		if (header[i].startsWith("Proxy-Connection:")) {
+			header[i] = "Proxy-Connection: Keep-Alive";
+		}
+	}
 }
 
 // return a modified accept-encoding header, based on the one supplied,
@@ -338,16 +356,6 @@ void HTTPHeader::removeEncoding(int newlen)
 #ifdef DGDEBUG
 			std::cout << "New: " << header[i] << std::endl << std::endl;
 #endif*/
-		}
-	}
-}
-
-// set content length header to report given lenth
-void HTTPHeader::setContentLength(int newlen)
-{
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("Content-Length:")) {
-			header[i] = "Content-Length: " + String(newlen);
 		}
 	}
 }
@@ -583,8 +591,7 @@ bool HTTPHeader::isPostUpload()
 }
 
 // fix bugs in certain web servers that don't obey standards
-// checkme: this could do with getting much cleverer. we need a case-insensitive startsWith.
-void HTTPHeader::checkheader()
+void HTTPHeader::checkheader(bool allowpersistent)
 {
 	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the headers
 		if (header[i].startsWithLower("Content-length:")) {
@@ -602,31 +609,21 @@ void HTTPHeader::checkheader()
 		else if (header[i].startsWithLower("Content-encoding:")) {
 			header[i] = "Content-Encoding:" + header[i].after(":");
 		}
-		/*else if (header[i].startsWith("content-encoding:")) {
-			header[i] = "Content-Encoding:" + header[i].after("content-encoding:");
-		}*/
 		else if (header[i].startsWithLower("Accept-encoding:")) {
 			header[i] = "Accept-Encoding:" + header[i].after(":");
 			header[i] = modifyEncodings(header[i]) + "\r";
 		}
-		/*else if (header[i].startsWith("Accept-Encoding:")) {
-			header[i] = modifyEncodings(header[i]) + "\r";
-		}*/
-		// Need to force HTTP/1.1 clients and servers to use non persistant connections
-		else if (header[i].startsWithLower("Connection: keep-alive")) {
-			header[i] = "Connection: Close\r";
-		}
-		/*else if (header[i].startsWith("Connection: Keep-Alive")) {
-			header[i] = "Connection: Close\r";// ditto
-		}*/
-		else if (header[i].startsWithLower("Proxy-Connection: Keep-Alive")) {
-			header[i] = "Proxy-Connection: Close\r";
-		}
-		/*else if (header[i].startsWith("Proxy-Connection: keep-alive")) {
-			header[i] = "Proxy-Connection: Close\r";
-		}*/
 		else if (header[i].startsWithLower("Proxy-authorization:")) {
 			header[i] = "Proxy-Authorization:" + header[i].after(":");
+		}
+		else if (!allowpersistent) {
+			// Need to force HTTP/1.1 clients and servers to use non persistant connections
+			if (header[i].startsWithLower("Connection: keep-alive")) {
+				header[i] = "Connection: Close\r";
+			}
+			else if (header[i].startsWithLower("Proxy-Connection: Keep-Alive")) {
+				header[i] = "Proxy-Connection: Close\r";
+			}
 		}
 #ifdef DGDEBUG
 		std::cout << header[i] << std::endl;
@@ -1125,7 +1122,7 @@ void HTTPHeader::out(Socket * sock, int sendflag) throw(exception)
 	}
 }
 
-void HTTPHeader::in(Socket * sock)
+void HTTPHeader::in(Socket * sock, bool allowpersistent)
 {
 	// the RFCs don't specify a max header line length so this should be
 	// dynamic really.  Pointed out (well reminded actually) by Daniel Robbins
@@ -1148,7 +1145,7 @@ void HTTPHeader::in(Socket * sock)
 	}
 	header.pop_back();  // remove the final blank line of a header
 
-	checkheader();  // sort out a few bits in the header
+	checkheader(allowpersistent);  // sort out a few bits in the header
 
 	int length;
 	String requestMethod = header[0].before(" ");
