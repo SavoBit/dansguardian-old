@@ -51,8 +51,9 @@ AuthPlugin *proxycreate(ConfigVar & definition)
 int proxyinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string)
 {
 	// extract username
-	string = h.getAuthUser();
+	string = h.getAuthData();
 	if (string.length() > 0) {
+		string = string.substr(string.find_first_of(':')+1);
 		fg = determineGroup(string);
 		if (fg >= 0)
 			return DGAUTH_OK;
