@@ -4,9 +4,9 @@ DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/authplugins
 
 SUBDIRS = .
 
-FLISTS = proxy.conf ident.conf ip.conf
+FLISTS = proxy.conf ident.conf ip.conf ntlm.conf
 
-EXTRA_DIST = proxy.conf ident.conf ip.conf.in
+EXTRA_DIST = proxy.conf ident.conf ip.conf.in ntlm.conf
 
 install-data-local: 
 	$(mkinstalldirs) $(DESTDIR)$(DGDATADIR) && \
