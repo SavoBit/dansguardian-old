@@ -3,7 +3,7 @@
 # 2004,2005 - Daniel Barron
 
 AC_PREREQ(2.57)
-AC_INIT(dansguardian, 2.9.1.0)
+AC_INIT(dansguardian, 2.9.2.0)
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([dgconfig.h])
 
@@ -336,6 +336,11 @@ fi],
 )
 AM_CONDITIONAL(ENABLE_KAVD, test "x$kavd" = "xtrue")
 
+dnl detecting kaspersky antivirus client
+#KAV_PATH_KAVCLIENT
+#AM_CONDITIONAL(HAVE_KAVCLIENT, test "x$kavclient_found" = "xyes")
+#kav stuff is not finished Wed 09th February 2005 - DB
+
 # asking user if they want fancy downloadmanager support
 AC_MSG_CHECKING(for fancy download manager support)
 AC_ARG_ENABLE(
@@ -357,10 +362,25 @@ fi],
 )
 AM_CONDITIONAL(ENABLE_FANCYDM, test "x$fancydm" = "xtrue")
 
-dnl detecting kaspersky antivirus client
-#KAV_PATH_KAVCLIENT
-#AM_CONDITIONAL(HAVE_KAVCLIENT, test "x$kavclient_found" = "xyes")
-#kav stuff is not finished Wed 09th February 2005 - DB
+# asking user if they want NTLM auth support
+AC_MSG_CHECKING(for NTLM support)
+AC_ARG_ENABLE(
+ntlm,
+[  --enable-ntlm=[[no]]  Enable support for the NTLM auth plugin],
+[ if test "x$enableval" = "xyes"; then
+	AC_MSG_RESULT(yes)
+	ntlm=true
+	AC_DEFINE([ENABLE_NTLM],[],[Define to enable NTLM auth plugin])
+else
+	AC_MSG_RESULT(no)
+	ntlm=false
+fi],
+[
+	AC_MSG_RESULT(no)
+	ntlm=false
+]
+)
+AM_CONDITIONAL(ENABLE_NTLM, test "x$ntlm" = "xtrue")
 
 AC_DEFINE_UNQUOTED([DG_CONFIGURE_OPTIONS], ["$ac_configure_args"], [Record configure-time options])
 

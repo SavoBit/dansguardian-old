@@ -38,6 +38,10 @@ extern authcreate_t proxycreate;
 extern authcreate_t identcreate;
 extern authcreate_t ipcreate;
 
+#ifdef __NTLM
+extern authcreate_t ntlmcreate;
+#endif
+
 // IMPLEMENTATION
 
 AuthPlugin::AuthPlugin(ConfigVar &definition)
@@ -138,6 +142,15 @@ AuthPlugin* auth_plugin_load(const char *pluginConfigPath)
 #endif
 		return ipcreate(cv);
 	}
+
+#ifdef __NTLM
+	if (plugname == "ntlm") {
+#ifdef DGDEBUG
+		std::cout << "Enabling NTLM auth plugin" << std::endl;
+#endif
+		return ntlmcreate(cv);
+	}
+#endif
 
 	if (!is_daemonised) {
 		std::cerr << "Unable to load plugin: " << pluginConfigPath << std::endl;
