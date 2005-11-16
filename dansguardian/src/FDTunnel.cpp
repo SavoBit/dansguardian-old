@@ -51,7 +51,7 @@ FDTunnel::FDTunnel()
 }
 
 // tunnel data from fdfrom to fdto (unfiltered)
-void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto)
+void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway)
 {
 	int maxfd, rc, fdfrom, fdto;
 
@@ -126,20 +126,22 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto)
 		}
 		if (FD_ISSET(fdto, &inset)) {	// fdto is ready to be read from
 
-			// since HTTP works on a simple request/response basis, with no explicit
-			// communications from the client until the response has been completed
-			// (just TCP cruft, which is of no interest to us here), tunnels only
-			// need to be one way. As soon as the client tries to send data, break
-			// the tunnel, as it will be a new request, possibly to an entirely
-			// different webserver. This is important for proper filtering when
-			// persistent connection support gets implemented. PRA 2005-11-14
+			if (!twoway) {
+				// since HTTP works on a simple request/response basis, with no explicit
+				// communications from the client until the response has been completed
+				// (just TCP cruft, which is of no interest to us here), tunnels only
+				// need to be one way. As soon as the client tries to send data, break
+				// the tunnel, as it will be a new request, possibly to an entirely
+				// different webserver. This is important for proper filtering when
+				// persistent connection support gets implemented. PRA 2005-11-14
 
 #ifdef DGDEBUG
-			std::cout << "fdto is sending data; closing tunnel. This must be a persistent connection." << std::endl;
+				std::cout << "fdto is sending data; closing tunnel. This must be a persistent connection." << std::endl;
 #endif
-			break;
+				break;
+			}
 
-			/*rc = sockto.readFromSocket(buff, sizeof(buff)-1, 0, 0, false);
+			rc = sockto.readFromSocket(buff, sizeof(buff)-1, 0, 0, false);
 
 			// read as much as is available
 			if (rc < 0) {
@@ -167,7 +169,7 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto)
 				} else {
 					break;  // should never get here
 				}
-			}*/
+			}
 		}
 	}
 }

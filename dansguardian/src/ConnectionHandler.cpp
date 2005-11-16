@@ -725,8 +725,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
 			try {
 				FDTunnel fdt;  // make a tunnel object
-				// tunnel from client to proxy and back
-				fdt.tunnel(proxysock, peerconn);  // not expected to exception
+				// tunnel from client to proxy and back - *true* two-way tunnel
+				fdt.tunnel(proxysock, peerconn, true);  // not expected to exception
 				docsize = fdt.throughput;
 				String rtype = header.requestType();
 				doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false,

@@ -43,7 +43,7 @@ public:
 	FDTunnel();
 	
 	// tunnel from fdfrom to fdto
-	void tunnel(Socket &sockfrom, Socket &sockto);
+	void tunnel(Socket &sockfrom, Socket &sockto, bool twoway = false);
 
 };
 
