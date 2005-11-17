@@ -419,9 +419,31 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 		std::string clientuser;
 		int filtergroup;
-		if (o.auth_plugin) {
-			rc = o.auth_plugin->identify(peerconn, proxysock, header, filtergroup, clientuser);
-			if (rc == DGAUTH_REDIRECT) {
+		bool authed = false;
+		for (std::deque<Plugin*>::iterator i = o.authplugins_begin; i != o.authplugins_end; i++) {
+#ifdef DGDEBUG
+			std::cout << "Querying next auth plugin..." << std::endl;
+#endif
+			rc = ((AuthPlugin*)(*i))->identify(peerconn, proxysock, header, filtergroup, clientuser);
+			if (rc == DGAUTH_OK) {
+#ifdef DGDEBUG
+				std::cout<<"Auth plugin found username & group; not querying remaining plugins"<<std::endl;
+#endif
+				authed = true;
+				break;
+			}
+			else if (rc == DGAUTH_NOUSER) {
+#ifdef DGDEBUG
+				std::cout<<"Auth plugin found username \"" << clientuser << "\" but no associated group; not querying remaining plugins"<<std::endl;
+#endif
+				filtergroup = 0;  //default group - one day configurable?
+				authed = true;
+				break;
+			}
+			else if (rc == DGAUTH_REDIRECT) {
+#ifdef DGDEBUG
+				std::cout<<"Auth plugin told us to redirect client to \"" << clientuser << "\"; not querying remaining plugins"<<std::endl;
+#endif
 				// ident plugin told us to redirect to a login page
 				proxysock.close();
 				String writestring = "HTTP/1.0 302 Redirect\nLocation: ";
@@ -430,30 +452,23 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				peerconn.writeString(writestring.toCharArray());
 				return;
 			}
-			else if (rc != DGAUTH_OK) {
-				// got some other error
-				if (rc != DGAUTH_NOUSER)
-					clientuser = "-";
-				filtergroup = 0;  //default group - one day configurable?
-				if (rc < 0) {
-					if (!is_daemonised)
-						std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
-					syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
-					proxysock.close();
-					return;
-				}
-				//checkme: can we have multiple plugins chained together; checking for bans & exceptions in modes of the returned groups?
-#ifdef DGDEBUG
-				if (rc == DGAUTH_NOMATCH) std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
-				if (rc == DGAUTH_NOUSER) std::cout<<"Auth plugin found username, but it is not recognised; not querying remaining plugins"<<std::endl;
-#endif
+			else if (rc < 0) {
+				if (!is_daemonised)
+					std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
+				syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
+				proxysock.close();
+				return;
 			}
-		} else {
 #ifdef DGDEBUG
-			std::cout << "No ident plugin loaded; using defaults" << std::endl;
+			if (rc == DGAUTH_NOMATCH) std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
+#endif
+		} 
+		if (!authed) {
+#ifdef DGDEBUG
+			std::cout << "No identity found; using defaults" << std::endl;
 #endif
 			clientuser = "-";
-			filtergroup = 0;
+			filtergroup = 0;  //default group - one day configurable?
 		}
 
 #ifdef DGDEBUG
