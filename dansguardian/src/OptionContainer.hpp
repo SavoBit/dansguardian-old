@@ -128,13 +128,15 @@ public:
 	LanguageContainer language_list;
 	ImageContainer banned_image;
 
-	AuthPlugin* auth_plugin;
 	std::deque<Plugin*> dmplugins;
 	std::deque<Plugin*> csplugins;
+	std::deque<Plugin*> authplugins;
 	std::deque<Plugin*>::iterator dmplugins_begin;
 	std::deque<Plugin*>::iterator dmplugins_end;
 	std::deque<Plugin*>::iterator csplugins_begin;
 	std::deque<Plugin*>::iterator csplugins_end;
+	std::deque<Plugin*>::iterator authplugins_begin;
+	std::deque<Plugin*>::iterator authplugins_end;
 
 	ListManager lm;
 	FOptionContainer **fg;
@@ -164,6 +166,7 @@ private:
 	String conffilename;
 
 	bool loadDMPlugins();
+	bool loadAuthPlugins();
 
 	bool precompileregexps();
 	int findoptionI(const char *option);

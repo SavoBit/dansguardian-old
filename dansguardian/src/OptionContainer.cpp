@@ -42,7 +42,7 @@ extern bool is_daemonised;
 
 // IMPLEMENTATION
 
-OptionContainer::OptionContainer():numfg(0), auth_plugin(NULL)
+OptionContainer::OptionContainer():numfg(0)
 {
 }
 
@@ -51,9 +51,7 @@ OptionContainer::~OptionContainer()
 	deleteFilterGroups();
 	deletePlugins(dmplugins);
 	deletePlugins(csplugins);
-	if (auth_plugin != NULL)
-		auth_plugin->quit();
-	delete auth_plugin;
+	deletePlugins(authplugins);
 }
 
 void OptionContainer::reset()
@@ -61,9 +59,7 @@ void OptionContainer::reset()
 	deleteFilterGroups();
 	deletePlugins(dmplugins);
 	deletePlugins(csplugins);
-	if (auth_plugin != NULL)
-		auth_plugin->quit();
-	delete auth_plugin;
+	deletePlugins(authplugins);
 	exception_ip_list.reset();
 	banned_ip_list.reset();
 	html_template.reset();
@@ -416,61 +412,6 @@ bool OptionContainer::read(const char *filename, int type)
 		} else {
 			logconerror = 0;
 		}
-		
-		/*if (findoptionS("usernameidmethodproxyauth") == "on") {
-			uim_proxyauth = 1;
-		} else {
-			uim_proxyauth = 0;
-		}
-		if (findoptionS("usernameidmethodntlm") == "on") {
-			uim_ntlm = 1;
-		} else {
-			uim_ntlm = 0;
-		}
-		if (findoptionS("usernameidmethodident") == "on") {
-			uim_ident = 1;
-		} else {
-			uim_ident = 0;
-		}*/
-
-		// load the Auth plugin
-		String amethod = findoptionS("authplugin");
-		if (amethod.length() > 0) {
-			auth_plugin = auth_plugin_load(amethod.toCharArray());
-			if (auth_plugin == NULL) {
-				if (!is_daemonised) {
-					std::cerr << "auth_plugin_load() returned NULL pointer with config file: " << amethod << std::endl;
-				}
-				syslog(LOG_ERR, "auth_plugin_load() returned NULL pointer with config file: %s", amethod.toCharArray());
-				return false;
-			}
-#ifdef DGDEBUG
-			std::cout << "Auth plugin is good" << std::endl;
-#endif
-			int rc = auth_plugin->init(NULL);
-#ifdef DGDEBUG
-			std::cout << "Auth plugin init called" << std::endl;
-#endif
-			if (rc < 0) {
-				if (!is_daemonised) {
-					std::cerr << "Auth plugin init returned error value: " << rc << std::endl;
-				}
-				syslog(LOG_ERR, "Auth plugin init returned error value: %d", rc);
-				return false;
-			}
-			else if (rc > 0) {
-				if (!is_daemonised) {
-					std::cerr << "Auth plugin init returned warning value: " << rc << std::endl;
-				}
-				syslog(LOG_ERR, "Auth plugin init returned warning value: %d", rc);
-			}
-
-			/*if (findoptionS("preemptivebanning") == "off") {
-				preemptive_banning = 0;
-			} else {
-				preemptive_banning = 1;
-			}*/
-		}
 
 		if (findoptionS("reverseaddresslookups") == "on") {
 			reverse_lookups = 1;
@@ -509,7 +450,7 @@ bool OptionContainer::read(const char *filename, int type)
 			if (!is_daemonised) {
 				std::cerr << "filtergroups too small" << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "filtergroups too small");
+			syslog(LOG_ERR, "filtergroups too small");
 			return false;
 		}
 
@@ -517,7 +458,7 @@ bool OptionContainer::read(const char *filename, int type)
 			if (!is_daemonised) {
 				std::cerr << "Error loading DM plugins" << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Error loading DM plugins");
+			syslog(LOG_ERR, "Error loading DM plugins");
 			return false;
 		}
 
@@ -525,7 +466,15 @@ bool OptionContainer::read(const char *filename, int type)
 			if (!is_daemonised) {
 				std::cerr << "Error loading CS plugins" << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Error loading CS plugins");
+			syslog(LOG_ERR, "Error loading CS plugins");
+			return false;
+		}
+		
+		if (!loadAuthPlugins()) {
+			if (!is_daemonised) {
+				std::cerr << "Error loading auth plugins" << std::endl;
+			}
+			syslog(LOG_ERR, "Error loading auth plugins");
 			return false;
 		}
 
@@ -542,8 +491,7 @@ bool OptionContainer::read(const char *filename, int type)
 			access_denied_domain.removeWhiteSpace();
 			if (access_denied_domain.contains("/")) {
 				access_denied_domain = access_denied_domain.before("/");  // access_denied_domain now contains the FQ host nom of the
-				// server that serves the accessdenied.html
-				// file
+				// server that serves the accessdenied.html file
 			}
 			if (access_denied_domain.contains(":")) {
 				access_denied_domain = access_denied_domain.before(":");  // chop off the port number if any
@@ -915,12 +863,9 @@ bool OptionContainer::loadCSPlugins()
 			return false;
 		}
 #ifdef DGDEBUG
-		std::cout << "Content scanner plugin is good" << std::endl;
+		std::cout << "Content scanner plugin is good, calling init..." << std::endl;
 #endif
 		int rc = cspp->init(NULL);
-#ifdef DGDEBUG
-		std::cout << "Content scanner plugin init called" << std::endl;
-#endif
 		if (rc < 0) {
 			if (!is_daemonised) {
 				std::cerr << "Content scanner plugin init returned error value: " << rc << std::endl;
@@ -939,5 +884,52 @@ bool OptionContainer::loadCSPlugins()
 	// cache reusable iterators
 	csplugins_begin = csplugins.begin();
 	csplugins_end = csplugins.end();
+	return true;
+}
+
+bool OptionContainer::loadAuthPlugins()
+{
+	std::deque<String > dq = findoptionM("authplugin");
+	unsigned int numplugins = dq.size();
+	if (numplugins < 1) {
+		return true;  // to have one is optional
+	}
+	String config;
+	for (unsigned int i = 0; i < numplugins; i++) {
+		config = dq[i];
+		// worth adding some input checking on config
+#ifdef DGDEBUG
+		std::cout << "loading auth plugin config: " << config << std::endl;
+#endif
+		AuthPlugin *app = auth_plugin_load(config.toCharArray());
+		if (app == NULL) {
+			if (!is_daemonised) {
+				std::cerr << "auth_plugin_load() returned NULL pointer with config file: " << config << std::endl;
+			}
+			syslog(LOG_ERR, "auth_plugin_load() returned NULL pointer with config file: %s", config.toCharArray());
+			return false;
+		}
+#ifdef DGDEBUG
+		std::cout << "Auth plugin is good, calling init..." << std::endl;
+#endif
+		int rc = app->init(NULL);
+		if (rc < 0) {
+			if (!is_daemonised) {
+				std::cerr << "Auth plugin init returned error value: " << rc << std::endl;
+			}
+			syslog(LOG_ERR, "Auth plugin init returned error value: %d", rc);
+			return false;
+		}
+		else if (rc > 0) {
+			if (!is_daemonised) {
+				std::cerr << "Auth plugin init returned warning value: " << rc << std::endl;
+			}
+			syslog(LOG_ERR, "Auth plugin init returned warning value: %d", rc);
+		}
+		authplugins.push_back(app);
+	}
+	// cache reusable iterators
+	authplugins_begin = authplugins.begin();
+	authplugins_end = authplugins.end();
 	return true;
 }
