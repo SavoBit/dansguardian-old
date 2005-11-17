@@ -906,7 +906,8 @@ std::deque<unsigned int> ListContainer::graphSearch(char *doc, int len)
 	}
 	
 	int ml;
-	int *stack = new int[1024];
+//#warning Experimental graphsearch code being used
+	int *stack = new int[63];
 	int stacksize = 0;
 	unsigned char p;
 	int pos;
@@ -922,7 +923,8 @@ std::deque<unsigned int> ListContainer::graphSearch(char *doc, int len)
 
 			// now comes the main graph search!
 			// this is basically a depth-first tree search
-			for (depth = 0;;) {
+			depth = 0;
+			while (true) {
 				// get the address of the link endpoint and the data actually stored at it
 				ppos = pos << 6;
 				p = graphdata[ppos];
@@ -941,22 +943,36 @@ std::deque<unsigned int> ListContainer::graphSearch(char *doc, int len)
 						// add the node's children (bar the first) to the stack for later examination
 						// and signal that we're moving along the current string by one.
 						depth++;
+						stacksize=0;
 						for (k = 1; k < sl; k++) {
 							stack[stacksize++] = graphdata[ppos + 4 + k];
-							stack[stacksize++] = depth;
 						}
 						// zip straight to the first child of the matched node
 						// (this is the magic that makes it depth first)
 						pos = graphdata[ppos + 4];
 						continue;
 					}
+					// if we just matched a node that has no children,
+					// we can stop searching. there should be no case in
+					// which the node was not also marked as end of phrase.
+					else break;
 				}
 
 				if (stacksize > 0) {
-					depth = stack[--stacksize];
+					// if we get here, we have discounted one branch, but
+					// we still have more branches to examine at this level.
+					// but do we ever actually need to backtrack here?
+					// after all, surely a character will only ever match
+					// one node at any given level. so perhaps *only* store
+					// a stack of children from the most recently matched node,
+					// so that this code will never initiate backtracking.
+					// the stack would then be allowed to be reduced to 63,
+					// since we only have max 64 children on a node, and
+					// we'd set stacksize to 0 before we do any adding, to
+					// effectively clear it beforehand.
 					pos = stack[--stacksize];
 					continue;
-				}	
+				}
 				// if we get here, we've discounted all branches at this depth, and the search is over.
 				break;
 			}
