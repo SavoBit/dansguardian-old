@@ -1,52 +1,52 @@
-# DansGuardian messages file in German
+# DansGuardian 2.9 messages file in German
 #
-# Translation by Thomas Jarosch
+# Translated and adapted to Unicode by Peter Vollmar
 
 "1","Zugriff verweigert"
 
-"100","Ihre IP-Adresse darf nicht surfen auf: "
-"101","Ihre IP-Adresse darf nicht surfen."
-"102","Ihr Benutzername darf nicht surfen auf: "
+"100","Ihre Arbeitsstation hat keine Erlaubnis zum Surfen auf: "
+"101","Ihre Arbeitsstation hat keine Erlaubnis zum Surfen"
+"102","Ihr Benutzername hat keine Erlaubnis zum Surfen auf: "
 
-"200","Die angeforderte URL ist ungültig."
+"200","Die angeforderte URL ist ungÃ¼ltig"
 
 "300","Verbotener Ausdruck gefunden: "
-"301","Verbotener Ausdruck gefunden."
+"301","Verbotener Ausdruck gefunden"
 
-"400","Verbotene Kombination von Ausdrücken gefunden: "
-"401","Verbotene Ausdruckkombination gefunden."
-"402","Gewichtete Ausdrucksbeschränkung von "
-"403","Gewichtete Ausdrucksbeschränkung überschritten."
+"400","Verbotene Kombination von AusdrÃ¼cken gefunden: "
+"401","Verbotene Kombination von AusdrÃ¼cken gefunden"
+"402","Gewichtete AusdrucksbeschrÃ¤nkung von "
+"403","Gewichtete AusdrucksbeschrÃ¤nkung Ã¼berschritten"
 
 "500","Verbotene Seite: "
 "501","Verbotene URL: "
-"502","Allgemeines Blocken von Seiten ist aktiv und diese Seite ist nicht auf der Liste der erlaubten Seiten"
-"503","Verbotene Regular Expression URL: "
-"504","Verbotene Regular Expression URL gefunden."
-"505","Allgemeines Blocken von IP Adressen ist aktiv und diese Adresse ist nur eine IP."
+"502","Totalsperre fÃ¼r Nur-IP-Adressen aktiv, diese Seite ist nicht auf der Erlaubt-Liste"
+"503","Aufgrund von regulÃ¤ren AusdrÃ¼cken verbotene URL: "
+"504","Aufgrund von regulÃ¤ren AusdrÃ¼cken verbotene URL gefunden"
+"505","Totalsperre fÃ¼r IP-Adressen aktiv, diese Adresse ist nur eine IP."
 
-"600","Ausnahme Client IP Übereinstimmung."
-"601","Ausnahme Client Benutzer-bereinstimmung."
-"602","Ausnahme Seiten-Übereinstimmung."
-"603","Ausnahme URL Übereinstimmung."
-"604","Ausnahme Ausdruck gefunden: "
-"605","Kombination von Ausnahmeausdrücken gefunden: "
-"606","Umgehungs-URL gefunden."
-"607","Umgehungs-Cookie gefunden."
-#606,607 by Sven Anders
+"600","Ãœbereinstimmung mit Client-IP in Ausnahmeliste"
+"601","Ãœbereinstimmung mit Client-Benutzer in Ausnahmeliste"
+"602","Ãœbereinstimmung mit Seite in Ausnahmeliste"
+"603","Ãœbereinstimmung mit URL in Ausnahmeliste"
+"604","Ausnahme-Ausdruck gefunden: "
+"605","Kombination von Ausnahme-AusdrÃ¼cken gefunden: "
+"606","Umgehungs-URL gefunden"
+"607","Umgehungs-Cookie gefunden"
 
-"700","Web upload ist verboten."
-"701","Web upload Begrenzung erreicht."
+"700","Web-Upload verboten"
+"701","Web-Upload-Schwellwert erreicht"
 
-"800","Verbotener MIME Typ: "
+"800","Verbotener MIME-Typ: "
 
 "900","Verbotene Datei-Erweiterung: "
 
-"1000","PICS Kennzeichnungsschwellwert überstiegen bei der oben genannten Seite."
+"1000","PICS-Kennzeichnungsschwellwert Ã¼berschritten"
 
 "1100","Virus or bad content detected."
+"1101","Advert blocked"
 
 "1200","Please wait - downloading to be scanned..."
 "1210","Download Complete.  Starting scan..."
-"1220","Scan complete.</p><p>Click here to download:"
+"1220","Scan complete.</p><p>Click here to download: "
 "1230","File no longer available"
