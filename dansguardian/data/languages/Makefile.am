@@ -5,7 +5,7 @@ LANGUAGES = 	czech   hebrew      turkish \
 		bulgarian      danish  indonesian  russian-1251 ukenglish \
 		chinesebig5    dutch   italian     russian-koi8-r \
 		chinesegb2312  french  lithuanian  polish       slovak \
-		german         portuguese  swedish spanish
+		german         portuguese  swedish spanish hungarian
 
 EXTRA_DIST= ReadMe
 
