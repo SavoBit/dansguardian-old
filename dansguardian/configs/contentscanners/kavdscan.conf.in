@@ -1,7 +1,7 @@
 plugname = 'kavdscan'
 
 # kaspersky unix domain socket file
-#kavdudsfile = '/tmp/kavav'
+kavdudsfile = '/var/run/aveserver'
 
 exceptionvirusmimetypelist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusmimetypelist'
 exceptionvirusextensionlist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusextensionlist'
