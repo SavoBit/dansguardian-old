@@ -33,6 +33,8 @@
 "605","Rasta fraziø kombinacija ið iðimèiø sàraðo: "
 "606","URL apëjimo iðimtis."
 "607","Slapuko apëjimo iðimtis."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 
 "700","Nusiuntimas (upload) yra uþdraustas."
 "701","Virðytas nusiuntimo (upload) limitas."

@@ -34,6 +34,8 @@
 "605","Kombinasi frase pengecualian ditemukan: "
 "606","Bypass URL cocok."
 "607","Bypass cookie cocok."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 # 606,607 by Daniel Barron - corrections welcome
 
 "700","Web upload ditolak."

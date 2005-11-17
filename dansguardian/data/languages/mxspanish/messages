@@ -34,6 +34,8 @@
 "605","Combinaci&oacute;n de frases presente en la lista de excepciones: "
 "606","Puente URL excepciones."
 "607","Puente cookie excepciones."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 # 606,607 by Daniel Barron - corrections welcome
 
 "700","No esta permitido enviar archivos a sitios en Internet."

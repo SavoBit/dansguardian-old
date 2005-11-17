@@ -32,6 +32,8 @@
 "605","Nájdená kombinacia výnimkových fráz: "
 "606","Nahradi» výnimku URL."
 "607","Nahradi» cookie výnimku."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 
 "700","Web upload je zakázaný."
 "701","Web upload limit bol prekroèený."

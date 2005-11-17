@@ -31,6 +31,8 @@
 "605","发现例外的组合短语: "
 "606","Bypass URL exception."
 "607","Bypass cookie exception."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 # 606,607 by Daniel Barron - corrections welcome
 
 "700","禁止上传文件。"

@@ -29,6 +29,8 @@
 "605","Encontrada combina&ccedil;&atilde;o de frases na lista de exce&ccedil;&otilde;es: "
 "606","Desvio tempor&aacute;rio de bloqueio (Bypass URL.)"
 "607","Desvio tempor&aacute;rio de bloqueio (Bypass cookie.)"
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 
 "700","Transfer&ecirc;ncia de arquivos para web proibida."
 "701","Limite de transfer&ecirc;ncia de arquivos para web excedido."

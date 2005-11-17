@@ -32,6 +32,8 @@
 "605","Uitzonderings combinatie van woorden gevonden: "
 "606","Bypass URL uitzonderings."
 "607","Bypass cookie uitzonderings."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 # 606,607 by Daniel Barron - corrections welcome
 
 "700","Uploaden via het web is geblokkerd."

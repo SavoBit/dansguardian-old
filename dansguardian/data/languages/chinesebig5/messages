@@ -26,6 +26,8 @@
 "605","找到組合例外片語字句："
 "606","越過URL之例外。"
 "607","越過cookie之例外。"
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 "700","禁止網路上傳。"
 "701","超過網路上傳極限。"
 "800","被禁止的MIME協定型態："

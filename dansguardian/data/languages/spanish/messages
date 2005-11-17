@@ -33,6 +33,8 @@
 "605","Combinación de frases presente en la lista de excepciones: "
 "606","Puente URL en la lista de excepciones."
 "607","Puente cookie en la lista de excepciones."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 
 "700","La subida está bloqueada."
 "701","Límite de subida excedido."

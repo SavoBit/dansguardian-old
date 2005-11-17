@@ -31,6 +31,7 @@
 "605","Combination exception phrase found: "
 "607","Bypass cookie exception."
 "608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 
 "700","Загрузка файлов запрещена."
 "701","Превышен предел загрузок."

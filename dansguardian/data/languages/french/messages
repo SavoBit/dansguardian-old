@@ -34,6 +34,8 @@ uniquement."
 "605","Combinaison de mots interdits trouvee: "
 "606","URL sans controle trouvee."
 "607","Cookie sans controle trouve."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 
 "700","L'upload WEB est interdit."
 "701","Depassement de limite d'upload Web."

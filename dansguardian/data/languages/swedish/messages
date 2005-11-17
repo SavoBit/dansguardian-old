@@ -32,6 +32,8 @@
 "605","Kombinerad undantagsfras funnen: "
 "606","Kringg&aring; URL begr&auml;nsning."
 "607","Kringg&aring; cookie begr&auml;nsning."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 
 "700","Webbuppladdning &auml;r f&ouml;rbjuden."
 "701","Storlek f&ouml;r webbuppladdning &auml;r &ouml;verskriden."

@@ -32,6 +32,8 @@
 "605","Combination exception phrase found: "
 "606","Bypass URL exception."
 "607","Bypass cookie exception."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 
 "700","Il Web-upload e' vietato."
 "701","E' stato superato il limite per il Web upload."

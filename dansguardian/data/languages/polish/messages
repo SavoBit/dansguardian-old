@@ -33,6 +33,8 @@
 "605","Znaleziono kombinacjê fraz, która pasuje do wyj±tków: "
 "606","Bypass URL wyj±tków."
 "607","Bypass cookie wyj±tków."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 # 606,607 by Daniel Barron - corrections welcome
 
 "700","Wgrywanie do sieci jest zakazane."

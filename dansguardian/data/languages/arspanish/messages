@@ -34,6 +34,8 @@
 "605","Se encontr&oacute; una excepci&oacute;n por la combinaci&oacute;n de frases: "
 "606","Bypass URL excepci&oacute;n."
 "607","Bypass cookie excepci&oacute;n."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 # 606,607 by Daniel Barron - corrections welcome
 
 "700","La subida esta bloqueada."

@@ -33,6 +33,8 @@
 "605","Kombination von Ausnahme-Ausdrücken gefunden: "
 "606","Umgehungs-URL gefunden"
 "607","Umgehungs-Cookie gefunden"
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 
 "700","Web-Upload verboten"
 "701","Web-Upload-Schwellwert erreicht"

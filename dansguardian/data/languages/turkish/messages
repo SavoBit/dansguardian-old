@@ -33,6 +33,8 @@
 "605","Combination exception phrase found: "
 "606","Bypass URL exception."
 "607","Bypass cookie exception."
+"608","Scan bypass URL exception."
+"609","Exception regular expression URL match: "
 # 606,607 by Daniel Barron - corrections welcome
 
 "700","Web üzerinden dosya gönderimi yasaklanmýþtýr."
