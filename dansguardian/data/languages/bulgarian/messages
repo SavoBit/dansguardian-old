@@ -44,8 +44,9 @@
 "1000","Нивото на категоризация на този сайт надвишава нормата на Платформата за Избор на Интернет Съдържание."
 
 "1100","Virus or bad content detected."
+"1101","Advert blocked"
 
 "1200","Please wait - downloading to be scanned..."
 "1210","Download Complete.  Starting scan..."
-"1220","Scan complete.</p><p>Click here to download:"
+"1220","Scan complete.</p><p>Click here to download: "
 "1230","File no longer available"
