@@ -113,10 +113,18 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int
 {
 	FDTunnel fdt;
 
-	if (h.getAuthType() != "NTLM") {
-		// allow the initial request through so the client will get the proxy's initial auth required response.
-		// advertise persistent connections so that parent proxy will agree to advertise NTLM support.
-		h.makePersistent();
+	String at = h.getAuthType();
+	if (at != "NTLM") {
+		// if no auth currently underway, then...
+		if (at.length() == 0) {
+			// allow the initial request through so the client will get the proxy's initial auth required response.
+			// advertise persistent connections so that parent proxy will agree to advertise NTLM support.
+#ifdef DGDEBUG
+			std::cout << "No auth negotiation currently in progress - making initial request persistent so that proxy will advertise NTLM" << std::endl;
+#endif
+
+			h.makePersistent();
+		}
 		return DGAUTH_NOMATCH;
 	}
 
