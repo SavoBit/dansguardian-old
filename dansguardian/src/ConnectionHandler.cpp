@@ -885,7 +885,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 				// if we're not careful, we can end up accidentally setting the bypass cookie twice.
 				// because of the code flow, this second cookie ends up with timestamp 0, and is always disallowed.
-				if (isbypass && !iscookiebypass) {
+				if (isbypass && !isvirusbypass && !iscookiebypass) {
 #ifdef DGDEBUG
 					std::cout<<"Setting GBYPASS cookie; bypasstimestamp = "<<bypasstimestamp<<std::endl;
 #endif
@@ -1591,8 +1591,8 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		// flags to enable filter/infection bypass hash generation
 		bool filterhash = false;
 		bool virushash = false;
-		// flag to enable internal generation of hashes
-		// (if disabled, just output '1' to show that the CGI should generate a hash;
+		// flag to enable internal generation of hashes (i.e. obey the "-1" setting; to allow the modes but disable hash generation)
+		// (if disabled, just output '1' or '2' to show that the CGI should generate a filter/virus bypass hash;
 		// otherwise, real hashes get put into substitution variables/appended to the ban CGI redirect URL)
 		bool dohash = false;
 		if (o.reporting_level > 0) {
