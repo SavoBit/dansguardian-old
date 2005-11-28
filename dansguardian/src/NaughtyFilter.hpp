@@ -39,6 +39,9 @@ public:
 	bool isItNaughty;
 	// should the content bypass any further filtering?
 	bool isException;
+	// should the browser use the categories string or the displaycategories string?
+	// (related to category list thresholding)
+	bool usedisplaycats;
 
 	int filtergroup;
 	
@@ -47,6 +50,7 @@ public:
 	std::string whatIsNaughty;
 	std::string whatIsNaughtyLog;
 	std::string whatIsNaughtyCategories;
+	std::string whatIsNaughtyDisplayCategories;
 
 	NaughtyFilter();
 	void checkme(DataBuffer * body, String &url, String &domain);

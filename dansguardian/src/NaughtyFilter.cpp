@@ -64,7 +64,8 @@ public:
 
 // constructor - set up defaults
 NaughtyFilter::NaughtyFilter()
-:	isItNaughty(false), isException(false), filtergroup(0), whatIsNaughty(""), whatIsNaughtyLog(""), whatIsNaughtyCategories(""), naughtiness(0)
+:	isItNaughty(false), isException(false), filtergroup(0), whatIsNaughty(""),
+	whatIsNaughtyLog(""), whatIsNaughtyCategories(""), naughtiness(0), usedisplaycats(false)
 {
 }
 
@@ -751,16 +752,37 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 		// Weighted phrase limit exceeded.
 		// Generate category list, sorted with highest scoring first.
 		bool nonempty = false;
+		bool belowthreshold = false;
 		String categories;
 		std::sort(listcategories.begin(), listcategories.end());
 		std::deque<listent>::iterator k = listcategories.begin();
 		while (k != listcategories.end()) {
+			// if category display threshold is in use, apply it
+			if (!belowthreshold && (o.fg[filtergroup]->category_threshold > 0)
+				&& (k->weight < o.fg[filtergroup]->category_threshold))
+			{
+				whatIsNaughtyDisplayCategories = categories.toCharArray();
+				belowthreshold = true;
+				usedisplaycats = true;
+			}
 			if (k->string.length() > 0) {
 				if (nonempty) categories += ", ";
+				// put brackets around the string to indicate cats that are logged but not displayed
+				if (belowthreshold)
+					categories += "(";
 				categories += k->string;
+				if (belowthreshold)
+					categories += ")";
 				nonempty = true;
 			}
 			k++;
+			// if category threshold is set to show only the top category,
+			// everything after the first loop is below the threshold
+			if (!belowthreshold && o.fg[filtergroup]->category_threshold < 0) {
+				whatIsNaughtyDisplayCategories = categories.toCharArray();
+				belowthreshold = true;
+				usedisplaycats = true;
+			}
 		}
 		whatIsNaughtyCategories = categories.toCharArray();
 		return;
