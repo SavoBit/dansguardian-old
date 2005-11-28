@@ -61,6 +61,28 @@ DataBuffer::DataBuffer():data(new char[0]), buffer_length(0), compresseddata(NUL
 {
 }
 
+void DataBuffer::reset()
+{
+	delete data;
+	data = new char[0];
+	delete compresseddata;
+	compresseddata = NULL;
+	
+	buffer_length = 0;
+	compressed_buffer_length = 0;
+	if (tempfilefd > -1) {
+		close(tempfilefd);
+		if (!preservetemp) {
+			unlink(tempfilepath.toCharArray());
+		}
+		tempfilefd = -1;
+		tempfilesize = 0;
+	}
+	bytesalreadysent = 0;
+	dontsendbody = false;
+	preservetemp = false;
+}
+
 // delete the memory block when the class is destroyed
 DataBuffer::~DataBuffer()
 {
@@ -350,7 +372,7 @@ void DataBuffer::zlibinflate(bool header)
 	if (err != Z_OK) {	// was a problem so just return
 		delete[]block;  // don't forget to free claimed memory
 #ifdef DGDEBUG
-		std::cerr << "bad init inflate:" << err << std::endl;
+		std::cerr << "bad init inflate: " << err << std::endl;
 #endif
 		return;
 	}
@@ -367,8 +389,14 @@ void DataBuffer::zlibinflate(bool header)
 		if (err != Z_OK) {	// was a problem so just return
 			delete[]block;  // don't forget to free claimed memory
 #ifdef DGDEBUG
-			std::cerr << "bad inflate:" << String(err) << std::endl;
-
+			std::cerr << "bad inflate: " << String(err) << std::endl;
+#endif
+			return;
+		}
+		if (bytesgot > o.max_content_filter_size) {
+			delete[]block;  // don't forget to free claimed memory
+#ifdef DGDEBUG
+			std::cerr << "inflated file larger than maxcontentfiltersize, not inflating further" << std::endl;
 #endif
 			return;
 		}
