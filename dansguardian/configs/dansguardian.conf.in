@@ -412,10 +412,18 @@ contentscanexceptions = off
 # handle the extraction of client usernames from various sources, such as
 # Proxy-Authorisation headers and ident servers, enabling requests to be
 # handled according to the settings of the user's filter group.
-# Currently only one plugin can be enabled at a time. If you do not use
-# multiple filter groups, this option can be commented out.
+# Multiple plugins can be specified, and will be queried in order until one
+# of them either finds a username or throws an error. For example, if Squid
+# is configured with both NTLM and Basic auth enabled, and both the 'proxy'
+# and 'ntlm' auth plugins are enabled here, then clients which do not support
+# NTLM can fall back to Basic without sacrificing access rights.
+#
+# If you do not use multiple filter groups, you need not specify this option.
+#
 authplugin = '@DGCONFDIR@/authplugins/proxy.conf'
+#authplugin = '@DGCONFDIR@/authplugins/ntlm.conf'
 #authplugin = '@DGCONFDIR@/authplugins/ident.conf'
+#authplugin = '@DGCONFDIR@/authplugins/ip.conf'
 
 
 
