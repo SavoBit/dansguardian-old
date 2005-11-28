@@ -51,7 +51,8 @@ private:
 	void doLog(std::string &who, std::string &from, String &where, unsigned int &port,
 		std::string &what, String &how, int &size, std::string *cat, int &loglevel, bool isnaughty,
 		bool isexception, int logexceptions, bool istext, struct timeval *thestart, bool cachehit, int code,
-		std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness);
+		std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness,
+		bool contentmodified = false, bool urlmodified = false);
 
 	// perform URL encoding on a string
 	std::string miniURLEncode(const char *s);
@@ -73,17 +74,19 @@ private:
 
 	// show the relevant banned page depending upon the report level settings, request type, etc.
 	bool denyAccess(Socket *peerconn, Socket *proxysock, HTTPHeader *header, HTTPHeader *docheader,
-		String *url, NaughtyFilter *checkme, std::string *clientuser, std::string *clientip, int filtergroup, bool ispostblock, int headersent);
+		String *url, NaughtyFilter *checkme, std::string *clientuser, std::string *clientip,
+		int filtergroup, bool ispostblock, int headersent, bool wasinfected, bool scanerror);
 
 	// create temporary ban bypass URLs/cookies
-	String hashedURL(String *url, int filtergroup, std::string *clientip);
+	String hashedURL(String *url, int filtergroup, std::string *clientip, bool infectionbypass);
 	String hashedCookie(String *url, int filtergroup, std::string *clientip, int bypasstimestamp);
 
 	// do content scanning (AV filtering) and naughty filtering
 	void contentFilter(HTTPHeader *docheader, HTTPHeader *header, DataBuffer *docbody, Socket *proxysock,
 		Socket *peerconn, int *headersent, bool *pausedtoobig, int *docsize, NaughtyFilter *checkme, bool runav,
 		bool wasclean, bool cachehit, int filtergroup, std::deque<bool > *sendtoscanner, std::string *clientuser,
-		std::string *clientip, bool *wasinfected, bool *wasscanned, bool isbypass, String &url, String &domain);
+		std::string *clientip, bool *wasinfected, bool *wasscanned, bool isbypass, String &url, String &domain,
+		bool *scanerror, bool &contentmodified);
 
 	// send a file to the client - used during bypass of blocked downloads
 	unsigned int sendFile(Socket *peerconn, String & filename, String & filemime, String & filedis);
