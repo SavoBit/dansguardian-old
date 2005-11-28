@@ -128,6 +128,12 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	unsigned int eta = 0;
 	int timeelapsed = 0;
 
+	// if using non-persistent connections, some servers will not report
+	// a content-length. in these situations, just download everything.
+	bool geteverything = false;
+	if ((expectedsize == 0) && !(docheader->isPersistent()))
+		geteverything = true;
+
 	bool initialsent = false;
 
 	String message, jsmessage;
@@ -154,18 +160,13 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 			filename = filename.after("/");
 	}
 
-	while (true) {
+	while ((bytesgot < expectedsize) || geteverything) {
 		// send text header to show status
 		if (o.trickle_delay > 0) {
 			gettimeofday(&nowadays, NULL);
 			timeelapsed = nowadays.tv_sec - starttime.tv_sec;
 			if ((!initialsent && timeelapsed > o.initial_trickle_delay) || (initialsent && nowadays.tv_sec - themdays.tv_sec > o.trickle_delay)) {
 				initialsent = true;
-				if (d->tempfilesize > 0) {
-					bytesgot = d->tempfilesize;
-				} else {
-					bytesgot = d->buffer_length;
-				}
 				bytessec = bytesgot / timeelapsed;
 				themdays.tv_sec = nowadays.tv_sec;
 				if ((*headersent) < 1) {
@@ -256,13 +257,15 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 			}
 		}
 
-		if (d->buffer_length >= 32768) {
-			newsize = d->buffer_length;
-		} else {
-			newsize = 32768;
-		}
-
 		if (!swappedtodisk) {
+			if (d->buffer_length >= 32768) {
+				newsize = d->buffer_length;
+			} else {
+				newsize = 32768;
+			}
+			// if not getting everything until connection close, grab only what is left
+			if (!geteverything && (newsize > (expectedsize - bytesgot)))
+				newsize = expectedsize - bytesgot;
 			block = new char[newsize];
 			try {
 				sock->checkForInput(d->timeout);
@@ -274,12 +277,12 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 			rc = d->bufferReadFromSocket(sock, block, newsize, d->timeout, o.trickle_delay);
 			// grab a block of input, doubled each time
 
-			if (rc < 1) {
+			if (rc <= 0) {
 				delete[]block;
 				break;  // an error occured so end the while()
 				// or none received so pipe is closed
 			}
-			if (rc > 0) {
+			else {
 				temp = new char[d->buffer_length + rc];  // replacement store
 				memcpy(temp, d->data, d->buffer_length);  // copy the current data
 				memcpy(temp + d->buffer_length, block, rc);  // copy the new data
@@ -295,11 +298,13 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 			catch(exception & e) {
 				break;
 			}
-			rc = d->bufferReadFromSocket(sock, d->data, d->buffer_length, d->timeout);
-			if (rc < 1) {
+			rc = d->bufferReadFromSocket(sock, d->data,
+				// if not getting everything until connection close, grab only what is left
+				(!geteverything && ((expectedsize - bytesgot) < d->buffer_length) ? (expectedsize - bytesgot) : d->buffer_length), d->timeout);
+			if (rc <= 0) {
 				break;
 			}
-			if (rc > 0) {
+			else {
 				lseek(d->tempfilefd, 0, SEEK_END);  // not really needed
 				writeEINTR(d->tempfilefd, d->data, rc);
 				d->tempfilesize += rc;
@@ -307,6 +312,11 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 				std::cout << "written to disk: " << rc << " total: " << d->tempfilesize << std::endl;
 #endif
 			}
+		}
+		if (d->tempfilesize > 0) {
+			bytesgot = d->tempfilesize;
+		} else {
+			bytesgot = d->buffer_length;
 		}
 	}
 
