@@ -69,8 +69,7 @@ String HTTPHeader::requestType()
 int HTTPHeader::contentLength()
 {
 	String temp;
-	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in
-		// the header
+	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the header
 		if (header[i].startsWith("Content-Length:")) {
 			temp = header[i].after(" ");
 			return temp.toInteger();
@@ -96,9 +95,9 @@ String HTTPHeader::getAuthType()
 bool HTTPHeader::authRequired()
 {
 	String temp = header[0].after(" ");
-	if (temp.contains(" ")) {
+	/*if (temp.contains(" ")) {
 		temp = temp.before(" ");
-	}
+	}*/
 	if (temp.startsWith("407")) {
 		return true;
 	}
@@ -109,11 +108,9 @@ bool HTTPHeader::authRequired()
 String HTTPHeader::disposition()
 {
 	String filename;
-	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in
-		// the header
+	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the header
 		if (header[i].startsWith("Content-Disposition:")) {
-			// hmmm. see 3rd example format below.
-			filename = header[i]/*.after(";")*/.after("filename").after("=");
+			filename = header[i].after("filename").after("=");
 			if (filename.contains(";"))
 				filename = filename.before(";");
 			filename.removeWhiteSpace();  // incase of trailing space
@@ -142,7 +139,7 @@ String HTTPHeader::userAgent()
 			return agent;
 		}
 	}
-	return agent;
+	return "";
 }
 
 // grab the content type header
@@ -164,14 +161,14 @@ String HTTPHeader::getContentType()
 				}
 				j++;
 			}
-			break;
+			mimetype.toLower();
+			if (mimetype.length() < 1) {
+				return "-";
+			}
+			return mimetype;
 		}
 	}
-	mimetype.toLower();
-	if (mimetype.length() < 1) {
-		mimetype = "-";
-	}
-	return mimetype;
+	return "-";
 }
 
 // does the given content type string match our headers?
@@ -189,11 +186,11 @@ std::string HTTPHeader::getXForwardedForIP()
 	for (int i = 0; i < (signed) header.size(); i++) {
 		if (header[i].startsWith("X-Forwarded-For:")) {
 			line = header[i].after("or: ");
-			break;
+			line.chop();
+			return std::string(line.toCharArray());
 		}
 	}
-	line.chop();
-	return std::string(line.toCharArray());
+	return "";
 }
 
 // check the return code to see if it's a redirection request
@@ -277,16 +274,33 @@ void HTTPHeader::setContentLength(int newlen)
 	for (int i = 0; i < (signed) header.size(); i++) {
 		if (header[i].startsWith("Content-Length:")) {
 			header[i] = "Content-Length: " + String(newlen);
+			break;
 		}
 	}
 }
 
-// set the proxy-connection header to allow persistence
-void HTTPHeader::makePersistent()
+// set the proxy-connection header to allow persistence (or not)
+void HTTPHeader::makePersistent(bool persist)
 {
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("Proxy-Connection:")) {
-			header[i] = "Proxy-Connection: Keep-Alive";
+	if (persist) {
+		if (waspersistent && !ispersistent) {
+			for (int i = 0; i < (signed) header.size(); i++) {
+				if (header[i].startsWithLower("Proxy-Connection:") || header[i].startsWithLower("Connection:")) {
+					header[i] = header[i].before(":") + ": Keep-Alive\r";
+					ispersistent = true;
+					break;
+				}
+			}
+		}
+	} else {
+		if (ispersistent) {
+			for (int i = 0; i < (signed) header.size(); i++) {
+				if (header[i].startsWithLower("Proxy-Connection:") || header[i].startsWithLower("Connection:")) {
+					header[i] = header[i].before(":") + ": Close\r";
+					ispersistent = false;
+					break;
+				}
+			}
 		}
 	}
 }
@@ -321,15 +335,18 @@ String HTTPHeader::modifyEncodings(String e)
 // set content length to report the given length, and strip content encoding
 void HTTPHeader::removeEncoding(int newlen)
 {
+	bool donelength = false;
+	bool doneencoding = false;
 	for (int i = 0; i < (signed) header.size(); i++) {
 		if (header[i].startsWith("Content-Length:")) {
 			header[i] = "Content-Length: " + String(newlen);
+			donelength = true;
 		}
 		// this may all be overkill. since we strip everything out of the outgoing
 		// accept-encoding header that we don't support, we won't be getting anything
 		// back again that we don't support, in theory. leave new code commented
 		// unless it proves to be necessary further down the line. PRA 20-10-2005
-		if (header[i].startsWith("Content-Encoding:")) {
+		else if (header[i].startsWith("Content-Encoding:")) {
 /*#ifdef DGDEBUG
 			std::cout << std::endl << "Stripping Content-Encoding header" <<std::endl;
 			std::cout << "Old: " << header[i] <<std::endl;
@@ -356,7 +373,10 @@ void HTTPHeader::removeEncoding(int newlen)
 #ifdef DGDEBUG
 			std::cout << "New: " << header[i] << std::endl << std::endl;
 #endif*/
+			doneencoding = true;
 		}
+		if (donelength && doneencoding)
+			break;
 	}
 }
 
@@ -389,6 +409,8 @@ void HTTPHeader::setURL(String &url) {
 	std::cout << " to: " << header[0] << std::endl;
 #endif
 
+	bool donehost = false;
+	bool doneport = false;
 	for (int i = 1; i < (signed)header.size(); i++) {
 		if (header[i].startsWith("Host:")) {
 #ifdef DGDEBUG
@@ -398,8 +420,9 @@ void HTTPHeader::setURL(String &url) {
 #ifdef DGDEBUG
 			std::cout << " to " << header[i] << std::endl;
 #endif
+			donehost = true;
 		}
-		if (header[i].startsWith("Port:")) {
+		else if (header[i].startsWith("Port:")) {
 #ifdef DGDEBUG
 			std::cout << "setURL: header[] line changed from: " << header[i] << std::endl;
 #endif
@@ -407,7 +430,10 @@ void HTTPHeader::setURL(String &url) {
 #ifdef DGDEBUG
 			std::cout << " to " << header[i] << std::endl;
 #endif
+			doneport = true;
 		}
+		if (donehost && doneport)
+			break;
 	}
 }
 
@@ -488,13 +514,16 @@ bool HTTPHeader::urlRegExp(int filtergroup) {
 			// copy newUrl into oldUrl and continue with other regexes
 			/*setURL(*/oldUrl = newUrl/*)*/;
 			urlmodified = true;
+#ifdef DGDEBUG
+			std::cout << "URL modified!" << std::endl;
+#endif
 		}
 	}
 	
 	// surely we can get away with doing this once, not every time round the loop?
 	if (urlmodified) {
 		// replace URL string in all relevant header lines
-		setURL(newUrl);
+		setURL(oldUrl);
 	}
 	
 	return urlmodified;
@@ -593,6 +622,8 @@ bool HTTPHeader::isPostUpload()
 // fix bugs in certain web servers that don't obey standards
 void HTTPHeader::checkheader(bool allowpersistent)
 {
+	waspersistent = false;
+	ispersistent = false;
 	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the headers
 		if (header[i].startsWithLower("Content-length:")) {
 			header[i] = "Content-Length:" + header[i].after(":");
@@ -616,13 +647,13 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		else if (header[i].startsWithLower("Proxy-authorization:")) {
 			header[i] = "Proxy-Authorization:" + header[i].after(":");
 		}
-		else if (!allowpersistent) {
-			// Need to force HTTP/1.1 clients and servers to use non persistant connections
-			if (header[i].startsWithLower("Connection: keep-alive")) {
-				header[i] = "Connection: Close\r";
-			}
-			else if (header[i].startsWithLower("Proxy-Connection: Keep-Alive")) {
-				header[i] = "Proxy-Connection: Close\r";
+		else if (header[i].startsWithLower("Proxy-Connection: Keep-Alive") || header[i].startsWithLower("Connection: keep-alive")) {
+			waspersistent = true;
+			if (!allowpersistent) {
+				ispersistent = false;
+				header[i] = header[i].before(":") + ": Close\r";
+			} else {
+				ispersistent = true;
 			}
 		}
 #ifdef DGDEBUG
@@ -724,19 +755,19 @@ String HTTPHeader::url()
 // *
 // *
 
-// chop the GBYPASS variable out of a bypass URL
+// chop the GBYPASS or GIBYPASS variable out of a bypass URL
 // This function ASSUMES that you really know what you are doing
 // Do NOT run this function unless you know that the URL contains a valid bypass code
 // Ernest W Lessenger
-void HTTPHeader::chopBypass(String url)
+void HTTPHeader::chopBypass(String url, bool infectionbypass)
 {
-	if (url.contains("GBYPASS=")) {
-		if (url.contains("?GBYPASS=")) {
-			String bypass = url.after("?GBYPASS=");
-			header[0] = header[0].before("?GBYPASS=") + header[0].after(bypass.toCharArray());
+	if (url.contains(infectionbypass ? "GIBYPASS=" : "GBYPASS=")) {
+		if (url.contains(infectionbypass ? "?GIBYPASS=" : "?GBYPASS=")) {
+			String bypass = url.after(infectionbypass ? "?GIBYPASS=" : "?GBYPASS=");
+			header[0] = header[0].before(infectionbypass ? "?GIBYPASS=" : "?GBYPASS=") + header[0].after(bypass.toCharArray());
 		} else {
-			String bypass = url.after("&GBYPASS=");
-			header[0] = header[0].before("&GBYPASS=") + header[0].after(bypass.toCharArray());
+			String bypass = url.after(infectionbypass ? "&GIBYPASS=" : "&GBYPASS=");
+			header[0] = header[0].before(infectionbypass ? "&GIBYPASS=" : "&GBYPASS=") + header[0].after(bypass.toCharArray());
 		}
 	}
 }
@@ -822,21 +853,29 @@ bool HTTPHeader::isBypassCookie(String * url, const char *magic, const char *cli
 }
 
 // is this a temporary filter bypass URL?
-int HTTPHeader::isBypassURL(String * url, const char *magic, const char *clientip)
+int HTTPHeader::isBypassURL(String * url, const char *magic, const char *clientip, bool *isvirusbypass)
 {
 	if ((*url).length() <= 45)
 		return false;  // Too short, can't be a bypass
 
-	if (!(*url).contains("GBYPASS=")) {	// If this is not a bypass url
-		return 0;
+	// check to see if this is a bypass URL, and which type it is
+	bool filterbypass = false;
+	bool virusbypass = false;
+	if ((isvirusbypass == NULL) && ((*url).contains("GBYPASS="))) {
+		filterbypass = true;
+	} else if ((isvirusbypass != NULL) && (*url).contains("GIBYPASS=")) {
+		virusbypass = true;
 	}
+	if (!(filterbypass || virusbypass))
+		return 0;
+
 #ifdef DGDEBUG
-	std::cout << "URL GBYPASS found checking..." << std::endl;
+	std::cout << "URL " << (filterbypass ? "GBYPASS" : "GIBYPASS") << " found checking..." << std::endl;
 #endif
 
-	String url_left = (*url).before("GBYPASS=");
+	String url_left = (*url).before(filterbypass ? "GBYPASS=" : "GIBYPASS=");
 	url_left.chop();  // remove the ? or &
-	String url_right = (*url).after("GBYPASS=");
+	String url_right = (*url).after(filterbypass ? "GBYPASS=" : "GIBYPASS=");
 
 	String url_hash = url_right.subString(0, 32);
 	String url_time = url_right.after(url_hash.toCharArray());
@@ -850,6 +889,9 @@ int HTTPHeader::isBypassURL(String * url, const char *magic, const char *clienti
 	String hashed = url_left.md5(mymagic.toCharArray());
 
 	if (hashed != url_hash) {
+#ifdef DGDEBUG
+		std::cout << "URL " << (filterbypass ? "GBYPASS" : "GIBYPASS") << " hash mismatch" << std::endl;
+#endif
 		return 0;
 	}
 
@@ -858,20 +900,21 @@ int HTTPHeader::isBypassURL(String * url, const char *magic, const char *clienti
 
 	if (timeu < 1) {
 #ifdef DGDEBUG
-		std::cout << "URL GBYPASS bad time value" << std::endl;
+		std::cout << "URL " << (filterbypass ? "GBYPASS" : "GIBYPASS") << " bad time value" << std::endl;
 #endif
 		return 1;  // bad time value
 	}
 	if (timeu < timen) {	// expired key
 #ifdef DGDEBUG
-		std::cout << "URL GBYPASS expired" << std::endl;
+		std::cout << "URL " << (filterbypass ? "GBYPASS" : "GIBYPASS") << " expired" << std::endl;
 #endif
 		return 1;  // denotes expired but there
 	}
 #ifdef DGDEBUG
-	std::cout << "URL GBYPASS not expired" << std::endl;
+	std::cout << "URL " << (filterbypass ? "GBYPASS" : "GIBYPASS") << " not expired" << std::endl;
 #endif
-
+	if (virusbypass)
+		(*isvirusbypass) = true;
 	return (int) timeu;
 }
 
@@ -1124,6 +1167,9 @@ void HTTPHeader::out(Socket * sock, int sendflag) throw(exception)
 
 void HTTPHeader::in(Socket * sock, bool allowpersistent)
 {
+	header.clear();
+	postdata.reset();
+
 	// the RFCs don't specify a max header line length so this should be
 	// dynamic really.  Pointed out (well reminded actually) by Daniel Robbins
 	char buff[8192];  // setup a buffer to hold the incomming HTTP line
@@ -1144,6 +1190,8 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent)
 		// holds the header
 	}
 	header.pop_back();  // remove the final blank line of a header
+	if (header.size() == 0)
+		throw exception();
 
 	checkheader(allowpersistent);  // sort out a few bits in the header
 
