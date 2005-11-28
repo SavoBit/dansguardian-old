@@ -1,4 +1,9 @@
 # IP-based auth plugin
+#
+# Maps client IPs to filter groups.
+# If "usexforwardedfor" is enabled, grabs the IP from the X-Forwarded-For
+# header, if available.
+
 plugname = 'ip'
 
 # ipgroups file
