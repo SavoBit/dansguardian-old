@@ -12,6 +12,18 @@ $cats = $in{'CATEGORIES'};
 # originating hostname - can be undefined
 $host = $in{'HOST'};
 
+# virus/filter bypass hashes
+# if bypass modes have been set to > 0,
+# then the GBYPASS or GIBYPASS variable will contain the filter/infection bypass hash.
+# if bypass modes have been set to -1,
+# then the HASH variable will be set to 1 if the CGI should generate a GBYPASS hash (filter bypass),
+# or 2 if the CGI should generate a GIBYPASS hash (infection bypass).
+
+$fbypasshash = $in{'GBYPASS'}; # filter bypass hash - can be undefined
+$ibypasshash = $in{'GIBYPASS'}; # infection bypass hash - can be undefined
+$hashflag = $in{'HASH'}; # hash flag - can be undefined; 1 = generate GBYPASS; 2 = generate GIBYPASS
+
+
 print "Content-type: text/html\n\n";
 print '<HTML><HEAD><TITLE>DansGuardian - Access Denied</TITLE></HEAD>';
 print '<BODY><CENTER><H2>ACCESS HAS BEEN DENIED</H2>';
