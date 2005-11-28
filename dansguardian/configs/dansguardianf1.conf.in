@@ -45,6 +45,18 @@ urlregexplist = '@DGCONFDIR@/lists/urlregexplist'
 # 50 is for young children,  100 for old children,  160 for young adults.
 naughtynesslimit = 50
 
+# Category display threshold
+# This option only applies to pages blocked by weighted phrase filtering.
+# Defines the minimum score that must be accumulated within a particular
+# category in order for it to show up on the block pages' category list.
+# All categories under which the page scores positively will be logged; those
+# that were not displayed to the user appear in brackets.
+#
+# -1 = display only the highest scoring category
+# 0 = display all categories (default)
+# > 0 = minimum score for a category to be displayed
+categorydisplaythreshold = 0
+
 # Embedded URL weighting
 # When set to something greater than zero, this option causes URLs embedded within a
 # page's HTML (from links, image tags, etc.) to be extracted and checked against the
@@ -52,6 +64,10 @@ naughtynesslimit = 50
 # here to be added to the page's weighting.
 # The behaviour of this option with regards to multiple occurrences of a site/URL is
 # affected by the weightedphrasemode setting.
+#
+# NB: Currently, this feature uses regular expressions that require the PCRE library.
+# As such, it is only available if you compiled DansGuardian with '--enable-pcre=yes'.
+# You can check compile-time options by running 'dansguardian -v'.
 #
 # Set to 0 to disable.
 # Defaults to 0.
@@ -65,14 +81,14 @@ embeddedurlweight = 0
 enablepics = off
 
 # Temporary Denied Page Bypass
-# It provides a link on the denied page to bypass the ban for a few minutes.  To be
+# This provides a link on the denied page to bypass the ban for a few minutes.  To be
 # secure it uses a random hashed secret generated at daemon startup.  You define the
 # number of seconds the bypass will function for before the deny will appear again.
 # To allow the link on the denied page to appear you will need to edit the template.html
 # or dansguardian.pl file for your language.
 # 300 = enable for 5 minutes
 # 0 = disable ( defaults to 0 )
-# -1 = enable but you require a seperate program to generate a valid link
+# -1 = enable but you require a separate program/CGI to generate a valid link
 bypass = 0
 
 # Temporary Denied Page Bypass Secret Key
@@ -80,7 +96,31 @@ bypass = 0
 # '' = generate a random one (recommended and default)
 # 'Mary had a little lamb.' = an example
 # '76b42abc1cd0fdcaf6e943dcbc93b826' = an example
+#
+# Please note: manually entered keys are converted to all lowercase before use.
+#
 bypasskey = ''
+
+# Infection/Scan Error Bypass
+# Similar to the 'bypass' setting, but specifically for bypassing files scanned and found
+# to be infected, or files that trigger scanner errors - for example, archive types with
+# recognised but unsupported compression schemes, or corrupt archives.
+# The option specifies the number of seconds for which the bypass link will be valid.
+# 300 = enable for 5 minutes
+# 0 = disable (default)
+# -1 = enable, but require a separate program/CGI to generate a valid link
+infectionbypass = 0
+
+# Infection/Scan Error Bypass Secret Key
+# Same as the 'bypasskey' option, but used for infection bypass mode.
+infectionbypasskey = ''
+
+# Infection/Scan Error Bypass on Scan Errors Only
+# Enable this option to allow infectionbypass links only when virus scanning fails,
+# not when a file is found to contain a virus.
+# on = enable (default and highly recommended)
+# off = disable
+infectionbypasserrorsonly = on
 
 # Disable content scanning
 # If you enable this option you will disable content scanning for this group.
