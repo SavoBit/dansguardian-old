@@ -70,6 +70,7 @@ public:
 	// create a temp file and return its FD	- NOT a simple accessor function
 	int getTempFileFD();
 
+	void reset();
 private:
 	// DM plugins do horrible things to our innards - this is acceptable pending a proper cleanup
 	friend class DMPlugin;
