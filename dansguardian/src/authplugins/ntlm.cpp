@@ -22,12 +22,15 @@
 
 #include "../Auth.hpp"
 #include "../FDTunnel.hpp"
+#include "../OptionContainer.hpp"
 
 #include <syslog.h>
 #include <endian.h>
 
 
 // DEFINES
+
+extern OptionContainer o;
 
 // NTLM username grabbing needs to be independent of endianness
 
@@ -131,6 +134,19 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int
 #ifdef DGDEBUG
 	std::cout << "NTLM - sending step 1" << std::endl;
 #endif
+	if (o.forwarded_for == 1) {
+		std::string clientip;
+		if (o.use_xforwardedfor == 1) {
+			// grab the X-Forwarded-For IP if available
+			clientip = h.getXForwardedForIP();
+			// otherwise, grab the IP directly from the client connection
+			if (clientip.length() == 0)
+				clientip = peercon.getPeerIP();
+		} else {
+			clientip = peercon.getPeerIP();
+		}
+		h.addXForwardedFor(clientip);  // add squid-like entry
+	}
 	h.makePersistent();
 	h.out(&proxycon, __DGHEADER_SENDALL);
 	fdt.tunnel(peercon, proxycon);
@@ -150,7 +166,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int
 		std::cout << "NTLM - receiving step 3" << std::endl;
 #endif
 		h.header.clear();
-		h.in(&peercon);
+		h.in(&peercon, true);
 
 #ifdef DGDEBUG
 		std::cout << "NTLM - decoding type 3 message" << std::endl;
