@@ -142,7 +142,7 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 	delete[]buff;
 	reply.removeWhiteSpace();
 #ifdef DGDEBUG
-	std::cout << "Got from clamdscan:" << reply << std::endl;
+	std::cout << "Got from clamdscan: " << reply << std::endl;
 #endif
 	stripedsocks.close();
 	if (reply.endsWith("ERROR")) {
@@ -154,7 +154,7 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 		// format is:
 		// /foo/path/file: foovirus FOUND
 #ifdef DGDEBUG
-		std::cerr << "clamdscan INFECTED! with:" << lastvirusname << std::endl;
+		std::cerr << "clamdscan INFECTED! with: " << lastvirusname << std::endl;
 #endif
 		return DGCS_INFECTED;
 	}

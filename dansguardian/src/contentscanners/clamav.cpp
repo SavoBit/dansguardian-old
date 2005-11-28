@@ -119,14 +119,14 @@ int clamavinstance::doRC(int rc, const char *vn)
 	if (rc == CL_VIRUS) {
 		lastvirusname = vn;
 #ifdef DGDEBUG
-		std::cerr << "INFECTED! with:" << lastvirusname << std::endl;
+		std::cerr << "INFECTED! with: " << lastvirusname << std::endl;
 #endif
 		return DGCS_INFECTED;
 	}
 	else if (rc != CL_CLEAN) {
 		lastmessage = cl_strerror(rc);
 #ifdef DGDEBUG
-		std::cerr << "ClamAV error:" << lastmessage << std::endl;
+		std::cerr << "ClamAV error: " << lastmessage << std::endl;
 #endif
 		return DGCS_SCANERROR;
 	}
