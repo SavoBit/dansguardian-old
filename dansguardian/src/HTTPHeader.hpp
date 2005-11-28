@@ -78,6 +78,8 @@ public:
 	// grab the contents of Proxy-Authorization header
 	// returns base64-decoding of the chunk of data after the auth type string
 	std::string getAuthData();
+	// check whether a connection is persistent
+	bool isPersistent() { return ispersistent; };
 
 	// detailed value/type checks
 
@@ -95,8 +97,8 @@ public:
 	// regexp search and replace
 	// urlRegExp Code originally from from Ton Gorter 2004
 	bool urlRegExp(int filtergroup);
-	// make a connection persistent
-	void makePersistent();
+	// make a connection persistent - or not
+	void makePersistent(bool persist = true);
 
 	// do URL decoding (%xx) on string
 	String decode(String s);
@@ -104,13 +106,13 @@ public:
 	// Bypass URL & Cookie funcs
 	
 	// is this a temporary filter bypass URL?
-	int isBypassURL(String *url, const char *magic, const char *clientip);
+	int isBypassURL(String *url, const char *magic, const char *clientip, bool *isvirusbypass);
 	// is this a scan bypass URL? (download previously scanned file)
 	bool isScanBypassURL(String *url, const char *magic, const char *clientip);
 	// is this a temporary filter bypass cookie?
 	bool isBypassCookie(String *url, const char *magic, const char *clientip);
 	// chop GBYPASS/GSPYBASS off URLs (must know it's there to begin with)
-	void chopBypass(String url);
+	void chopBypass(String url, bool infectionbypass);
 	void chopScanBypass(String url);
 	// add cookie to outgoing headers with given name & value
 	void setCookie(const char *cookie, const char *value);
@@ -118,6 +120,8 @@ public:
 private:
 	// timeout for socket operations
 	int timeout;
+
+	bool ispersistent, waspersistent;
 
 	// check & fix headers from servers that don't obey standards
 	void checkheader(bool allowpersistent);
