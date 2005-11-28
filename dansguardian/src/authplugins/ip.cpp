@@ -22,6 +22,7 @@
 
 #include "../Auth.hpp"
 #include "../RegExp.hpp"
+#include "../OptionContainer.hpp"
 
 #include <syslog.h>
 #include <algorithm>
@@ -33,6 +34,7 @@
 // GLOBALS
 
 extern bool is_daemonised;
+extern OptionContainer o;
 
 
 // DECLARATIONS
@@ -138,7 +140,16 @@ int ipinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &
 {
 	// we don't get usernames out of this plugin, just a filter group
 	// for now, use the IP as the username
-	string = peercon.getPeerIP();
+	
+	if (o.use_xforwardedfor == 1) {
+		// grab the X-Forwarded-For IP if available
+		string = h.getXForwardedForIP();
+		// otherwise, grab the IP directly from the client connection
+		if (string.length() == 0)
+			string = peercon.getPeerIP();
+	} else {
+		string = peercon.getPeerIP();
+	}
 	unsigned long int addr = peercon.getPeerSourceAddr();
 	// check straight IPs, subnets, and ranges
 	fg = inList(addr);
