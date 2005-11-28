@@ -93,16 +93,16 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway)
 		}
 
 		if (FD_ISSET(fdfrom, &inset)) {	// fdfrom is ready to be read from
-			rc = sockfrom.readFromSocket(buff, sizeof(buff)-1, 0, 0, false);
+			rc = sockfrom.readFromSocket(buff, sizeof(buff), 0, 0, false);
 
 			// read as much as is available
 			if (rc < 0) {
 				break;  // an error occured so end the while()
 			}
-			if (!rc) {
+			else if (!rc) {
 				done = true;  // none received so pipe is closed so flag it
 			}
-			if (rc > 0) {	// some data read
+			else {	// some data read
 				throughput += rc;  // increment our counter used to log
 				outset = fdSet;  // take a copy to work with
 				FD_CLR(fdfrom, &outset);  // remove fdfrom from the set
@@ -125,7 +125,6 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway)
 			}
 		}
 		if (FD_ISSET(fdto, &inset)) {	// fdto is ready to be read from
-
 			if (!twoway) {
 				// since HTTP works on a simple request/response basis, with no explicit
 				// communications from the client until the response has been completed
@@ -134,23 +133,23 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway)
 				// the tunnel, as it will be a new request, possibly to an entirely
 				// different webserver. This is important for proper filtering when
 				// persistent connection support gets implemented. PRA 2005-11-14
-
 #ifdef DGDEBUG
-				std::cout << "fdto is sending data; closing tunnel. This must be a persistent connection." << std::endl;
+				std::cout << "fdto is sending data; closing tunnel. (This must be a persistent connection.)" << std::endl;
 #endif
 				break;
 			}
 
-			rc = sockto.readFromSocket(buff, sizeof(buff)-1, 0, 0, false);
-
 			// read as much as is available
+			rc = sockto.readFromSocket(buff, sizeof(buff), 0, 0, false);
+
 			if (rc < 0) {
 				break;  // an error occured so end the while()
 			}
-			if (!rc) {
+			else if (!rc) {
 				done = true;  // none received so pipe is closed so flag it
+				break;
 			}
-			if (rc > 0) {	// some data read
+			else {	// some data read
 				outset = fdSet;  // take a copy to work with
 				FD_CLR(fdto, &outset);  // remove fdto from the set
 				// as we are only interested in writing to fdfrom
