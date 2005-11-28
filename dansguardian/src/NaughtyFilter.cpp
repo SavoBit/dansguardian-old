@@ -145,15 +145,14 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 				hexdecoded[j] = c;
 				j++;
 			}
-			if (bodylen > 3) {
-				hexdecoded[bodylen - 3] = bodylc[bodylen - 3];
-				hexdecoded[bodylen - 2] = bodylc[bodylen - 2];
-				hexdecoded[bodylen - 1] = bodylc[bodylen - 1];
-				hexdecoded[bodylen] = '\0';
-			}
+			// copy any remaining bytes
+			while (i < bodylen) {
+				hexdecoded[j++] = bodylc[i++];
+			} 
+			hexdecoded[j] = '\0';
 			delete[]bodylc;
 			bodylc = hexdecoded;
-
+			bodylen = j;
 		}
 		
 		// filter meta tags & title only
