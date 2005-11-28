@@ -44,6 +44,8 @@ class FOptionContainer
 {
 
 public:
+	int category_threshold;
+	int infection_bypass_errors_only;
 	int disable_content_scan;
 	int weighted_phrase_mode;
 	int group_mode;
@@ -57,6 +59,7 @@ public:
 	int reverse_lookups;
 	int force_quick_search;
 	int bypass_mode;
+	int infection_bypass_mode;
 	int pics_rsac_violence;
 	int pics_rsac_sex;
 	int pics_rsac_nudity;
@@ -138,6 +141,7 @@ public:
 	int pics_safenet_alcoholtobacco;
 
 	std::string magic;
+	std::string imagic;
 	std::string cookie_magic;
 	std::string banned_phrase_list_location;
 	std::string exception_phrase_list_location;

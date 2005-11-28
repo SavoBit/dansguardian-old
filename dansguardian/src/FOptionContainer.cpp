@@ -237,6 +237,11 @@ bool FOptionContainer::read(const char *filename)
 			std::cout << "Embedded URL Weight: " << embedded_url_weight << std::endl;
 #endif
 
+			category_threshold = findoptionI("categorydisplaythreshold");
+#ifdef DGDEBUG
+			std::cout << "Category display threshold: " << category_threshold << std::endl;
+#endif
+
 			// the dansguardian.conf and pics files get amalgamated into one
 			// deque.  They are only seperate files for clarity.
 
@@ -455,6 +460,12 @@ bool FOptionContainer::read(const char *filename)
 			return false;
 		}		// precompiled reg exps for speed
 
+		//
+		//
+		// Bypass/infection bypass modes
+		//
+		//
+
 		bypass_mode = findoptionI("bypass");
 		if (!realitycheck(String(bypass_mode), 1, 4, "bypass")) {
 			return false;
@@ -478,6 +489,31 @@ bool FOptionContainer::read(const char *filename)
 			}
 		}
 
+		infection_bypass_mode = findoptionI("infectionbypass");
+		if (!realitycheck(String(infection_bypass_mode), 1, 4, "infectionbypass")) {
+			return false;
+		}
+		if (infection_bypass_mode != 0) {
+			imagic = findoptionS("infectionbypasskey");
+			if (imagic.length() < 9) {
+				std::string s(16u, ' ');
+				for (int i = 0; i < 16; i++) {
+					s[i] = (rand() % 26) + 'A';
+				}
+				imagic = s;
+			}
+#ifdef DGDEBUG
+			std::cout << "Setting imagic key to '" << imagic << "'" << std::endl;
+#endif
+			if (findoptionS("infectionbypasserrorsonly") == "off") {
+				infection_bypass_errors_only = 0;
+			} else {
+#ifdef DGDEBUG
+				std::cout << "Only allowing infection bypass on scan error" << std::endl;
+#endif
+				infection_bypass_errors_only = 1;
+			}
+		}
 	}
 	catch(exception & e) {
 		if (!is_daemonised) {
