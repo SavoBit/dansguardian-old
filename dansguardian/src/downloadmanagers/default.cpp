@@ -99,6 +99,13 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 //      std::cout << "cvtest:" << cv["dummy"] << std::endl;
 
 	int rc, newsize;
+	int bytesremaining = docheader->contentLength();
+	
+	// if using non-persistent connections, some servers will not report
+	// a content-length. in these situations, just download everything.
+	bool geteverything = false;
+	if ((bytesremaining == 0) && !(docheader->isPersistent()))
+		geteverything = true;
 
 	char *block;  // buffer for storing a grabbed block from the
 	// imput stream
@@ -110,7 +117,7 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 	struct timeval nowadays;
 	gettimeofday(&themdays, NULL);
 
-	while (true) {
+	while ((bytesremaining > 0) || geteverything) {
 		// send x-header keep-alive here
 		if (o.trickle_delay > 0) {
 			gettimeofday(&nowadays, NULL);
@@ -164,13 +171,15 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 			}
 		}
 
-		if (d->buffer_length >= 32768) {
-			newsize = d->buffer_length;
-		} else {
-			newsize = 32768;
-		}
-
 		if (!swappedtodisk) {
+			if (d->buffer_length >= 32768) {
+				newsize = d->buffer_length;
+			} else {
+				newsize = 32768;
+			}
+			// if not getting everything until connection close, grab only what is left
+			if (!geteverything && (newsize > bytesremaining))
+				newsize = bytesremaining;
 			block = new char[newsize];
 			try {
 				sock->checkForInput(d->timeout);
@@ -182,12 +191,13 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 			rc = d->bufferReadFromSocket(sock, block, newsize, d->timeout);
 			// grab a block of input, doubled each time
 
-			if (rc < 1) {
+			if (rc <= 0) {
 				delete[]block;
 				break;  // an error occured so end the while()
 				// or none received so pipe is closed
 			}
-			if (rc > 0) {
+			else {
+				bytesremaining -= rc;
 				temp = new char[d->buffer_length + rc];  // replacement store
 				memcpy(temp, d->data, d->buffer_length);  // copy the current data
 				memcpy(temp + d->buffer_length, block, rc);  // copy the new data
@@ -203,11 +213,14 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 			catch(exception & e) {
 				break;
 			}
-			rc = d->bufferReadFromSocket(sock, d->data, d->buffer_length, d->timeout);
-			if (rc < 1) {
+			rc = d->bufferReadFromSocket(sock, d->data,
+				// if not getting everything until connection close, grab only what is left
+				(!geteverything && (bytesremaining < d->buffer_length) ? bytesremaining : d->buffer_length), d->timeout);
+			if (rc <= 0) {
 				break;
 			}
-			if (rc > 0) {
+			else {
+				bytesremaining -= rc;
 				lseek(d->tempfilefd, 0, SEEK_END);  // not really needed
 				writeEINTR(d->tempfilefd, d->data, rc);
 				d->tempfilesize += rc;
@@ -233,5 +246,8 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 		}
 	}
 	d->bytesalreadysent = 0;
+#ifdef DGDEBUG
+	std::cout << "Leaving default download manager plugin" << std::endl;
+#endif
 	return 0;
 }
