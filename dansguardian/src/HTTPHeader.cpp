@@ -1123,41 +1123,77 @@ int HTTPHeader::decode1b64(char c)
 // *
 // *
 
-void HTTPHeader::out(Socket * sock, int sendflag) throw(exception)
+// send headers out over the given socket
+// "reconnect" flag gives permission to reconnect to the socket on write error
+// - this allows us to re-open the proxy connection on pconns if squid's end has
+// timed out but the client's end hasn't. not much use with NTLM, since squid
+// will throw a 407 and restart negotiation, but works well with basic & others.
+void HTTPHeader::out(Socket * sock, int sendflag, bool reconnect) throw(exception)
 {
 	String l;  // for amalgamating to avoid conflict with the Nagel algorithm
 
-	if (sendflag == __DGHEADER_SENDALL || sendflag == __DGHEADER_SENDFIRSTLINE) {
-		if (header.size() > 0) {
-			l = header[0] + "\n";
+	// reconnect loop
+	while (true) {
+		if (sendflag == __DGHEADER_SENDALL || sendflag == __DGHEADER_SENDFIRSTLINE) {
+			if (header.size() > 0) {
+				l = header[0] + "\n";
 #ifdef DGDEBUG
-			std::cout << "headertoclient:" << l << std::endl;
+				std::cout << "headertoclient:" << l << std::endl;
 #endif
-			if (!(*sock).writeToSocket(l.toCharArray(), l.length(), 0, timeout)) {
-				throw exception();
+				if (!(*sock).writeToSocket(l.toCharArray(), l.length(), 0, timeout)) {
+					// reconnect & try again if we've been told to
+					if (reconnect) {
+						// don't try more than once
+#ifdef DGDEBUG
+						std::cout << "Proxy connection broken; trying to re-establish..." << std::endl;
+#endif
+						reconnect = false;
+						sock->reset();
+						int rc = sock->connect(o.proxy_ip, o.proxy_port);
+						if (rc)
+							throw exception();
+						continue;
+					}
+					throw exception();
+				}
+			}
+			if (sendflag == __DGHEADER_SENDFIRSTLINE) {
+				return;
 			}
 		}
-		if (sendflag == __DGHEADER_SENDFIRSTLINE) {
-			return;
+
+		l = "";
+
+		for (int i = 1; i < (signed) header.size(); i++) {
+			l += header[i] + "\n";
 		}
-	}
-
-	l = "";
-
-	for (int i = 1; i < (signed) header.size(); i++) {
-		l += header[i] + "\n";
-	}
-	l += "\r\n";
+		l += "\r\n";
 
 #ifdef DGDEBUG
-	std::cout << "headertoclient:" << l << std::endl;
+		std::cout << "headertoclient:" << l << std::endl;
 #endif
 
-	// send header to the output stream
-	// need exception for bad write
+		// send header to the output stream
+		// need exception for bad write
 
-	if (!(*sock).writeToSocket(l.toCharArray(), l.length(), 0, timeout)) {
-		throw exception();
+		if (!(*sock).writeToSocket(l.toCharArray(), l.length(), 0, timeout)) {
+			// reconnect & try again if we've been told to
+			if (reconnect) {
+				// don't try more than once
+#ifdef DGDEBUG
+				std::cout << "Proxy connection broken; trying to re-establish..." << std::endl;
+#endif
+				reconnect = false;
+				sock->reset();
+				int rc = sock->connect(o.proxy_ip, o.proxy_port);
+				if (rc)
+					throw exception();
+				continue;
+			}
+			throw exception();
+		}
+		// if we got here, we succeeded, so break the reconnect loop
+		break;
 	}
 
 	if (postdata.buffer_length > 0) {

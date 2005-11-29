@@ -53,7 +53,13 @@ public:
 
 	void setTimeout(int t);
 	void in(Socket *sock, bool allowpersistent = false);
-	void out(Socket *sock, int sendflag) throw(exception);
+
+	// send headers out over the given socket
+	// "reconnect" flag gives permission to reconnect to the socket on write error
+	// - this allows us to re-open the proxy connection on pconns if squid's end has
+	// timed out but the client's end hasn't. not much use with NTLM, since squid
+	// will throw a 407 and restart negotiation, but works well with basic & others.
+	void out(Socket *sock, int sendflag, bool reconnect = false) throw(exception);
 	
 	// header value and type checks
 

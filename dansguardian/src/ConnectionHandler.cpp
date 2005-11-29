@@ -715,7 +715,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				|| isourwebserver)
 			{
 				proxysock.readyForOutput(10);  // exception on timeout or error
-				header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
+				header.out(&proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
 				// if this is not a CONNECT request, check the returned headers for persistency flags
 				if (!isconnect && persist) {
 					docheader.in(&proxysock, persist);
@@ -803,7 +803,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						|| isourwebserver)
 					{
 						proxysock.readyForOutput(10);  // exception on timeout or error
-						header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
+						header.out(&proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
 						// if this is not a CONNECT request, check the returned headers for persistency flags
 						if (!isconnect && persist) {
 							docheader.in(&proxysock, persist);
@@ -856,7 +856,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			if (!checkme.isItNaughty && isconnect) {
 				// can't filter content of CONNECT
 				proxysock.readyForOutput(10);  // exception on timeout or error
-				header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
+				header.out(&proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
 				try {
 					FDTunnel fdt;  // make a tunnel object
 					// tunnel from client to proxy and back - *true* two-way tunnel
@@ -883,7 +883,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 				// send header to proxy
 				proxysock.readyForOutput(10);
-				header.out(&proxysock, __DGHEADER_SENDALL);
+				header.out(&proxysock, __DGHEADER_SENDALL, true);
 				// get header from proxy
 				proxysock.checkForInput(120);
 				docheader.in(&proxysock, persist);
@@ -1094,7 +1094,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 			if (wasrequested == false) {
 				proxysock.readyForOutput(10);  // exceptions on error/timeout
-				header.out(&proxysock, __DGHEADER_SENDALL);  // exceptions on error/timeout
+				header.out(&proxysock, __DGHEADER_SENDALL, true);  // exceptions on error/timeout
 				proxysock.checkForInput(120);  // exceptions on error/timeout
 				docheader.in(&proxysock, persist);  // get reply header from proxy
 				// don't allow auth required requests to persist
