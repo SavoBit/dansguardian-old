@@ -311,6 +311,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 	header.setTimeout(120);  // set a timeout as we don't want blocking 4 eva
 	// this also sets how long a pconn will wait for other requests
+	// squid apparently defaults to 1 minute (persistent_request_timeout),
+	// so wait slightly less than this to avoid duff pconns.
+	// checkme: have this value configurable, and/or reconnect to proxy
+	// when the onward connection has timed out instead of failing?
 
 	HTTPHeader docheader;  // to hold the returned page header from proxy
 
@@ -389,73 +393,13 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 
 		// assume all requests over the one persistent connection are from
-		// the same user. means we only need to query the auth plugin once.
-#ifdef DGDEBUG
-		std::cout << "About to determine username/group" << std::endl;
-#endif
+		// the same user. means we only need to query the auth plugin until
+		// we get credentials, then assume they are valid for all reqs. on
+		// the persistent connection.
 		std::string clientuser;
 		int filtergroup;
 		bool authed = false;
-		for (std::deque<Plugin*>::iterator i = o.authplugins_begin; i != o.authplugins_end; i++) {
-#ifdef DGDEBUG
-			std::cout << "Querying next auth plugin..." << std::endl;
-#endif
-			rc = ((AuthPlugin*)(*i))->identify(peerconn, proxysock, header, filtergroup, clientuser);
-			if (rc == DGAUTH_OK) {
-#ifdef DGDEBUG
-				std::cout<<"Auth plugin found username & group; not querying remaining plugins"<<std::endl;
-#endif
-				authed = true;
-				break;
-			}
-			else if (rc == DGAUTH_NOUSER) {
-#ifdef DGDEBUG
-				std::cout<<"Auth plugin found username \"" << clientuser << "\" but no associated group; not querying remaining plugins"<<std::endl;
-#endif
-				filtergroup = 0;  //default group - one day configurable?
-				authed = true;
-				break;
-			}
-			else if (rc == DGAUTH_REDIRECT) {
-#ifdef DGDEBUG
-				std::cout<<"Auth plugin told us to redirect client to \"" << clientuser << "\"; not querying remaining plugins"<<std::endl;
-#endif
-				// ident plugin told us to redirect to a login page
-				proxysock.close();
-				String writestring = "HTTP/1.0 302 Redirect\nLocation: ";
-				writestring += clientuser;
-				writestring += "\n\n";
-				peerconn.writeString(writestring.toCharArray());
-				return;
-			}
-			else if (rc < 0) {
-				if (!is_daemonised)
-					std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
-				syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
-				proxysock.close();
-				return;
-			}
-#ifdef DGDEBUG
-			if (rc == DGAUTH_NOMATCH) std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
-#endif
-		} 
-		if (!authed) {
-#ifdef DGDEBUG
-			std::cout << "No identity found; using defaults" << std::endl;
-#endif
-			clientuser = "-";
-			filtergroup = 0;  //default group - one day configurable?
-		}
-
-#ifdef DGDEBUG
-		std::cout << "username: " << clientuser << std::endl;
-		std::cout << "filtergroup: " << filtergroup << std::endl;
-		std::cout << "groupmode: " << o.fg[filtergroup]->group_mode << std::endl;
-#endif
-
-		// filter group modes are: 0 = banned, 1 = filtered, 2 = exception.
-		// is this user banned?
-		bool isbanneduser = (o.fg[filtergroup]->group_mode == 0);
+		bool isbanneduser = false;
 
 		// maintain a persistent connection
 		while (persist) {
@@ -516,6 +460,77 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// reset flags & objects next time round the loop
 				firsttime = false;
 			}
+
+			// don't have credentials for this connection yet? get some!
+			if (!authed) {
+#ifdef DGDEBUG
+				std::cout << "Not got credentials for this connection - querying auth plugins" << std::endl;
+#endif
+				for (std::deque<Plugin*>::iterator i = o.authplugins_begin; i != o.authplugins_end; i++) {
+#ifdef DGDEBUG
+					std::cout << "Querying next auth plugin..." << std::endl;
+#endif
+					rc = ((AuthPlugin*)(*i))->identify(peerconn, proxysock, header, filtergroup, clientuser);
+					if (rc == DGAUTH_OK) {
+#ifdef DGDEBUG
+						std::cout<<"Auth plugin found username & group; not querying remaining plugins"<<std::endl;
+#endif
+						authed = true;
+						break;
+					}
+					else if (rc == DGAUTH_NOUSER) {
+#ifdef DGDEBUG
+						std::cout<<"Auth plugin found username \"" << clientuser << "\" but no associated group; not querying remaining plugins"<<std::endl;
+#endif
+						filtergroup = 0;  //default group - one day configurable?
+						authed = true;
+						break;
+					}
+					else if (rc == DGAUTH_REDIRECT) {
+#ifdef DGDEBUG
+						std::cout<<"Auth plugin told us to redirect client to \"" << clientuser << "\"; not querying remaining plugins"<<std::endl;
+#endif
+						// ident plugin told us to redirect to a login page
+						proxysock.close();
+						String writestring = "HTTP/1.0 302 Redirect\nLocation: ";
+						writestring += clientuser;
+						writestring += "\n\n";
+						peerconn.writeString(writestring.toCharArray());
+						return;
+					}
+					else if (rc < 0) {
+						if (!is_daemonised)
+							std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
+						syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
+						proxysock.close();
+						return;
+					}
+#ifdef DGDEBUG
+					if (rc == DGAUTH_NOMATCH) std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
+#endif
+				} 
+				if (!authed) {
+#ifdef DGDEBUG
+					std::cout << "No identity found; using defaults" << std::endl;
+#endif
+					clientuser = "-";
+					filtergroup = 0;  //default group - one day configurable?
+				}
+			}
+#ifdef DGDEBUG
+			else
+				std::cout << "Already got credentials for this connection - not querying auth plugins" << std::endl;
+#endif
+
+#ifdef DGDEBUG
+			std::cout << "username: " << clientuser << std::endl;
+			std::cout << "filtergroup: " << filtergroup << std::endl;
+			std::cout << "groupmode: " << o.fg[filtergroup]->group_mode << std::endl;
+#endif
+
+			// filter group modes are: 0 = banned, 1 = filtered, 2 = exception.
+			// is this user banned?
+			isbanneduser = (o.fg[filtergroup]->group_mode == 0);
 
 			url = header.url();
 			urld = header.decode(url);
@@ -701,9 +716,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			{
 				proxysock.readyForOutput(10);  // exception on timeout or error
 				header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
-				docheader.in(&proxysock, persist);
-				persist = docheader.isPersistent();
-				docheader.out(&peerconn, __DGHEADER_SENDALL);
+				// if this is not a CONNECT request, check the returned headers for persistency flags
+				if (!isconnect && persist) {
+					docheader.in(&proxysock, persist);
+					persist = docheader.isPersistent();
+					docheader.out(&peerconn, __DGHEADER_SENDALL);
+				}
 				try {
 					FDTunnel fdt;  // make a tunnel object
 					// tunnel from client to proxy and back
@@ -786,13 +804,17 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					{
 						proxysock.readyForOutput(10);  // exception on timeout or error
 						header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
-						docheader.in(&proxysock, persist);
-						persist = docheader.isPersistent();
-						docheader.out(&peerconn, __DGHEADER_SENDALL);
+						// if this is not a CONNECT request, check the returned headers for persistency flags
+						if (!isconnect && persist) {
+							docheader.in(&proxysock, persist);
+							persist = docheader.isPersistent();
+							docheader.out(&peerconn, __DGHEADER_SENDALL);
+						}
 						try {
 							FDTunnel fdt;  // make a tunnel object
 							// tunnel from client to proxy and back
-							fdt.tunnel(proxysock, peerconn);  // not expected to exception
+							// two-way if SSL
+							fdt.tunnel(proxysock, peerconn, isconnect);  // not expected to exception
 							docsize = fdt.throughput;
 							if (!isourwebserver) {	// don't log requests to the web server
 								String rtype = header.requestType();
@@ -835,9 +857,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// can't filter content of CONNECT
 				proxysock.readyForOutput(10);  // exception on timeout or error
 				header.out(&proxysock, __DGHEADER_SENDALL);  // send proxy the request
-				docheader.in(&proxysock, persist);
-				persist = docheader.isPersistent();
-				docheader.out(&peerconn, __DGHEADER_SENDALL);
 				try {
 					FDTunnel fdt;  // make a tunnel object
 					// tunnel from client to proxy and back - *true* two-way tunnel
@@ -868,14 +887,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// get header from proxy
 				proxysock.checkForInput(120);
 				docheader.in(&proxysock, persist);
+				persist = docheader.isPersistent();
 
-				// don't allow auth required requests to persist
-				// - we only query the auth plugin outside the persistency loop
-				if (docheader.authRequired()) {
-					persist = false;
-					docheader.makePersistent(false);
-				} else
-					persist = docheader.isPersistent();
 #ifdef DGDEBUG
 				std::cout << "got header from proxy" << std::endl;
 				if (!persist)
