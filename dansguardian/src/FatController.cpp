@@ -92,6 +92,7 @@ extern "C"
 	void sig_termsafe(int signo);  // This is so we can kill our children safer
 	void sig_hup(int signo);  // This is so we know if we should re-read our config.
 	void sig_usr1(int signo);  // This is so we know if we should re-read our config but not kill current connections
+	void sig_childterm(int signo);
 }
 
 // logging & URL cache processes
@@ -170,6 +171,13 @@ extern "C"
 #ifdef DGDEBUG
 		std::cout << "USR1 received." << std::endl;
 #endif
+	}
+	void sig_childterm(int signo)
+	{
+#ifdef DGDEBUG
+		std::cout << "TERM recieved." << std::endl;
+#endif
+		_exit(0);
 	}
 }
 
@@ -389,7 +397,7 @@ void tidyup_forchild()
 {
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = SIG_DFL;
+	sa.sa_handler = &sig_childterm;
 	if (sigaction(SIGTERM, &sa, NULL)) {	// restore sig handler
 		// in child process
 #ifdef DGDEBUG
@@ -612,6 +620,7 @@ void cullchildren(int num)
 			childrenstates[i] = -2;  // dieing
 			numchildren--;
 			delete childsockets[i];
+			childsockets[i] = NULL;
 			pids[i].fd = -1;
 			if (count >= num) {
 				break;
@@ -632,6 +641,7 @@ void kill_allchildren()
 			childrenstates[i] = -2;  // dieing
 			numchildren--;
 			delete childsockets[i];
+			childsockets[i] = NULL;
 			pids[i].fd = -1;
 		}
 	}
@@ -721,6 +731,7 @@ void deletechild(int child_pid, int stat)
 			if (childrenstates[i] != -2) {	// -2 is when its been culled
 				numchildren--;  // so no need to duplicater
 				delete childsockets[i];
+				childsockets[i] = NULL;
 				pids[i].fd = -1;
 			}
 			childrenstates[i] = -1;  // unused
@@ -1691,6 +1702,7 @@ int fc_controlit()
 	for (int i = 0; i < o.max_children; i++) {
 		if (pids[i].fd != -1) {
 			delete childsockets[i];
+			childsockets[i] = NULL;
 		}
 	}
 	if (numchildren > 0) {
