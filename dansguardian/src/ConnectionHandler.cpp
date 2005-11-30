@@ -50,6 +50,7 @@
 // GLOBALS
 extern OptionContainer o;
 extern bool is_daemonised;
+extern bool reloadconfig;
 
 
 // IMPLEMENTATION
@@ -126,6 +127,8 @@ String ConnectionHandler::hashedCookie(String * url, int filtergroup, std::strin
 
 // when using IP address counting - have we got any remaining free IPs?
 bool ConnectionHandler::gotIPs(char *ipstr) {
+	if (reloadconfig)
+		return false;
 	UDSocket ipcsock;
 	if (ipcsock.getFD() < 0) {
 		syslog(LOG_ERR, "%s","Error creating ipc socket to IP cache");
@@ -158,6 +161,8 @@ bool ConnectionHandler::gotIPs(char *ipstr) {
 // check the URL cache to see if we've already flagged an address as clean
 bool ConnectionHandler::wasClean(String &url)
 {
+	if (reloadconfig)
+		return false;
 	String myurl = url.after("://");
 	UDSocket ipcsock;
 	if (ipcsock.getFD() < 0) {
@@ -203,6 +208,8 @@ bool ConnectionHandler::wasClean(String &url)
 // add a known clean URL to the cache
 void ConnectionHandler::addToClean(String &url)
 {
+	if (reloadconfig)
+		return;
 	String myurl = url.after("://");
 	UDSocket ipcsock;
 	if (ipcsock.getFD() < 0) {
@@ -402,7 +409,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		bool isbanneduser = false;
 
 		// maintain a persistent connection
-		while (persist) {
+		while (persist && !reloadconfig) {
 
 			if (!firsttime) {
 #ifdef DGDEBUG
@@ -1239,6 +1246,8 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		int code, std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness,
 		bool contentmodified, bool urlmodified)
 {
+	if (reloadconfig)
+		return;
 	// don't log if logging disabled entirely, or if it's an ad block and ad logging is disabled
 	if ((loglevel == 0) || ((cat != NULL) && (o.log_ad_blocks == 0) && (strstr(cat->c_str(),"ADs") != NULL))) {
 #ifdef DGDEBUG
