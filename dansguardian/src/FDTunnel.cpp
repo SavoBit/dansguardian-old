@@ -66,7 +66,7 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway)
 
 	char buff[32768];  // buffer for the input
 	timeval timeout;  // timeval struct
-	timeout.tv_sec = 120;  // modify the struct so its a 120 sec timeout
+	timeout.tv_sec = 60;  // modify the struct so its a 60 sec timeout
 	timeout.tv_usec = 0;
 
 	fd_set fdSet;  // file descriptor set
