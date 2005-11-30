@@ -33,6 +33,7 @@
 // GLOBALS
 
 extern OptionContainer o;
+extern bool is_daemonised;
 
 
 // DECLARATIONS
@@ -171,18 +172,16 @@ int clamavinstance::init(void* args)
 	std::cout << "root: " << root << " virnum: " << virnum << std::endl;
 #endif
 	if (rc != 0) {
-#ifdef DGDEBUG
-		std::cerr << "Error loading clamav db:" << cl_strerror(rc) << std::endl;
-#endif
+		if (!is_daemonised)
+			std::cerr << "Error loading clamav db:" << cl_strerror(rc) << std::endl;
 		syslog(LOG_ERR, "%s", "Error loading clamav db");
 		syslog(LOG_ERR, "%s", cl_strerror(rc));
 		return DGCS_ERROR;
 	}
 	rc = cl_build(root);
 	if (rc != 0) {
-#ifdef DGDEBUG
-		std::cerr << "Error building clamav db:" << cl_strerror(rc) << std::endl;
-#endif
+		if (!is_daemonised)
+			std::cerr << "Error building clamav db:" << cl_strerror(rc) << std::endl;
 		syslog(LOG_ERR, "%s", "Error building clamav db");
 		syslog(LOG_ERR, "%s", cl_strerror(rc));
 		return DGCS_ERROR;

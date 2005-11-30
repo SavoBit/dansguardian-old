@@ -34,6 +34,7 @@
 // GLOBALS
 
 extern OptionContainer o;
+extern bool is_daemonised;
 
 
 // DECLARATIONS
@@ -79,9 +80,8 @@ int clamdinstance::init(void* args)
 	// read in ClamD UNIX domain socket path 
 	udspath = cv["clamdudsfile"];
 	if (udspath.length() < 3) {
-#ifdef DGDEBUG
-		std::cerr << "Error reading clamdudsfile option." << std::endl;
-#endif
+		if (!is_daemonised)
+			std::cerr << "Error reading clamdudsfile option." << std::endl;
 		syslog(LOG_ERR, "Error reading clamdudsfile option.");
 		return DGCS_ERROR;
 		// it would be far better to do a test connection to the file but

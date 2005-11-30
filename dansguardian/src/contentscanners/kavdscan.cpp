@@ -36,6 +36,7 @@
 // GLOBALS
 
 extern OptionContainer o;
+extern bool is_daemonised;
 
 
 // IMPLEMENTATION
@@ -74,9 +75,8 @@ int kavdinstance::init(void* args)
 
 	udspath = cv["kavdudsfile"];
 	if (udspath.length() < 3) {
-#ifdef DGDEBUG
-		std::cerr << "Error reading kavdudsfile option." << std::endl;
-#endif
+		if (!is_daemonised)
+			std::cerr << "Error reading kavdudsfile option." << std::endl;
 		syslog(LOG_ERR, "%s", "Error reading kavdudsfile option.");
 		return DGCS_ERROR;
 		// it would be far better to do a test connection to the file but

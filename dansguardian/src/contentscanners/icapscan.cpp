@@ -38,6 +38,7 @@
 // GLOBALS
 
 extern OptionContainer o;
+extern bool is_daemonised;
 
 
 // DECLARATIONS
@@ -90,9 +91,8 @@ int icapinstance::init(void* args)
 
 	icapurl = cv["icapurl"];  // format: icap://icapserver:1344/avscan
 	if (icapurl.length() < 3) {
-#ifdef DGDEBUG
-		std::cerr << "Error reading icapurl option." << std::endl;
-#endif
+		if (!is_daemonised)
+			std::cerr << "Error reading icapurl option." << std::endl;
 		syslog(LOG_ERR, "%s", "Error reading icapurl option.");
 		return DGCS_ERROR;
 		// it would be far better to do a test connection
@@ -102,9 +102,8 @@ int icapinstance::init(void* args)
 	icaphost = icaphost.before(":");
 	struct hostent *host;
 	if ((host = gethostbyname(icaphost.toCharArray())) == 0) {
-#ifdef DGDEBUG
-		std::cerr << "Error resolving icap host address." << std::endl;
-#endif
+		if (!is_daemonised)
+			std::cerr << "Error resolving icap host address." << std::endl;
 		syslog(LOG_ERR, "%s", "Error resolving icap host address.");
 		return DGCS_ERROR;
 	}
