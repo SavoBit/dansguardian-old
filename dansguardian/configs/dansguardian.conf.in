@@ -87,7 +87,12 @@ proxyport = 3128
 accessdeniedaddress = 'http://YOURSERVER.YOURDOMAIN/cgi-bin/dansguardian.pl'
 
 # Non standard delimiter (only used with accessdeniedaddress)
-# Default is enabled but to go back to the original standard mode dissable it.
+# To help preserve the full banned URL, including parameters, the variables
+# passed into the access denied CGI are separated using non-standard
+# delimiters. This can be useful to ensure correct operation of the filter
+# bypass modes. Parameters are split using "::" in place of "&", and "==" in
+# place of "=".
+# Default is enabled, but to go back to the standard mode, disable it.
 nonstandarddelimiter = on
 
 
@@ -463,13 +468,13 @@ logconnectionhandlingerrors = on
 
 # Fork pool options
 
-# sets the maximum number of processes to sporn to handle the incomming
+# sets the maximum number of processes to spawn to handle the incoming
 # connections.  Max value usually 250 depending on OS.
 # On large sites you might want to try 180.
 maxchildren = 120
 
 
-# sets the minimum number of processes to sporn to handle the incomming connections.
+# sets the minimum number of processes to spawn to handle the incoming connections.
 # On large sites you might want to try 32.
 minchildren = 8
 
@@ -479,7 +484,7 @@ minchildren = 8
 minsparechildren = 4
 
 
-# sets the minimum number of processes to sporn when it runs out
+# sets the minimum number of processes to spawn when it runs out
 # On large sites you might want to try 10.
 preforkchildren = 6
 
