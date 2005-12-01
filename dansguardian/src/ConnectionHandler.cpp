@@ -392,7 +392,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			// in continuing
 		}
 
-		header.in(&peerconn, true);  // get header from client, allowing persistency
+		header.in(&peerconn, true, true);  // get header from client, allowing persistency and breaking on reloadconfig
 		bool persist = header.isPersistent();
 		bool firsttime = true;
 #ifdef DGDEBUG
@@ -409,7 +409,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		bool isbanneduser = false;
 
 		// maintain a persistent connection
-		while (persist && !reloadconfig) {
+		while ((firsttime || persist) && !reloadconfig) {
 
 			if (!firsttime) {
 #ifdef DGDEBUG
@@ -418,7 +418,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				std::cout << clientip << std::endl;
 #endif
 				try {
-					header.in(&peerconn, true);  // get header from client, allowing persistency
+					header.in(&peerconn, true, true);  // get header from client, allowing persistency and breaking on reloadconfig
 				} catch (exception &e) {
 #ifdef DGDEBUG
 					std::cout << "Persistent connection closed" << std::endl;
@@ -1246,8 +1246,6 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		int code, std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness,
 		bool contentmodified, bool urlmodified)
 {
-	if (reloadconfig)
-		return;
 	// don't log if logging disabled entirely, or if it's an ad block and ad logging is disabled
 	if ((loglevel == 0) || ((cat != NULL) && (o.log_ad_blocks == 0) && (strstr(cat->c_str(),"ADs") != NULL))) {
 #ifdef DGDEBUG
