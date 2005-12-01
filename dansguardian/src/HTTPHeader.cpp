@@ -1201,7 +1201,7 @@ void HTTPHeader::out(Socket * sock, int sendflag, bool reconnect) throw(exceptio
 	}
 }
 
-void HTTPHeader::in(Socket * sock, bool allowpersistent)
+void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfig)
 {
 	header.clear();
 	postdata.reset();
@@ -1211,10 +1211,15 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent)
 	char buff[8192];  // setup a buffer to hold the incomming HTTP line
 	String line;  // temp store to hold the line after processing
 	line = "----";  // so we get past the first while
+	bool firsttime = true;
 	while (line.length() > 3) {	// loop until the stream is
 		// failed or we get to the end of the header (a line by itself)
 
-		(*sock).getLine(buff, 8192, timeout);  // get a line of header from the stream
+		// get a line of header from the stream
+		// on the first time round the loop, honour the reloadconfig flag if desired
+		// - this lets us break when waiting for the next request on a pconn, but not
+		// during receipt of a request in progress.
+		(*sock).getLine(buff, 8192, timeout, firsttime ? honour_reloadconfig : false);
 
 		// getline will throw an exception if there is an error which will
 		// only be caught by HandleConnection()
@@ -1222,8 +1227,8 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent)
 
 		line = buff;  // convert the line to a String
 
-		header.push_back(line);  // stick the line in the deque that
-		// holds the header
+		header.push_back(line);  // stick the line in the deque that holds the header
+		firsttime = false;
 	}
 	header.pop_back();  // remove the final blank line of a header
 	if (header.size() == 0)
