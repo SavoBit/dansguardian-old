@@ -746,7 +746,7 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 	char *i;
 	String foundurl;
 #ifdef DGDEBUG
-	std::cout << "inURLList:" << url << std::endl;
+	std::cout << "inURLList: " << url << std::endl;
 #endif
 	url.removeWhiteSpace();  // just in case of weird browser crap
 	url.toLower();
@@ -759,12 +759,12 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 		tpath.realPath();
 		url += tpath;  // will resolve ../ and %2e2e/ and // etc
 	}
-#ifdef DGDEBUG
-	std::cout << "inURLList(processed):" << url << std::endl;
-#endif
 	if (url.endsWith("/")) {
 		url.chop();  // chop off trailing / if any
 	}
+#ifdef DGDEBUG
+	std::cout << "inURLList (processed): " << url << std::endl;
+#endif
 	if (reverse_lookups == 1 && url.after("/").length() > 0) {
 		String hostname = url.before("/");
 		if (isIPHostname(hostname)) {
@@ -802,8 +802,8 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 			foundurl = i;
 			fl = foundurl.length();
 #ifdef DGDEBUG
-			std::cout << "foundurl:" << foundurl << foundurl.length() << std::endl;
-			std::cout << "url:" << url << fl << std::endl;
+			std::cout << "foundurl: " << foundurl << foundurl.length() << std::endl;
+			std::cout << "url: " << url << fl << std::endl;
 #endif
 			if (url.length() > fl) {
 				if (url[fl] == '/' || url[fl] == '?' || url[fl] == '&' || url[fl] == '=') {
@@ -858,9 +858,17 @@ char *FOptionContainer::inBannedExtensionList(String url)
 // is this URL in the given regexp URL list?
 int FOptionContainer::inRegExpURLList(String &url, std::deque<RegExp> &list_comp)
 {
+#ifdef DGDEBUG
+	std::cout<<"inRegExpURLList: "<<url<<std::endl;
+#endif
 	url.removeWhiteSpace();  // just in case of weird browser crap
 	url.toLower();
-	url.removePTP();  // chop off the ht(f)tp(s)://
+	// chop off the PTP (ht(f)tp(s)://)
+	String ptp;
+	if (url.contains("//")) {
+		ptp = url.before("//");
+		url = url.after("//");
+	}
 	if (url.contains("/")) {
 		String tpath = "/";
 		tpath += url.after("/");
@@ -872,6 +880,12 @@ int FOptionContainer::inRegExpURLList(String &url, std::deque<RegExp> &list_comp
 	if (url.endsWith("/")) {
 		url.chop();  // chop off trailing / if any
 	}
+	// re-add the PTP
+	if (ptp.length() > 0)
+		url = ptp + "//" + url;
+#ifdef DGDEBUG
+	std::cout<<"inRegExpURLList (processed): "<<url<<std::endl;
+#endif
 	unsigned int i;
 	for (i = 0; i < list_comp.size(); i++) {
 		list_comp[i].match(url.toCharArray());
@@ -885,6 +899,9 @@ int FOptionContainer::inRegExpURLList(String &url, std::deque<RegExp> &list_comp
 // use above to check banned/exception RegExp URLs
 int FOptionContainer::inBannedRegExpURLList(String url)
 {
+#ifdef DGDEBUG
+	std::cout<<"inBannedRegExpURLList"<<std::endl;
+#endif
 	return inRegExpURLList(url, banned_regexpurl_list_comp);
 }
 
