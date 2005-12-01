@@ -1283,14 +1283,12 @@ int fc_controlit()
 	unlink(o.urlipc_filename.c_str());
 	unlink(o.ipipc_filename.c_str());
 
-	// checkme: why can't we output the actual filenames in the syslog? answer: we can, so do.
-
 	if (o.no_logger == 0) {
 		if (loggersock.bind((char *) o.ipc_filename.c_str())) {	// bind to file
 			if (!is_daemonised) {
 				std::cerr << "Error binding ipc server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm " << o.ipc_filename << "')." << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Error binding ipc server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm /tmp/.dguardianipc' or whatever you have it configured to).");
+			syslog(LOG_ERR, "Error binding ipc server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm %s').", o.ipc_filename.c_str());
 			return 1;
 		}
 		if (loggersock.listen(256)) {	// set it to listen mode with a kernel
@@ -1308,7 +1306,7 @@ int fc_controlit()
 			if (!is_daemonised) {
 				std::cerr << "Error binding urllistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm " << o.urlipc_filename << "')." << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Error binding urllistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm /tmp/.dguardianurlipc' or whatever you have it configured to).");
+			syslog(LOG_ERR, "Error binding urllistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm %s').", o.urlipc_filename.c_str());
 			return 1;
 		}
 		if (urllistsock.listen(256)) {	// set it to listen mode with a kernel
@@ -1326,7 +1324,7 @@ int fc_controlit()
 			if (!is_daemonised) {
 				std::cerr << "Error binding iplistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm " << o.ipipc_filename << "')." << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Error binding iplistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm /tmp/.dguardianurlipc' or whatever you have it configured to).");
+			syslog(LOG_ERR, "%s", "Error binding iplistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm %s').", o.ipipc_filename.c_str());
 			return 1;
 		}
 		if (iplistsock.listen(256)) {	// set it to listen mode with a kernel
