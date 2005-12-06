@@ -81,6 +81,7 @@ void DataBuffer::reset()
 	bytesalreadysent = 0;
 	dontsendbody = false;
 	preservetemp = false;
+	decompress = "";
 }
 
 // delete the memory block when the class is destroyed
@@ -277,6 +278,9 @@ bool DataBuffer::in(Socket * sock, Socket * peersock, HTTPHeader * requestheader
 void DataBuffer::out(Socket * sock) throw(exception)
 {
 	if (dontsendbody) {
+#ifdef DGDEBUG
+		std::cout << "dontsendbody true; not sending" << std::endl;
+#endif
 		return;
 	}
 	(*sock).readyForOutput(timeout);  // exceptions on timeout or error
@@ -316,9 +320,16 @@ void DataBuffer::out(Socket * sock) throw(exception)
 #endif
 		}
 	} else {
+#ifdef DGDEBUG
+		std::cout << "Sending " << buffer_length - bytesalreadysent << " bytes from RAM (" << buffer_length << " in buffer; " << bytesalreadysent << " already sent)" << std::endl;
+#endif
 		// it's in RAM, so just send it, no streaming from disk
-		if (!(*sock).writeToSocket(data + bytesalreadysent, buffer_length - bytesalreadysent, 0, timeout)) {
-			throw exception();
+		if (buffer_length != 0) {
+			if (!(*sock).writeToSocket(data + bytesalreadysent, buffer_length - bytesalreadysent, 0, timeout))
+				throw exception();
+		} else {
+			if (!sock->writeToSocket("\r\n", 2, 0, timeout))
+				throw exception();
 		}
 	}
 }
@@ -351,7 +362,6 @@ void DataBuffer::zlibinflate(bool header)
 	char *temp;
 	block = new char[newsize];
 	int err;
-	int bout;
 	int bytesgot = 0;
 
 	z_stream d_stream;
@@ -363,6 +373,7 @@ void DataBuffer::zlibinflate(bool header)
 	d_stream.next_out = (Bytef *) block;
 	d_stream.avail_out = newsize;
 
+	// inflate either raw zlib, or possibly gzip with a header
 	if (header) {
 		err = inflateInit2(&d_stream, 15 + 32);
 	} else {
@@ -380,16 +391,15 @@ void DataBuffer::zlibinflate(bool header)
 #ifdef DGDEBUG
 		std::cerr << "inflate loop" << std::endl;
 #endif
-		err = inflate(&d_stream, Z_NO_FLUSH);
-		bout = newsize - bytesgot - d_stream.avail_out;
-		bytesgot += bout;
+		err = inflate(&d_stream, Z_SYNC_FLUSH);
+		bytesgot = d_stream.total_out;
 		if (err == Z_STREAM_END) {
 			break;
 		}
 		if (err != Z_OK) {	// was a problem so just return
 			delete[]block;  // don't forget to free claimed memory
 #ifdef DGDEBUG
-			std::cerr << "bad inflate: " << String(err) << std::endl;
+			std::cerr << "bad inflate: " << d_stream.msg << std::endl;
 #endif
 			return;
 		}
@@ -401,6 +411,7 @@ void DataBuffer::zlibinflate(bool header)
 			return;
 		}
 
+		// inflation is going ok, but we don't have enough room in the output buffer
 		newsize = bytesgot * 2;
 		temp = new char[newsize];
 		memcpy(temp, block, bytesgot);
@@ -414,6 +425,9 @@ void DataBuffer::zlibinflate(bool header)
 	compressed_buffer_length = buffer_length;
 	data = block;
 	buffer_length = bytesgot;
+#ifdef DGDEBUG
+	std::cout << "decompressed size: " << buffer_length << std::endl;
+#endif
 	
 	// what exactly is this doing here!?
 	// it looks like this is done above anyway, despite what this says.
