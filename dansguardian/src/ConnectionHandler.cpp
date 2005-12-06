@@ -1907,7 +1907,8 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 	String &url, String &domain, bool *scanerror, bool &contentmodified)
 {
 	proxysock->checkForInput(120);
-	if (docheader->isCompressed()) {
+	bool compressed = docheader->isCompressed();
+	if (compressed) {
 #ifdef DGDEBUG
 		std::cout << "Decompressing as we go....." << std::endl;
 #endif
@@ -1937,8 +1938,17 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 	// don't scan zero-length buffers (waste of AV resources, especially with external scanners (ICAP)).
 	// these were encountered browsing opengroup.org, caused by a stats script. (PRA 21/09/2005)
 	// if we wanted to honour a hypothetical min_content_scan_size, we'd do it here.
-	if (((*docsize) = (signed) dblen) == 0)
+	if (((*docsize) = (signed) dblen) == 0) {
+#ifdef DGDEBUG
+		std::cout << "Not scanning zero-length body" << std::endl;
+#endif
+		// it's not inconceivable that we received zlib or gzip encoded content
+		// that is, after decompression, zero length. we need to cater for this.
+		// seen on SW's internal MediaWiki.
+		if (compressed)
+			docheader->removeEncoding(0);
 		return;
+	}
 
 	if (!wasclean) {	// was not clean or no urlcache
 
@@ -2048,7 +2058,14 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 	}
 #ifdef DGDEBUG
 	else {
-		std::cout << "content length large so skipping content modifying or it's not text" << std::endl;
+		std::cout << "Skipping content modification: ";
+		if (dblen > o.max_content_filter_size)
+			std::cout << "Content too large";
+		else if (!docheader->isContentType("text"))
+			std::cout << "Not text";
+		else if (checkme->isItNaughty)
+			std::cout << "Already flagged as naughty";
+		std::cout << std::endl;
 	}
 	system("date");
 #endif
@@ -2059,8 +2076,8 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 #ifdef DGDEBUG
 		std::cout << "content modification made" << std::endl;
 #endif
-		if (docheader->isCompressed()) {
-			docheader->removeEncoding(dblen);
+		if (compressed) {
+			docheader->removeEncoding(docbody->buffer_length);
 			// need to modify header to mark as not compressed
 			// it also modifies Content-Length as well
 		} else {
