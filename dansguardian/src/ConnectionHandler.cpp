@@ -1029,7 +1029,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					}
 				}
 
-				// check received header from proxy
+				// check header sent to proxy - this could be done before the send, but we
+				// want to wait until after the MIME type & extension checks, because they may
+				// act as a quicker rejection.
 				if (!isbypass && !isexception && !checkme.isItNaughty && !docheader.authRequired()) {
 					requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup,
 						&ispostblock, isbanneduser, isbannedip);
