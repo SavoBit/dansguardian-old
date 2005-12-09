@@ -864,11 +864,17 @@ int FOptionContainer::inRegExpURLList(String &url, std::deque<RegExp> &list_comp
 	url.removeWhiteSpace();  // just in case of weird browser crap
 	url.toLower();
 	// chop off the PTP (ht(f)tp(s)://)
-	String ptp;
+	/*String ptp;
 	if (url.contains("//")) {
 		ptp = url.before("//");
 		url = url.after("//");
-	}
+	}*/
+	
+	// whilst it would be nice to have regexes be able to match the PTP,
+	// it has been assumed for too long that the URL string does not start with one,
+	// and we don't want to break regexes that look explicitly for the start of
+	// the string. changes here have therefore been reverted. 2005-12-07
+	url.removePTP();
 	if (url.contains("/")) {
 		String tpath = "/";
 		tpath += url.after("/");
@@ -881,8 +887,8 @@ int FOptionContainer::inRegExpURLList(String &url, std::deque<RegExp> &list_comp
 		url.chop();  // chop off trailing / if any
 	}
 	// re-add the PTP
-	if (ptp.length() > 0)
-		url = ptp + "//" + url;
+	/*if (ptp.length() > 0)
+		url = ptp + "//" + url;*/
 #ifdef DGDEBUG
 	std::cout<<"inRegExpURLList (processed): "<<url<<std::endl;
 #endif
