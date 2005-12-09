@@ -25,7 +25,12 @@
 #include "../OptionContainer.hpp"
 
 #include <syslog.h>
+
+#ifdef HAVE_ENDIAN_H
 #include <endian.h>
+#else
+#include <sys/endian.h>
+#endif
 
 
 // DEFINES
@@ -33,6 +38,22 @@
 extern OptionContainer o;
 
 // NTLM username grabbing needs to be independent of endianness
+
+#ifdef HAVE_BYTESWAP_H
+#include <byteswap.h>
+#define bswap16(x) bswap_16(x)
+#define bswap32(x) bswap_32(x)
+#else
+#ifndef bswap16
+#define bswap16(x) (((((u_int16_t)x) >> 8) & 0xff) | ((((u_int16_t)x) & 0xff) << 8))
+#endif
+#ifndef bswap32
+#define bswap32(x) (((((u_int32_t)x) & 0xff000000) >> 24) | ((((u_int32_t)x) & 0x00ff0000) >>  8) | \
+	((((u_int32_t)x) & 0x0000ff00) <<  8) | ((((u_int32_t)x) & 0x000000ff) << 24))
+#endif
+#endif
+
+#ifdef __BYTE_ORDER
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 #define SSWAP(x) (bswap16((x)))
@@ -42,14 +63,16 @@ extern OptionContainer o;
 #define WSWAP(x) (x)
 #endif
 
-#ifdef HAVE_BYTESWAP_H
-#include <byteswap.h>
-#define bswap16(x) bswap_16(x)
-#define bswap32(x) bswap_32(x)
 #else
-#define bswap16(x) (((((u_int16_t)x) >> 8) & 0xff) | ((((u_int16_t)x) & 0xff) << 8))
-#define bswap32(x) (((((u_int32_t)x) & 0xff000000) >> 24) | ((((u_int32_t)x) & 0x00ff0000) >>  8) | \
-	((((u_int32_t)x) & 0x0000ff00) <<  8) | ((((u_int32_t)x) & 0x000000ff) << 24))
+
+#if _BYTE_ORDER == _BIG_ENDIAN
+#define SSWAP(x) (bswap16((x)))
+#define WSWAP(x) (bswap32((x)))
+#else
+#define SSWAP(x) (x)
+#define WSWAP(x) (x)
+#endif
+
 #endif
 
 
