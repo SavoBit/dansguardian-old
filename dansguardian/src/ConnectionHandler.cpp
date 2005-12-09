@@ -852,19 +852,49 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			// Improved IF structure as suggested by AFN
 
 			if (isconnect && !isbypass && !isexception) {
-				// if its a connect and we don't do filtering on it now then
-				// it will get tunneled and not filtered.  We can't tunnel later
-				// as its ssl so we can't see the return header etc
-				// So preemptive banning is forced on with ssl unfortunately.
-				// It is unlikely to cause many problems though.
-				requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup, &ispostblock, isbanneduser, isbannedip);
+				// send header to proxy
+				proxysock.readyForOutput(10);
+				header.out(&proxysock, __DGHEADER_SENDALL, true);
+				// get header from proxy
+				proxysock.checkForInput(120);
+				docheader.in(&proxysock, persist);
+				persist = docheader.isPersistent();
+
+				wasrequested = true;
+				
+				if (docheader.authRequired()) {
+#ifdef DGDEBUG
+					std::cout << "CONNECT request requires proxy authentication - doing standard filtering on auth required response" << std::endl;
+#endif
+					isconnect = false;
+				} else {
+#ifdef DGDEBUG
+					std::cout << "CONNECT request does not require proxy authentication - attempting pre-emptive ban" << std::endl;
+#endif
+					// if its a connect and we don't do filtering on it now then
+					// it will get tunneled and not filtered.  We can't tunnel later
+					// as its ssl so we can't see the return header etc
+					// So preemptive banning is forced on with ssl unfortunately.
+					// It is unlikely to cause many problems though.
+					requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup, &ispostblock, isbanneduser, isbannedip);
+#ifdef DGDEBUG
+					std::cout << "done checking" << std::endl;
+#endif
+				}
 			}
 
 			if (!checkme.isItNaughty && isconnect) {
 				// can't filter content of CONNECT
-				proxysock.readyForOutput(10);  // exception on timeout or error
-				header.out(&proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
+				if (!wasrequested) {
+					proxysock.readyForOutput(10);  // exception on timeout or error
+					header.out(&proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
+				} else {
+					docheader.out(&peerconn, __DGHEADER_SENDALL);
+				}
 				try {
+#ifdef DGDEBUG
+					std::cout << "Opening tunnel for CONNECT" << std::endl;
+#endif
 					FDTunnel fdt;  // make a tunnel object
 					// tunnel from client to proxy and back - *true* two-way tunnel
 					fdt.tunnel(proxysock, peerconn, true);  // not expected to exception
@@ -889,12 +919,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				char *i;
 
 				// send header to proxy
-				proxysock.readyForOutput(10);
-				header.out(&proxysock, __DGHEADER_SENDALL, true);
-				// get header from proxy
-				proxysock.checkForInput(120);
-				docheader.in(&proxysock, persist);
-				persist = docheader.isPersistent();
+				if (!wasrequested) {
+					proxysock.readyForOutput(10);
+					header.out(&proxysock, __DGHEADER_SENDALL, true);
+					// get header from proxy
+					proxysock.checkForInput(120);
+					docheader.in(&proxysock, persist);
+					persist = docheader.isPersistent();
+				}
 
 #ifdef DGDEBUG
 				std::cout << "got header from proxy" << std::endl;
@@ -1079,15 +1111,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 			// then we deny. previously, this checked the isbypass flag too; now, since bypass requests only undergo the same checking
 			// as exceptions, it needn't. and in fact it mustn't, if bypass requests are to be virus scanned/blocked in the same manner as exceptions.
-			// the only way to download an infected file is to be in a "disablecontentscan" filtergroup, or disable contentscanexceptions.
-			// checkme:
-			// 1. might it be useful in future to have another bypass mode, specifically for downloading infected files? (per-group option, obviously)
-			//    the link generation would presumably occur in denyAccess, so the wasinfected flag would need passing in. requests coming in on
-			//    infectedbypass links would be tunnelled, and would not generate any kind of cookie. params would be similar to existing scanbypass URLs.
-			// 2. until the above is decided, a "known bug" is that you can repeatedly click the "bypass" link on an infected file block page,
-			//    and append more and more GSBYPASS parameters. chop these off, or not provide valid links for infected files?
-			//
-			// PRA 3-11-2005
 			if (checkme.isItNaughty) {
 				String rtype = header.requestType();
 				std::cout<<"Category: "<<checkme.whatIsNaughtyCategories<<std::endl;
@@ -1106,13 +1129,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				header.out(&proxysock, __DGHEADER_SENDALL, true);  // exceptions on error/timeout
 				proxysock.checkForInput(120);  // exceptions on error/timeout
 				docheader.in(&proxysock, persist);  // get reply header from proxy
-				// don't allow auth required requests to persist
-				// - we only query the auth plugin outside the persistency loop
-				if (docheader.authRequired()) {
-					persist = false;
-					docheader.makePersistent(false);
-				} else
-					persist = docheader.isPersistent();
 			}
 #ifdef DGDEBUG
 			std::cout << "sending header to client" << std::endl;
@@ -1599,6 +1615,9 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 #endif
 			}
 		}
+#ifdef DGDEBUG
+		std::cout << "done deep analysis" << std::endl;
+#endif
 	}
 }
 
