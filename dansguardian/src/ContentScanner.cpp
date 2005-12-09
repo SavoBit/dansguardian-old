@@ -147,7 +147,9 @@ int CSPlugin::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, con
 		return DGCS_SCANERROR;
 	}
 	int rc = scanFile(requestheader, docheader, user, filtergroup, ip, tempfilepath.toCharArray());
+#ifndef DGDEBUG
 	unlink(tempfilepath.toCharArray());  // delete temp file
+#endif
 	return rc;
 }
 
