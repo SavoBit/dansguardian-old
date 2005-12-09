@@ -27,7 +27,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netdb.h netinet/in.h stdlib.h])
 AC_CHECK_HEADERS([string.h sys/socket.h sys/time.h syslog.h unistd.h locale.h])
 AC_CHECK_HEADERS([sys/types.h sys/un.h sys/poll.h sys/resource.h])
 AC_CHECK_HEADERS([pwd.h grp.h wait.h])
-AC_CHECK_HEADERS([endian.h])
+AC_CHECK_HEADERS([endian.h byteswap.h])
 
 # check for zlib
 AC_CHECK_HEADERS([zlib.h])
@@ -61,6 +61,7 @@ AC_CACHE_SAVE
 AC_MSG_CHECKING(for backside with both hands)
 AC_MSG_RESULT(no)
 AC_MSG_CHECKING(build os)
+AC_CANONICAL_BUILD
 AC_MSG_RESULT($build_os)
 
 dnl Darwin bits are needed as early versions don't define _BSD_SOCKLEN_T_ and
@@ -96,7 +97,6 @@ case $build_os in
     AC_MSG_RESULT(no)
   ;;
 esac
-
 
 AC_MSG_CHECKING(for debug option)
 AC_ARG_WITH(dgdebug,
