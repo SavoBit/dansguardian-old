@@ -78,7 +78,8 @@ class ipinstance:public AuthPlugin
 {
 public:
 	ipinstance(ConfigVar &definition):AuthPlugin(definition) {};
-	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string);
+	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string);
+	int determineGroup(std::string &user, int &fg);
 
 	int init(void* args);
 	int quit();
@@ -86,7 +87,7 @@ private:
 	std::deque<ip> iplist;
 	std::deque<subnetstruct> ipsubnetlist;
 	std::deque<rangestruct> iprangelist;
-	
+
 	int readIPMelangeList(const char *filename);
 	int searchList(int a, int s, const unsigned long int &ip);
 	int inList(const unsigned long int &ip);
@@ -136,7 +137,7 @@ int ipinstance::init(void* args) {
 // IP-based filter group determination
 // never actually return NOUSER from this, because we don't actually look in the filtergroupslist.
 // NOUSER stops ConnectionHandler from querying subsequent plugins.
-int ipinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string)
+int ipinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, /*int &fg,*/ std::string &string)
 {
 	// we don't get usernames out of this plugin, just a filter group
 	// for now, use the IP as the username
@@ -150,31 +151,38 @@ int ipinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &
 	} else {
 		string = peercon.getPeerIP();
 	}
-	unsigned long int addr = peercon.getPeerSourceAddr();
+	return DGAUTH_OK;
+}
+
+int ipinstance::determineGroup(std::string &user, int &fg)
+{
+	struct in_addr sin;
+	inet_aton(user.c_str(), &sin);
+	unsigned long int addr = ntohl(sin.s_addr);
 	// check straight IPs, subnets, and ranges
 	fg = inList(addr);
 	if (fg >= 0) {
 #ifdef DGDEBUG
-		std::cout << "Matched IP " << string << " to straight IP list" << std::endl;
+		std::cout << "Matched IP " << user << " to straight IP list" << std::endl;
 #endif
 		return DGAUTH_OK;
 	}
 	fg = inSubnet(addr);
 	if (fg >= 0) {
 #ifdef DGDEBUG
-		std::cout << "Matched IP " << string << " to subnet" << std::endl;
+		std::cout << "Matched IP " << user << " to subnet" << std::endl;
 #endif
 		return DGAUTH_OK;
 	}
 	fg = inRange(addr);
 	if (fg >= 0) {
 #ifdef DGDEBUG
-		std::cout << "Matched IP " << string << " to range" << std::endl;
+		std::cout << "Matched IP " << user << " to range" << std::endl;
 #endif
 		return DGAUTH_OK;
 	}
 #ifdef DGDEBUG
-	std::cout << "Matched IP " << string << " to nothing" << std::endl;
+	std::cout << "Matched IP " << user << " to nothing" << std::endl;
 #endif
 	return DGAUTH_NOMATCH;
 }
