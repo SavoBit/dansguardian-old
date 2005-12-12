@@ -328,7 +328,7 @@ void DataBuffer::out(Socket * sock) throw(exception)
 			if (!(*sock).writeToSocket(data + bytesalreadysent, buffer_length - bytesalreadysent, 0, timeout))
 				throw exception();
 		} else {
-			if (!sock->writeToSocket("\r\n", 2, 0, timeout))
+			if (!sock->writeToSocket("\r\n\r\n", 4, 0, timeout))
 				throw exception();
 		}
 	}
