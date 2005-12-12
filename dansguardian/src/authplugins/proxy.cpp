@@ -32,7 +32,7 @@ class proxyinstance:public AuthPlugin
 {
 public:
 	proxyinstance(ConfigVar &definition):AuthPlugin(definition) {};
-	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string);
+	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string);
 };
 
 
@@ -48,7 +48,7 @@ AuthPlugin *proxycreate(ConfigVar & definition)
 // end of Class factory
 
 // proxy auth header username extraction
-int proxyinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string)
+int proxyinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string)
 {
 	// don't match for non-basic auth types
 	String t = h.getAuthType();
@@ -59,11 +59,7 @@ int proxyinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, in
 	string = h.getAuthData();
 	if (string.length() > 0) {
 		string = string.substr(0, string.find_first_of(':'));
-		fg = determineGroup(string);
-		if (fg >= 0)
-			return DGAUTH_OK;
-		else
-			return DGAUTH_NOUSER;
+		return DGAUTH_OK;
 	}
 	return DGAUTH_NOMATCH;
 }
