@@ -44,7 +44,7 @@ extern authcreate_t ntlmcreate;
 
 // IMPLEMENTATION
 
-AuthPlugin::AuthPlugin(ConfigVar &definition)
+AuthPlugin::AuthPlugin(ConfigVar &definition):is_connection_based(false)
 {
 	cv = definition;
 }
@@ -61,12 +61,13 @@ int AuthPlugin::quit()
 
 // determine what filter group the given username is in
 // return -1 when user not found
-int AuthPlugin::determineGroup(std::string &user)
+int AuthPlugin::determineGroup(std::string &user, int &fg)
 {
 	if (user.length() < 1 || user == "-") {
-		return -1;
+		return DGAUTH_NOMATCH;
 	}
 	String u(user);
+	u.toLower();  // since the filtergroupslist is read in in lowercase, we should do this.
 	String ue(u);
 	ue += "=";
 
@@ -76,7 +77,7 @@ int AuthPlugin::determineGroup(std::string &user)
 #ifdef DGDEBUG
 		std::cout << "User not in filter groups list: " << ue << std::endl;
 #endif
-		return -1;
+		return DGAUTH_NOUSER;
 	}
 #ifdef DGDEBUG
 	std::cout << "User found: " << i << std::endl;
@@ -86,18 +87,18 @@ int AuthPlugin::determineGroup(std::string &user)
 		ue = ue.after("=filter");
 		int l = ue.length();
 		if (l < 1 || l > 2) {
-			return -1;
+			return DGAUTH_NOUSER;
 		}
-		int g = ue.toInteger();
-		if (g > o.numfg) {
-			return -1;
+		fg = ue.toInteger();
+		if (fg > o.numfg) {
+			return DGAUTH_NOUSER;
 		}
-		if (g > 0) {
-			g--;
+		if (fg > 0) {
+			fg--;
 		}
-		return g;
+		return DGAUTH_OK;
 	}
-	return -1;
+	return DGAUTH_NOUSER;
 }
 
 // take in a configuration file, find the AuthPlugin class associated with the plugname variable, and return an instance
