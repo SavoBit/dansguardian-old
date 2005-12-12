@@ -82,8 +82,8 @@ extern OptionContainer o;
 class ntlminstance:public AuthPlugin
 {
 public:
-	ntlminstance(ConfigVar &definition):AuthPlugin(definition) {};
-	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string);
+	ntlminstance(ConfigVar &definition):AuthPlugin(definition) { is_connection_based = true; };
+	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string);
 };
 
 // things need to be on byte boundaries here
@@ -135,7 +135,7 @@ AuthPlugin *ntlmcreate(ConfigVar & definition)
 // end of Class factory
 
 // ntlm auth header username extraction - also lets connection persist long enough to complete NTLM negotiation
-int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int &fg, std::string &string)
+int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string)
 {
 	FDTunnel fdt;
 
@@ -224,11 +224,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, int
 				std::cout << "NTLM - got username " << username << std::endl;
 #endif
 				string = username;
-				fg = determineGroup(string);
-				if (fg < 0)
-					return DGAUTH_NOUSER;
-				else
-					return DGAUTH_OK;
+				return DGAUTH_OK;
 			}
 		}
 		return DGAUTH_NOMATCH;
