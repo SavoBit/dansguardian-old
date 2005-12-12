@@ -404,9 +404,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		// we get credentials, then assume they are valid for all reqs. on
 		// the persistent connection.
 		std::string clientuser;
-		int filtergroup;
+		std::string oldclientuser;
+		int filtergroup, oldfg;
 		bool authed = false;
 		bool isbanneduser = false;
+		bool persistent_authed = false;
 
 		// maintain a persistent connection
 		while ((firsttime || persist) && !reloadconfig) {
@@ -448,6 +450,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				contentmodified = false;
 				urlmodified = false;
 
+				authed = false;
+				isbanneduser = false;
+				clientuser = "-";
+
 				//bool runav = false;  // not just AV but any content scanner
 				headersent = 0;  // 0=none,1=first line,2=all
 				delete clienthost;
@@ -469,29 +475,21 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			}
 
 			// don't have credentials for this connection yet? get some!
-			if (!authed) {
-#ifdef DGDEBUG
+			if (!persistent_authed) {
+/*#ifdef DGDEBUG
 				std::cout << "Not got credentials for this connection - querying auth plugins" << std::endl;
-#endif
+#endif*/
 				for (std::deque<Plugin*>::iterator i = o.authplugins_begin; i != o.authplugins_end; i++) {
 #ifdef DGDEBUG
 					std::cout << "Querying next auth plugin..." << std::endl;
 #endif
-					rc = ((AuthPlugin*)(*i))->identify(peerconn, proxysock, header, filtergroup, clientuser);
-					if (rc == DGAUTH_OK) {
+					// try to get the username & parse the return value
+					rc = ((AuthPlugin*)(*i))->identify(peerconn, proxysock, header, /*filtergroup,*/ clientuser);
+					if (rc == DGAUTH_NOMATCH) {
 #ifdef DGDEBUG
-						std::cout<<"Auth plugin found username & group; not querying remaining plugins"<<std::endl;
+						std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
 #endif
-						authed = true;
-						break;
-					}
-					else if (rc == DGAUTH_NOUSER) {
-#ifdef DGDEBUG
-						std::cout<<"Auth plugin found username \"" << clientuser << "\" but no associated group; not querying remaining plugins"<<std::endl;
-#endif
-						filtergroup = 0;  //default group - one day configurable?
-						authed = true;
-						break;
+						continue;
 					}
 					else if (rc == DGAUTH_REDIRECT) {
 #ifdef DGDEBUG
@@ -513,15 +511,65 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						return;
 					}
 #ifdef DGDEBUG
-					if (rc == DGAUTH_NOMATCH) std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
+					std::cout << "Auth plugin found username " << clientuser << " (" << oldclientuser << "), now determining group" << std::endl;
 #endif
-				} 
+					if (clientuser == oldclientuser) {
+#ifdef DGDEBUG
+						std::cout << "Same user as last time, re-using old group no." << std::endl;
+#endif
+						authed = true;
+						filtergroup = oldfg;
+						break;
+					}
+					// try to get the filter group & parse the return value
+					rc = ((AuthPlugin*)(*i))->determineGroup(clientuser, filtergroup);
+					if (rc == DGAUTH_OK) {
+#ifdef DGDEBUG
+						std::cout<<"Auth plugin found username & group; not querying remaining plugins"<<std::endl;
+#endif
+						authed = true;
+						if (((AuthPlugin*)(*i))->is_connection_based) {
+#ifdef DGDEBUG
+							std::cout<<"Auth plugin is for a connection-based auth method - keeping credentials for entire connection"<<std::endl;
+#endif
+							persistent_authed = true;
+						}
+						break;
+					}
+					else if (rc == DGAUTH_NOMATCH) {
+#ifdef DGDEBUG
+						std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
+#endif
+						continue;
+					}
+					else if (rc == DGAUTH_NOUSER) {
+#ifdef DGDEBUG
+						std::cout<<"Auth plugin found username \"" << clientuser << "\" but no associated group; not querying remaining plugins"<<std::endl;
+#endif
+						filtergroup = 0;  //default group - one day configurable?
+						authed = true;
+						break;
+					}
+					else if (rc < 0) {
+						if (!is_daemonised)
+							std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
+						syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
+						proxysock.close();
+						return;
+					}
+				}
 				if (!authed) {
 #ifdef DGDEBUG
 					std::cout << "No identity found; using defaults" << std::endl;
 #endif
 					clientuser = "-";
 					filtergroup = 0;  //default group - one day configurable?
+				} else {
+#ifdef DGDEBUG
+					std::cout << "Identity found; caching username & group" << std::endl;
+#endif
+					oldclientuser = clientuser;
+					oldfg = filtergroup;
 				}
 			}
 #ifdef DGDEBUG
