@@ -104,7 +104,7 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 	// if using non-persistent connections, some servers will not report
 	// a content-length. in these situations, just download everything.
 	bool geteverything = false;
-	if ((bytesremaining == 0) && !(docheader->isPersistent()))
+	if ((bytesremaining < 0) && !(docheader->isPersistent()))
 		geteverything = true;
 
 	char *block;  // buffer for storing a grabbed block from the

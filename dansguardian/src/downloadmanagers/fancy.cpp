@@ -131,7 +131,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	// if using non-persistent connections, some servers will not report
 	// a content-length. in these situations, just download everything.
 	bool geteverything = false;
-	if ((expectedsize == 0) && !(docheader->isPersistent()))
+	if ((expectedsize < 0) && !(docheader->isPersistent()))
 		geteverything = true;
 
 	bool initialsent = false;
