@@ -50,9 +50,26 @@ FDTunnel::FDTunnel()
 {
 }
 
-// tunnel data from fdfrom to fdto (unfiltered)
-void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway)
+void FDTunnel::reset()
 {
+	throughput = 0;
+}
+
+// tunnel data from fdfrom to fdto (unfiltered)
+void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targetthroughput)
+{
+	if (targetthroughput == 0) {
+#ifdef DGDEBUG
+		std::cout << "No data expected, tunnelling aborted." << std::endl;
+#endif
+		return;
+	}
+
+#ifdef DGDEBUG
+	if (targetthroughput == -1)
+		std::cout << "Tunnelling without known content-length" << std::endl;
+#endif
+
 	int maxfd, rc, fdfrom, fdto;
 
 	fdfrom = sockfrom.getFD();
@@ -81,7 +98,7 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway)
 
 	bool done = false;  // so we get past the first while
 
-	while (!done) {
+	while (!done && (targetthroughput > -1 ? throughput < targetthroughput : true)) {
 		done = true;  // if we don't make a sucessful read and write this
 		// flag will stay true and so the while() will exit
 
@@ -171,4 +188,10 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway)
 			}
 		}
 	}
+#ifdef DGDEBUG
+	if ((throughput >= targetthroughput) && (targetthroughput > -1))
+		std::cout << "All expected data tunnelled." << std::endl;
+	else
+		std::cout <<"Tunnel closed."<< std::endl;
+#endif
 }
