@@ -69,6 +69,18 @@ NaughtyFilter::NaughtyFilter()
 {
 }
 
+void NaughtyFilter::reset()
+{
+	isItNaughty = false;
+	isException = false;
+	/*filtergroup = 0;
+	whatIsNaughty = "";
+	whatIsNaughtyLog = "";
+	whatIsNaughtyCategories = "";*/
+	usedisplaycats = false;
+	naughtiness = 0;
+}
+
 // check the given document body for banned, weighted, and exception phrases (and PICS, and regexes, &c.)
 void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 {

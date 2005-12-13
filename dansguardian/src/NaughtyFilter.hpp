@@ -53,6 +53,7 @@ public:
 	std::string whatIsNaughtyDisplayCategories;
 
 	NaughtyFilter();
+	void reset();
 	void checkme(DataBuffer * body, String &url, String &domain);
 	
 	// highest positive (or lowest negative) weighting out of
