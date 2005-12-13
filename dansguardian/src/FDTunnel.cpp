@@ -190,7 +190,7 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targett
 	}
 #ifdef DGDEBUG
 	if ((throughput >= targetthroughput) && (targetthroughput > -1))
-		std::cout << "All expected data tunnelled." << std::endl;
+		std::cout << "All expected data tunnelled. (expected " << targetthroughput << "; tunnelled " << throughput << ")" << std::endl;
 	else
 		std::cout <<"Tunnel closed."<< std::endl;
 #endif
