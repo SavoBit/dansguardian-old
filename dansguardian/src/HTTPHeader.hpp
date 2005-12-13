@@ -65,6 +65,7 @@ public:
 
 	// request type: GET, HEAD, POST etc.
 	String requestType();
+	// get content length - returns -1 if undetermined
 	int contentLength();
 	String getContentType();
 	// check received content type against given content type

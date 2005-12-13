@@ -68,14 +68,18 @@ String HTTPHeader::requestType()
 // grab content length
 int HTTPHeader::contentLength()
 {
-	String temp;
+	// code 304 - not modified - no content
+	String temp = header[0].after(" ");
+	if (temp.startsWith("304"))
+		return 0;
 	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the header
 		if (header[i].startsWith("Content-Length:")) {
 			temp = header[i].after(" ");
 			return temp.toInteger();
 		}
 	}
-	return 0;  // it finds the length of the POST data
+	// no content-length header - we don't know
+	return -1;
 }
 
 // grab the auth type
@@ -1251,4 +1255,6 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 		// if it's a request (not reply) with content, grab the data and store it
 		postdata.read(sock, length);  // get the DataBuffer to read the data
 	}
+	if (length < 0)
+		length = 0;
 }
