@@ -409,6 +409,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		bool authed = false;
 		bool isbanneduser = false;
 		bool persistent_authed = false;
+		
+		FDTunnel fdt;
+		NaughtyFilter checkme;
 
 		// maintain a persistent connection
 		while ((firsttime || persist) && !reloadconfig) {
@@ -452,7 +455,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 				authed = false;
 				isbanneduser = false;
-				clientuser = "-";
 
 				//bool runav = false;  // not just AV but any content scanner
 				headersent = 0;  // 0=none,1=first line,2=all
@@ -476,9 +478,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 			// don't have credentials for this connection yet? get some!
 			if (!persistent_authed) {
-/*#ifdef DGDEBUG
-				std::cout << "Not got credentials for this connection - querying auth plugins" << std::endl;
-#endif*/
+#ifdef DGDEBUG
+				std::cout << "Not got persistent credentials for this connection - querying auth plugins" << std::endl;
+#endif
 				for (std::deque<Plugin*>::iterator i = o.authplugins_begin; i != o.authplugins_end; i++) {
 #ifdef DGDEBUG
 					std::cout << "Querying next auth plugin..." << std::endl;
@@ -778,10 +780,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					docheader.out(&peerconn, __DGHEADER_SENDALL);
 				}
 				try {
-					FDTunnel fdt;  // make a tunnel object
+					fdt.reset();  // make a tunnel object
 					// tunnel from client to proxy and back
 					// two-way if SSL
-					fdt.tunnel(proxysock, peerconn, isconnect);  // not expected to exception
+					fdt.tunnel(proxysock, peerconn, isconnect, docheader.contentLength());  // not expected to exception
 					docsize = fdt.throughput;
 					if (!isourwebserver) {	// don't log requests to the web server
 						String rtype = header.requestType();
@@ -797,7 +799,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				return;  // connection dealt with so exit
 			}
 
-			NaughtyFilter checkme;  // our filter object
+			checkme.reset();  // our filter object
 			checkme.filtergroup = filtergroup;
 
 			if ((o.max_ips > 0) && (!gotIPs((char*)clientip.c_str()))) {
@@ -866,10 +868,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							docheader.out(&peerconn, __DGHEADER_SENDALL);
 						}
 						try {
-							FDTunnel fdt;  // make a tunnel object
+							fdt.reset();  // make a tunnel object
 							// tunnel from client to proxy and back
 							// two-way if SSL
-							fdt.tunnel(proxysock, peerconn, isconnect);  // not expected to exception
+							fdt.tunnel(proxysock, peerconn, isconnect, docheader.contentLength());  // not expected to exception
 							docsize = fdt.throughput;
 							if (!isourwebserver) {	// don't log requests to the web server
 								String rtype = header.requestType();
@@ -943,7 +945,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 					std::cout << "Opening tunnel for CONNECT" << std::endl;
 #endif
-					FDTunnel fdt;  // make a tunnel object
+					fdt.reset();  // make a tunnel object
 					// tunnel from client to proxy and back - *true* two-way tunnel
 					fdt.tunnel(proxysock, peerconn, true);  // not expected to exception
 					docsize = fdt.throughput;
@@ -1259,7 +1261,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					std::cout << "about to start tunnel to send the rest" << std::endl;
 #endif
 
-					FDTunnel fdt;
+					fdt.reset();
 #ifdef DGDEBUG
 					std::cout << "tunnel activated" << std::endl;
 #endif
@@ -1272,11 +1274,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						wasinfected, wasscanned, checkme.naughtiness, contentmodified, urlmodified);
 				}
 			} else {	// was not supposed to be checked
-				FDTunnel fdt;
+				fdt.reset();
 #ifdef DGDEBUG
 				std::cout << "tunnel activated" << std::endl;
 #endif
-				fdt.tunnel(proxysock, peerconn);
+				fdt.tunnel(proxysock, peerconn, false, docheader.contentLength());
 				docsize = fdt.throughput;
 				String rtype = header.requestType();
 				doLog(clientuser, clientip, url, header.port, exceptionreason,
