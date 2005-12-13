@@ -1132,20 +1132,21 @@ void HTTPHeader::out(Socket * sock, int sendflag, bool reconnect) throw(exceptio
 {
 	String l;  // for amalgamating to avoid conflict with the Nagel algorithm
 
-	// reconnect loop
-	while (true) {
-		if (sendflag == __DGHEADER_SENDALL || sendflag == __DGHEADER_SENDFIRSTLINE) {
-			if (header.size() > 0) {
-				l = header[0] + "\n";
+	if (sendflag == __DGHEADER_SENDALL || sendflag == __DGHEADER_SENDFIRSTLINE) {
+		if (header.size() > 0) {
+			l = header[0] + "\n";
 #ifdef DGDEBUG
-				std::cout << "headertoclient:" << l << std::endl;
+			std::cout << "headertoclient:" << l << std::endl;
 #endif
+			// first reconnect loop - send first line
+			while (true) {
 				if (!(*sock).writeToSocket(l.toCharArray(), l.length(), 0, timeout)) {
 					// reconnect & try again if we've been told to
 					if (reconnect) {
 						// don't try more than once
 #ifdef DGDEBUG
-						std::cout << "Proxy connection broken; trying to re-establish..." << std::endl;
+						std::cout << "Proxy connection broken (1); trying to re-establish..." << std::endl;
+						syslog(LOG_ERR,"Proxy connection broken (1); trying to re-establish...");
 #endif
 						reconnect = false;
 						sock->reset();
@@ -1156,23 +1157,28 @@ void HTTPHeader::out(Socket * sock, int sendflag, bool reconnect) throw(exceptio
 					}
 					throw exception();
 				}
-			}
-			if (sendflag == __DGHEADER_SENDFIRSTLINE) {
-				return;
+				// if we got here, we succeeded, so break the reconnect loop
+				break;
 			}
 		}
-
-		l = "";
-
-		for (int i = 1; i < (signed) header.size(); i++) {
-			l += header[i] + "\n";
+		if (sendflag == __DGHEADER_SENDFIRSTLINE) {
+			return;
 		}
-		l += "\r\n";
+	}
+
+	l = "";
+
+	for (int i = 1; i < (signed) header.size(); i++) {
+		l += header[i] + "\n";
+	}
+	l += "\r\n";
 
 #ifdef DGDEBUG
-		std::cout << "headertoclient:" << l << std::endl;
+	std::cout << "headertoclient:" << l << std::endl;
 #endif
 
+	// second reconnect loop
+	while (true) {
 		// send header to the output stream
 		// need exception for bad write
 
@@ -1181,13 +1187,16 @@ void HTTPHeader::out(Socket * sock, int sendflag, bool reconnect) throw(exceptio
 			if (reconnect) {
 				// don't try more than once
 #ifdef DGDEBUG
-				std::cout << "Proxy connection broken; trying to re-establish..." << std::endl;
+				std::cout << "Proxy connection broken (2); trying to re-establish..." << std::endl;
+				syslog(LOG_ERR,"Proxy connection broken (2); trying to re-establish...");
 #endif
 				reconnect = false;
 				sock->reset();
 				int rc = sock->connect(o.proxy_ip, o.proxy_port);
 				if (rc)
 					throw exception();
+				// include the first line on the retry
+				l = header[0] + "\n" + l;
 				continue;
 			}
 			throw exception();
