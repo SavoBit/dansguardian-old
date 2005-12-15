@@ -26,6 +26,8 @@
 
 #include <syslog.h>
 
+#include <iconv.h>
+
 #ifdef HAVE_ENDIAN_H
 #include <endian.h>
 #else
@@ -200,6 +202,9 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 		ntlm_authenticate auth;
 		ntlm_auth *a = &(auth.a);
 		static char username[256]; // fixed size
+		static char username2[256];
+		const char* inptr = username;
+		char* outptr = username2;
 		int l,o;
 
 		// copy the NTLM message into the union's buffer, simultaneously filling in the struct
@@ -220,10 +225,30 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 				// note offsets are from start of packet - not the start of the payload area
 				memcpy((void *)username, (const void *)&(auth.buf[o]),l);
 				username[l] = '\0';
+				// check flags - we may need to convert from UTF-16 to something more sensible
+				int f = WSWAP(a->flags);
+				if (f & WSWAP(0x0001)) {
+					iconv_t ic = iconv_open("UTF-8", "UTF-16LE");
+					if (ic == (iconv_t)-1) {
+						syslog(LOG_ERR, "NTLM - Cannot initialise conversion from UTF-16LE to UTF-8: %s", strerror(errno));
 #ifdef DGDEBUG
-				std::cout << "NTLM - got username " << username << std::endl;
+						std::cerr << "NTLM - Cannot initialise conversion from UTF-16LE to UTF-8: " << strerror(errno) << std::endl;
 #endif
-				string = username;
+						return -2;
+					}
+					int l2 = 256;
+					iconv(ic, &inptr, (size_t*)&l, &outptr, (size_t*)&l2);
+					iconv_close(ic);
+#ifdef DGDEBUG
+					std::cout << "NTLM - got username (converted from UTF-16LE) " << username2 << std::endl;
+#endif
+					string = username2;
+				} else {
+#ifdef DGDEBUG
+					std::cout << "NTLM - got username " << username << std::endl;
+#endif
+					string = username;
+				}
 				return DGAUTH_OK;
 			}
 		}
