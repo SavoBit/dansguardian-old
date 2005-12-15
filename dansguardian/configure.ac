@@ -371,16 +371,36 @@ ntlm,
 	AC_MSG_RESULT(yes)
 	ntlm=true
 	AC_DEFINE([ENABLE_NTLM],[],[Define to enable NTLM auth plugin])
+	# now need to check if they're using an iconv library, rather
+	# than a native iconv implementation
+	AC_MSG_CHECKING(if libiconv enabled)
+	AC_ARG_WITH(libiconv,
+		[  --with-libiconv=[[no]]  enable this if compiling on a system which requires an
+			external iconv library (only used in conjunction with
+			NTLM auth plugin)],
+		[if test "x$withval" = "xyes"; then
+		 	iconv=true
+			AC_MSG_RESULT(yes)
+		else
+			iconv=false
+			AC_MSG_RESULT(no)
+		fi],
+		[iconv=false
+		 AC_MSG_RESULT(no)])
+		
 else
 	AC_MSG_RESULT(no)
 	ntlm=false
+	iconv=false
 fi],
 [
 	AC_MSG_RESULT(no)
 	ntlm=false
+	iconv=false
 ]
 )
 AM_CONDITIONAL(ENABLE_NTLM, test "x$ntlm" = "xtrue")
+AM_CONDITIONAL(ENABLE_LIBICONV, test "x$iconv" = "xtrue")
 
 AC_DEFINE_UNQUOTED([DG_CONFIGURE_OPTIONS], ["$ac_configure_args"], [Record configure-time options])
 
