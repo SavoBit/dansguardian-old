@@ -124,6 +124,16 @@ union ntlm_authenticate {
 };
 #pragma pack()
 
+// "template adaptor" for iconv - basically, let G++ do the hard work of
+// figuring out whether or not the second parameter is const for us ;)
+template <typename T>
+inline size_t local_iconv_adaptor (size_t (*iconv_func)(iconv_t, T, size_t *, char**,size_t*),
+	iconv_t cd, char **inbuf, size_t *inbytesleft,
+	char **outbuf, size_t *outbytesleft)
+{
+  return iconv_func (cd, (T)inbuf, inbytesleft, outbuf, outbytesleft);
+}
+
 
 // IMPLEMENTATION
 
@@ -203,7 +213,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 		ntlm_auth *a = &(auth.a);
 		static char username[256]; // fixed size
 		static char username2[256];
-		const char* inptr = username;
+		char* inptr = username;
 		char* outptr = username2;
 		int l,o;
 
@@ -237,7 +247,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 						return -2;
 					}
 					int l2 = 256;
-					iconv(ic, &inptr, (size_t*)&l, &outptr, (size_t*)&l2);
+					local_iconv_adaptor(iconv, ic, &inptr, (size_t*)&l, &outptr, (size_t*)&l2);
 					iconv_close(ic);
 #ifdef DGDEBUG
 					std::cout << "NTLM - got username (converted from UTF-16LE) " << username2 << std::endl;
