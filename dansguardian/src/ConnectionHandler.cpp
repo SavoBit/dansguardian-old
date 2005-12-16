@@ -412,6 +412,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		
 		FDTunnel fdt;
 		NaughtyFilter checkme;
+		AuthPlugin* auth_plugin;
 
 		// maintain a persistent connection
 		while ((firsttime || persist) && !reloadconfig) {
@@ -486,7 +487,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					std::cout << "Querying next auth plugin..." << std::endl;
 #endif
 					// try to get the username & parse the return value
-					rc = ((AuthPlugin*)(*i))->identify(peerconn, proxysock, header, /*filtergroup,*/ clientuser);
+					auth_plugin = (AuthPlugin*)(*i);
+					rc = auth_plugin->identify(peerconn, proxysock, header, /*filtergroup,*/ clientuser);
 					if (rc == DGAUTH_NOMATCH) {
 #ifdef DGDEBUG
 						std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
@@ -524,18 +526,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						break;
 					}
 					// try to get the filter group & parse the return value
-					rc = ((AuthPlugin*)(*i))->determineGroup(clientuser, filtergroup);
+					rc = auth_plugin->determineGroup(clientuser, filtergroup);
 					if (rc == DGAUTH_OK) {
 #ifdef DGDEBUG
 						std::cout<<"Auth plugin found username & group; not querying remaining plugins"<<std::endl;
 #endif
 						authed = true;
-						if (((AuthPlugin*)(*i))->is_connection_based) {
-#ifdef DGDEBUG
-							std::cout<<"Auth plugin is for a connection-based auth method - keeping credentials for entire connection"<<std::endl;
-#endif
-							persistent_authed = true;
-						}
 						break;
 					}
 					else if (rc == DGAUTH_NOMATCH) {
@@ -570,6 +566,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 					std::cout << "Identity found; caching username & group" << std::endl;
 #endif
+					if (auth_plugin->is_connection_based) {
+#ifdef DGDEBUG
+						std::cout<<"Auth plugin is for a connection-based auth method - keeping credentials for entire connection"<<std::endl;
+#endif
+						persistent_authed = true;
+					}
 					oldclientuser = clientuser;
 					oldfg = filtergroup;
 				}
