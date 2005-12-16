@@ -24,6 +24,12 @@ This overcomes certain limitations of the standard library, allowing
 - for example - character negations ([^w]). PCRE support is disabled
 by default; version 6.0 or above is required.
 
+As of 2.9.3.1, iconv support is necessary for using the NTLM auth
+plugin. Some systems (e.g. Linux) provide this as part of their core
+API; others (e.g. FreeBSD) require an external iconv library to be
+installed. The "--with-libiconv" configure option enables linking with
+an external library. Charsets UTF-16LE and UTF-8 must be supported.
+
 
 1.	Run the configure (./configure --help) script with
 	the help option to see the user selectable settings.
@@ -73,6 +79,10 @@ You may change with the configure options:
   enable-kavd      (enable support for kaspersky av daemon scanner)
   enable-fancydm   (enable support for the 'fancy' download manager)
   enable-pcre      (enable support for PCRE instead of GNU regex library)
+  enable-ntlm      (enable support for the NTLM auth plugin)
+  with-libiconv    (add -liconv to linker flags for systems with no native
+                    iconv implementation - only used in conjunction with
+		    enable-ntlm)
   
 See ./configure --help for more details.
 
