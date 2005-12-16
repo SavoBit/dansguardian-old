@@ -79,13 +79,13 @@ IPAUTH_SOURCE = authplugins/ip.cpp
 if ENABLE_NTLM
 NTLMAUTH_SOURCE = authplugins/ntlm.cpp
 if ENABLE_LIBICONV
-LIBICONV_LIBS = -liconv
+ICONV_LDFLAGS = -liconv
 else
-LIBICONV_LIBS =
+ICONV_LDFLAGS =
 endif
 else
 NTLMAUTH_SOURCE =
-LIBICONV_LIBS =
+ICONV_LDFLAGS =
 endif
 
 sbin_PROGRAMS = dansguardian 
@@ -128,7 +128,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
 		       $(IDENTAUTH_SOURCE) $(IPAUTH_SOURCE) \
 		       $(NTLMAUTH_SOURCE)
 
-dansguardian_LDADD = $(PCRE_LDFLAGS) $(ZLIB) $(CLAMAV_LDFLAGS) $(KAVAV_LDFLAGS) \
-		     $(LIBICONV_LIBS)
+dansguardian_LDADD = $(PCRE_LDFLAGS) $(ZLIB) $(CLAMAV_LDFLAGS) \
+			$(KAVAV_LDFLAGS) $(ICONV_LDFLAGS)
 
 #dansguardian_CFLAGS = $(CLAMAV_CFLAGS) $(KAVAV_CFLAGS)
