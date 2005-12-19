@@ -65,6 +65,12 @@ String HTTPHeader::requestType()
 	return header[0].before(" ");
 }
 
+// grab return code
+int HTTPHeader::returnCode()
+{
+	return header[0].after(" ").before(" ").toInteger();
+}
+
 // grab content length
 int HTTPHeader::contentLength()
 {
