@@ -790,7 +790,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					if (!isourwebserver) {	// don't log requests to the web server
 						String rtype = header.requestType();
 						doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception,
-							o.log_exception_hits, false, &thestart, cachehit, 200, mimetype, wasinfected, wasscanned, 0);
+							o.log_exception_hits, false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
+							mimetype, wasinfected, wasscanned, 0);
 					}
 				}
 				catch(exception & e) {
@@ -878,7 +879,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							if (!isourwebserver) {	// don't log requests to the web server
 								String rtype = header.requestType();
 								doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception,
-									o.log_exception_hits, false, &thestart, cachehit, 200, mimetype, wasinfected, wasscanned, checkme.naughtiness,
+									o.log_exception_hits, false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
+									mimetype, wasinfected, wasscanned, checkme.naughtiness,
 									// content wasn't modified, but URL was
 									false, true);
 							}
@@ -954,7 +956,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					String rtype = header.requestType();
 					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false,
 						isexception, o.log_exception_hits, false, &thestart,
-						cachehit, 200, mimetype, wasinfected, wasscanned, checkme.naughtiness, false, urlmodified);
+						cachehit, (wasrequested ? docheader.returnCode() : 200), mimetype, wasinfected, wasscanned, checkme.naughtiness, false, urlmodified);
 				}
 				catch(exception & e) {
 				}
@@ -1204,7 +1206,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					String rtype = header.requestType();
 					doLog(clientuser, clientip, url, header.port, exceptionreason,
 						rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits,
-						docheader.isContentType("text"), &thestart, cachehit, 200, mimetype,
+						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, contentmodified, urlmodified);
 				}
 
@@ -1272,7 +1274,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					String rtype = header.requestType();
 					doLog(clientuser, clientip, url, header.port, exceptionreason,
 						rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits,
-						docheader.isContentType("text"), &thestart, cachehit, 200, mimetype,
+						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, contentmodified, urlmodified);
 				}
 			} else {	// was not supposed to be checked
@@ -1285,7 +1287,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				String rtype = header.requestType();
 				doLog(clientuser, clientip, url, header.port, exceptionreason,
 					rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits,
-					docheader.isContentType("text"), &thestart, cachehit, 200, mimetype,
+					docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 					wasinfected, wasscanned, checkme.naughtiness, contentmodified, urlmodified);
 			}
 		} // while persist
@@ -1447,10 +1449,12 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 			clienthost = NULL;
 		}
 		
+		std::string stringcode = String(code).toCharArray();
+		
 		switch (o.log_file_format) {
 		case 4:
 			logline = when + "\t" + who + "\t" + (clienthost ? *clienthost : from) + "\t" + where.toCharArray() + "\t" + what
-				+ "\t" + how.toCharArray() + "\t" + ssize + "\t" + mimetype + "\t" + sweight + "\t" + (cat ? (*cat) : "N/A") + "\n";
+				+ "\t" + how.toCharArray() + "\t" + stringcode + "\t" + ssize + "\t" + mimetype + "\t" + sweight + "\t" + (cat ? (*cat) : "N/A") + "\n";
 			break;
 		case 3:
 			{
@@ -1483,10 +1487,10 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 				} else {
 					if (cachehit) {
 						hitmiss = "TCP_HIT/";
-						hitmiss += String((int) code).toCharArray();
+						hitmiss += stringcode;
 					} else {
 						hitmiss = "TCP_MISS/";
-						hitmiss += String((int) code).toCharArray();
+						hitmiss += stringcode;
 					}
 				}
 				hier = "DEFAULT_PARENT/";
@@ -1509,12 +1513,12 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 			}
 		case 2:
 			logline = "\"" + when + "\",\"" + who + "\",\"" + (clienthost ? *clienthost : from) + "\",\"" + where.toCharArray()
-				+ "\",\"" + what + "\",\"" + how.toCharArray() + "\",\"" + ssize + "\",\"" + mimetype + "\",\""
+				+ "\",\"" + what + "\",\"" + how.toCharArray() + "\",\"" + stringcode + "\",\"" + ssize + "\",\"" + mimetype + "\",\""
 				+ sweight + "\",\"" + (cat ? (*cat) : "N/A") + "\"\n";
 			break;
 		default:
 			logline = when + " " + who + " " + (clienthost ? *clienthost : from) + " " + where.toCharArray() + " " + what + " "
-				+ how.toCharArray() + " " + ssize + " " + mimetype + " " + sweight + " " + (cat ? (*cat) : "N/A") + "\n";
+				+ how.toCharArray() + " " + stringcode + " " + ssize + " " + mimetype + " " + sweight + " " + (cat ? (*cat) : "N/A") + "\n";
 		}
 
 		// connect to dedicated logging proc
