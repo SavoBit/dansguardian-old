@@ -87,11 +87,12 @@ You may change with the configure options:
   enable-fancydm   (enable support for the 'fancy' download manager)
   enable-pcre      (enable support for PCRE instead of GNU regex library)
   enable-ntlm      (enable support for the NTLM auth plugin)
-  with-libiconv    (prefix for libiconv lib & include directories, for
-                    platforms without native iconv - only used in
-                    conjunction with enable-ntlm)
-  with-zlib        (specify a non-standard prefix for zlib lib & include
-                    directories)
+  with-libiconv    (for platforms without native iconv (only used in
+                    conjunction with enable-ntlm). set to "yes" to enable
+                    basic libiconv support, or to a directory prefix if
+                    libiconv is installed in a non-standard location)
+  with-zlib        (specify optional non-standard prefix for zlib
+                    lib & include directories)
   
 See ./configure --help for more details.
 
