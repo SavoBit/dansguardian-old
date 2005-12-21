@@ -3,7 +3,7 @@
 # 2004,2005 - Daniel Barron
 
 AC_PREREQ(2.57)
-AC_INIT(dansguardian, 2.9.3.1)
+AC_INIT(dansguardian, 2.9.3.2)
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([dgconfig.h])
 
@@ -428,10 +428,15 @@ ntlm,
 	AC_ARG_WITH(libiconv,
 		[  --with-libiconv=[[/path/to/iconv/]]  use this if compiling on a system which
                     requires an external iconv library (only used in
-                    conjunction with NTLM auth plugin)],
+                    conjunction with NTLM auth plugin). Set to "yes"
+                    if no non-standard search path is required.],
 		[ # check for header & func (in library) in given prefix
-		CPPFLAGS="${CPPFLAGS} -I${withval}/include"
-		LDFLAGS="${LDFLAGS} -L${withval}/lib -liconv"
+		if test "x$withval" = "xyes"; then
+			LDFLAGS="${LDFLAGS} -liconv"
+		else
+			CPPFLAGS="${CPPFLAGS} -I${withval}/include"
+			LDFLAGS="${LDFLAGS} -L${withval}/lib -liconv"
+		fi
 		AC_CHECK_LIB(iconv, iconv, [AC_MSG_RESULT(linked)], [AC_MSG_ERROR([--with-libiconv used, but no libiconv found!])])
 		],
 		[ # check for native header & func (no library)
