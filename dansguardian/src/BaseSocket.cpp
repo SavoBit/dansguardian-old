@@ -102,11 +102,8 @@ int BaseSocket::baseAccept(struct sockaddr *acc_adr, socklen_t *acc_adr_length)
 	// int accept(int s, struct sockaddr *addr, int *addrlen);
 	// but everyone else as:
 	// int accept(int s, struct sockaddr *addr, socklen_t *addrlen);
-#ifdef __DARWIN
-	int newfd =::accept(sck, acc_adr, (int *) acc_adr_length);
-#else
-	int newfd =::accept(sck, acc_adr, acc_adr_length);
-#endif
+	// NB: except 10.4, which seems to use the more standard definition. grrr.
+	int newfd =::accept(sck, acc_adr, (ACCEPT_TYPE *) acc_adr_length);
 	return newfd;
 }
 
