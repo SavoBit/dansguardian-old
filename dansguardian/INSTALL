@@ -17,7 +17,8 @@ support.  This change was to fix a bug that could not be fixed
 with an earlier version.  If you do not want to upgrade zlib on
 your system see the notes at the end about compiling in zlib
 statically. As of 2.9.3.2, you can also specify a non-standard search
-path for the zlib headers & library using the "--with-zlib" option.
+path for the zlib headers & library (during linking stage) using the
+"--with-zlib" option.
 
 As of 2.9.1.0, DansGuardian can optionally be compiled and linked
 against PCRE instead of the standard GNU regular expression library.
