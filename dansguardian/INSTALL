@@ -16,19 +16,25 @@ As of DansGuardian 2.7.7-10 zlib 1.2.1 is required for gzip
 support.  This change was to fix a bug that could not be fixed
 with an earlier version.  If you do not want to upgrade zlib on
 your system see the notes at the end about compiling in zlib
-statically.
+statically. As of 2.9.3.2, you can also specify a non-standard search
+path for the zlib headers & library using the "--with-zlib" option.
 
 As of 2.9.1.0, DansGuardian can optionally be compiled and linked
 against PCRE instead of the standard GNU regular expression library.
 This overcomes certain limitations of the standard library, allowing
 - for example - character negations ([^w]). PCRE support is disabled
-by default; version 6.0 or above is required.
+by default; version 6.0 or above is required. The "pcre-config" program
+must be available in your PATH during build configuration.
 
 As of 2.9.3.1, iconv support is necessary for using the NTLM auth
 plugin. Some systems (e.g. Linux) provide this as part of their core
 API; others (e.g. FreeBSD) require an external iconv library to be
 installed. The "--with-libiconv" configure option enables linking with
 an external library. Charsets UTF-16LE and UTF-8 must be supported.
+
+For the library-based ClamAV scanner (not applicable to the Clamd scanner),
+the "clamav-config" program must be available in your PATH during build
+configuration.
 
 
 1.	Run the configure (./configure --help) script with
@@ -80,9 +86,11 @@ You may change with the configure options:
   enable-fancydm   (enable support for the 'fancy' download manager)
   enable-pcre      (enable support for PCRE instead of GNU regex library)
   enable-ntlm      (enable support for the NTLM auth plugin)
-  with-libiconv    (add -liconv to linker flags for systems with no native
-                    iconv implementation - only used in conjunction with
-		    enable-ntlm)
+  with-libiconv    (prefix for libiconv lib & include directories, for
+                    platforms without native iconv - only used in
+                    conjunction with enable-ntlm)
+  with-zlib        (specify a non-standard prefix for zlib lib & include
+                    directories)
   
 See ./configure --help for more details.
 
@@ -131,7 +139,8 @@ Note:  You will need to run 'make installx', not 'make install'.
 NETBSD:
 ------
 
-A standard configure script that should work, provided you have installedNetBSD and the associated programs in their default locations.
+A standard configure script that should work, provided you have installed
+NetBSD and the associated programs in their default locations.
     ./configure  --localstatedir=/var \
         --prefix=/usr/pkg
 	--sysconfdir=/usr/pkg/etc \
