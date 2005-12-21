@@ -27,12 +27,62 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netdb.h netinet/in.h stdlib.h])
 AC_CHECK_HEADERS([string.h sys/socket.h sys/time.h syslog.h unistd.h locale.h])
 AC_CHECK_HEADERS([sys/types.h sys/un.h sys/poll.h sys/resource.h])
 AC_CHECK_HEADERS([pwd.h grp.h wait.h])
-AC_CHECK_HEADERS([endian.h byteswap.h])
+AC_CHECK_HEADERS([byteswap.h])
+
+# check for endian.h
+AC_CHECK_HEADER([endian.h],
+  [AC_DEFINE(HAVE_ENDIAN_H, [], [Define if endian.h exists])],
+  [AC_CHECK_HEADER([sys/endian.h],
+    [AC_DEFINE(HAVE_SYS_ENDIAN_H, [], [Define if sys/endian.h exists])],
+    [AC_CHECK_HEADER([machine/endian.h],
+      [AC_DEFINE(HAVE_MACHINE_ENDIAN_H, [], [Define if machine/endian.h exists])],
+      [AC_MSG_ERROR([no endian.h found! (or sys/endian.h, or machine/endian.h)])]
+    )]
+  )]
+)
+  
 
 # check for zlib
+AC_ARG_WITH(zlib,
+	[  --with-zlib=[[/path/to/zlib/]]  non-standard search path for zlib library],
+	[ # check for header & func (in library) in given prefix
+	CPPFLAGS="${CPPFLAGS} -I${withval}/include"
+	LDFLAGS="${LDFLAGS} -L${withval}/lib"
+	])
 AC_CHECK_HEADERS([zlib.h])
-AC_CHECK_LIB(z, gzdopen, [ZLIB="-lz"])
-AC_SUBST(ZLIB)
+AC_CHECK_LIB(z, gzdopen, [AC_MSG_RESULT(yes)], [AC_MSG_ERROR([no zlib!])])
+LDFLAGS="${LDFLAGS} -lz"
+
+# check whether accept() wants an int* or a socklen_t* as third argument
+AC_MSG_CHECKING([type of 3rd argument to accept()])
+AC_TRY_COMPILE([
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+int accept (int, struct sockaddr *, int *);
+], [],[
+	AC_MSG_RESULT([int*])
+	AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[int], [type for 3rd argument to accept()])
+],[
+	AC_TRY_COMPILE([
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+int accept (int, struct sockaddr *, socklen_t *);
+	],[],[
+		AC_MSG_RESULT([socklen_t*])
+		AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[socklen_t], [type for 3rd argument to accept()])
+    ], [
+		AC_MSG_RESULT([size_t*])
+		AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[size_t], [type for 3rd argument to accept()])
+    ])
+])
 
 AC_CACHE_SAVE
 
@@ -41,7 +91,6 @@ AC_HEADER_STDBOOL
 AC_C_CONST
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
-AC_CHECK_TYPES([socklen_t])
 AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
@@ -208,9 +257,11 @@ if test "x$pcre" = "xtrue"; then
 	if ! test $PCRE = "yes"; then
 		AC_MSG_ERROR([pcre-config not found!])
 	fi
-	LIBPCRE_LIBS=`pcre-config --libs`
+	PCRE_LIBS=`pcre-config --libs`
 	PCRE_PREFIX=`pcre-config --prefix`
-	LIBPCRE_CFLAGS="-I${PCRE_PREFIX}/include"
+
+	LDFLAGS="${LDFLAGS} ${PCRE_LIBS} -lpcreposix"
+	CPPFLAGS="${CPPFLAGS} -I${PCRE_PREFIX}/include"
 
 	AC_MSG_CHECKING([for REG_DOTALL in pcreposix.h])
 	AC_LANG_PUSH(C)
@@ -223,8 +274,7 @@ if test "x$pcre" = "xtrue"; then
 	AC_LANG_POP(C)
 
 	AC_DEFINE([HAVE_PCRE],[],[Define to enable PCRE support])
-	AC_SUBST([LIBPCRE_LIBS])
-	AC_SUBST([LIBPCRE_CFLAGS])
+
 else
 	AC_CHECK_FUNCS([regcomp])
 fi
@@ -258,11 +308,12 @@ clamav,
 	fi
 	CLAMAV_LIBS=`clamav-config --libs`
 	CLAMAV_PREFIX=`clamav-config --prefix`
-	LIBCLAMAV_LIBS="$CLAMAV_LIBS -lclamav"
-	LIBCLAMAV_CFLAGS="-I${CLAMAV_PREFIX}/include"
+
+	LDFLAGS="${LDFLAGS} ${CLAMAV_LIBS} -lclamav"
+	CPPFLAGS="${CPPFLAGS} -I${CLAMAV_PREFIX}/include"
+
 	AC_DEFINE([HAVE_CLAMAV],[],[Define to enable ClamAV content scanner])
-	AC_SUBST([LIBCLAMAV_LIBS])
-	AC_SUBST([LIBCLAMAV_CFLAGS])
+
 	clamav=true
 else
 	clamav=false
@@ -373,34 +424,30 @@ ntlm,
 	AC_DEFINE([ENABLE_NTLM],[],[Define to enable NTLM auth plugin])
 	# now need to check if they're using an iconv library, rather
 	# than a native iconv implementation
-	AC_MSG_CHECKING(if libiconv enabled)
+	AC_MSG_CHECKING(for iconv)
 	AC_ARG_WITH(libiconv,
-		[  --with-libiconv=[[no]]  enable this if compiling on a system which requires an
-			external iconv library (only used in conjunction with
-			NTLM auth plugin)],
-		[if test "x$withval" = "xyes"; then
-		 	iconv=true
-			AC_MSG_RESULT(yes)
-		else
-			iconv=false
-			AC_MSG_RESULT(no)
-		fi],
-		[iconv=false
-		 AC_MSG_RESULT(no)])
+		[  --with-libiconv=[[/path/to/iconv/]]  use this if compiling on a system which
+                    requires an external iconv library (only used in
+                    conjunction with NTLM auth plugin)],
+		[ # check for header & func (in library) in given prefix
+		CPPFLAGS="${CPPFLAGS} -I${withval}/include"
+		LDFLAGS="${LDFLAGS} -L${withval}/lib -liconv"
+		AC_CHECK_LIB(iconv, iconv, [AC_MSG_RESULT(linked)], [AC_MSG_ERROR([--with-libiconv used, but no libiconv found!])])
+		],
+		[ # check for native header & func (no library)
+		AC_CHECK_FUNCS(iconv, [AC_MSG_RESULT(native)], [AC_MSG_ERROR([--with-libiconv not used, but no native iconv found!])])
+		])
 		
 else
 	AC_MSG_RESULT(no)
 	ntlm=false
-	iconv=false
 fi],
 [
 	AC_MSG_RESULT(no)
 	ntlm=false
-	iconv=false
 ]
 )
 AM_CONDITIONAL(ENABLE_NTLM, test "x$ntlm" = "xtrue")
-AM_CONDITIONAL(ENABLE_LIBICONV, test "x$iconv" = "xtrue")
 
 AC_DEFINE_UNQUOTED([DG_CONFIGURE_OPTIONS], ["$ac_configure_args"], [Record configure-time options])
 
