@@ -12,9 +12,7 @@ clean_SUBDIRS= . downloadmanagers contentscanners authplugins
 # other than Linux, libtool support has been removed in favour
 # of configure-time options (at DB's request).
 
-#AM_CXXFLAGS = @CXXFLAGS@ -fexceptions
-AM_CXXFLAGS = -fexceptions $(LIBCLAMAV_CFLAGS) $(LIBPCRE_CFLAGS)
-#AM_CFLAGS = @CFLAGS@
+AM_CXXFLAGS = -fexceptions
 
 DGCONFFILE = @DGCONFFILE@
 DGLOGLOCATION = @DGLOGLOCATION@
@@ -22,28 +20,16 @@ DGPIDDIR = @DGPIDDIR@
 DGPROXYUSER = @DGPROXYUSER@ 
 DGPROXYGROUP = @DGPROXYGROUP@
 
-if HAVE_PCRE
-PCRE_LDFLAGS = $(LIBPCRE_LIBS) -lpcreposix
-else
-PCRE_LDFLAGS =
-endif
-
 if HAVE_CLAMAV
-CLAMAV_LDFLAGS = $(LIBCLAMAV_LIBS)
 CLAMAV_SOURCE = contentscanners/clamav.cpp
 else
-CLAMAV_LDFLAGS =
 CLAMAV_SOURCE =
 endif
 
 #if HAVE_KAVCLIENT
 #KAVAV_SOURCES = contentscanners/kavav.cpp
-#KAVAV_CFLAGS = -I$(KAV_INCLUDES)
-#KAVAV_LDFLAGS = $(KAV_LIBS)
 #else
 #KAVAV_SOURCES =
-#KAVAV_CFLAGS =
-#KAVAV_LDFLAGS =
 #endif
 
 if ENABLE_CLAMD
@@ -78,14 +64,8 @@ IPAUTH_SOURCE = authplugins/ip.cpp
 
 if ENABLE_NTLM
 NTLMAUTH_SOURCE = authplugins/ntlm.cpp
-if ENABLE_LIBICONV
-ICONV_LDFLAGS = -liconv
-else
-ICONV_LDFLAGS =
-endif
 else
 NTLMAUTH_SOURCE =
-ICONV_LDFLAGS =
 endif
 
 sbin_PROGRAMS = dansguardian 
@@ -127,8 +107,3 @@ dansguardian_SOURCES = String.cpp String.hpp \
 		       $(KAVAV_SOURCES) $(PROXYAUTH_SOURCE) \
 		       $(IDENTAUTH_SOURCE) $(IPAUTH_SOURCE) \
 		       $(NTLMAUTH_SOURCE)
-
-dansguardian_LDADD = $(PCRE_LDFLAGS) $(ZLIB) $(CLAMAV_LDFLAGS) \
-			$(KAVAV_LDFLAGS) $(ICONV_LDFLAGS)
-
-#dansguardian_CFLAGS = $(CLAMAV_CFLAGS) $(KAVAV_CFLAGS)
