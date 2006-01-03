@@ -98,7 +98,7 @@ protected:
 	// constructor - sets default values. override this if you actually wish to create a default socket.
 	BaseSocket();
 	// destructor - closes socket
-	~BaseSocket();
+	virtual ~BaseSocket();
 	
 	// performs accept(). call from derived classes' accept method
 	int baseAccept(struct sockaddr *acc_adr, socklen_t *acc_adr_length);
