@@ -107,3 +107,6 @@ dansguardian_SOURCES = String.cpp String.hpp \
 		       $(KAVAV_SOURCES) $(PROXYAUTH_SOURCE) \
 		       $(IDENTAUTH_SOURCE) $(IPAUTH_SOURCE) \
 		       $(NTLMAUTH_SOURCE)
+if STATIC_ZLIB
+dansguardian_LDADD = @ZLIBSOURCE@
+endif

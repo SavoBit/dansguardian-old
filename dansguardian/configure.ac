@@ -3,7 +3,7 @@
 # 2004,2005 - Daniel Barron
 
 AC_PREREQ(2.57)
-AC_INIT(dansguardian, 2.9.3.2)
+AC_INIT(dansguardian, 2.9.3.3)
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([dgconfig.h])
 
@@ -43,15 +43,39 @@ AC_CHECK_HEADER([endian.h],
   
 
 # check for zlib
+AC_MSG_CHECKING(if zlib should be statically linked)
+AC_ARG_ENABLE(static-zlib,
+[  --enable-static-zlib=[[no]]  Enable static linking of zlib],
+[ if test "x$enableval" = "xyes"; then
+	staticzlib=true
+	AC_MSG_RESULT(yes)
+else
+	staticzlib=false
+	AC_MSG_RESULT(no)
+fi
+],
+[
+staticzlib = false
+AC_MSG_RESULT(no)
+])
+
+AC_MSG_CHECKING(for zlib)
 AC_ARG_WITH(zlib,
 	[  --with-zlib=[[/path/to/zlib/]]  non-standard search path for zlib library],
 	[ # check for header & func (in library) in given prefix
 	CPPFLAGS="${CPPFLAGS} -I${withval}/include"
-	LDFLAGS="${LDFLAGS} -L${withval}/lib"
+	if ! test "x$staticzlib" = "xtrue"; then
+		LDFLAGS="${LDFLAGS} -L${withval}/lib"
+	fi
 	])
 AC_CHECK_HEADERS([zlib.h])
-AC_CHECK_LIB(z, gzdopen, [AC_MSG_RESULT(yes)], [AC_MSG_ERROR([no zlib!])])
-LDFLAGS="${LDFLAGS} -lz"
+if ! test "x$staticzlib" = "xtrue"; then
+	AC_CHECK_LIB(z, gzdopen, [AC_MSG_RESULT(yes)], [AC_MSG_ERROR([no zlib!])])
+	LDFLAGS="${LDFLAGS} -lz"
+else
+	AC_SUBST(ZLIBSOURCE, "${withval}/lib/libz.a")
+fi
+AM_CONDITIONAL(STATIC_ZLIB, test "x$staticzlib" = "xtrue")
 
 # check whether accept() wants an int* or a socklen_t* as third argument
 AC_MSG_CHECKING([type of 3rd argument to accept()])
