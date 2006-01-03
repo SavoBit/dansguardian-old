@@ -814,7 +814,7 @@ bool OptionContainer::loadDMPlugins()
 			if (!is_daemonised) {
 				std::cerr << "dm_plugin_load() returned NULL pointer with config file: " << config << std::endl;
 			}
-			syslog(LOG_ERR, "dm_plugin_load() returned NULL pointer with config file: ", config.toCharArray());
+			syslog(LOG_ERR, "dm_plugin_load() returned NULL pointer with config file: %s", config.toCharArray());
 			return false;
 		}
 		bool lastplugin = (i == (numplugins - 1));
