@@ -760,8 +760,6 @@ int getfreechild()
 // tell given child process to accept an incoming connection
 void tellchild_accept(int num, int whichsock)
 {
-	int fd = pids[num].fd;
-	
 	// include server socket number in message
 	try {
 		childsockets[num]->writeToSockete((char*)&whichsock, 1, 0, 5, true);
@@ -1267,7 +1265,7 @@ int fc_controlit()
 		rc = seteuid(o.proxy_user);  // become low priv again
 #endif
 		if (rc == -1) {
-			syslog(LOG_ERR, "%s", "Unable to re-seteuid()");
+			syslog(LOG_ERR, "Unable to re-seteuid()");
 #ifdef DGDEBUG
 			std::cerr << "Unable to re-seteuid()" << std::endl;
 #endif
@@ -1296,7 +1294,7 @@ int fc_controlit()
 			if (!is_daemonised) {
 				std::cerr << "Error listening to ipc server file" << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Error listening to ipc server file");
+			syslog(LOG_ERR, "Error listening to ipc server file");
 			return 1;
 		}
 	}
@@ -1314,7 +1312,7 @@ int fc_controlit()
 			if (!is_daemonised) {
 				std::cerr << "Error listening to url ipc server file" << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Error listening to url ipc server file");
+			syslog(LOG_ERR, "Error listening to url ipc server file");
 			return 1;
 		}
 	}
@@ -1324,7 +1322,7 @@ int fc_controlit()
 			if (!is_daemonised) {
 				std::cerr << "Error binding iplistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm " << o.ipipc_filename << "')." << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Error binding iplistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm %s').", o.ipipc_filename.c_str());
+			syslog(LOG_ERR, "Error binding iplistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm %s').", o.ipipc_filename.c_str());
 			return 1;
 		}
 		if (iplistsock.listen(256)) {	// set it to listen mode with a kernel
@@ -1332,7 +1330,7 @@ int fc_controlit()
 			if (!is_daemonised) {
 				std::cerr << "Error listening to ip ipc server file" << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Error listening to ip ipc server file");
+			syslog(LOG_ERR, "Error listening to ip ipc server file");
 			return 1;
 		}
 	}
@@ -1350,7 +1348,7 @@ int fc_controlit()
 		if (!is_daemonised) {
 			std::cerr << "Error daemonising" << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error daemonising");
+		syslog(LOG_ERR, "Error daemonising");
 		return 1;
 	}
 
