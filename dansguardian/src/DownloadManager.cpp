@@ -56,7 +56,7 @@ extern dmcreate_t fancydmcreate;
 //
 
 // constructor
-DMPlugin::DMPlugin(ConfigVar &definition):cv(definition), alwaysmatchua(false)
+DMPlugin::DMPlugin(ConfigVar &definition):alwaysmatchua(false), cv(definition)
 {
 }
 

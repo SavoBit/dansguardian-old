@@ -196,7 +196,7 @@ public:
 	std::string access_denied_address;
 	String access_denied_domain;
 
-	FOptionContainer():banned_page(NULL),blanketblock(0),blanket_ip_block(0) {};
+	FOptionContainer():blanketblock(0),blanket_ip_block(0),banned_page(NULL) {};
 	~FOptionContainer();
 	bool read(const char *filename);
 	void reset();

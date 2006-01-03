@@ -64,8 +64,8 @@ public:
 
 // constructor - set up defaults
 NaughtyFilter::NaughtyFilter()
-:	isItNaughty(false), isException(false), filtergroup(0), whatIsNaughty(""),
-	whatIsNaughtyLog(""), whatIsNaughtyCategories(""), naughtiness(0), usedisplaycats(false)
+:	isItNaughty(false), isException(false), usedisplaycats(false), filtergroup(0), whatIsNaughty(""),
+	whatIsNaughtyLog(""), whatIsNaughtyCategories(""), naughtiness(0)
 {
 }
 

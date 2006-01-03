@@ -57,7 +57,7 @@ extern OptionContainer o;
 // IMPLEMENTATION
 
 DataBuffer::DataBuffer():data(new char[0]), buffer_length(0), compresseddata(NULL), compressed_buffer_length(0),
-	timeout(20), tempfilefd(-1), tempfilesize(0), bytesalreadysent(0), preservetemp(false), dontsendbody(false)
+	tempfilesize(0), dontsendbody(false), tempfilefd(-1), timeout(20), bytesalreadysent(0), preservetemp(false)
 {
 }
 

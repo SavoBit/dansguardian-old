@@ -35,7 +35,7 @@ class SocketArray
 {
 public:
 	// set sensible defaults
-	SocketArray():socknum(0),drawer(NULL) {};
+	SocketArray():drawer(NULL),socknum(0) {};
 	// delete all sockets
 	~SocketArray();
 
