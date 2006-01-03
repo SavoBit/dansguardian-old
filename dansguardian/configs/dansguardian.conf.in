@@ -419,14 +419,14 @@ contentscanexceptions = off
 # handled according to the settings of the user's filter group.
 # Multiple plugins can be specified, and will be queried in order until one
 # of them either finds a username or throws an error. For example, if Squid
-# is configured with both NTLM and Basic auth enabled, and both the 'proxy'
-# and 'ntlm' auth plugins are enabled here, then clients which do not support
+# is configured with both NTLM and Basic auth enabled, and both the 'proxy-basic'
+# and 'proxy-ntlm' auth plugins are enabled here, then clients which do not support
 # NTLM can fall back to Basic without sacrificing access rights.
 #
 # If you do not use multiple filter groups, you need not specify this option.
 #
-#authplugin = '@DGCONFDIR@/authplugins/proxy.conf'
-#authplugin = '@DGCONFDIR@/authplugins/ntlm.conf'
+#authplugin = '@DGCONFDIR@/authplugins/proxy-basic.conf'
+#authplugin = '@DGCONFDIR@/authplugins/proxy-ntlm.conf'
 #authplugin = '@DGCONFDIR@/authplugins/ident.conf'
 #authplugin = '@DGCONFDIR@/authplugins/ip.conf'
 
