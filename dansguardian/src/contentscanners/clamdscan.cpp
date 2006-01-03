@@ -147,6 +147,7 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 	stripedsocks.close();
 	if (reply.endsWith("ERROR")) {
 		lastmessage = reply;
+		syslog(LOG_ERR, "ClamD error: %s", reply);
 		return DGCS_SCANERROR;
 	}
 	else if (reply.endsWith("FOUND")) {
