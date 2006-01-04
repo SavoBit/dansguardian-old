@@ -73,6 +73,9 @@ void OptionContainer::deleteFilterGroups()
 {
 	for (int i = 0; i < numfg; i++) {
 		if (fg[i] != NULL) {
+#ifdef DGDEBUG
+			std::cout << "In deleteFilterGroups loop" << std::endl;
+#endif
 			delete fg[i];  // delete extra FOptionContainer objects
 			fg[i] = NULL;
 		}

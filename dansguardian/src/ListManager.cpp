@@ -47,6 +47,10 @@ ListManager::~ListManager()
 // reduce the reference count on the given list identifier
 void ListManager::deRefList(unsigned int item)
 {
+#ifdef DGDEBUG
+	std::cout << "de-reffing: " << item << std::endl;
+#endif
+
 	if ((item + 1) > l.size()) {
 		return;  // should only happen if when a list was generated
 		// there was a problem so the list ref is bad
@@ -77,7 +81,7 @@ void ListManager::garbageCollect()
 		if (l[i] != NULL) {
 			if ((*l[i]).refcount < 1) {
 #ifdef DGDEBUG
-				std::cout << "deleting zero ref list:" << i << std::endl;
+				std::cout << "deleting zero ref list: " << i << " " << l[i]->refcount << std::endl;
 #endif
 				delete l[i];
 				l[i] = NULL;
@@ -117,7 +121,8 @@ int ListManager::newItemList(const char *filename, bool startswith, int filters,
 			if ((*l[i]).upToDate()) {
 				(*l[i]).refcount++;
 #ifdef DGDEBUG
-				std::cout << "Using previous item:" << i << " " << filename << std::endl;
+				std::cout << "Using previous item: " << i << " " << filename << std::endl;
+				std::cout << "refcount: " << l[i]->refcount << std::endl;
 #endif
 				return i;
 			}
@@ -164,11 +169,11 @@ int ListManager::newPhraseList(const char *exception, const char *banned, const 
 				//so when phrases read in in list container it needs to store
 				//all the file names and if a single one has changed needs a
 				//complete regenerate
-
-#ifdef DGDEBUG
-				std::cout << "Using previous phrase:" << exception << " - " << banned << " - " << weighted << std::endl;
-#endif
 				(*l[i]).refcount++;
+#ifdef DGDEBUG
+				std::cout << "Using previous phrase: " << exception << " - " << banned << " - " << weighted << std::endl;
+				std::cout << "refcount: " << l[i]->refcount << std::endl;
+#endif
 				return i;
 			}
 		}
