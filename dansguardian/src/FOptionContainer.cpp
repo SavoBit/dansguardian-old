@@ -46,37 +46,50 @@ extern OptionContainer o;
 
 FOptionContainer::~FOptionContainer()
 {
-	o.lm.deRefList(banned_phrase_list);
-	o.lm.deRefList(exception_site_list);
-	o.lm.deRefList(exception_url_list);
-	o.lm.deRefList(banned_extension_list);
-	o.lm.deRefList(banned_mimetype_list);
-	o.lm.deRefList(banned_site_list);
-	o.lm.deRefList(banned_url_list);
-	o.lm.deRefList(grey_site_list);
-	o.lm.deRefList(grey_url_list);
-	o.lm.deRefList(banned_regexpurl_list);
-	o.lm.deRefList(exception_regexpurl_list);
-	o.lm.deRefList(content_regexp_list);
-	o.lm.deRefList(url_regexp_list);
+	if (banned_phrase_flag) o.lm.deRefList(banned_phrase_list);
+	if (exception_site_flag) o.lm.deRefList(exception_site_list);
+	if (exception_url_flag) o.lm.deRefList(exception_url_list);
+	if (banned_extension_flag) o.lm.deRefList(banned_extension_list);
+	if (banned_mimetype_flag) o.lm.deRefList(banned_mimetype_list);
+	if (banned_site_flag) o.lm.deRefList(banned_site_list);
+	if (banned_url_flag) o.lm.deRefList(banned_url_list);
+	if (grey_site_flag) o.lm.deRefList(grey_site_list);
+	if (grey_url_flag) o.lm.deRefList(grey_url_list);
+	if (banned_regexpurl_flag) o.lm.deRefList(banned_regexpurl_list);
+	if (exception_regexpurl_flag) o.lm.deRefList(exception_regexpurl_list);
+	if (content_regexp_flag) o.lm.deRefList(content_regexp_list);
+	if (url_regexp_flag) o.lm.deRefList(url_regexp_list);
 	delete banned_page;
 }
 
 void FOptionContainer::reset()
 {
-	o.lm.deRefList(banned_phrase_list);
-	o.lm.deRefList(exception_site_list);
-	o.lm.deRefList(exception_url_list);
-	o.lm.deRefList(banned_extension_list);
-	o.lm.deRefList(banned_mimetype_list);
-	o.lm.deRefList(banned_site_list);
-	o.lm.deRefList(banned_url_list);
-	o.lm.deRefList(grey_site_list);
-	o.lm.deRefList(grey_url_list);
-	o.lm.deRefList(banned_regexpurl_list);
-	o.lm.deRefList(exception_regexpurl_list);
-	o.lm.deRefList(content_regexp_list);
-	o.lm.deRefList(url_regexp_list);
+	if (banned_phrase_flag) o.lm.deRefList(banned_phrase_list);
+	if (exception_site_flag) o.lm.deRefList(exception_site_list);
+	if (exception_url_flag) o.lm.deRefList(exception_url_list);
+	if (banned_extension_flag) o.lm.deRefList(banned_extension_list);
+	if (banned_mimetype_flag) o.lm.deRefList(banned_mimetype_list);
+	if (banned_site_flag) o.lm.deRefList(banned_site_list);
+	if (banned_url_flag) o.lm.deRefList(banned_url_list);
+	if (grey_site_flag) o.lm.deRefList(grey_site_list);
+	if (grey_url_flag) o.lm.deRefList(grey_url_list);
+	if (banned_regexpurl_flag) o.lm.deRefList(banned_regexpurl_list);
+	if (exception_regexpurl_flag) o.lm.deRefList(exception_regexpurl_list);
+	if (content_regexp_flag) o.lm.deRefList(content_regexp_list);
+	if (url_regexp_flag) o.lm.deRefList(url_regexp_list);
+	banned_phrase_flag = false;
+	exception_site_flag = false;
+	exception_url_flag = false;
+	banned_extension_flag = false;
+	banned_mimetype_flag = false;
+	banned_site_flag = false;
+	banned_url_flag = false;
+	grey_site_flag = false;
+	grey_url_flag = false;
+	banned_regexpurl_flag = false;
+	exception_regexpurl_flag = false;
+	content_regexp_flag = false;
+	url_regexp_flag = false;
 	banned_phrase_list_index.clear();
 	conffile.clear();
 	content_regexp_list_comp.clear();
@@ -400,50 +413,63 @@ bool FOptionContainer::read(const char *filename)
 			if (!readbplfile(banned_phrase_list_location.c_str(), exception_phrase_list_location.c_str(), weighted_phrase_list_location.c_str())) {
 				return false;
 			}		// read banned, exception, weighted phrase list
+			banned_phrase_flag = true;
 			if (!readFile(exceptions_site_list_location.c_str(),&exception_site_list,false,true,"exceptionsitelist")) {
 				return false;
 			}		// site exceptions
+			exception_site_flag = true;
 			if (!readFile(exceptions_url_list_location.c_str(),&exception_url_list,true,true,"exceptionurllist")) {
 				return false;
 			}		// url exceptions
+			exception_url_flag = true;
 			if (!readFile(banned_extension_list_location.c_str(),&banned_extension_list,false,false,"bannedextensionlist")) {
 				return false;
 			}		// file extensions
+			banned_extension_flag = true;
 			if (!readFile(banned_mimetype_list_location.c_str(),&banned_mimetype_list,false,true,"bannedmimetypelist")) {
 				return false;
 			}		// mime types
+			banned_mimetype_flag = true;
 			if (!readFile(banned_site_list_location.c_str(),&banned_site_list,false,true,"bannedsitelist")) {
 				return false;
 			}		// banned domains
+			banned_site_flag = true;
 			if (!readFile(banned_url_list_location.c_str(),&banned_url_list,true,true,"bannedurllist")) {
 				return false;
 			}		// banned urls
+			banned_url_flag = true;
 			if (!readFile(grey_site_list_location.c_str(),&grey_site_list,false,true,"greysitelist")) {
 				return false;
 			}		// grey domains
+			grey_site_flag = true;
 			if (!readFile(grey_url_list_location.c_str(),&grey_url_list,true,true,"greyurllist")) {
 				return false;
 			}		// grey urls
+			grey_url_flag = true;
 
 			if (!readRegExURLFile(banned_regexpurl_list_location.c_str(),"bannedregexpurllist",banned_regexpurl_list,
 				banned_regexpurl_list_comp, banned_regexpurl_list_source, banned_regexpurl_list_ref))
 			{
 				return false;
 			}		// banned reg exp urls
+			banned_regexpurl_flag = true;
 
 			if (!readRegExURLFile(exception_regexpurl_list_location.c_str(),"exceptionregexpurllist",exception_regexpurl_list,
 				exception_regexpurl_list_comp, exception_regexpurl_list_source, exception_regexpurl_list_ref))
 			{
 				return false;
 			}		// exception reg exp urls
+			exception_regexpurl_flag = true;
 
 			if (!readRegExListFile(content_regexp_list_location.c_str(),"contentregexplist",content_regexp_list,content_regexp_list_rep,content_regexp_list_comp)) {
 				return false;
 			}		// content replacement regular expressions
+			content_regexp_flag = true;
 
 			if (!readRegExListFile(url_regexp_list_location.c_str(),"urlregexplist",url_regexp_list,url_regexp_list_rep,url_regexp_list_comp)) {
 				return false;
 			}  // url replacement regular expressions
+			url_regexp_flag = true;
 #ifdef DGDEBUG
 			std::cout << "Lists in memory" << std::endl;
 #endif
@@ -579,7 +605,7 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 }
 
 // read regexp url list
-bool FOptionContainer::readRegExURLFile(const char *filename, const char *listname, unsigned int listref,
+bool FOptionContainer::readRegExURLFile(const char *filename, const char *listname, unsigned int& listref,
 	std::deque<RegExp> &list_comp, std::deque<String> &list_source, std::deque<unsigned int> &list_ref)
 {
 	int result = o.lm.newItemList(filename, true, 0, true);
@@ -628,7 +654,7 @@ bool FOptionContainer::compileRegExURLFile(unsigned int list, std::deque<RegExp>
 }
 
 // content and URL regular expression replacement files
-bool FOptionContainer::readRegExListFile(const char *filename, const char *listname, unsigned int listid,
+bool FOptionContainer::readRegExListFile(const char *filename, const char *listname, unsigned int& listid,
 	std::deque<String> &list_rep, std::deque<RegExp> &list_comp)
 {
 	int result = o.lm.newItemList(filename, true, 0, true);

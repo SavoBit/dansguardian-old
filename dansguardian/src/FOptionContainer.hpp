@@ -171,6 +171,19 @@ public:
 	unsigned int exception_regexpurl_list;
 	unsigned int content_regexp_list;
 	unsigned int url_regexp_list;
+	bool banned_phrase_flag;
+	bool exception_site_flag;
+	bool exception_url_flag;
+	bool banned_extension_flag;
+	bool banned_mimetype_flag;
+	bool banned_site_flag;
+	bool banned_url_flag;
+	bool grey_site_flag;
+	bool grey_url_flag;
+	bool banned_regexpurl_flag;
+	bool exception_regexpurl_flag;
+	bool content_regexp_flag;
+	bool url_regexp_flag;
 	std::deque<int> banned_phrase_list_index;
 	
 	// regex match lists
@@ -196,7 +209,13 @@ public:
 	std::string access_denied_address;
 	String access_denied_domain;
 
-	FOptionContainer():blanketblock(0),blanket_ip_block(0),banned_page(NULL) {};
+	FOptionContainer():blanketblock(0),blanket_ip_block(0),
+		banned_phrase_flag(false), exception_site_flag(false), exception_url_flag(false),
+		banned_extension_flag(false), banned_mimetype_flag(false), banned_site_flag(false),
+		banned_url_flag(false), grey_site_flag(false), grey_url_flag(false),
+		banned_regexpurl_flag(false), exception_regexpurl_flag(false),
+		content_regexp_flag(false), url_regexp_flag(false),
+		banned_page(NULL) {};
 	~FOptionContainer();
 	bool read(const char *filename);
 	void reset();
@@ -226,11 +245,11 @@ private:
 	bool precompileregexps();
 	bool readbplfile(const char *banned, const char *exception, const char *weighted);
 	bool readFile(const char *filename, unsigned int* whichlist, bool sortsw, bool cache, const char *listname);
-	bool readRegExURLFile(const char *filename, const char *listname, unsigned int listref,
+	bool readRegExURLFile(const char *filename, const char *listname, unsigned int& listref,
 		std::deque<RegExp> &list_comp, std::deque<String> &list_source, std::deque<unsigned int> &list_ref);
 	bool compileRegExURLFile(unsigned int list, std::deque<RegExp> &list_comp,
 		std::deque<String> &list_source, std::deque<unsigned int> &list_ref);
-	bool readRegExListFile(const char *filename, const char *listname, unsigned int listid,
+	bool readRegExListFile(const char *filename, const char *listname, unsigned int& listid,
 	std::deque<String> &list_rep, std::deque<RegExp> &list_comp);
 
 	int findoptionI(const char *option);
