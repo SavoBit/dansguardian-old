@@ -123,9 +123,9 @@ AuthPlugin* auth_plugin_load(const char *pluginConfigPath)
 		return NULL;
 	}
 
-	if (plugname == "proxy") {
+	if (plugname == "proxy-basic") {
 #ifdef DGDEBUG
-		std::cout << "Enabling proxy auth plugin" << std::endl;
+		std::cout << "Enabling proxy-basic auth plugin" << std::endl;
 #endif
 		return proxycreate(cv);
 	}
@@ -145,9 +145,9 @@ AuthPlugin* auth_plugin_load(const char *pluginConfigPath)
 	}
 
 #ifdef __NTLM
-	if (plugname == "ntlm") {
+	if (plugname == "proxy-ntlm") {
 #ifdef DGDEBUG
-		std::cout << "Enabling NTLM auth plugin" << std::endl;
+		std::cout << "Enabling proxy-NTLM auth plugin" << std::endl;
 #endif
 		return ntlmcreate(cv);
 	}
