@@ -1040,6 +1040,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 
 				// no need to check bypass mode, exception mode, auth required headers, or banned ip/user (the latter get caught by requestChecks later)
+				// checkme: surely redirections don't have a MIME type either? why do *any* checking on them - we just force them to be un-naughty later!
 				if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.authRequired())
 				{
 
