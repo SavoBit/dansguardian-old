@@ -129,7 +129,7 @@ int clamavinstance::doRC(int rc, const char *vn)
 #ifdef DGDEBUG
 		std::cerr << "ClamAV error: " << lastmessage << std::endl;
 #endif
-		syslog(LOG_ERR, "ClamAV error: %s", lastmessage);
+		syslog(LOG_ERR, "ClamAV error: %s", lastmessage.toCharArray());
 		return DGCS_SCANERROR;
 	}
 #ifdef DGDEBUG
