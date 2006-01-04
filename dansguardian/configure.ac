@@ -55,7 +55,7 @@ else
 fi
 ],
 [
-staticzlib = false
+staticzlib=false
 AC_MSG_RESULT(no)
 ])
 
