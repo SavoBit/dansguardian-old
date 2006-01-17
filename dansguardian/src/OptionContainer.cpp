@@ -65,7 +65,7 @@ void OptionContainer::reset()
 	html_template.reset();
 	language_list.reset();
 	conffile.clear();
-	filter_groups_list.reset();
+	if (use_filter_groups_list) filter_groups_list.reset();
 	filter_ip.clear();
 }
 
@@ -486,6 +486,7 @@ bool OptionContainer::read(const char *filename, int type)
 		filter_groups_list_location = findoptionS("filtergroupslist");
 		banned_ip_list_location = findoptionS("bannediplist");
 		exceptions_ip_list_location = findoptionS("exceptioniplist");
+		group_names_list_location = findoptionS("groupnamesfile");
 		language_list_location = languagepath + "messages";
 		if (reporting_level == 1 || reporting_level == 2) {
 			access_denied_address = findoptionS("accessdeniedaddress");
@@ -508,8 +509,24 @@ bool OptionContainer::read(const char *filename, int type)
 			}
 		}
 
-		if (!doReadItemList(filter_groups_list_location.c_str(),&filter_groups_list,"filtergroupslist",true)) {
+		if (filter_groups_list_location.length() == 0) {
+			use_filter_groups_list = false;
+#ifdef DGDEBUG
+			std::cout << "Not using filtergroupslist" << std::endl;
+#endif
+		} else if (!doReadItemList(filter_groups_list_location.c_str(),&filter_groups_list,"filtergroupslist",true)) {
 			return false;
+		} else {
+			use_filter_groups_list = true;
+		}
+
+		if (group_names_list_location.length() == 0) {
+			use_group_names_list = false;
+#ifdef DGDEBUG
+			std::cout << "Not using groupnameslist" << std::endl;
+#endif
+		} else {
+			use_group_names_list = true;
 		}
 
 		if (!doReadItemList(banned_ip_list_location.c_str(),&banned_ip_list,"bannediplist",true)) {
@@ -731,25 +748,51 @@ bool OptionContainer::readFilterGroupConf()
 	prefix = prefix.before(".conf");
 	prefix += "f";
 	String file;
-	for (int i = 1; i <= filter_groups; i++) {
-		file = prefix + String(i);
-		file += ".conf";
-		if (!readAnotherFilterGroupConf(file.toCharArray())) {
-			if (!is_daemonised) {
-				std::cerr << "Error opening filter list:" << file << std::endl;
-			}
-			syslog(LOG_ERR, "%s", "Error opening filter list:");
-			syslog(LOG_ERR, "%s", file.toCharArray());
+	ifstream groupnamesfile;
+	std::string groupname;
+	if (use_group_names_list) {
+		groupnamesfile.open(group_names_list_location.c_str(), ios::in);
+		if (!groupnamesfile.good()) {
+			if (!is_daemonised)
+				std::cerr << "Error opening group names file: " << group_names_list_location << std::endl;
+			syslog(LOG_ERR, "Error opening group names file: %s", group_names_list_location.c_str());
 			return false;
 		}
 	}
+	for (int i = 1; i <= filter_groups; i++) {
+		file = prefix + String(i);
+		file += ".conf";
+		if (use_group_names_list) {
+			if (groupnamesfile.eof()) {
+				if (!is_daemonised)
+					std::cerr << "Group names file too short: " << group_names_list_location << std::endl;
+				syslog(LOG_ERR, "Group names file too short: %s", group_names_list_location.c_str());
+				return false;
+			}
+			getline(groupnamesfile, groupname);
+			groupname = groupname.substr(groupname.find('\'',0)+1);
+			groupname = groupname.substr(0,groupname.rfind('\'',groupname.length()-1));
+#ifdef DGDEBUG
+			std::cout << "Group name: " << groupname << std::endl;
+#endif
+		}
+		if (!readAnotherFilterGroupConf(file.toCharArray(), groupname.c_str())) {
+			if (!is_daemonised) {
+				std::cerr << "Error opening filter group config: " << file << std::endl;
+			}
+			syslog(LOG_ERR, "Error opening filter group config: %s", file.toCharArray());
+			return false;
+		}
+	}
+	if (use_group_names_list)
+		groupnamesfile.close();
 	return true;
 }
 
-bool OptionContainer::readAnotherFilterGroupConf(const char *filename)
+bool OptionContainer::readAnotherFilterGroupConf(const char *filename, const char *groupname)
 {
 #ifdef DGDEBUG
-	std::cout << "adding filter group" << numfg << " " << filename << std::endl;
+	std::cout << "adding filter group: " << numfg << " " << filename << std::endl;
 #endif
 
 	// array of pointers to FOptionContainer
@@ -765,7 +808,7 @@ bool OptionContainer::readAnotherFilterGroupConf(const char *filename)
 	fg[numfg] = new FOptionContainer;
 
 #ifdef DGDEBUG
-	std::cout << "added filter group" << numfg << " " << filename << std::endl;
+	std::cout << "added filter group: " << numfg << " " << filename << std::endl;
 #endif
 
 	// pass all the vars from OptionContainer needed
@@ -777,14 +820,17 @@ bool OptionContainer::readAnotherFilterGroupConf(const char *filename)
 	// pass in default access denied address - can be overidden
 	(*fg[numfg]).access_denied_domain = access_denied_domain;
 	(*fg[numfg]).access_denied_address = access_denied_address;
+	
+	// pass in the group name
+	(*fg[numfg]).name = groupname;
 
 #ifdef DGDEBUG
-	std::cout << "passed variables to filter group" << numfg << " " << filename << std::endl;
+	std::cout << "passed variables to filter group: " << numfg << " " << filename << std::endl;
 #endif
 
 	bool rc = (*fg[numfg]).read(filename);
 #ifdef DGDEBUG
-	std::cout << "read filter group" << numfg << " " << filename << std::endl;
+	std::cout << "read filter group: " << numfg << " " << filename << std::endl;
 #endif
 
 	numfg++;
