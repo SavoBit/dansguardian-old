@@ -41,7 +41,7 @@ public:
 	~ConnectionHandler() { delete clienthost; };
 
 	// pass data between proxy and client, filtering as we go.
-	void handleConnection(Socket &peerconn, String &ip, int port);
+	void handleConnection(Socket &peerconn, String &ip, int port, int socknum);
 
 private:
 	std::string *clienthost;
@@ -58,9 +58,9 @@ private:
 	std::string miniURLEncode(const char *s);
 
 	// check the URL cache to see if we've already flagged an address as clean
-	bool wasClean(String &url);
+	bool wasClean(String &url, const int fg);
 	// add a known clean URL to the cache
-	void addToClean(String &url);
+	void addToClean(String &url, const int fg);
 
 	// when using IP address counting - have we got any remaining free IPs?
 	bool gotIPs(char *ipstr);
@@ -75,7 +75,7 @@ private:
 	// show the relevant banned page depending upon the report level settings, request type, etc.
 	bool denyAccess(Socket *peerconn, Socket *proxysock, HTTPHeader *header, HTTPHeader *docheader,
 		String *url, NaughtyFilter *checkme, std::string *clientuser, std::string *clientip,
-		int filtergroup, bool ispostblock, int headersent, bool wasinfected, bool scanerror);
+		int filtergroup, bool ispostblock, int headersent, bool wasinfected, bool scanerror, int socknum);
 
 	// create temporary ban bypass URLs/cookies
 	String hashedURL(String *url, int filtergroup, std::string *clientip, bool infectionbypass);
