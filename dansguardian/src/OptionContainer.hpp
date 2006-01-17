@@ -88,6 +88,8 @@ public:
 
 	int max_ips;
 	bool recheck_replaced_urls;
+	bool use_filter_groups_list;
+	bool use_group_names_list;
 
 	std::string languagepath;
 	std::string filter_groups_list_location;
@@ -101,16 +103,17 @@ public:
 	std::string urlipc_filename;
 	std::string ipipc_filename;
 	std::string pid_filename;
+	std::string group_names_list_location;
 	int no_daemon;
 	int no_logger;
-	int max_logitem_length;
+	unsigned int max_logitem_length;
 	int anonymise_logs;
 	int log_ad_blocks;
 	int soft_restart;
 	std::string daemon_user;
 	std::string daemon_group;
 	int max_upload_size;
-	unsigned max_content_filter_size;
+	unsigned int max_content_filter_size;
 	unsigned int max_content_ramcache_scan_size;
 	unsigned int max_content_filecache_scan_size;
 	int scan_clean_cache;
@@ -172,7 +175,7 @@ private:
 	int findoptionI(const char *option);
 	std::string findoptionS(const char *option);
 	bool realitycheck(String s, int minl, int maxl, char *emessage);
-	bool readAnotherFilterGroupConf(const char *filename);
+	bool readAnotherFilterGroupConf(const char *filename, const char *groupname);
 	std::deque<String> findoptionM(const char *option);
 
 	bool inIPList(const std::string *ip, ListContainer& list, std::string *&host);
