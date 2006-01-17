@@ -148,6 +148,17 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	struct timeval nowadays;
 	gettimeofday(&themdays, NULL);
 	gettimeofday(&starttime, NULL);
+	
+	// buffer size for streaming downloads
+	unsigned int blocksize = 32768;
+	// set to a sensible minimum
+	if (!wantall && (blocksize > o.max_content_filter_size))
+		blocksize = o.max_content_filter_size;
+	else if (wantall && (blocksize > o.max_content_ramcache_scan_size))
+		blocksize = o.max_content_ramcache_scan_size;
+#ifdef DGDEBUG
+	std::cout << "blocksize: " << blocksize << std::endl;
+#endif
 
 	// determine downloaded filename
 	String filename = requestheader->disposition();
@@ -226,43 +237,52 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 
 		if (wantall) {
 			if (!swappedtodisk) {
-				if (d->buffer_length > o.max_content_ramcache_scan_size) {
-					if (d->buffer_length > o.max_content_filecache_scan_size) {
+				// if not swapped to disk and file is too large for RAM, then swap to disk
+				if (bytesgot > o.max_content_ramcache_scan_size) {
+#ifdef DGDEBUG
+					std::cout << "swapping to disk" << std::endl;
+#endif
+					d->tempfilefd = d->getTempFileFD();
+					if (d->tempfilefd < 0) {
+#ifdef DGDEBUG
+						std::cerr << "error buffering to disk so skipping disk buffering" << std::endl;
+#endif
+						syslog(LOG_ERR, "%s", "error buffering to disk so skipping disk buffering");
 						(*toobig) = true;
 						break;
-					} else {
-#ifdef DGDEBUG
-						std::cout << "swapping to disk" << std::endl;
-#endif
-						d->tempfilefd = d->getTempFileFD();
-						if (d->tempfilefd < 0) {
-#ifdef DGDEBUG
-							std::cerr << "error buffering to disk so skipping disk buffering" << std::endl;
-#endif
-							syslog(LOG_ERR, "%s", "error buffering to disk so skipping disk buffering");
-							(*toobig) = true;
-							break;
-						}
-						writeEINTR(d->tempfilefd, d->data, d->buffer_length);
-						swappedtodisk = true;
-						d->tempfilesize = d->buffer_length;
 					}
-
+					writeEINTR(d->tempfilefd, d->data, d->buffer_length);
+					swappedtodisk = true;
+					d->tempfilesize = d->buffer_length;
 				}
+			} else if (bytesgot > o.max_content_filecache_scan_size) {
+				// if swapped to disk and file too large for that too, then give up
+#ifdef DGDEBUG
+				std::cout << "fancydm: file too big to be scanned, halting download" << std::endl;
+#endif
+				(*toobig) = true;
+				break;
 			}
 		} else {
-			if (d->buffer_length > o.max_content_filter_size) {
+			if (bytesgot > o.max_content_filter_size) {
+				// if we aren't downloading for virus scanning, and file too large for filtering, give up
+#ifdef DGDEBUG
+				std::cout << "fancydm: file too big to be filtered, halting download" << std::endl;
+#endif
 				(*toobig) = true;
 				break;
 			}
 		}
 
 		if (!swappedtodisk) {
-			if (d->buffer_length >= 32768) {
+			if (d->buffer_length >= blocksize) {
 				newsize = d->buffer_length;
 			} else {
-				newsize = 32768;
+				newsize = blocksize;
 			}
+#ifdef DGDEBUG
+			std::cout << "newsize: " << newsize << std::endl;
+#endif
 			// if not getting everything until connection close, grab only what is left
 			if (!geteverything && (newsize > (expectedsize - bytesgot)))
 				newsize = expectedsize - bytesgot;
