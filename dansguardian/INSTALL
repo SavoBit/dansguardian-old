@@ -33,9 +33,10 @@ API; others (e.g. FreeBSD) require an external iconv library to be
 installed. The "--with-libiconv" configure option enables linking with
 an external library. Charsets UTF-16LE and UTF-8 must be supported.
 
-For the library-based ClamAV scanner (not applicable to the Clamd scanner),
+For the library-based ClamAV scanner (not applicable to the ClamD scanner),
 the "clamav-config" program must be available in your PATH during build
-configuration.
+configuration. Note that libclamav is commonly dynamically linked against
+zlib; this may break --enable-static-zlib.
 
 
 1.	Run the configure (./configure --help) script with
@@ -76,10 +77,14 @@ You may change with the configure options:
   localstatedir    (where var/run and /var/logs are)
   with-logdir      (where the logs get placed eg /var/log/dansguardian)
   with-piddir      (where the pid file gets placed eg /var/run)
+  with-sysconfsubdir
+  		   (subdirectory of sysconfdir in which to place config files)
   exec-prefix      (architecture-dependent files ie bin files)
   bindir           (where the binary gets placed)
   with-proxyuser   (the system user the daemon runs as)
   with-proxygroup  (the system group the daemon runs as)
+  enable-static-zlib
+  		   (enable static linking against zlib)
   enable-clamd     (enable support for clamd antivirus scanner)
   enable-clamav    (enable support for libclamav av scanner)
   enable-icap      (enable support for ICAP-compatible av scanner)
@@ -376,7 +381,9 @@ HOT TO COMPILE STATICALLY WITH ZLIB: (Provided by Ernest W. Lessenger)
 -----------------------------------
 
 Note: these instructions might be now out of date due to changes in
-the DansGuardian build process.
+the DansGuardian build process. Instead of editing the Makefile (step 3
+below), you may instead wish to use the "--enable-static-zlib" and
+"--with-zlib" configure options.
 
 Step 0:
 Configure DansGuardian as usual
