@@ -26,8 +26,10 @@
 #include <syslog.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <clamav.h>
+#include <fcntl.h>
 
 
 // GLOBALS
@@ -95,12 +97,43 @@ int clamavinstance::quit()
 }*/
 
 // override the inherited scanMemory, since libclamav can actually scan memory areas directly
+// ... but we don't want it to! cl_scanbuff is crippled (no archive unpacking, only basic signature scanning)
+// and scheduled for removal. instead, use shm_open to create an "in memory" file, and use cl_scandesc.
+// !!! this may not prove to be very portable !!!
 int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user,
 	int filtergroup, const char *ip, const char *object, unsigned int objectsize)
 {
 	lastmessage = lastvirusname = "";
 	const char *vn = "";
-	int rc = cl_scanbuff(object, objectsize - 1, &vn, root);
+	int fd = shm_open("/dgclamavtemp", O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
+	if (fd == -1) {
+#ifdef DGDEBUG
+		std::cerr << "ClamAV plugin error during shm_open: " << strerror(errno) << std::endl;
+#endif
+		syslog(LOG_ERR, "ClamAV plugin error during shm_open: %s", strerror(errno));
+		return DGCS_SCANERROR;
+	}
+	
+	int rc = write(fd, object, objectsize);
+	if (fd == -1) {
+#ifdef DGDEBUG
+		std::cerr << "ClamAV plugin error during shm write: " << strerror(errno) << std::endl;
+#endif
+		syslog(LOG_ERR, "ClamAV plugin error during shm write: %s", strerror(errno));
+		return DGCS_SCANERROR;
+	}
+
+	//int rc = cl_scanbuff(object, objectsize - 1, &vn, root);
+	rc = cl_scandesc(fd, &vn, NULL, root, &limits, CL_SCAN_STDOPT);
+	close(fd);
+	fd = shm_unlink("/dgclamavtemp");
+	if (fd == -1) {
+#ifdef DGDEBUG
+		std::cerr << "ClamAV plugin error during shm_unlink: " << strerror(errno) << std::endl;
+#endif
+		syslog(LOG_ERR, "ClamAV plugin error during shm_unlink: %s", strerror(errno));
+		return DGCS_SCANERROR;
+	}
 	return doRC(rc, vn);
 }
 
