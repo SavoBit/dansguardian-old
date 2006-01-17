@@ -4,7 +4,11 @@ DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/authplugins
 
 SUBDIRS = .
 
-FLISTS = proxy-basic.conf ident.conf ip.conf proxy-ntlm.conf
+FLISTS = proxy-basic.conf ident.conf ip.conf
+
+if ENABLE_NTLM
+FLISTS += proxy-ntlm.conf
+endif
 
 EXTRA_DIST = proxy-basic.conf ident.conf ip.conf.in proxy-ntlm.conf
 
