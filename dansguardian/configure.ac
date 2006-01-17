@@ -3,7 +3,7 @@
 # 2004,2005 - Daniel Barron
 
 AC_PREREQ(2.57)
-AC_INIT(dansguardian, 2.9.3.3)
+AC_INIT(dansguardian, 2.9.4.0)
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([dgconfig.h])
 
@@ -45,13 +45,13 @@ AC_CHECK_HEADER([endian.h],
 # check for zlib
 AC_MSG_CHECKING(if zlib should be statically linked)
 AC_ARG_ENABLE(static-zlib,
-[  --enable-static-zlib=[[no]]  Enable static linking of zlib],
-[ if test "x$enableval" = "xyes"; then
-	staticzlib=true
-	AC_MSG_RESULT(yes)
-else
+[AC_HELP_STRING([--enable-static-zlib@<:@=no@:>@], [Enable static linking of zlib])],
+[ if test "x$enableval" = "xno"; then
 	staticzlib=false
 	AC_MSG_RESULT(no)
+else
+	staticzlib=true
+	AC_MSG_RESULT(yes)
 fi
 ],
 [
@@ -61,21 +61,27 @@ AC_MSG_RESULT(no)
 
 AC_MSG_CHECKING(for zlib)
 AC_ARG_WITH(zlib,
-	[  --with-zlib=[[/path/to/zlib/]]  non-standard search path for zlib library],
+	[AC_HELP_STRING([--with-zlib@<:@=NONE@:>@], [non-standard search path for zlib library])],
 	[ # check for header & func (in library) in given prefix
 	CPPFLAGS="${CPPFLAGS} -I${withval}/include"
-	if ! test "x$staticzlib" = "xtrue"; then
-		LDFLAGS="${LDFLAGS} -L${withval}/lib"
+	if test "x$staticzlib" = "xtrue"; then
+		LIBS="-Bstatic -L${withval} -lz -Bdynamic ${LIBS}"
+	else
+		LIBS="-L${withval}/lib -lz ${LIBS}"
+	fi
+	],
+	[ # if --with-zlib is not supplied, we still need -lz in LIBS.
+	if test "x$staticzlib" = "xtrue"; then
+		LIBS="-Bstatic -lz -Bdynamic ${LIBS}"
+	else
+		LIBS="-lz ${LIBS}"
 	fi
 	])
 AC_CHECK_HEADERS([zlib.h])
 if ! test "x$staticzlib" = "xtrue"; then
 	AC_CHECK_LIB(z, gzdopen, [AC_MSG_RESULT(yes)], [AC_MSG_ERROR([no zlib!])])
-	LDFLAGS="${LDFLAGS} -lz"
-else
-	AC_SUBST(ZLIBSOURCE, "${withval}/lib/libz.a")
 fi
-AM_CONDITIONAL(STATIC_ZLIB, test "x$staticzlib" = "xtrue")
+#AM_CONDITIONAL(STATIC_ZLIB, test "x$staticzlib" = "xtrue")
 
 # check whether accept() wants an int* or a socklen_t* as third argument
 AC_MSG_CHECKING([type of 3rd argument to accept()])
@@ -173,13 +179,13 @@ esac
 
 AC_MSG_CHECKING(for debug option)
 AC_ARG_WITH(dgdebug,
-[  --with-dgdebug=[[off]]    switch on debug build mode],
-[if test "${withval}" == "on" ; then
+[AC_HELP_STRING([--with-dgdebug@<:@=off@:>@], [switch on debug build mode])],
+[if test "x${withval}" == "xoff" ; then
+  AC_MSG_RESULT(no)
+else
   AC_MSG_RESULT(yes)
   dgdebug=${withval}
   AC_DEFINE(HAVE_DGDEBUG, 1, [Define to enable debug build mode])
-else
-  AC_MSG_RESULT(no)
 fi], [
   # disable by default
   AC_MSG_RESULT(no)
@@ -188,8 +194,8 @@ fi], [
 
 AC_MSG_CHECKING(for proxy user)
 AC_ARG_WITH(proxyuser,
-[  --with-proxyuser=[[nobody]]       name of proxy user],
-[if test "${withval}" != "" ; then
+[AC_HELP_STRING([--with-proxyuser@<:@=nobody@:>@], [name of proxy user])],
+[if test "x${withval}" != "x" ; then
   AC_MSG_RESULT(yes)
   proxyuser=${withval}
 else
@@ -204,8 +210,8 @@ AC_SUBST(DGPROXYUSER, "$proxyuser")
 
 AC_MSG_CHECKING(for proxy group)
 AC_ARG_WITH(proxygroup,
-[  --with-proxygroup=[[nobody]]      name of proxy group],
-[if test "${withval}" != "" ; then
+[AC_HELP_STRING([--with-proxygroup@<:@=nobody@:>@], [name of proxy group])],
+[if test "x${withval}" != "x" ; then
   AC_MSG_RESULT(yes)
   proxygroup=${withval}
 else
@@ -220,8 +226,8 @@ AC_SUBST(DGPROXYGROUP, "$proxygroup")
 
 AC_MSG_CHECKING(for piddir)
 AC_ARG_WITH(piddir,
-[  --with-piddir=[[PREFIX/LOCALSTATEDIR/run]]  path for pid file],
-[if test "${withval}" != "" ; then
+[AC_HELP_STRING([--with-piddir@<:@=PREFIX/LOCALSTATEDIR/run@:>@], [path for pid file])],
+[if test "x${withval}" != "x" ; then
   AC_MSG_RESULT(yes)
   piddir=${withval}
 else
@@ -238,8 +244,8 @@ AC_SUBST(DGPIDDIR)
 
 AC_MSG_CHECKING(for logdir)
 AC_ARG_WITH(logdir,
-[  --with-logdir=[[PREFIX/LOCALSTATEDIR/log/dansguardian]]  path for log files],
-[if test "${withval}" != "" ; then
+[AC_HELP_STRING([--with-logdir@<:@=PREFIX/LOCALSTATEDIR/log/dansguardian@:>@], [path for log files])],
+[if test "x${withval}" != "x" ; then
   AC_MSG_RESULT(yes)
   logdir=${withval}
 else
@@ -257,13 +263,13 @@ AC_SUBST(DGLOGLOCATION)
 AC_MSG_CHECKING(for PCRE support)
 AC_ARG_ENABLE(
 pcre,
-[  --enable-pcre=[[no]]  Enable support for the PCRE library],
-[ if test "x$enableval" = "xyes"; then
-	pcre=true
-	AC_MSG_RESULT(yes)
-else
+[AC_HELP_STRING([--enable-pcre@<:@=no@:>@], [Enable support for the PCRE library])],
+[ if test "x$enableval" = "xno"; then
 	pcre=false
 	AC_MSG_RESULT(no)
+else
+	pcre=true
+	AC_MSG_RESULT(yes)
 fi
 ],
 [ # disable by default
@@ -281,10 +287,10 @@ if test "x$pcre" = "xtrue"; then
 	if ! test $PCRE = "yes"; then
 		AC_MSG_ERROR([pcre-config not found!])
 	fi
-	PCRE_LIBS=`pcre-config --libs`
+	PCRE_LIBS=`pcre-config --libs-posix`
 	PCRE_PREFIX=`pcre-config --prefix`
 
-	LDFLAGS="${LDFLAGS} ${PCRE_LIBS} -lpcreposix"
+	LIBS="${PCRE_LIBS} ${LIBS}"
 	CPPFLAGS="${CPPFLAGS} -I${PCRE_PREFIX}/include"
 
 	AC_MSG_CHECKING([for REG_DOTALL in pcreposix.h])
@@ -306,20 +312,14 @@ AM_CONDITIONAL(HAVE_PCRE, test "x$pcre" = "xtrue")
 
 # asking user if they want clamav support
 AC_MSG_CHECKING(for libclamav support)
-#USE_CLAMAV=false
 AC_ARG_ENABLE(
 clamav,
-[  --enable-clamav=[[no]]  Enable support for the libClamAV content scanner],
-[ if test "x$enableval" = "xyes"; then
-	dnl detecting clamav and make conditional for it
-	#PKG_CHECK_MODULES(LIBCLAMAV, libclamav,
-	#	[AC_MSG_RESULT(yes)
-	#	USE_CLAMAV=true
-	#	AC_DEFINE([HAVE_CLAMAV],[],[Define to enable ClamAV content scanner])]
-	#)
-	#pkg_check_modules requires pkg-config to be installed which seems an overkill
-	#and extra work - maybe better to let the user choose with a configure option?
-	#Thu 10th February 2005 - DB
+[AC_HELP_STRING([--enable-clamav@<:@=no@:>@], [Enable support for the libClamAV content scanner])],
+[ if test "x$enableval" = "xno"; then
+	clamav=false
+	AC_MSG_RESULT(no)
+	CLAMAVSUPPORT="!! Not compiled !! "
+else
 	AC_MSG_RESULT(yes)
 	AC_CHECK_PROG(
 		      CLAMAV,
@@ -330,166 +330,202 @@ clamav,
 	if ! test $CLAMAV = "yes"; then
 		AC_MSG_ERROR([libClamAV support enabled, but clamav-config not found!])
 	fi
-	CLAMAV_LIBS=`clamav-config --libs`
+	dnl CLAMAV_LIBS=`clamav-config --libs`
 	CLAMAV_PREFIX=`clamav-config --prefix`
 
-	LDFLAGS="${LDFLAGS} ${CLAMAV_LIBS} -lclamav"
+	dnl LIBS="${CLAMAV_LIBS} -lclamav ${LIBS}"
+	LIBS="-L${CLAMAV_PREFIX}/lib -lclamav ${LIBS}"
 	CPPFLAGS="${CPPFLAGS} -I${CLAMAV_PREFIX}/include"
 
 	AC_DEFINE([HAVE_CLAMAV],[],[Define to enable ClamAV content scanner])
+	
+	# check for shm_open (& shm_unlink)
+	AC_CHECK_HEADERS([sys/mman.h])
+	AC_CHECK_FUNCS([shm_open])
+	if test "x$ac_cv_func_shm_open" = "xno"; then
+		AC_CHECK_LIB(rt, shm_open, [], [AC_MSG_ERROR([no shm_open! (needed by clamav scanner)])])
+	fi
 
 	clamav=true
-else
-	clamav=false
-	AC_MSG_RESULT(no)
+	CLAMAVSUPPORT=""
 fi
 ],
 [ #disable by default
  	clamav=false
 	AC_MSG_RESULT(no)
+	CLAMAVSUPPORT="!! Not compiled !! "
 ]
 )
 AM_CONDITIONAL(HAVE_CLAMAV, test "x$clamav" = "xtrue")
+AC_SUBST(CLAMAVSUPPORT)
 
 # asking user if they want clamd support
 AC_MSG_CHECKING(for clamd support)
 AC_ARG_ENABLE(
 clamd,
-[  --enable-clamd=[[no]]  Enable support for the ClamD content scanner],
-[ if test "x$enableval" = "xyes"; then
-	AC_MSG_RESULT(yes)
-	clamd=true
-	AC_DEFINE([ENABLE_CLAMD],[],[Define to enable ClamD content scanner])
-else
+[AC_HELP_STRING([--enable-clamd@<:@=no@:>@], [Enable support for the ClamD content scanner])],
+[ if test "x$enableval" = "xno"; then
 	AC_MSG_RESULT(no)
 	clamd=false
+	CLAMDSUPPORT="!! Not compiled !! "
+else
+	AC_MSG_RESULT(yes)
+	clamd=true
+	CLAMDSUPPORT=""
+	AC_DEFINE([ENABLE_CLAMD],[],[Define to enable ClamD content scanner])
 fi],
 [
 	AC_MSG_RESULT(no)
 	clamd=false
+	CLAMDSUPPORT="!! Not compiled !! "
 ]
 )
 AM_CONDITIONAL(ENABLE_CLAMD, test "x$clamd" = "xtrue")
+AC_SUBST(CLAMDSUPPORT)
 
 # asking user if they want icap support
 AC_MSG_CHECKING(for icap support)
 AC_ARG_ENABLE(
 icap,
-[  --enable-icap=[[no]]  Enable support for ICAP AV server content scanner],
-[ if test "x$enableval" = "xyes"; then
+[AC_HELP_STRING([--enable-icap@<:@=no@:>@], [Enable support for ICAP AV server content scanner])],
+[ if test "x$enableval" = "xno"; then
+	AC_MSG_RESULT(no)
+	icap=false
+	ICAPSUPPORT="!! Not compiled !! "
+else
 	AC_MSG_RESULT(yes)
 	icap=true
 	AC_DEFINE([ENABLE_ICAP],[],[Define to enable ICAP content scanner])
-else
-	AC_MSG_RESULT(no)
-	icap=false
+	ICAPSUPPORT=""
 fi],
 [
 	AC_MSG_RESULT(no)
 	icap=false
+	ICAPSUPPORT="!! Not compiled !! "
 ]
 )
 AM_CONDITIONAL(ENABLE_ICAP, test "x$icap" = "xtrue")
+AC_SUBST(ICAPSUPPORT)
 
 # asking user if they want kavd support
 AC_MSG_CHECKING(for kavd support)
 AC_ARG_ENABLE(
 kavd,
-[  --enable-kavd=[[no]]  Enable support for the Kaspersky AV daemon content scanner],
-[ if test "x$enableval" = "xyes"; then
-	AC_MSG_RESULT(yes)
-	kavd=true
-	AC_DEFINE([ENABLE_KAVD],[],[Define to enable KAVD content scanner])
-else
+[AC_HELP_STRING([--enable-kavd@<:@=no@:>@], [Enable support for the Kaspersky AV daemon content scanner])],
+[ if test "x$enableval" = "xno"; then
 	AC_MSG_RESULT(no)
 	kavd=false
+	KAVDSUPPORT="!! Not compiled !! "
+else
+	AC_MSG_RESULT(yes)
+	kavd=true
+	KAVDSUPPORT=""
+	AC_DEFINE([ENABLE_KAVD],[],[Define to enable KAVD content scanner])
 fi],
 [
 	AC_MSG_RESULT(no)
 	kavd=false
+	KAVDSUPPORT="!! Not compiled !! "
 ]
 )
 AM_CONDITIONAL(ENABLE_KAVD, test "x$kavd" = "xtrue")
+AC_SUBST(KAVDSUPPORT)
 
 dnl detecting kaspersky antivirus client
 #KAV_PATH_KAVCLIENT
 #AM_CONDITIONAL(HAVE_KAVCLIENT, test "x$kavclient_found" = "xyes")
 #kav stuff is not finished Wed 09th February 2005 - DB
+KAVAVSUPPORT="!! Unimplemented !! "
+AC_SUBST(KAVAVSUPPORT)
 
 # asking user if they want fancy downloadmanager support
 AC_MSG_CHECKING(for fancy download manager support)
 AC_ARG_ENABLE(
 fancydm,
-[  --enable-fancydm=[[yes]]  Enable support for the fancy download manager],
-[ if test "x$enableval" = "xyes"; then
+[AC_HELP_STRING([--enable-fancydm@<:@=yes@:>@], [Enable support for the fancy download manager])],
+[ if test "x$enableval" = "xno"; then
+	fancydm=false
+	FANCYSUPPORT="#!! Not compiled !! "
+	AC_MSG_RESULT(no)
+else
 	AC_MSG_RESULT(yes)
 	fancydm=true
+	FANCYSUPPORT=""
 	AC_DEFINE([ENABLE_FANCYDM],[],[Define to enable fancy download manager])
-else
-	fancydm=false
-	AC_MSG_RESULT(no)
 fi],
 [
 	fancydm=true
+	FANCYSUPPORT=""
 	AC_MSG_RESULT(yes)
 	AC_DEFINE([ENABLE_FANCYDM],[],[Define to enable fancy download manager])
 ]
 )
 AM_CONDITIONAL(ENABLE_FANCYDM, test "x$fancydm" = "xtrue")
+AC_SUBST(FANCYSUPPORT)
 
 # asking user if they want NTLM auth support
 AC_MSG_CHECKING(for NTLM support)
 AC_ARG_ENABLE(
 ntlm,
-[  --enable-ntlm=[[no]]  Enable support for the NTLM auth plugin],
-[ if test "x$enableval" = "xyes"; then
+[AC_HELP_STRING([--enable-ntlm@<:@=no@:>@], [Enable support for the NTLM auth plugin])],
+[ if test "x$enableval" = "xno"; then
+	AC_MSG_RESULT(no)
+	ntlm=false
+	NTLMSUPPORT="!! Not compiled !! "
+else
 	AC_MSG_RESULT(yes)
 	ntlm=true
+	NTLMSUPPORT=""
 	AC_DEFINE([ENABLE_NTLM],[],[Define to enable NTLM auth plugin])
 	# now need to check if they're using an iconv library, rather
 	# than a native iconv implementation
 	AC_MSG_CHECKING(for iconv)
 	AC_ARG_WITH(libiconv,
-		[  --with-libiconv=[[/path/to/iconv/]]  use this if compiling on a system which
-                    requires an external iconv library (only used in
-                    conjunction with NTLM auth plugin). Set to "yes"
-                    if no non-standard search path is required.],
+		[AC_HELP_STRING([--with-libiconv@<:@=NONE@:>@], [Use this if compiling on a system which requires an external iconv library (only used in conjunction with NTLM auth plugin). Set to search path, or "yes" if no non-standard search path is required.])],
 		[ # check for header & func (in library) in given prefix
-		if test "x$withval" = "xyes"; then
-			LDFLAGS="${LDFLAGS} -liconv"
+		if test "x$withval" = "xyes" | test "x$withval" = "x"; then
+			LIBS="-liconv ${LIBS}"
 		else
 			CPPFLAGS="${CPPFLAGS} -I${withval}/include"
-			LDFLAGS="${LDFLAGS} -L${withval}/lib -liconv"
+			LIBS="-L${withval}/lib -liconv ${LIBS}"
 		fi
-		AC_CHECK_LIB(iconv, iconv, [AC_MSG_RESULT(linked)], [AC_MSG_ERROR([--with-libiconv used, but no libiconv found!])])
+		AC_CHECK_LIB(iconv, iconv, [AC_MSG_RESULT(linked)], [AC_MSG_ERROR([--with-libiconv used, but no libiconv found! (needed by NTLM plugin)])])
 		],
 		[ # check for native header & func (no library)
-		AC_CHECK_FUNCS(iconv, [AC_MSG_RESULT(native)], [AC_MSG_ERROR([--with-libiconv not used, but no native iconv found!])])
+		AC_CHECK_FUNCS(iconv, [AC_MSG_RESULT(native)], [AC_MSG_ERROR([--with-libiconv not used, but no native iconv found! (needed by NTLM plugin)])])
 		])
-		
-else
-	AC_MSG_RESULT(no)
-	ntlm=false
 fi],
 [
 	AC_MSG_RESULT(no)
 	ntlm=false
+	NTLMSUPPORT="!! Not compiled !! "
 ]
 )
 AM_CONDITIONAL(ENABLE_NTLM, test "x$ntlm" = "xtrue")
+AC_SUBST(NTLMSUPPORT)
 
 AC_DEFINE_UNQUOTED([DG_CONFIGURE_OPTIONS], ["$ac_configure_args"], [Record configure-time options])
 
 libdir="${libdir}/${PACKAGE_NAME}"
+
+AC_ARG_WITH(sysconfsubdir,
+	[AC_HELP_STRING([--with-sysconfsubdir@<:@=dansguardian@:>@], [subdirectory under sysconfdir in which to place config files])],
+	[if test "x$withval" != "x"; then
+		dgsysconfdir="${sysconfdir}/${withval}"
+	else
+		dgsysconfdir="${sysconfdir}"
+	fi],
+	[dgsysconfdir="${sysconfdir}/${PACKAGE_NAME}"])
+
 AC_FINALIZE_VAR(DGLIBDIR,"${libdir}")
 AC_SUBST(DGLIBDIR)
 AC_FINALIZE_VAR(DGBINDIR,"${sbindir}")
 AC_SUBST(DGBINDIR)
-AC_FINALIZE_VAR(DGCONFDIR,"${sysconfdir}/${PACKAGE_NAME}")
+AC_FINALIZE_VAR(DGCONFDIR,"${dgsysconfdir}")
 AC_SUBST(DGCONFDIR)
 AC_FINALIZE_VAR(DGDATADIR,"${datadir}/${PACKAGE_NAME}")
 AC_SUBST(DGDATADIR)
-AC_FINALIZE_VAR(DGCONFFILE,"${sysconfdir}/${PACKAGE_NAME}/${PACKAGE_NAME}.conf")
+AC_FINALIZE_VAR(DGCONFFILE,"${dgsysconfdir}/${PACKAGE_NAME}.conf")
 AC_SUBST(DGCONFFILE)
 
 AC_CONFIG_FILES([Makefile
