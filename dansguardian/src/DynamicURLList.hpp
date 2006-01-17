@@ -34,9 +34,9 @@ public:
 	// flush the list (set all entries to old)
 	void flush();
 	// is an entry in the list?
-	bool inURLList(const char *url);
+	bool inURLList(const char *url, const int fg);
 	// add a URL - if it's already there but marked as too old, simply rejuvenate it
-	void addEntry(const char *url);
+	void addEntry(const char *url, const int fg);
 
 private:
 	// index list - points to URL list entries in alphabetical order
@@ -45,6 +45,8 @@ private:
 	unsigned long int *urlreftime;
 	// actual URL list
 	char *urls;
+	// group list - which group(s) is this URL clean for?
+	std::string *groups;
 
 	// size of list
 	int size;
