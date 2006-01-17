@@ -27,6 +27,7 @@
 #include "HTMLTemplate.hpp"
 #include "RegExp.hpp"
 #include "String.hpp"
+#include "OptionContainer.hpp"
 
 #include <cstdlib>
 #include <cstdio>
@@ -40,6 +41,7 @@
 // GLOBALS
 
 extern bool is_daemonised;
+extern OptionContainer o;
 
 
 // IMPLEMENTATION
@@ -65,7 +67,7 @@ bool HTMLTemplate::readTemplateFile(const char *filename, const char *placeholde
 	RegExp re;
 	// compile regexp for matching supported placeholders
 	// allow optional custom placeholder string
-	re.comp(placeholders ? placeholders : "-URL-|-REASONGIVEN-|-REASONLOGGED-|-USER-|-IP-|-HOST-|-FILTERGROUP-|-BYPASS-|-CATEGORIES-");
+	re.comp(placeholders ? placeholders : "-URL-|-REASONGIVEN-|-REASONLOGGED-|-USER-|-IP-|-HOST-|-FILTERGROUP-|-RAWFILTERGROUP-|-BYPASS-|-CATEGORIES-|-SHORTURL-|-SERVERIP-");
 	unsigned int offset;
 	String result;
 	String line;
@@ -108,7 +110,7 @@ bool HTMLTemplate::readTemplateFile(const char *filename, const char *placeholde
 // fill in placeholders with the given information and send the resulting page to the client
 // only useful if you used the default set of placeholders
 void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::string &logreason, std::string &categories,
-		std::string *user, std::string *ip, std::string *host, int filtergroup, String &hashed)
+		std::string *user, std::string *ip, std::string *host, int filtergroup, String &hashed, int socknum)
 {
 #ifdef DGDEBUG
 	std::cout << "Displaying TEMPLATE" << std::endl;
@@ -123,6 +125,16 @@ void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::str
 		// look for placeholders (split onto their own line by readTemplateFile) and replace them
 		if (line == "-URL-") {
 			line = *url;
+		}
+		else if (line == "-SHORTURL-") {
+			line = *url;
+			if (line.length() > 41) {
+			    line = line.subString(0, 40);
+			    line += "...";
+			}
+		}
+		else if (line == "-SERVERIP-") {
+			line = o.filter_ip[socknum];
 		}
 		else if (line == "-REASONGIVEN-") {
 			line = reason;
@@ -140,7 +152,10 @@ void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::str
 			line = (host != NULL ? *host : "");
 		}
 		else if (line == "-FILTERGROUP-") {
-			line = String(filtergroup);
+			line = o.fg[filtergroup]->name;
+		}
+		else if (line == "-RAWFILTERGROUP-") {
+			line = String(filtergroup + 1);
 		}
 		else if (line == "-CATEGORIES-") {
 			if (categories.length() > 0) {
