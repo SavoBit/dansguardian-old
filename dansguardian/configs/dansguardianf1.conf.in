@@ -18,6 +18,12 @@
 # Unauthenticated users are treated as being in the first filter group.
 groupmode = 1
 
+# Filter group name
+# Used to fill in the -FILTERGROUP- placeholder in the HTML template file, and to
+# name the group in the access logs
+# Defaults to empty string
+#groupname = ''
+
 # Content filtering files location
 bannedphraselist = '@DGCONFDIR@/lists/bannedphraselist'
 weightedphraselist = '@DGCONFDIR@/lists/weightedphraselist'
