@@ -140,6 +140,7 @@ public:
 	int pics_safenet_gambling;
 	int pics_safenet_alcoholtobacco;
 
+	std::string name;
 	std::string magic;
 	std::string imagic;
 	std::string cookie_magic;
