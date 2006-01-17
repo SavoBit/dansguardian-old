@@ -66,7 +66,7 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targett
 	}
 
 #ifdef DGDEBUG
-	if (targetthroughput == -1)
+	if (targetthroughput < 0)
 		std::cout << "Tunnelling without known content-length" << std::endl;
 #endif
 
