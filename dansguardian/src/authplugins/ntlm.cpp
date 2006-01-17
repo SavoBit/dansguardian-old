@@ -271,7 +271,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 		return DGAUTH_NOMATCH;
 	} else {
 #ifdef DGDEBUG
-		for (int i = 0; i < h.header.size(); i++)
+		for (unsigned int i = 0; i < h.header.size(); i++)
 			std::cout << h.header[i] << std::endl;
 #endif
 		return -1;

@@ -60,7 +60,7 @@ public:
 		addr = a;
 		group = g;
 	};
-	int addr;
+	unsigned long int addr;
 	int group;
 	int operator < (const ip &a) const {
 		return addr < a.addr;

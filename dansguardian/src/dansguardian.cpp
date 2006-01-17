@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 
 	for (int i = 1; i < argc; i++) {
 		if (argv[i][0] == '-') {
-			for (int j = 1; j < strlen(argv[i]); j++) {
+			for (unsigned int j = 1; j < strlen(argv[i]); j++) {
 				char option = argv[i][j];
 				switch (option) {
 				case 'P':
