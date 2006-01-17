@@ -214,7 +214,6 @@ bool FOptionContainer::read(const char *filename)
 		}
 
 		// override default banned page
-		
 		if (o.reporting_level == 3) {
 			String html_template = findoptionS("htmltemplate");
 			if (html_template != "") {
@@ -242,6 +241,14 @@ bool FOptionContainer::read(const char *filename)
 #ifdef DGDEBUG
 		std::cout << "Group mode: " << group_mode << std::endl;
 #endif
+
+		// grab group name (if not using external group names file)
+		if (!o.use_group_names_list) {
+			name = findoptionS("groupname");
+#ifdef DGDEBUG
+			std::cout << "Group name: " << name << std::endl;
+#endif
+		}
 
 		if (group_mode == 1) {
 
