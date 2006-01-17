@@ -214,9 +214,9 @@ int DataBuffer::getTempFileFD()
 	strcpy(tempfilepatharray, tempfilepath.toCharArray());
 	if ((tempfilefd = mkstemp(tempfilepatharray)) < 0) {
 #ifdef DGDEBUG
-		std::cerr << "error creating temp: " << tempfilepath << std::endl;
+		std::cerr << "error creating temp " << tempfilepath << ": " << strerror(errno) << std::endl;
 #endif
-		syslog(LOG_ERR, "%s", "Could not create temp file to store download for scanning.");
+		syslog(LOG_ERR, "Could not create temp file to store download for scanning: %s", strerror(errno));
 		tempfilefd = -1;
 		tempfilepath = "";
 	} else {
@@ -362,7 +362,7 @@ void DataBuffer::zlibinflate(bool header)
 	char *temp;
 	block = new char[newsize];
 	int err;
-	int bytesgot = 0;
+	unsigned int bytesgot = 0;
 
 	z_stream d_stream;
 	d_stream.zalloc = (alloc_func) 0;
