@@ -20,8 +20,8 @@
 
 // INCLUDES
 
-#include "DynamicURLList.hpp"
 #include "OptionContainer.hpp"
+#include "DynamicURLList.hpp"
 
 #include <syslog.h>
 #include <algorithm>
@@ -43,7 +43,7 @@ extern bool is_daemonised;
 
 // constructor - initialise values to empty defaults
 DynamicURLList::DynamicURLList()
-:index(new unsigned int[0]), urlreftime(new unsigned long int[0]), urls(new char[0]), size(0), agepos(0), timeout(0)
+:index(new unsigned int[0]), urlreftime(new unsigned long int[0]), urls(new char[0]), groups(new std::string[0]), size(0), agepos(0), timeout(0)
 {
 }
 
@@ -53,6 +53,7 @@ DynamicURLList::~DynamicURLList()
 	delete[]index;
 	delete[]urlreftime;
 	delete[]urls;
+	delete[]groups;
 }
 
 // "flush" the list (not quite)
@@ -124,14 +125,15 @@ bool DynamicURLList::setListSize(unsigned int s, unsigned int t)
 	index = new unsigned int[size];
 	urlreftime = new unsigned long int[size];
 	urls = new char[size * 1000];  // allows url up to 999 in length
+	groups = new std::string[size];
 	return true;
 }
 
 // see if the given URL is in the list
-bool DynamicURLList::inURLList(const char *url)
+bool DynamicURLList::inURLList(const char *url, const int fg)
 {
 #ifdef DGDEBUG
-	std::cout << "inURLList(" << url << ")" << std::endl;
+	std::cout << "url cache search request: " << fg << " " << url << std::endl;
 #endif
 	if (items == 0) {
 		return false;
@@ -139,11 +141,11 @@ bool DynamicURLList::inURLList(const char *url)
 #ifdef DGDEBUG
 	std::cout << "****** url cache table ******" << std::endl;
 	std::cout << "items: " << items << std::endl;
-	int i;
-	char *u;
-	for (i = 0; i < items; i++) {
-		u = index[i] * 1000 + urls;
-		std::cout << u << std::endl;
+	for (int i = 0; i < items; i++) {
+		for (unsigned int j = 0; j < groups[index[i]].length(); j++) {
+			std::cout << (unsigned int) (groups[index[i]][j]) << " ";
+		}
+		std::cout << (char*) (index[i] * 1000 + urls) << std::endl;
 	}
 	std::cout << "****** url cache table ******" << std::endl;
 #endif
@@ -171,7 +173,17 @@ bool DynamicURLList::inURLList(const char *url)
 		unsigned long int timenow = time(NULL);
 		if ((timenow - urlreftime[index[pos]]) > timeout) {
 #ifdef DGDEBUG
-			std::cout << "found but url ttl exceeded:" << (timenow - urlreftime[index[pos]]) << std::endl;
+			std::cout << "found but url ttl exceeded: " << (timenow - urlreftime[index[pos]]) << std::endl;
+#endif
+			return false;
+		}
+		if (groups[index[pos]].find((char)fg, 0) == std::string::npos) {
+#ifdef DGDEBUG
+			std::cout << "found but url not flagged clean for this group: " << fg << " (is clean for: ";
+			for (unsigned int j = 0; j < groups[index[pos]].length(); j++) {
+				std::cout << (unsigned int) (groups[index[pos]][j]) << " ";
+			}
+			std::cout << ")" << std::endl;
 #endif
 			return false;
 		}
@@ -182,10 +194,10 @@ bool DynamicURLList::inURLList(const char *url)
 
 // add an entry to the URL list - if it's already there, but timed out due to age, simply refresh the timer
 // also, maintain the lists' sorting, to allow binary search to be performed
-void DynamicURLList::addEntry(const char *url)
+void DynamicURLList::addEntry(const char *url, const int fg)
 {
 #ifdef DGDEBUG
-	std::cout << "addEntry: " << url << std::endl;
+	std::cout << "url cache add request: " << fg << " " << url << std::endl;
 	std::cout << "itemsbeforeadd: " << items << std::endl;
 #endif
 	int len = strlen(url);
@@ -212,6 +224,8 @@ void DynamicURLList::addEntry(const char *url)
 		std::cout << "Entry found at pos: " << pos << std::endl;
 #endif
 		urlreftime[index[pos]] = time(NULL);  // reset refresh counter
+		if (groups[index[pos]].find((char)fg, 0) == std::string::npos)
+			groups[index[pos]] += (char)fg;  // flag it as clean for this filter group
 		return;  // not going to add entry thats there already
 	}
 
@@ -239,12 +253,15 @@ void DynamicURLList::addEntry(const char *url)
 			index[i] = index[i - 1];
 		}
 		index[pos] = items;
+		groups[items] = (char)fg;
 		items++;
 		if (resized) {
 			delete[]u;
 		}
 		return;
 	}
+
+	// list is full, so we can't simply push a new entry on to it.
 	// now replace the oldest entry but first need to find it in
 	// the index to remove from there. old entries don't get deleted, just overwritten!
 
@@ -258,6 +275,7 @@ void DynamicURLList::addEntry(const char *url)
 	memcpy(oldestref, u, len);
 	oldestref[len] = '\0';
 	urlreftime[agepos] = time(NULL);
+	groups[agepos] = (char)fg;
 
 	// now shuffle the index list to remain sorted
 	// remember: pos contains the alphabetical position of what we just added,
