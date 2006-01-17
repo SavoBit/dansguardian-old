@@ -370,7 +370,7 @@ trickledelay = 10
 # one is forced to match as the default, regardless of user agent
 # and other matching mechanisms.
 #
-downloadmanager = '@DGCONFDIR@/downloadmanagers/fancy.conf'
+@FANCYSUPPORT@downloadmanager = '@DGCONFDIR@/downloadmanagers/fancy.conf'
 downloadmanager = '@DGCONFDIR@/downloadmanagers/default.conf'
 
 
@@ -385,11 +385,11 @@ downloadmanager = '@DGCONFDIR@/downloadmanagers/default.conf'
 # Some of the scanner(s) require 3rd party software and libraries eg clamav.
 # See the individual plugin conf file for more options (if any).
 #
-#contentscanner = '@DGCONFDIR@/contentscanners/clamav.conf'
-#contentscanner = '@DGCONFDIR@/contentscanners/clamdscan.conf'
-#contentscanner = '@DGCONFDIR@/contentscanners/kavav.conf'
-#contentscanner = '@DGCONFDIR@/contentscanners/kavdscan.conf'
-#contentscanner = '@DGCONFDIR@/contentscanners/icapscan.conf'
+#@CLAMAVSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/clamav.conf'
+#@CLAMDSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/clamdscan.conf'
+#@KAVAVSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/kavav.conf'
+#@KAVDSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/kavdscan.conf'
+#@ICAPSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/icapscan.conf'
 
 
 
@@ -426,7 +426,7 @@ contentscanexceptions = off
 # If you do not use multiple filter groups, you need not specify this option.
 #
 #authplugin = '@DGCONFDIR@/authplugins/proxy-basic.conf'
-#authplugin = '@DGCONFDIR@/authplugins/proxy-ntlm.conf'
+#@NTLMSUPPORT@authplugin = '@DGCONFDIR@/authplugins/proxy-ntlm.conf'
 #authplugin = '@DGCONFDIR@/authplugins/ident.conf'
 #authplugin = '@DGCONFDIR@/authplugins/ip.conf'
 
@@ -555,8 +555,8 @@ logadblocks = off
 # Temp files created during virus scanning are given owner and group read
 # permissions; to use content scanners based on external processes, such as
 # clamdscan, the two processes must run with either the same group or user ID.
-# daemonuser = '@DGPROXYUSER@'
-# daemongroup = '@DGPROXYGROUP@'
+#daemonuser = '@DGPROXYUSER@'
+#daemongroup = '@DGPROXYGROUP@'
 
 # Soft restart
 # When on this disables the forced killing off all processes in the process group.
