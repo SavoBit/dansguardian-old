@@ -62,7 +62,7 @@ private:
 	// our sock collection container
 	Socket* drawer;
 	// how many sockets we have
-	int socknum;
+	unsigned int socknum;
 };
 
 #endif
