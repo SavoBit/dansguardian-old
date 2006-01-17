@@ -84,6 +84,9 @@ void NaughtyFilter::reset()
 // check the given document body for banned, weighted, and exception phrases (and PICS, and regexes, &c.)
 void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 {
+	// checkme: what if the body has been stored in a temp file? the file might want both virus scanning *and*
+	// content filtering, which might conceivably mean (if maxcontentfiltersize is larger than
+	// maxcontentramcachescansize) that the file has been swapped to disk during downloading.
 	int bodylen = (*body).buffer_length;
 	char *rawbody = (*body).data;
 #ifdef DGDEBUG

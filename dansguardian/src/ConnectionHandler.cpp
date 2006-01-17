@@ -2034,6 +2034,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 	// checkme: surely if pausedtoobig is true, we just want to break here?
 	// the content is larger than max_content_filecache_scan_size if it was downloaded for scanning,
 	// and larger than max_content_filter_size if not.
+	// in fact, why don't we check the content length (when it's not -1) before even triggering the download managers?
 #ifdef DGDEBUG
 	if ((*pausedtoobig)) {
 		std::cout << "got PARTIAL body from proxy" << std::endl;
