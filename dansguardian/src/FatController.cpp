@@ -116,7 +116,7 @@ int handle_connections(UDSocket &pipe);
 // tell a non-busy child process to accept the incoming connection
 void tellchild_accept(int num, int whichsock);
 // child process accept()s connection from server socket
-bool getsock_fromparent(UDSocket &fd/*, int socknum*/);
+bool getsock_fromparent(UDSocket &fd, int &socknum);
 
 // add known info about a child to our info lists
 void addchild(int pos, int fd, pid_t child_pid);
@@ -257,7 +257,7 @@ void flush_urlcache()
 #endif
 		return;
 	}
-	String request = "F\n";
+	String request = "f\n";
 	try {
 		fipcsock.writeString(request.toCharArray());  // throws on err
 	}
@@ -474,9 +474,9 @@ int handle_connections(UDSocket &pipe)
 			toldparentready = true;
 		}
 
-		//int socknum;
+		int socknum;
 
-		if (!getsock_fromparent(pipe/*, socknum*/)) {	// blocks waiting for a few mins
+		if (!getsock_fromparent(pipe, socknum)) {	// blocks waiting for a few mins
 			continue;
 		}
 		toldparentready = false;
@@ -485,7 +485,7 @@ int handle_connections(UDSocket &pipe)
 			continue;
 		}
 
-		h.handleConnection(*peersock, peersockip, peersockport/*, socknum*/);  // deal with the connection
+		h.handleConnection(*peersock, peersockip, peersockport, socknum);  // deal with the connection
 		delete peersock;
 	}
 #ifdef DGDEBUG
@@ -500,7 +500,7 @@ int handle_connections(UDSocket &pipe)
 }
 
 // the parent process recieves connections - children receive notifications of this over their socketpair, and accept() them for handling
-bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
+bool getsock_fromparent(UDSocket &fd, int &socknum)
 {
 	String message;
 	char buf;
@@ -526,7 +526,7 @@ bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
 	}
 
 	// woo! we have a connection. accept it.
-	//socknum = buf[1]-32;
+	socknum = (int)buf;
 	peersock = serversockets[buf]->accept();
 	peersockip = peersock->getPeerIP();
 	peersockport = peersock->getPeerSourcePort();
@@ -970,7 +970,15 @@ int url_list_listener(int logconerror)
 				}
 				continue;
 			}
-			if (logline[0] == 'F') {
+			// check the command type
+			// f: flush the cache
+			// g: add a URL to the cache
+			// everything else: search the cache
+			// n.b. we use command characters with ASCII encoding
+			// > 100, because we can have up to 99 filter groups, and
+			// group no. plus 1 is the first character in the 'everything else'
+			// case.
+			if (logline[0] == 'f') {
 				ipcpeersock->close();  // close the connection
 				urllist.flush();
 #ifdef DGDEBUG
@@ -978,18 +986,12 @@ int url_list_listener(int logconerror)
 #endif
 				continue;
 			}
-			if (logline[0] == 'A') {
+			if (logline[0] == 'g') {
 				ipcpeersock->close();  // close the connection
-				urllist.addEntry(logline + 1);
-#ifdef DGDEBUG
-				std::cout << "url add request:" << logline << std::endl;
-#endif
+				urllist.addEntry(logline + 2, logline[1]-1);
 				continue;
 			}
-#ifdef DGDEBUG
-			std::cout << "url search request:" << logline << std::endl;
-#endif
-			if (urllist.inURLList(logline)) {
+			if (urllist.inURLList(logline + 1, logline[0]-1)) {
 				reply = 'Y';
 			} else {
 				reply = 'N';
@@ -1007,7 +1009,7 @@ int url_list_listener(int logconerror)
 			}
 			ipcpeersock->close();  // close the connection
 #ifdef DGDEBUG
-			std::cout << "url list reply:" << reply << std::endl;
+			std::cout << "url list reply: " << reply << std::endl;
 #endif
 			continue;  // go back to listening
 		}
@@ -1571,10 +1573,12 @@ int fc_controlit()
 				// try and reload entire config instead
 				// if that fails it will bomb out
 			} else {
-				o.filter_groups_list.reset();
-				if (!o.doReadItemList(o.filter_groups_list_location.c_str(),&(o.filter_groups_list),"filtergroupslist",true)) {
-					reloadconfig = true;  // filter groups problem...
-				} else {
+				if (o.use_filter_groups_list) {
+					o.filter_groups_list.reset();
+					if (!o.doReadItemList(o.filter_groups_list_location.c_str(),&(o.filter_groups_list),"filtergroupslist",true))
+						reloadconfig = true;  // filter groups problem...
+				}
+				if (!reloadconfig) {
 					o.deletePlugins(o.csplugins);
 					if (!o.loadCSPlugins()) {
 						reloadconfig = true;  // content scan plugs problem
@@ -1583,6 +1587,8 @@ int fc_controlit()
 						hup_allchildren();
 						prefork(o.min_children);
 						gentlereload = false;
+						// everything ok - no full reload needed
+						// clear gentle reload flag for next run of the loop
 					}
 				}
 			}
