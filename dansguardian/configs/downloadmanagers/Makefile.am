@@ -5,7 +5,11 @@ DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/downloadmanagers
 
 SUBDIRS = .
 
-FLISTS = default.conf fancy.conf
+FLISTS = default.conf
+
+if ENABLE_FANCYDM
+FLISTS += fancy.conf
+endif
 
 EXTRA_DIST = default.conf.in fancy.conf.in
 
