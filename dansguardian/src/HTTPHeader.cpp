@@ -1255,12 +1255,10 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 
 	checkheader(allowpersistent);  // sort out a few bits in the header
 
-	int length;
+	int length = 0;
 	String requestMethod = header[0].before(" ");
 	if (!requestMethod.contains("/") && (length = contentLength()) > 0) {
 		// if it's a request (not reply) with content, grab the data and store it
 		postdata.read(sock, length);  // get the DataBuffer to read the data
 	}
-	if (length < 0)
-		length = 0;
 }
