@@ -108,7 +108,7 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 		syslog(LOG_ERR, "Could not change file ownership to give ClamD read access: %s", strerror(errno));
 		return DGCS_SCANERROR;
 	};
-	String command = "CONTSCAN ";
+	String command = "SCAN ";
 	command += filename;
 	command += "\r\n";
 #ifdef DGDEBUG
