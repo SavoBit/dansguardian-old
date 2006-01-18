@@ -41,7 +41,7 @@ public:
 	~ConnectionHandler() { delete clienthost; };
 
 	// pass data between proxy and client, filtering as we go.
-	void handleConnection(Socket &peerconn, String &ip, int port, int socknum);
+	void handleConnection(Socket &peerconn, String &ip, int port);
 
 private:
 	std::string *clienthost;
@@ -75,7 +75,7 @@ private:
 	// show the relevant banned page depending upon the report level settings, request type, etc.
 	bool denyAccess(Socket *peerconn, Socket *proxysock, HTTPHeader *header, HTTPHeader *docheader,
 		String *url, NaughtyFilter *checkme, std::string *clientuser, std::string *clientip,
-		int filtergroup, bool ispostblock, int headersent, bool wasinfected, bool scanerror, int socknum);
+		int filtergroup, bool ispostblock, int headersent, bool wasinfected, bool scanerror);
 
 	// create temporary ban bypass URLs/cookies
 	String hashedURL(String *url, int filtergroup, std::string *clientip, bool infectionbypass);

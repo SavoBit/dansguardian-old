@@ -110,7 +110,7 @@ bool HTMLTemplate::readTemplateFile(const char *filename, const char *placeholde
 // fill in placeholders with the given information and send the resulting page to the client
 // only useful if you used the default set of placeholders
 void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::string &logreason, std::string &categories,
-		std::string *user, std::string *ip, std::string *host, int filtergroup, String &hashed, int socknum)
+		std::string *user, std::string *ip, std::string *host, int filtergroup, String &hashed)
 {
 #ifdef DGDEBUG
 	std::cout << "Displaying TEMPLATE" << std::endl;
@@ -134,7 +134,7 @@ void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::str
 			}
 		}
 		else if (line == "-SERVERIP-") {
-			line = o.filter_ip[socknum];
+			line = s->getLocalIP();
 		}
 		else if (line == "-REASONGIVEN-") {
 			line = reason;

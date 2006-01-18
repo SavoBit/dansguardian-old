@@ -116,7 +116,7 @@ int handle_connections(UDSocket &pipe);
 // tell a non-busy child process to accept the incoming connection
 void tellchild_accept(int num, int whichsock);
 // child process accept()s connection from server socket
-bool getsock_fromparent(UDSocket &fd, int &socknum);
+bool getsock_fromparent(UDSocket &fd/*, int &socknum*/);
 
 // add known info about a child to our info lists
 void addchild(int pos, int fd, pid_t child_pid);
@@ -474,9 +474,9 @@ int handle_connections(UDSocket &pipe)
 			toldparentready = true;
 		}
 
-		int socknum;
+		//int socknum;
 
-		if (!getsock_fromparent(pipe, socknum)) {	// blocks waiting for a few mins
+		if (!getsock_fromparent(pipe/*, socknum*/)) {	// blocks waiting for a few mins
 			continue;
 		}
 		toldparentready = false;
@@ -485,7 +485,7 @@ int handle_connections(UDSocket &pipe)
 			continue;
 		}
 
-		h.handleConnection(*peersock, peersockip, peersockport, socknum);  // deal with the connection
+		h.handleConnection(*peersock, peersockip, peersockport/*, socknum*/);  // deal with the connection
 		delete peersock;
 	}
 #ifdef DGDEBUG
@@ -500,7 +500,7 @@ int handle_connections(UDSocket &pipe)
 }
 
 // the parent process recieves connections - children receive notifications of this over their socketpair, and accept() them for handling
-bool getsock_fromparent(UDSocket &fd, int &socknum)
+bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
 {
 	String message;
 	char buf;
@@ -526,7 +526,7 @@ bool getsock_fromparent(UDSocket &fd, int &socknum)
 	}
 
 	// woo! we have a connection. accept it.
-	socknum = (int)buf;
+	//socknum = (int)buf;
 	peersock = serversockets[buf]->accept();
 	peersockip = peersock->getPeerIP();
 	peersockport = peersock->getPeerSourcePort();
