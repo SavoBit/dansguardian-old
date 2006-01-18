@@ -312,7 +312,7 @@ unsigned int ConnectionHandler::sendFile(Socket * peerconn, String & filename, S
 
 // pass data between proxy and client, filtering as we go.
 // this is the only public function of ConnectionHandler - all content blocking/filtering is triggered from calls that live here.
-void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port, int socknum)
+void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 {
 	struct timeval thestart;
 	gettimeofday(&thestart, NULL);
@@ -1206,7 +1206,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port,
 				doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
 					rtype, docsize, &checkme.whatIsNaughtyCategories, o.ll, true, false, 0, false, &thestart,
 					cachehit, 403, mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup, contentmodified, urlmodified);
-				if (denyAccess(&peerconn, &proxysock, &header, &docheader, &url, &checkme, &clientuser,&clientip, filtergroup, ispostblock, headersent, wasinfected, scanerror, socknum))
+				if (denyAccess(&peerconn, &proxysock, &header, &docheader, &url, &checkme, &clientuser,&clientip, filtergroup, ispostblock, headersent, wasinfected, scanerror))
 				{
 					return;  // not stealth mode
 				}
@@ -1490,8 +1490,9 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		
 		switch (o.log_file_format) {
 		case 4:
-			logline = when + "\t" + who + "\t" + stringgroup + "\t" + (clienthost ? *clienthost : from) + "\t" + where.toCharArray() + "\t" + what
-				+ "\t" + how.toCharArray() + "\t" + stringcode + "\t" + ssize + "\t" + mimetype + "\t" + sweight + "\t" + (cat ? (*cat) : "N/A") + "\n";
+			logline = when +"\t"+ who + "\t" + (clienthost ? *clienthost : from) + "\t" + where.toCharArray() + "\t" + what + "\t"
+				+ how.toCharArray() + "\t" + ssize +"\t"  + sweight +"\t" + (cat ? (*cat) : "N/A") +  "\t" + stringgroup + "\t"
+				+ stringcode + "\t" + mimetype + "\n";
 			break;
 		case 3:
 			{
@@ -1549,13 +1550,14 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 				break;
 			}
 		case 2:
-			logline = "\"" + when + "\",\"" + who + "\",\"" + stringgroup + "\",\"" + (clienthost ? *clienthost : from) + "\",\"" + where.toCharArray()
-				+ "\",\"" + what + "\",\"" + how.toCharArray() + "\",\"" + stringcode + "\",\"" + ssize + "\",\"" + mimetype + "\",\""
-				+ sweight + "\",\"" + (cat ? (*cat) : "N/A") + "\"\n";
+			logline = "\"" + when +"\",\""+ who + "\",\"" + (clienthost ? *clienthost : from) + "\",\"" + where.toCharArray() + "\",\"" + what + "\",\""
+				+ how.toCharArray() + "\",\"" + ssize +"\",\""  + sweight +"\",\"" + (cat ? (*cat) : "N/A") +  "\",\"" + stringgroup + "\",\""
+				+ stringcode + "\",\"" + mimetype + "\"\n";
 			break;
 		default:
-			logline = when + " " + who + " " + stringgroup + " " + (clienthost ? *clienthost : from) + " " + where.toCharArray() + " " + what + " "
-				+ how.toCharArray() + " " + stringcode + " " + ssize + " " + mimetype + " " + sweight + " " + (cat ? (*cat) : "N/A") + "\n";
+			logline = when +" "+ who + " " + (clienthost ? *clienthost : from) + " " + where.toCharArray() + " " + what + " "
+				+ how.toCharArray() + " " + ssize +" "  + sweight +" " + (cat ? (*cat) : "N/A") +  " " + stringgroup + " "
+				+ stringcode + " " + mimetype + "\n";
 		}
 
 		// connect to dedicated logging proc
@@ -1718,7 +1720,7 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 // show the relevant banned page/image/CGI based on report level setting, request type etc.
 bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHeader * header, HTTPHeader * docheader,
 	String * url, NaughtyFilter * checkme, std::string * clientuser, std::string * clientip, int filtergroup,
-	bool ispostblock, int headersent, bool wasinfected, bool scanerror, int socknum)
+	bool ispostblock, int headersent, bool wasinfected, bool scanerror)
 {
 	try {  // writestring throws exception on error/timeout
 
@@ -1868,7 +1870,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 							url, (*checkme).whatIsNaughty, (*checkme).whatIsNaughtyLog,
 							// grab either the full category list or the thresholded list
 							(checkme->usedisplaycats ? checkme->whatIsNaughtyDisplayCategories : checkme->whatIsNaughtyCategories),
-							clientuser, clientip, clienthost, filtergroup, hashed, socknum);
+							clientuser, clientip, clienthost, filtergroup, hashed);
 					}
 				}
 			}
