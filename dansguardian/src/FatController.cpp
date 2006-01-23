@@ -1020,7 +1020,7 @@ int url_list_listener(int logconerror)
 	return 1;  // It is only possible to reach here with an error
 }
 
-int ip_list_listener(int logconerror) {
+int ip_list_listener(std::string lic_location, int logconerror) {
 #ifdef DGDEBUG
 	std::cout << "ip listener started" << std::endl;
 #endif
@@ -1031,8 +1031,8 @@ int ip_list_listener(int logconerror) {
 	int rc, ipcsockfd;
 	char* inbuff = new char[16];
 
-	// pass in size of list, and max. age of entries (4 hours, apparently)
-	DynamicIPList iplist(o.max_ips, 14399);
+	// pass in size of list, and max. age of entries (7 days, apparently)
+	DynamicIPList iplist(o.max_ips, 604799);
 
 	ipcsockfd = iplistsock.getFD();
 
@@ -1042,8 +1042,14 @@ int ip_list_listener(int logconerror) {
 
 	struct timeval sleep;  // used later on for a short sleep
 	sleep.tv_sec = 180;
-	sleep.tv_usec = 0; // = 10ms = 0.01sec
+	sleep.tv_usec = 0;
 	struct timeval scopy;  // copy to use as select() can modify
+
+	int maxlics = 0;  // license statistics:
+		// current & highest no. of concurrent IPs using the filter
+
+	double elapsed = 0;  // keep a 3 minute counter so license statistics
+	time_t before;   // are written even on busy networks (don't rely on timeout)
 
 	fd_set fdSet;  // our set of fds (only 1) that select monitors for us
 	fd_set fdcpy;  // select modifes the set so we need to use a copy
@@ -1057,9 +1063,11 @@ int ip_list_listener(int logconerror) {
 	// loop, essentially, for ever
 	while (true) {
 		fdcpy = fdSet;  // take a copy
+		before = time(NULL);
 		rc = select(ipcsockfd + 1, &fdcpy, NULL, NULL, &scopy);  // block until something happens
+		elapsed += difftime(time(NULL), before);
 #ifdef DGDEBUG
-		std::cout << "ip listener select returned" << rc << std::endl;
+		std::cout << "ip listener select returned: " << rc << ", 3 min timer: " << elapsed << ", scopy: " << scopy.tv_sec << " " << scopy.tv_usec << std::endl;
 #endif
 		if (rc < 0) {  // was an error
 			if (errno == EINTR) {
@@ -1070,16 +1078,34 @@ int ip_list_listener(int logconerror) {
 			}
 			continue;
 		}
-		if (rc == 0) {
+		if (rc == 0 || elapsed >= 180) {
 #ifdef DGDEBUG
-		   std::cout << "ips in list:" << iplist.getNumberOfItems() << std::endl;
-		   std::cout << "purging old ip entries" << std::endl;
-		   std::cout << "ips in list:" << iplist.getNumberOfItems() << std::endl;
+			std::cout << "ips in list: " << iplist.getNumberOfItems() << std::endl;
+			std::cout << "purging old ip entries" << std::endl;
+			std::cout << "ips in list: " << iplist.getNumberOfItems() << std::endl;
 #endif
-		   // should only get here after a timeout
-		   iplist.purgeOldEntries();
-		   scopy = sleep;
-		   continue;
+			// should only get here after a timeout
+			iplist.purgeOldEntries();
+			// write license statistics
+			int curlics = iplist.getNumberOfItems();
+			if (curlics > maxlics)
+				maxlics = curlics;
+			String licstats;
+			licstats += String(curlics) + "\n" + String(maxlics) + "\n";
+#ifdef DGDEBUG
+			std::cout << "writing license stats: " << curlics << " " << maxlics << std::endl;
+#endif
+			int licfd = open(lic_location.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+			if (licfd > 0) {
+				write(licfd, licstats.toCharArray(), licstats.length());
+			}
+			close(licfd);
+			// reset sleep timer
+			scopy = sleep;
+			elapsed = 0;
+			// only skip back to top of loop if there was a genuine timeout
+			if (rc == 0)
+				continue;
 		}
 		if (FD_ISSET(ipcsockfd, &fdcpy)) {
 #ifdef DGDEBUG
@@ -1425,9 +1451,9 @@ int fc_controlit()
 			if (o.no_logger == 0) {
 				loggersock.close();  // we don't need our copy of this so close it
 			}
-			ip_list_listener(o.logconerror);
+			ip_list_listener(o.lic_location, o.logconerror);
 #ifdef DGDEBUG
-			std::cout << "URL List listener exiting" << std::endl;
+			std::cout << "IP List listener exiting" << std::endl;
 #endif
 			_exit(0);  // is reccomended for child and daemons to use this instead
 		}
