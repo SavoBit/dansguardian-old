@@ -153,6 +153,11 @@ bool OptionContainer::read(const char *filename, int type)
 				log_location += "access.log";
 			}
 
+			if ((lic_location = findoptionS("liclocation")) == "") {
+				lic_location = __LOGLOCATION;
+				lic_location += "license";
+			}
+
 			if (type == 0) {
 				return true;
 			}

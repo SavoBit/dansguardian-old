@@ -99,6 +99,7 @@ public:
 	std::string language_list_location;
 	std::string access_denied_address;
 	std::string log_location;
+	std::string lic_location;
 	std::string ipc_filename;
 	std::string urlipc_filename;
 	std::string ipipc_filename;
