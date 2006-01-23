@@ -49,16 +49,6 @@ DynamicIPList::~DynamicIPList() {
   delete[] datatime;
 }
 
-#ifdef DGDEBUG
-// return list size & fullness - only used during debugging
-int DynamicIPList::getListSize() {
-	return size;
-}
-int DynamicIPList::getNumberOfItems() {
-	return items;
-}
-#endif
-
 // store the timestamp for the given entry, used to determine age during purge
 void DynamicIPList::stamp(unsigned int pos) {
 	datatime[pos] = time(NULL);

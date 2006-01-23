@@ -34,9 +34,9 @@ public:
 	~DynamicIPList();
 
 #ifdef DGDEBUG
-	int getListSize();
-	int getNumberOfItems();
+	int getListSize() { return size; };
 #endif
+	int getNumberOfItems() { return items; };
 
 	// return whether or not given IP is in/could be added to list
 	// (i.e. returns false if list already full & this IP's not in it)
