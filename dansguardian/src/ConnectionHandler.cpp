@@ -126,7 +126,7 @@ String ConnectionHandler::hashedCookie(String * url, int filtergroup, std::strin
 }
 
 // when using IP address counting - have we got any remaining free IPs?
-bool ConnectionHandler::gotIPs(char *ipstr) {
+bool ConnectionHandler::gotIPs(std::string ipstr) {
 	if (reloadconfig)
 		return false;
 	UDSocket ipcsock;
@@ -140,9 +140,9 @@ bool ConnectionHandler::gotIPs(char *ipstr) {
 		return false;
 	}
 	char reply;
-	ipstr[strlen(ipstr)] = '\n';
+	ipstr += '\n';
 	try {
-		ipcsock.writeToSockete(ipstr, strlen(ipstr)+1, 0, 6);
+		ipcsock.writeToSockete((char*)ipstr.c_str(), ipstr.length(), 0, 6);
 		ipcsock.readFromSocket(&reply, 1, 0, 6);  // throws on err
 	}
 	catch (exception& e) {
@@ -153,7 +153,6 @@ bool ConnectionHandler::gotIPs(char *ipstr) {
 		syslog(LOG_ERR, "Exception with IP cache");
 		syslog(LOG_ERR, e.what());
 	}
-	ipstr[strlen(ipstr)] = '\0';
 	ipcsock.close();
 	return reply == 'Y';
 }
@@ -163,7 +162,6 @@ bool ConnectionHandler::wasClean(String &url, const int fg)
 {
 	if (reloadconfig)
 		return false;
-	//String myurl = (char)(fg+1) + url.after("://");
 	UDSocket ipcsock;
 	if (ipcsock.getFD() < 0) {
 		syslog(LOG_ERR, "%s", "Error creating ipc socket to url cache");
@@ -213,7 +211,6 @@ void ConnectionHandler::addToClean(String &url, const int fg)
 {
 	if (reloadconfig)
 		return;
-	//String myurl = url.after("://");
 	UDSocket ipcsock;
 	if (ipcsock.getFD() < 0) {
 		syslog(LOG_ERR, "%s", "Error creating ipc socket to url cache");
@@ -812,7 +809,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			checkme.reset();  // our filter object
 			checkme.filtergroup = filtergroup;
 
-			if ((o.max_ips > 0) && (!gotIPs((char*)clientip.c_str()))) {
+			if ((o.max_ips > 0) && (!gotIPs(clientip))) {
 #ifdef DGDEBUG
 				std::cout << "no client IP slots left" << std::endl;
 #endif
@@ -1218,6 +1215,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				header.out(&proxysock, __DGHEADER_SENDALL, true);  // exceptions on error/timeout
 				proxysock.checkForInput(120);  // exceptions on error/timeout
 				docheader.in(&proxysock, persist);  // get reply header from proxy
+				persist = docheader.isPersistent();
 			}
 #ifdef DGDEBUG
 			std::cout << "sending header to client" << std::endl;
@@ -1491,7 +1489,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		switch (o.log_file_format) {
 		case 4:
 			logline = when +"\t"+ who + "\t" + (clienthost ? *clienthost : from) + "\t" + where.toCharArray() + "\t" + what + "\t"
-				+ how.toCharArray() + "\t" + ssize +"\t"  + sweight +"\t" + (cat ? (*cat) : "N/A") +  "\t" + stringgroup + "\t"
+				+ how.toCharArray() + "\t" + ssize + "\t" + sweight + "\t" + (cat ? (*cat) : "") +  "\t" + stringgroup + "\t"
 				+ stringcode + "\t" + mimetype + "\n";
 			break;
 		case 3:
@@ -1551,12 +1549,12 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 			}
 		case 2:
 			logline = "\"" + when +"\",\""+ who + "\",\"" + (clienthost ? *clienthost : from) + "\",\"" + where.toCharArray() + "\",\"" + what + "\",\""
-				+ how.toCharArray() + "\",\"" + ssize +"\",\""  + sweight +"\",\"" + (cat ? (*cat) : "N/A") +  "\",\"" + stringgroup + "\",\""
+				+ how.toCharArray() + "\",\"" + ssize + "\",\"" + sweight + "\",\"" + (cat ? (*cat) : "") +  "\",\"" + stringgroup + "\",\""
 				+ stringcode + "\",\"" + mimetype + "\"\n";
 			break;
 		default:
 			logline = when +" "+ who + " " + (clienthost ? *clienthost : from) + " " + where.toCharArray() + " " + what + " "
-				+ how.toCharArray() + " " + ssize +" "  + sweight +" " + (cat ? (*cat) : "N/A") +  " " + stringgroup + " "
+				+ how.toCharArray() + " " + ssize + " " + sweight + " " + (cat ? (*cat) : "") +  " " + stringgroup + " "
 				+ stringcode + " " + mimetype + "\n";
 		}
 
