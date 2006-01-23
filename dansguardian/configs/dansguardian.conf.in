@@ -54,6 +54,16 @@ logfileformat = 1
 #loglocation = '@DGLOGLOCATION@/access.log'
 
 
+# License log file location
+#
+# Defines the license file directory and filename.
+# Only used in conjunction with maxips > 0
+# Once every 3 minutes, the current number of IPs in the cache, and the most
+# that have been in the cache since the daemon was started, are written to this
+# file. IPs persist in the cache for 7 days.
+#liclocation = '@DGLOGLOCATION@/license'
+
+
 # Network Settings
 # 
 # the IP that DansGuardian listens on.  If left blank DansGuardian will
