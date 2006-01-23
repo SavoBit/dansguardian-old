@@ -63,7 +63,7 @@ private:
 	void addToClean(String &url, const int fg);
 
 	// when using IP address counting - have we got any remaining free IPs?
-	bool gotIPs(char *ipstr);
+	bool gotIPs(std::string ipstr);
 
 	// check the request header is OK (client host/user/IP allowed to browse, site not banned, upload not too big)
 	void requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld, std::string *clientip,
