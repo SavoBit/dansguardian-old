@@ -319,6 +319,7 @@ clamav,
 	clamav=false
 	AC_MSG_RESULT(no)
 	CLAMAVSUPPORT="!! Not compiled !! "
+	CLAMAVSHM="!! Not supported on this platform !!"
 else
 	AC_MSG_RESULT(yes)
 	AC_CHECK_PROG(
@@ -343,7 +344,15 @@ else
 	AC_CHECK_HEADERS([sys/mman.h])
 	AC_CHECK_FUNCS([shm_open])
 	if test "x$ac_cv_func_shm_open" = "xno"; then
-		AC_CHECK_LIB(rt, shm_open, [], [AC_MSG_ERROR([no shm_open! (needed by clamav scanner)])])
+		AC_CHECK_LIB(rt, shm_open, [
+			AC_MSG_RESULT(yes)
+			AC_DEFINE([HAVE_CLAMAV_SHM],[],[Define to enable POSIX Shared Memory support in ClamAV content scanner])
+			LIBS="-lrt ${LIBS}"
+			CLAMAVSHM=""
+		], [
+			AC_MSG_RESULT(no)
+			CLAMAVSHM="!! Not supported on this platform !!"
+		])
 	fi
 
 	clamav=true
@@ -354,10 +363,12 @@ fi
  	clamav=false
 	AC_MSG_RESULT(no)
 	CLAMAVSUPPORT="!! Not compiled !! "
+	CLAMAVSHM="!! Not supported on this platform !!"
 ]
 )
 AM_CONDITIONAL(HAVE_CLAMAV, test "x$clamav" = "xtrue")
 AC_SUBST(CLAMAVSUPPORT)
+AC_SUBST(CLAMAVSHM)
 
 # asking user if they want clamd support
 AC_MSG_CHECKING(for clamd support)
