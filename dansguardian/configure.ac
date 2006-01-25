@@ -331,11 +331,11 @@ else
 	if ! test $CLAMAV = "yes"; then
 		AC_MSG_ERROR([libClamAV support enabled, but clamav-config not found!])
 	fi
-	dnl CLAMAV_LIBS=`clamav-config --libs`
+	CLAMAV_LIBS=`clamav-config --libs`
 	CLAMAV_PREFIX=`clamav-config --prefix`
 
-	dnl LIBS="${CLAMAV_LIBS} -lclamav ${LIBS}"
-	LIBS="-L${CLAMAV_PREFIX}/lib -lclamav ${LIBS}"
+	LIBS="${CLAMAV_LIBS} -lclamav ${LIBS}"
+	dnl LIBS="-L${CLAMAV_PREFIX}/lib -lclamav ${LIBS}"
 	CPPFLAGS="${CPPFLAGS} -I${CLAMAV_PREFIX}/include"
 
 	AC_DEFINE([HAVE_CLAMAV],[],[Define to enable ClamAV content scanner])
