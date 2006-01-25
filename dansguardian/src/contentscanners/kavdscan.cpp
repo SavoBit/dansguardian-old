@@ -153,22 +153,45 @@ int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 		return DGCS_SCANERROR;
 	}
 	String reply = buff;
-	delete[]buff;
-	reply.removeWhiteSpace();
 #ifdef DGDEBUG
 	std::cout << "Got from kavdscan:" << reply << std::endl;
 #endif
-	stripedsocks.close();
 	if (reply[0] == '2') {	// clean
 #ifdef DGDEBUG
 		std::cerr << "kavdscan - clean" << std::endl;
 #endif
+		delete[]buff;
+		stripedsocks.close();
 		return DGCS_CLEAN;
 	}
 	if (reply.startsWith("322")) {	// infected
-		lastvirusname = reply.after(" ").before(" ");
+		// patch to handle multiple virii in kavd response
+		// originally submitted by cahya <littlecahya@yahoo.de>
+		while(reply[0] != '2' && rc != 0) {
+			reply.removeWhiteSpace();
+			lastvirusname = lastvirusname + " " + reply.after("322-").before(" ");
+			try {
+				rc = stripedsocks.getLine(buff, 4096, o.content_scanner_timeout);
+			}
+			catch(exception & e) {
+				delete[]buff;
+				stripedsocks.close();
+				syslog(LOG_ERR, "%s", "Error reading kavdscan socket");
+				return DGCS_SCANERROR;
+			}
+			reply = buff;
+#ifdef DGDEBUG
+			std::cout << "Got from kavdscan:" << reply << std::endl;
+#endif
+		}
+		std::cout << "lastvirusname: " << lastvirusname << std::endl;
+		delete[]buff;
+		stripedsocks.close();
 		// format: 322 nastyvirus blah
+		return DGCS_INFECTED;
 	}
+	delete[]buff;
+	stripedsocks.close();
 	// must be an error then
 	lastmessage = reply;
 	return DGCS_SCANERROR;
