@@ -1483,8 +1483,13 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		}
 		
 		std::string stringcode = String(code).toCharArray();
-		std::string stringgroup = String(filtergroup+1).toCharArray();
-		stringgroup = "filter" + stringgroup;
+		std::string stringgroup;
+		if (o.fg[filtergroup]->name.length() == 0) {
+			stringgroup = String(filtergroup+1).toCharArray();
+			stringgroup = "filter" + stringgroup;
+		} else {
+			stringgroup = o.fg[filtergroup]->name;
+		}
 		
 		switch (o.log_file_format) {
 		case 4:
