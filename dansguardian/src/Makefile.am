@@ -1,6 +1,8 @@
 # Please don't delete platform.h.in. it's not very nice.
 MAINTAINERCLEANFILES = Makefile.in #platform.h.in
 
+EXTRA_DIST = platform.h.in
+
 clean_SUBDIRS= . downloadmanagers contentscanners authplugins
 
 # A MASSIVE thank you to Lawrence Manning for pointing out the
