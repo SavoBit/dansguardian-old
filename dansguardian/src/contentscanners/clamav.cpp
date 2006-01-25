@@ -44,7 +44,11 @@ extern bool is_daemonised;
 class clamavinstance:public CSPlugin
 {
 public:
-	clamavinstance(ConfigVar & definition):CSPlugin(definition) {};
+	clamavinstance(ConfigVar & definition):CSPlugin(definition)
+#ifdef __CLAMAV_SHM
+		, use_shm(false)
+#endif
+		{};
 
 	// we are replacing the inherited scanMemory as it has support for it
 	int scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
@@ -63,6 +67,14 @@ private:
 	struct cl_node *root;
 	// archive limit options
 	struct cl_limits limits;
+
+#ifdef __CLAMAV_SHM
+	// use POSIX shared memory
+	bool use_shm;
+#endif
+
+	// directory for storing memory buffers (if not shm)
+	std::string memdir;
 
 	// convert clamav return value to standard return value
 	int doRC(int rc, const char *vn);
@@ -105,33 +117,63 @@ int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheade
 {
 	lastmessage = lastvirusname = "";
 	const char *vn = "";
-	int fd = shm_open("/dgclamavtemp", O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
+	int fd;
+	std::string fname;
+
+#ifdef __CLAMAV_SHM
+	if (use_shm) {
+		// use POSIX shared memory to get the FD
+		fname = tmpnam(NULL);
+		fname = fname.substr(fname.find_last_of('/'));
+		fd = shm_open(fname.c_str(), O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
+	} else {
+#endif
+		fname = memdir + "/tfXXXXXX";
+		char* fnamearray = new char[fname.length() + 1];
+		strcpy(fnamearray, fname.c_str());
+		fd = mkstemp(fnamearray);
+		fname = fnamearray;
+#ifdef __CLAMAV_SHM
+	}
+#endif
+
+#ifdef DGDEBUG
+	std::cout << "Clamav plugin buffer store: " << fname << std::endl;
+#endif
+
 	if (fd == -1) {
 #ifdef DGDEBUG
-		std::cerr << "ClamAV plugin error during shm_open: " << strerror(errno) << std::endl;
+		std::cerr << "ClamAV plugin error during buffer store creation: " << fname << ", " << strerror(errno) << std::endl;
 #endif
-		syslog(LOG_ERR, "ClamAV plugin error during shm_open: %s", strerror(errno));
+		syslog(LOG_ERR, "ClamAV plugin error during buffer store creation: %s, %s", fname.c_str(), strerror(errno));
 		return DGCS_SCANERROR;
 	}
-	
+
 	int rc = write(fd, object, objectsize);
 	if (fd == -1) {
 #ifdef DGDEBUG
-		std::cerr << "ClamAV plugin error during shm write: " << strerror(errno) << std::endl;
+		std::cerr << "ClamAV plugin error during write: " << strerror(errno) << std::endl;
 #endif
-		syslog(LOG_ERR, "ClamAV plugin error during shm write: %s", strerror(errno));
+		syslog(LOG_ERR, "ClamAV plugin error during write: %s", strerror(errno));
 		return DGCS_SCANERROR;
 	}
 
 	//int rc = cl_scanbuff(object, objectsize - 1, &vn, root);
 	rc = cl_scandesc(fd, &vn, NULL, root, &limits, CL_SCAN_STDOPT);
 	close(fd);
-	fd = shm_unlink("/dgclamavtemp");
+
+#ifdef __CLAMAV_SHM
+	if (use_shm)
+		fd = shm_unlink(fname.c_str());
+	else
+#endif
+		fd = unlink(fname.c_str());
+
 	if (fd == -1) {
 #ifdef DGDEBUG
-		std::cerr << "ClamAV plugin error during shm_unlink: " << strerror(errno) << std::endl;
+		std::cerr << "ClamAV plugin error during unlink: " << strerror(errno) << std::endl;
 #endif
-		syslog(LOG_ERR, "ClamAV plugin error during shm_unlink: %s", strerror(errno));
+		syslog(LOG_ERR, "ClamAV plugin error during unlink: %s", strerror(errno));
 		return DGCS_SCANERROR;
 	}
 	return doRC(rc, vn);
@@ -179,6 +221,35 @@ int clamavinstance::init(void* args)
 		return DGCS_ERROR;
 	}
 
+	// pick method for storing memory buffers
+	String smethod(cv["scanbuffmethod"]);
+	if (smethod == "file") {
+		memdir = cv["scanbuffdir"].toCharArray();
+		if (memdir.length() == 0)
+			memdir = o.download_dir;
+	}
+#ifdef __CLAMAV_SHM
+	else if (smethod == "shm") {
+		use_shm = true;
+	}
+#endif
+	else {
+		if (!is_daemonised)
+			std::cerr << "Unsupported scanbuffmethod: " << smethod << std::endl;
+		syslog(LOG_ERR, "Unsupported scanbuffmethod: %s", smethod.toCharArray());
+		return DGCS_ERROR;
+	}
+
+	// set clam's own temp dir
+	if (cv["tempdir"].length() > 0)
+		cl_settempdir(cv["tempdir"].toCharArray(), 0);
+
+#ifdef DGDEBUG
+	std::cout << "Scanbuffmethod: " << smethod << std::endl;
+	std::cout << "Scanbuffdir: " << memdir << std::endl;
+	std::cout << "Tempdir: " << cv["tempdir"] << std::endl;
+#endif
+
 	// set file, recursion and compression ratio limits for scanning archives
 	root = NULL;
 	limits.maxfiles = cv["maxfiles"].toInteger();
@@ -195,8 +266,8 @@ int clamavinstance::init(void* args)
 		limits.maxratio = 200;
 	}
 #ifdef DGDEBUG
-	std::cerr << "maxfiles:" << limits.maxfiles << " maxfilesize:" << limits.maxfilesize
-		<< " maxreclevel:" << limits.maxreclevel << " maxratio:" << limits.maxratio << std::endl;
+	std::cerr << "maxfiles: " << limits.maxfiles << " maxfilesize: " << limits.maxfilesize
+		<< " maxreclevel: " << limits.maxreclevel << " maxratio: " << limits.maxratio << std::endl;
 #endif
 
 	// load virus database
@@ -207,17 +278,15 @@ int clamavinstance::init(void* args)
 #endif
 	if (rc != 0) {
 		if (!is_daemonised)
-			std::cerr << "Error loading clamav db:" << cl_strerror(rc) << std::endl;
-		syslog(LOG_ERR, "%s", "Error loading clamav db");
-		syslog(LOG_ERR, "%s", cl_strerror(rc));
+			std::cerr << "Error loading clamav db: " << cl_strerror(rc) << std::endl;
+		syslog(LOG_ERR, "Error loading clamav db: %s", cl_strerror(rc));
 		return DGCS_ERROR;
 	}
 	rc = cl_build(root);
 	if (rc != 0) {
 		if (!is_daemonised)
-			std::cerr << "Error building clamav db:" << cl_strerror(rc) << std::endl;
-		syslog(LOG_ERR, "%s", "Error building clamav db");
-		syslog(LOG_ERR, "%s", cl_strerror(rc));
+			std::cerr << "Error building clamav db: " << cl_strerror(rc) << std::endl;
+		syslog(LOG_ERR, "Error building clamav db: %s", cl_strerror(rc));
 		return DGCS_ERROR;
 	}
 	return DGCS_OK;
