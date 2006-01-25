@@ -153,9 +153,9 @@ bool OptionContainer::read(const char *filename, int type)
 				log_location += "access.log";
 			}
 
-			if ((lic_location = findoptionS("liclocation")) == "") {
-				lic_location = __LOGLOCATION;
-				lic_location += "license";
+			if ((stat_location = findoptionS("statlocation")) == "") {
+				stat_location = __LOGLOCATION;
+				stat_location += "stats";
 			}
 
 			if (type == 0) {
@@ -485,6 +485,13 @@ bool OptionContainer::read(const char *filename, int type)
 			syslog(LOG_ERR, "Error loading auth plugins");
 			return false;
 		}
+
+		// if there's no auth enabled, we only need the first group's settings
+		if (authplugins.size() == 0) {
+			no_auth_enabled = true;
+			filter_groups = 1;
+		} else
+			no_auth_enabled = false;
 
 		download_dir = findoptionS("filecachedir");
 

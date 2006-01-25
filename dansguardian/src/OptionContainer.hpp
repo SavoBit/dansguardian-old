@@ -90,6 +90,7 @@ public:
 	bool recheck_replaced_urls;
 	bool use_filter_groups_list;
 	bool use_group_names_list;
+	bool no_auth_enabled;
 
 	std::string languagepath;
 	std::string filter_groups_list_location;
@@ -99,7 +100,7 @@ public:
 	std::string language_list_location;
 	std::string access_denied_address;
 	std::string log_location;
-	std::string lic_location;
+	std::string stat_location;
 	std::string ipc_filename;
 	std::string urlipc_filename;
 	std::string ipipc_filename;
