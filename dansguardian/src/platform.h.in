@@ -63,6 +63,10 @@
 	#define __CLAMAV
 #endif
 
+#ifdef HAVE_CLAMAV_SHM
+	#define __CLAMAV_SHM
+#endif
+
 #ifdef ENABLE_CLAMD
 	#define __CLAMD
 #endif
