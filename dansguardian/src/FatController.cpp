@@ -1020,7 +1020,7 @@ int url_list_listener(int logconerror)
 	return 1;  // It is only possible to reach here with an error
 }
 
-int ip_list_listener(std::string lic_location, int logconerror) {
+int ip_list_listener(std::string stat_location, int logconerror) {
 #ifdef DGDEBUG
 	std::cout << "ip listener started" << std::endl;
 #endif
@@ -1045,7 +1045,7 @@ int ip_list_listener(std::string lic_location, int logconerror) {
 	sleep.tv_usec = 0;
 	struct timeval scopy;  // copy to use as select() can modify
 
-	int maxlics = 0;  // license statistics:
+	int maxusage = 0;  // usage statistics:
 		// current & highest no. of concurrent IPs using the filter
 
 	double elapsed = 0;  // keep a 3 minute counter so license statistics
@@ -1086,20 +1086,20 @@ int ip_list_listener(std::string lic_location, int logconerror) {
 #endif
 			// should only get here after a timeout
 			iplist.purgeOldEntries();
-			// write license statistics
-			int curlics = iplist.getNumberOfItems();
-			if (curlics > maxlics)
-				maxlics = curlics;
-			String licstats;
-			licstats += String(curlics) + "\n" + String(maxlics) + "\n";
+			// write usage statistics
+			int currusage = iplist.getNumberOfItems();
+			if (currusage > maxusage)
+				maxusage = currusage;
+			String usagestats;
+			usagestats += String(currusage) + "\n" + String(maxusage) + "\n";
 #ifdef DGDEBUG
-			std::cout << "writing license stats: " << curlics << " " << maxlics << std::endl;
+			std::cout << "writing usage stats: " << currusage << " " << maxusage << std::endl;
 #endif
-			int licfd = open(lic_location.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-			if (licfd > 0) {
-				write(licfd, licstats.toCharArray(), licstats.length());
+			int statfd = open(stat_location.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+			if (statfd > 0) {
+				write(statfd, usagestats.toCharArray(), usagestats.length());
 			}
-			close(licfd);
+			close(statfd);
 			// reset sleep timer
 			scopy = sleep;
 			elapsed = 0;
@@ -1451,7 +1451,7 @@ int fc_controlit()
 			if (o.no_logger == 0) {
 				loggersock.close();  // we don't need our copy of this so close it
 			}
-			ip_list_listener(o.lic_location, o.logconerror);
+			ip_list_listener(o.stat_location, o.logconerror);
 #ifdef DGDEBUG
 			std::cout << "IP List listener exiting" << std::endl;
 #endif
