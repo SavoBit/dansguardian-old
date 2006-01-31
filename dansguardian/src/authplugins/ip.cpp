@@ -77,7 +77,14 @@ public:
 class ipinstance:public AuthPlugin
 {
 public:
-	ipinstance(ConfigVar &definition):AuthPlugin(definition) {};
+	// keep credentials for the whole of a connection - IP isn't going to change.
+	// not quite true - what about downstream proxy with x-forwarded-for?
+	ipinstance(ConfigVar &definition):AuthPlugin(definition)
+	{
+		if (o.use_forwarded_for == 0)
+			is_connection_based = true;
+	};
+
 	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string);
 	int determineGroup(std::string &user, int &fg);
 
@@ -250,9 +257,15 @@ int ipinstance::readIPMelangeList(const char *filename) {
 
 	// compile regexps for determining whether a list entry is an IP, a subnet (IP + mask), or a range
 	RegExp matchIP, matchSubnet, matchRange;
+#ifdef __PCRE
 	matchIP.comp("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
-	matchSubnet.comp("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
-	matchRange.comp("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
+	matchSubnet.comp("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
+	matchRange.comp("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
+#else
+	matchIP.comp("^[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}$");
+	matchSubnet.comp("^[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}/[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}$");
+	matchRange.comp("^[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}-[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}$");
+#endif
 
 	// read in the file
 	String line;
