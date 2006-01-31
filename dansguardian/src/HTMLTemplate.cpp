@@ -149,7 +149,15 @@ void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::str
 			line = *ip;
 		}
 		else if (line == "-HOST-") {
-			line = (host != NULL ? *host : "");
+			if (host == NULL) {
+#ifdef DGDEBUG
+				std::cout<<"-HOST- placeholder encountered but hostname currently unknown; lookup forced."<<std::endl;
+#endif
+				std::deque<String> names = o.fg[0]->ipToHostname(ip->c_str());
+				if (names.size() > 0)
+					host = new std::string(names.front().toCharArray());
+			}
+			line = (host ? *host : "");
 		}
 		else if (line == "-FILTERGROUP-") {
 			line = o.fg[filtergroup]->name;
