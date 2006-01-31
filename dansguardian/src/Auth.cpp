@@ -68,6 +68,7 @@ int AuthPlugin::determineGroup(std::string &user, int &fg)
 	}
 	String u(user);
 	u.toLower();  // since the filtergroupslist is read in in lowercase, we should do this.
+	user = u.toCharArray();  // also pass back to ConnectionHandler, so appears lowercase in logs
 	String ue(u);
 	ue += "=";
 
