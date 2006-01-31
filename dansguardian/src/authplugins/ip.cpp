@@ -81,7 +81,7 @@ public:
 	// not quite true - what about downstream proxy with x-forwarded-for?
 	ipinstance(ConfigVar &definition):AuthPlugin(definition)
 	{
-		if (o.use_forwarded_for == 0)
+		if (o.use_xforwardedfor == 0)
 			is_connection_based = true;
 	};
 
