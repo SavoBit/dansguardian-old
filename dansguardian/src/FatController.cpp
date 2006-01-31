@@ -1606,9 +1606,14 @@ int fc_controlit()
 				}
 				if (!reloadconfig) {
 					o.deletePlugins(o.csplugins);
-					if (!o.loadCSPlugins()) {
+					if (!o.loadCSPlugins())
 						reloadconfig = true;  // content scan plugs problem
-					} else {
+					if (!reloadconfig) {
+						o.deletePlugins(o.authplugins);
+						if (!o.loadAuthPlugins())
+							reloadconfig = true;  // auth plugs problem
+					}
+					if (!reloadconfig) {
 						o.lm.garbageCollect();
 						hup_allchildren();
 						prefork(o.min_children);
