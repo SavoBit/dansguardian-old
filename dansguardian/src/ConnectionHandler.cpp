@@ -1483,13 +1483,8 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		}
 		
 		std::string stringcode = String(code).toCharArray();
-		std::string stringgroup;
-		if (o.fg[filtergroup]->name.length() == 0) {
-			stringgroup = String(filtergroup+1).toCharArray();
-			stringgroup = "filter" + stringgroup;
-		} else {
-			stringgroup = o.fg[filtergroup]->name;
-		}
+		std::string stringgroup(String(filtergroup+1).toCharArray());
+		stringgroup = "(filter" + stringgroup + ") " + o.fg[filtergroup]->name;
 		
 		switch (o.log_file_format) {
 		case 4:
@@ -1608,115 +1603,132 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 	int j;
 	String temp;
 	temp = (*urld);
-	bool igsl = (*o.fg[filtergroup]).inGreySiteList(temp);
-	bool igul = (*o.fg[filtergroup]).inGreyURLList(temp);
 
-	if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).blanketblock == 1 && !igsl && !igul) {
-		(*checkme).isItNaughty = true;
-		(*checkme).whatIsNaughty = o.language_list.getTranslation(502);
-		// Blanket Block is active and that site is not on the white list.
-		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-		(*checkme).whatIsNaughtyCategories = "Blanket Block";
-	}
+	// only apply bans to things not in the grey lists
+	if (!((*o.fg[filtergroup]).inGreySiteList(temp) || (*o.fg[filtergroup]).inGreyURLList(temp))) {
+		bool isssl = header->requestType() == "CONNECT";
+		bool bblock = o.fg[filtergroup]->blanketblock;
+		bool bsslblock = isssl && (o.fg[filtergroup]->blanketsslblock);
 
-	if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).blanketblock == 0) {
-		if ((*o.fg[filtergroup]).blanket_ip_block == 1 && isIPHostnameStrip(temp)) {
-			(*checkme).isItNaughty = true;
-			(*checkme).whatIsNaughty = o.language_list.getTranslation(502);
-			// Blanket IP Block is active and that address is an IP only address.
-			(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-			(*checkme).whatIsNaughtyCategories = "Blanket IP Block";
-		}
-		else if (!igsl && !igul && ((i = (*o.fg[filtergroup]).inBannedSiteList(temp)) != NULL)) {
-			(*checkme).whatIsNaughty = o.language_list.getTranslation(500);  // banned site
-			(*checkme).whatIsNaughty += i;
+		if (!(*checkme).isItNaughty && (bblock || bsslblock)) {
+			if (bblock) {
+				(*checkme).whatIsNaughty = o.language_list.getTranslation(502);
+				(*checkme).whatIsNaughtyCategories = "Blanket Block";
+			} else {
+				(*checkme).whatIsNaughty = o.language_list.getTranslation(506);
+				(*checkme).whatIsNaughtyCategories = "Blanket SSL Block";
+			}
+			// Blanket Block is active and that site is not on the white list.
 			(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
 			(*checkme).isItNaughty = true;
-			(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_site_list]).lastcategory.toCharArray();
 		}
-	}
 
-	if (!(*checkme).isItNaughty) {
-		if (!igsl && !igul && ((i = (*o.fg[filtergroup]).inBannedURLList(temp)) != NULL)) {
-			(*checkme).whatIsNaughty = o.language_list.getTranslation(501);
-			// Banned URL:
-			(*checkme).whatIsNaughty += i;
-			(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-			(*checkme).isItNaughty = true;
-			(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_url_list]).lastcategory.toCharArray();
-		}
-		else if (!igsl && !igul && ((j = (*o.fg[filtergroup]).inBannedRegExpURLList(temp)) >= 0)) {
-			(*checkme).isItNaughty = true;
-			(*checkme).whatIsNaughtyLog = o.language_list.getTranslation(503);
-			// Banned Regular Expression URL:
-			(*checkme).whatIsNaughtyLog += (*o.fg[filtergroup]).banned_regexpurl_list_source[j].toCharArray();
-			(*checkme).whatIsNaughty = o.language_list.getTranslation(504);
-			// Banned Regular Expression URL found.
-			(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_regexpurl_list_ref[j]]).category.toCharArray();
-		}
-		else if ((o.max_upload_size > -1) && (*header).isPostUpload())
-		{
-#ifdef DGDEBUG
-			std::cout << "is post upload" << std::endl;
-#endif
-			if (o.max_upload_size == 0) {
-				(*checkme).whatIsNaughty = o.language_list.getTranslation(700);
-				// Web upload is banned.
+		if (!(*checkme).isItNaughty && !(bblock || bsslblock)) {
+			bool bipblock = o.fg[filtergroup]->blanket_ip_block;
+			bool bsslipblock = isssl && (o.fg[filtergroup]->blanketssl_ip_block);
+			if (isIPHostnameStrip(temp) && (bipblock || bsslipblock)) {
+				if (bipblock) {
+					(*checkme).whatIsNaughty = o.language_list.getTranslation(505);
+					(*checkme).whatIsNaughtyCategories = "Blanket IP Block";
+				} else {
+					(*checkme).whatIsNaughty = o.language_list.getTranslation(507);
+					(*checkme).whatIsNaughtyCategories = "Blanket SSL IP Block";
+				}
+				// Blanket IP Block is active and that address is an IP only address.
 				(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-				(*checkme).whatIsNaughtyCategories = "Web upload.";
 				(*checkme).isItNaughty = true;
-				(*ispostblock) = true;
 			}
-			else if ((*header).contentLength() > o.max_upload_size) {
-				(*checkme).whatIsNaughty = o.language_list.getTranslation(701);
-				// Web upload limit exceeded.
-				(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-				(*checkme).whatIsNaughtyCategories = "Web upload.";
-				(*checkme).isItNaughty = true;
-				(*ispostblock) = true;
-			}
-		}
-	}
-	// look for URLs within URLs - ban, for example, images originating from banned sites during a Google image search.
-	if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).deep_url_analysis == 1) {
-#ifdef DGDEBUG
-		std::cout << "starting deep analysis" << std::endl;
-#endif
-		String deepurl = temp.after("p://");
-		while (deepurl.contains(":")) {
-			deepurl = deepurl.after(":");
-			while (deepurl.startsWith(":") || deepurl.startsWith("/")) {
-				deepurl.lop();
-			}
-#ifdef DGDEBUG
-			std::cout << "deep analysing: " << deepurl << std::endl;
-#endif
-			if (!igsl && !igul && ((i = (*o.fg[filtergroup]).inBannedSiteList(deepurl)) != NULL)) {
-				(*checkme).whatIsNaughty = o.language_list.getTranslation(500); // banned site
+			else if ((i = (*o.fg[filtergroup]).inBannedSiteList(temp)) != NULL) {
+				(*checkme).whatIsNaughty = o.language_list.getTranslation(500);  // banned site
 				(*checkme).whatIsNaughty += i;
 				(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
 				(*checkme).isItNaughty = true;
 				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_site_list]).lastcategory.toCharArray();
-#ifdef DGDEBUG
-				std::cout << "deep site: " << deepurl << std::endl;
-#endif
 			}
-			else if (!igsl && !igul && ((i = (*o.fg[filtergroup]).inBannedURLList(deepurl)) != NULL)) {
+		}
+
+		if (!(*checkme).isItNaughty) {
+			if ((i = (*o.fg[filtergroup]).inBannedURLList(temp)) != NULL) {
 				(*checkme).whatIsNaughty = o.language_list.getTranslation(501);
-				 // Banned URL:
+				// Banned URL:
 				(*checkme).whatIsNaughty += i;
 				(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
 				(*checkme).isItNaughty = true;
 				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_url_list]).lastcategory.toCharArray();
+			}
+			else if ((j = (*o.fg[filtergroup]).inBannedRegExpURLList(temp)) >= 0) {
+				(*checkme).isItNaughty = true;
+				(*checkme).whatIsNaughtyLog = o.language_list.getTranslation(503);
+				// Banned Regular Expression URL:
+				(*checkme).whatIsNaughtyLog += (*o.fg[filtergroup]).banned_regexpurl_list_source[j].toCharArray();
+				(*checkme).whatIsNaughty = o.language_list.getTranslation(504);
+				// Banned Regular Expression URL found.
+				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_regexpurl_list_ref[j]]).category.toCharArray();
+			}
+			else if ((o.max_upload_size > -1) && (*header).isPostUpload())
+			{
 #ifdef DGDEBUG
-				std::cout << "deep url: " << deepurl << std::endl;
+				std::cout << "is post upload" << std::endl;
 #endif
+				if (o.max_upload_size == 0) {
+					(*checkme).whatIsNaughty = o.language_list.getTranslation(700);
+					// Web upload is banned.
+					(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+					(*checkme).whatIsNaughtyCategories = "Web upload.";
+					(*checkme).isItNaughty = true;
+					(*ispostblock) = true;
+				}
+				else if ((*header).contentLength() > o.max_upload_size) {
+					(*checkme).whatIsNaughty = o.language_list.getTranslation(701);
+					// Web upload limit exceeded.
+					(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+					(*checkme).whatIsNaughtyCategories = "Web upload.";
+					(*checkme).isItNaughty = true;
+					(*ispostblock) = true;
+				}
 			}
 		}
+		// look for URLs within URLs - ban, for example, images originating from banned sites during a Google image search.
+		if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).deep_url_analysis == 1) {
 #ifdef DGDEBUG
-		std::cout << "done deep analysis" << std::endl;
+			std::cout << "starting deep analysis" << std::endl;
 #endif
-	}
+			String deepurl = temp.after("p://");
+			while (deepurl.contains(":")) {
+				deepurl = deepurl.after(":");
+				while (deepurl.startsWith(":") || deepurl.startsWith("/")) {
+					deepurl.lop();
+				}
+#ifdef DGDEBUG
+				std::cout << "deep analysing: " << deepurl << std::endl;
+#endif
+				if ((i = (*o.fg[filtergroup]).inBannedSiteList(deepurl)) != NULL) {
+					(*checkme).whatIsNaughty = o.language_list.getTranslation(500); // banned site
+					(*checkme).whatIsNaughty += i;
+					(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+					(*checkme).isItNaughty = true;
+					(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_site_list]).lastcategory.toCharArray();
+#ifdef DGDEBUG
+					std::cout << "deep site: " << deepurl << std::endl;
+#endif
+				}
+				else if ((i = (*o.fg[filtergroup]).inBannedURLList(deepurl)) != NULL) {
+					(*checkme).whatIsNaughty = o.language_list.getTranslation(501);
+					 // Banned URL:
+					(*checkme).whatIsNaughty += i;
+					(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+					(*checkme).isItNaughty = true;
+					(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_url_list]).lastcategory.toCharArray();
+#ifdef DGDEBUG
+					std::cout << "deep url: " << deepurl << std::endl;
+#endif
+				}
+			}
+#ifdef DGDEBUG
+			std::cout << "done deep analysis" << std::endl;
+#endif
+		}
+	} // grey site/URL list
 }
 
 // based on patch by Aecio F. Neto (afn@harvest.com.br) - Harvest Consultoria (http://www.harvest.com.br)
