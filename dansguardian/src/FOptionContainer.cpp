@@ -481,11 +481,17 @@ bool FOptionContainer::read(const char *filename)
 			std::cout << "Lists in memory" << std::endl;
 #endif
 
-			if ((*o.lm.l[banned_site_list]).inList("**")) {
-				blanketblock = 1;
+			if (o.lm.l[banned_site_list]->inList("**")) {
+				blanketblock = true;
 			}
-			if ((*o.lm.l[banned_site_list]).inList("*ip")) {
-				blanket_ip_block = 1;
+			if (o.lm.l[banned_site_list]->inList("*ip")) {
+				blanket_ip_block = true;
+			}
+			if (o.lm.l[banned_site_list]->inList("**s")) {
+				blanketsslblock = true;
+			}
+			if (o.lm.l[banned_site_list]->inList("*ips")) {
+				blanketssl_ip_block = true;
 			}
 		}
 

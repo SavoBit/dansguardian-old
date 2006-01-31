@@ -54,8 +54,10 @@ public:
 	int createlistcachefiles;
 	int enable_PICS;
 	int deep_url_analysis;
-	int blanketblock;
-	int blanket_ip_block;
+	bool blanketblock;
+	bool blanket_ip_block;
+	bool blanketsslblock;
+	bool blanketssl_ip_block;
 	int reverse_lookups;
 	int force_quick_search;
 	int bypass_mode;
@@ -210,7 +212,8 @@ public:
 	std::string access_denied_address;
 	String access_denied_domain;
 
-	FOptionContainer():blanketblock(0),blanket_ip_block(0),
+	FOptionContainer():blanketblock(false), blanket_ip_block(false),
+		blanketsslblock(false), blanketssl_ip_block(false),
 		banned_phrase_flag(false), exception_site_flag(false), exception_url_flag(false),
 		banned_extension_flag(false), banned_mimetype_flag(false), banned_site_flag(false),
 		banned_url_flag(false), grey_site_flag(false), grey_url_flag(false),
