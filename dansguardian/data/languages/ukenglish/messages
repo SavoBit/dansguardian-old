@@ -22,6 +22,8 @@
 "503","Banned Regular Expression URL: "
 "504","Banned Regular Expression URL found."
 "505","Blanket IP Block is active and that address is an IP only address."
+"506","Blanket SSL Block is active and that site is not on the white or grey list."
+"507","Blanket SSL IP Block is active and that address is an IP only address."
 
 "600","Exception client IP match."
 "601","Exception client user match."
