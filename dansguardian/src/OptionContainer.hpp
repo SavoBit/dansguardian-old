@@ -151,6 +151,7 @@ public:
 	String access_denied_domain;
 
 	bool loadCSPlugins();
+	bool loadAuthPlugins();
 	void deletePlugins(std::deque<Plugin*> &list);
 	void deleteFilterGroups();
 
@@ -171,7 +172,6 @@ private:
 	String conffilename;
 
 	bool loadDMPlugins();
-	bool loadAuthPlugins();
 
 	bool precompileregexps();
 	int findoptionI(const char *option);
