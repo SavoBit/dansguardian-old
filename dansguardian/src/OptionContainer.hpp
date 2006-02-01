@@ -73,7 +73,6 @@ public:
 	std::string proxy_ip;
 	std::deque<String> filter_ip;
 	int ll;
-	int reporting_level;
 	int max_children;
 	int min_children;
 	int maxspare_children;
@@ -170,6 +169,7 @@ public:
 private:
 	std::deque<std::string> conffile;
 	String conffilename;
+	int reporting_level;
 
 	bool loadDMPlugins();
 
@@ -177,7 +177,7 @@ private:
 	int findoptionI(const char *option);
 	std::string findoptionS(const char *option);
 	bool realitycheck(String s, int minl, int maxl, char *emessage);
-	bool readAnotherFilterGroupConf(const char *filename, const char *groupname);
+	bool readAnotherFilterGroupConf(const char *filename, const char *groupname, bool &need_html);
 	std::deque<String> findoptionM(const char *option);
 
 	bool inIPList(const std::string *ip, ListContainer& list, std::string *&host);

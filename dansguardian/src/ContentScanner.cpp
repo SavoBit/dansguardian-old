@@ -231,7 +231,7 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 	}
 
 	// don't scan our web server
-	if (((o.reporting_level == 1) || (o.reporting_level == 2)) && domain.startsWith(o.fg[filtergroup]->access_denied_domain)) {
+	if (((o.fg[filtergroup]->reporting_level == 1) || (o.fg[filtergroup]->reporting_level == 2)) && domain.startsWith(o.fg[filtergroup]->access_denied_domain)) {
 		return DGCS_NOSCAN;
 	}
 

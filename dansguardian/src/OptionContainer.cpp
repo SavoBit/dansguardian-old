@@ -569,7 +569,6 @@ bool OptionContainer::read(const char *filename, int type)
 			}
 			syslog(LOG_ERR, "%s", "Error reading filter group conf file(s).");
 			return false;
-
 		}
 
 	}
@@ -762,6 +761,7 @@ bool OptionContainer::readFilterGroupConf()
 	String file;
 	ifstream groupnamesfile;
 	std::string groupname;
+	bool need_html = false;
 	if (use_group_names_list) {
 		groupnamesfile.open(group_names_list_location.c_str(), ios::in);
 		if (!groupnamesfile.good()) {
@@ -788,7 +788,7 @@ bool OptionContainer::readFilterGroupConf()
 			std::cout << "Group name: " << groupname << std::endl;
 #endif
 		}
-		if (!readAnotherFilterGroupConf(file.toCharArray(), groupname.c_str())) {
+		if (!readAnotherFilterGroupConf(file.toCharArray(), groupname.c_str(), need_html)) {
 			if (!is_daemonised) {
 				std::cerr << "Error opening filter group config: " << file << std::endl;
 			}
@@ -798,10 +798,16 @@ bool OptionContainer::readFilterGroupConf()
 	}
 	if (use_group_names_list)
 		groupnamesfile.close();
+	if (!need_html && (reporting_level != 3)) {
+#ifdef DGDEBUG
+		std::cout << "Global reporting level not 3 & no filter groups using the template; so resetting it." << std::endl;
+#endif
+		html_template.reset();
+	}
 	return true;
 }
 
-bool OptionContainer::readAnotherFilterGroupConf(const char *filename, const char *groupname)
+bool OptionContainer::readAnotherFilterGroupConf(const char *filename, const char *groupname, bool &need_html)
 {
 #ifdef DGDEBUG
 	std::cout << "adding filter group: " << numfg << " " << filename << std::endl;
@@ -836,6 +842,9 @@ bool OptionContainer::readAnotherFilterGroupConf(const char *filename, const cha
 	// pass in the group name
 	(*fg[numfg]).name = groupname;
 
+	// pass in the reporting level - can be overridden
+	(*fg[numfg]).reporting_level = reporting_level;
+
 #ifdef DGDEBUG
 	std::cout << "passed variables to filter group: " << numfg << " " << filename << std::endl;
 #endif
@@ -850,6 +859,22 @@ bool OptionContainer::readAnotherFilterGroupConf(const char *filename, const cha
 	if (!rc) {
 		return false;
 	}
+
+	if ((fg[numfg-1]->reporting_level == 3) && (html_template.html.size() == 0)) {
+#ifdef DGDEBUG
+		std::cout << "One of the groups has overridden the reporting level! Loading the HTML template." << std::endl;
+#endif
+		need_html = true;
+		if (!html_template.readTemplateFile(html_template_location.c_str())) {
+			if (!is_daemonised) {
+				std::cerr << "Error reading HTML Template file: " << html_template_location << std::endl;
+			}
+			syslog(LOG_ERR, "Error reading HTML Template file: %s", html_template_location.c_str());
+			return false;
+			// HTML template file
+		}
+	}
+
 	return true;
 }
 

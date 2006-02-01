@@ -44,6 +44,7 @@ class FOptionContainer
 {
 
 public:
+	int reporting_level;
 	int category_threshold;
 	int infection_bypass_errors_only;
 	int disable_content_scan;

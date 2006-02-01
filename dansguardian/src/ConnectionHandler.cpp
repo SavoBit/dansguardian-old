@@ -1737,6 +1737,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 	String * url, NaughtyFilter * checkme, std::string * clientuser, std::string * clientip, int filtergroup,
 	bool ispostblock, int headersent, bool wasinfected, bool scanerror)
 {
+	int reporting_level = o.fg[filtergroup]->reporting_level;
 	try {  // writestring throws exception on error/timeout
 
 		// flags to enable filter/infection bypass hash generation
@@ -1746,7 +1747,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		// (if disabled, just output '1' or '2' to show that the CGI should generate a filter/virus bypass hash;
 		// otherwise, real hashes get put into substitution variables/appended to the ban CGI redirect URL)
 		bool dohash = false;
-		if (o.reporting_level > 0) {
+		if (reporting_level > 0) {
 			// generate a filter bypass hash
 			if (!wasinfected && ((*o.fg[filtergroup]).bypass_mode != 0) && !ispostblock) {
 #ifdef DGDEBUG
@@ -1771,7 +1772,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		}
 
 		// the user is using the full whack of custom banned images and/or HTML templates
-		if (o.reporting_level == 3 || (headersent > 0 && o.reporting_level > 0)) {
+		if (reporting_level == 3 || (headersent > 0 && reporting_level > 0)) {
 			// if reporting_level = 1 or 2 and headersent then we can't
 			// send a redirect so we have to display the template instead
 
@@ -1892,7 +1893,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		}
 		
 		// the user is using the CGI rather than the HTML template - so issue a redirect with parameters filled in on GET string
-		else if (o.reporting_level > 0) {
+		else if (reporting_level > 0) {
 			// grab either the full category list or the thresholded list
 			std::string cats;
 			cats = checkme->usedisplaycats ? checkme->whatIsNaughtyDisplayCategories : checkme->whatIsNaughtyCategories;
@@ -1973,7 +1974,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				}
 				writestring += "&REASON=";
 			}
-			if (o.reporting_level == 1) {
+			if (reporting_level == 1) {
 				writestring += miniURLEncode((*checkme).whatIsNaughty.c_str()).c_str();
 			} else {
 				writestring += miniURLEncode((*checkme).whatIsNaughtyLog.c_str()).c_str();
@@ -1988,7 +1989,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		}
 		
 		// the user is using the barebones banned page
-		else if (o.reporting_level == 0) {
+		else if (reporting_level == 0) {
 			(*proxysock).close();  // finshed with proxy
 			String writestring = "HTTP/1.0 200 OK\n";
 			writestring += "Content-type: text/html\n\n";
@@ -2007,7 +2008,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		}
 		
 		// stealth mode
-		else if (o.reporting_level == -1) {
+		else if (reporting_level == -1) {
 			(*checkme).isItNaughty = false;  // dont block
 		}
 	}

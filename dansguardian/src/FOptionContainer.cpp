@@ -192,9 +192,21 @@ bool FOptionContainer::read(const char *filename)
 		} else {
 			disable_content_scan = 0;
 		}
+		
+		// override default reporting level
+		String temp_reporting_level = findoptionS("reportinglevel");
+		if (temp_reporting_level != "") {
+			reporting_level = temp_reporting_level.toInteger();
+			if ((reporting_level < 0) || (reporting_level > 3)) {
+				if (!is_daemonised)
+					std::cerr << "Invalid reportinglevel: " << reporting_level << std::endl;
+				syslog(LOG_ERR, "Invalid reportinglevel: %s", reporting_level);
+				return false;
+			}
+		}
 
 		// override default access denied address
-		if (o.reporting_level == 1 || o.reporting_level == 2) {
+		if (reporting_level == 1 || reporting_level == 2) {
 			String temp_ada, temp_add;
 			temp_ada = findoptionS("accessdeniedaddress");
 			if (temp_ada != "") {
@@ -214,7 +226,7 @@ bool FOptionContainer::read(const char *filename)
 		}
 
 		// override default banned page
-		if (o.reporting_level == 3) {
+		else if (reporting_level == 3) {
 			String html_template = findoptionS("htmltemplate");
 			if (html_template != "") {
 				html_template = o.languagepath + html_template;
@@ -1083,7 +1095,7 @@ bool FOptionContainer::precompileregexps()
 bool FOptionContainer::isOurWebserver(String url)
 {
 	// reporting levels 0 and 3 don't use the CGI
-	if (o.reporting_level == 1 || o.reporting_level == 2) {
+	if (reporting_level == 1 || reporting_level == 2) {
 		url.removeWhiteSpace();  // just in case of weird browser crap
 		url.toLower();
 		url.removePTP();  // chop off the ht(f)tp(s)://
