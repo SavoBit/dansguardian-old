@@ -34,14 +34,12 @@ extern bool is_daemonised;
 
 SocketArray::~SocketArray()
 {
-	if (drawer != NULL)
-		delete[] drawer;
+	delete[] drawer;
 }
 
 void SocketArray::deleteAll()
 {
-	if (drawer != NULL)
-		delete[] drawer;
+	delete[] drawer;
 	drawer = NULL;
 	socknum = 0;
 }
@@ -49,8 +47,7 @@ void SocketArray::deleteAll()
 // close all sockets & create new ones
 void SocketArray::reset(int sockcount)
 {
-	if (drawer != NULL)
-		delete[] drawer;
+	delete[] drawer;
 	
 	drawer = new Socket[sockcount];
 	socknum = sockcount;
