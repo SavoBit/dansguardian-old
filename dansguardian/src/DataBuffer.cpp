@@ -63,9 +63,9 @@ DataBuffer::DataBuffer():data(new char[0]), buffer_length(0), compresseddata(NUL
 
 void DataBuffer::reset()
 {
-	delete data;
+	delete[]data;
 	data = new char[0];
-	delete compresseddata;
+	delete[]compresseddata;
 	compresseddata = NULL;
 	
 	buffer_length = 0;
@@ -358,9 +358,8 @@ void DataBuffer::zlibinflate(bool header)
 
 	int newsize = buffer_length * 5;  // good estimate of deflated HTML
 
-	char *block;
-	char *temp;
-	block = new char[newsize];
+	char *block = new char[newsize];
+	char *temp = NULL;
 	int err;
 	unsigned int bytesgot = 0;
 
@@ -394,6 +393,14 @@ void DataBuffer::zlibinflate(bool header)
 		err = inflate(&d_stream, Z_SYNC_FLUSH);
 		bytesgot = d_stream.total_out;
 		if (err == Z_STREAM_END) {
+			err = inflateEnd(&d_stream);
+			if (err != Z_OK) {
+				delete[] block;
+#ifdef DGDEBUG
+				std::cerr << "bad inflateEnd: " << d_stream.msg << std::endl;
+#endif
+				return;
+			}
 			break;
 		}
 		if (err != Z_OK) {	// was a problem so just return
@@ -401,6 +408,12 @@ void DataBuffer::zlibinflate(bool header)
 #ifdef DGDEBUG
 			std::cerr << "bad inflate: " << d_stream.msg << std::endl;
 #endif
+			err = inflateEnd(&d_stream);
+			if (err != Z_OK) {
+#ifdef DGDEBUG
+				std::cerr << "bad inflateEnd: " << d_stream.msg << std::endl;
+#endif
+			}
 			return;
 		}
 		if (bytesgot > o.max_content_filter_size) {
@@ -408,6 +421,12 @@ void DataBuffer::zlibinflate(bool header)
 #ifdef DGDEBUG
 			std::cerr << "inflated file larger than maxcontentfiltersize, not inflating further" << std::endl;
 #endif
+			err = inflateEnd(&d_stream);
+			if (err != Z_OK) {
+#ifdef DGDEBUG
+				std::cerr << "bad inflateEnd: " << d_stream.msg << std::endl;
+#endif
+			}
 			return;
 		}
 
@@ -417,6 +436,7 @@ void DataBuffer::zlibinflate(bool header)
 		memcpy(temp, block, bytesgot);
 		delete[]block;
 		block = temp;
+		temp = NULL;
 
 		d_stream.next_out = (Bytef *) (block + bytesgot);
 		d_stream.avail_out = newsize - bytesgot;
