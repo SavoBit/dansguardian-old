@@ -200,7 +200,7 @@ bool FOptionContainer::read(const char *filename)
 			if ((reporting_level < 0) || (reporting_level > 3)) {
 				if (!is_daemonised)
 					std::cerr << "Invalid reportinglevel: " << reporting_level << std::endl;
-				syslog(LOG_ERR, "Invalid reportinglevel: %s", reporting_level);
+				syslog(LOG_ERR, "Invalid reportinglevel: %d", reporting_level);
 				return false;
 			}
 		}
