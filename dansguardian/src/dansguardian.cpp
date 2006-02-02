@@ -34,6 +34,7 @@
 #include <grp.h>
 #include <fstream>
 #include <fcntl.h>
+#include <locale.h>
 
 
 // GLOBALS
