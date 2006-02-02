@@ -853,7 +853,7 @@ int log_listener(std::string log_location, int logconerror)
 #endif
 			ipcpeersock = loggersock.accept();
 			if (ipcpeersock->getFD() < 0) {
-				ipcpeersock->close();
+				delete ipcpeersock;
 				if (logconerror == 1) {
 					syslog(LOG_ERR, "%s", "Error accepting ipc. (Ignorable)");
 				}
@@ -864,7 +864,7 @@ int log_listener(std::string log_location, int logconerror)
 				rc = ipcpeersock->getLine(logline, 8192, 3, true);  // throws on err
 			}
 			catch(exception & e) {
-				ipcpeersock->close();
+				delete ipcpeersock;
 				if (logconerror == 1) {
 					syslog(LOG_ERR, "%s", "Error reading ipc. (Ignorable)");
 				}
@@ -874,7 +874,7 @@ int log_listener(std::string log_location, int logconerror)
 #ifdef DGDEBUG
 			std::cout << logline << std::endl;
 #endif
-			ipcpeersock->close();  // close the connection
+			delete ipcpeersock;  // close the connection
 #ifdef DGDEBUG
 			std::cout << "logged" << std::endl;
 #endif
@@ -885,10 +885,9 @@ int log_listener(std::string log_location, int logconerror)
 
 	}
 	delete[]logline;
-	logfile.close();  // close the file and
-	delete ipcpeersock;  // be nice and neat
+	logfile.close();  // close the file
+	loggersock.close();
 	return 1;  // It is only possible to reach here with an error
-
 }
 
 int url_list_listener(int logconerror)
@@ -899,7 +898,7 @@ int url_list_listener(int logconerror)
 	if (!drop_priv_completely()) {
 		return 1;  //error
 	}
-	UDSocket* ipcpeersock;  // the socket which will contain the ipc connection
+	UDSocket* ipcpeersock = NULL;  // the socket which will contain the ipc connection
 	int rc, ipcsockfd;
 	char *logline = new char[32000];
 	char reply;
@@ -945,7 +944,7 @@ int url_list_listener(int logconerror)
 #endif
 			ipcpeersock = urllistsock.accept();
 			if (ipcpeersock->getFD() < 0) {
-				ipcpeersock->close();
+				delete ipcpeersock;
 				if (logconerror == 1) {
 #ifdef DGDEBUG
 					std::cout << "Error accepting url ipc. (Ignorable)" << std::endl;
@@ -959,7 +958,7 @@ int url_list_listener(int logconerror)
 				rc = ipcpeersock->getLine(logline, 32000, 3, true);  // throws on err
 			}
 			catch(exception & e) {
-				ipcpeersock->close();  // close the connection
+				delete ipcpeersock;  // close the connection
 				if (logconerror == 1) {
 #ifdef DGDEBUG
 					std::cout << "Error reading url ipc. (Ignorable)" << std::endl;
@@ -979,7 +978,7 @@ int url_list_listener(int logconerror)
 			// group no. plus 1 is the first character in the 'everything else'
 			// case.
 			if (logline[0] == 'f') {
-				ipcpeersock->close();  // close the connection
+				delete ipcpeersock;  // close the connection
 				urllist.flush();
 #ifdef DGDEBUG
 				std::cout << "url FLUSH request" << std::endl;
@@ -987,7 +986,7 @@ int url_list_listener(int logconerror)
 				continue;
 			}
 			if (logline[0] == 'g') {
-				ipcpeersock->close();  // close the connection
+				delete ipcpeersock;  // close the connection
 				urllist.addEntry(logline + 2, logline[1]-1);
 				continue;
 			}
@@ -1000,14 +999,14 @@ int url_list_listener(int logconerror)
 				ipcpeersock->writeToSockete(&reply, 1, 0, 6);
 			}
 			catch(exception & e) {
-				ipcpeersock->close();  // close the connection
+				delete ipcpeersock;  // close the connection
 				if (logconerror == 1) {
 					syslog(LOG_ERR, "%s", "Error writing url ipc. (Ignorable)");
 					syslog(LOG_ERR, "%s", e.what());
 				}
 				continue;
 			}
-			ipcpeersock->close();  // close the connection
+			delete ipcpeersock;  // close the connection
 #ifdef DGDEBUG
 			std::cout << "url list reply: " << reply << std::endl;
 #endif
@@ -1015,7 +1014,6 @@ int url_list_listener(int logconerror)
 		}
 	}
 	delete[]logline;
-	delete ipcpeersock;
 	urllistsock.close();  // be nice and neat
 	return 1;  // It is only possible to reach here with an error
 }
@@ -1113,7 +1111,7 @@ int ip_list_listener(std::string stat_location, int logconerror) {
 #endif
 			ipcpeersock = iplistsock.accept();
 			if (ipcpeersock->getFD() < 0) {
-				ipcpeersock->close();
+				delete ipcpeersock;
 				if (logconerror == 1) {
 #ifdef DGDEBUG
 					std::cout << "Error accepting ip ipc. (Ignorable)" << std::endl;
@@ -1126,7 +1124,7 @@ int ip_list_listener(std::string stat_location, int logconerror) {
 			try {
 				rc = ipcpeersock->getLine(inbuff, 16, 3);  // throws on err
 			} catch (exception& e) {
-				ipcpeersock->close();
+				delete ipcpeersock;
 				if (logconerror == 1) {
 #ifdef DGDEBUG
 					std::cout << "Error reading ip ipc. (Ignorable)" << std::endl;
@@ -1148,7 +1146,7 @@ int ip_list_listener(std::string stat_location, int logconerror) {
 			try {
 				ipcpeersock->writeToSockete(&reply, 1, 0, 6);
 			} catch (exception& e) {
-				ipcpeersock->close();
+				delete ipcpeersock;
 				if (logconerror == 1) {
 #ifdef DGDEBUG
 					std::cout << "Error writing ip ipc. (Ignorable)" << std::endl;
@@ -1157,7 +1155,7 @@ int ip_list_listener(std::string stat_location, int logconerror) {
 				}
 				continue;
 			}
-			ipcpeersock->close();  // close the connection
+			delete ipcpeersock;  // close the connection
 #ifdef DGDEBUG
 			std::cout << "ip list reply: " << reply << std::endl;
 #endif
@@ -1767,7 +1765,7 @@ int fc_controlit()
 #endif
 
 	serversockets.deleteAll();
-	delete serversockfds; // be nice and neat
+	delete[] serversockfds; // be nice and neat
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = SIG_DFL;
