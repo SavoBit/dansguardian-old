@@ -70,7 +70,7 @@ std::string ConnectionHandler::miniURLEncode(const char *s)
 {
 	std::string encoded;
 	//char *buf = new char[16];  // way longer than needed
-	char *buf = new char[2];
+	char *buf = new char[3];
 	unsigned char c;
 	for (int i = 0; i < (signed) strlen(s); i++) {
 		c = s[i];
@@ -1199,7 +1199,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			// as exceptions, it needn't. and in fact it mustn't, if bypass requests are to be virus scanned/blocked in the same manner as exceptions.
 			if (checkme.isItNaughty) {
 				String rtype = header.requestType();
+#ifdef DGDEBUG
 				std::cout<<"Category: "<<checkme.whatIsNaughtyCategories<<std::endl;
+#endif
 				doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
 					rtype, docsize, &checkme.whatIsNaughtyCategories, o.ll, true, false, 0, false, &thestart,
 					cachehit, 403, mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup, contentmodified, urlmodified);
