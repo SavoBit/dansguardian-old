@@ -108,9 +108,9 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 	if ((bytesremaining < 0) && !(docheader->isPersistent()))
 		geteverything = true;
 
-	char *block;  // buffer for storing a grabbed block from the
+	char *block = NULL;  // buffer for storing a grabbed block from the
 	// imput stream
-	char *temp;
+	char *temp = NULL;
 
 	bool swappedtodisk = false;
 
@@ -200,11 +200,11 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 			// if not getting everything until connection close, grab only what is left
 			if (!geteverything && (newsize > bytesremaining))
 				newsize = bytesremaining;
+			delete[] block;
 			block = new char[newsize];
 			try {
 				sock->checkForInput(d->timeout);
 			} catch(exception & e) {
-				delete[]block;
 				break;
 			}
 			// improved more efficient socket read which uses the buffer better
@@ -212,20 +212,21 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 			// grab a block of input, doubled each time
 
 			if (rc <= 0) {
-				delete[]block;
 				break;  // an error occured so end the while()
 				// or none received so pipe is closed
 			}
 			else {
 				bytesremaining -= rc;
+				/*if (d->data != temp)
+					delete[] temp;*/
 				temp = new char[d->buffer_length + rc];  // replacement store
 				memcpy(temp, d->data, d->buffer_length);  // copy the current data
 				memcpy(temp + d->buffer_length, block, rc);  // copy the new data
 				delete[]d->data;  // delete the current data block
 				d->data = temp;
+				temp = NULL;
 				d->buffer_length += rc;  // update data size counter
 			}
-			delete[]block;
 		} else {
 			try {
 				sock->checkForInput(d->timeout);
@@ -269,5 +270,8 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 #ifdef DGDEBUG
 	std::cout << "Leaving default download manager plugin" << std::endl;
 #endif
+	delete[] block;
+	/*if (d->data != temp)
+		delete[] temp;*/
 	return 0;
 }

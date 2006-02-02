@@ -138,8 +138,8 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 
 	String message, jsmessage;
 
-	char *block;  // buffer for storing a grabbed block from the input stream
-	char *temp;
+	char *block = NULL;  // buffer for storing a grabbed block from the input stream
+	char *temp = NULL;
 
 	bool swappedtodisk = false;
 
@@ -286,11 +286,11 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 			// if not getting everything until connection close, grab only what is left
 			if (!geteverything && (newsize > (expectedsize - bytesgot)))
 				newsize = expectedsize - bytesgot;
+			delete[] block;
 			block = new char[newsize];
 			try {
 				sock->checkForInput(d->timeout);
 			} catch(exception & e) {
-				delete[]block;
 				break;
 			}
 			// improved more efficient socket read which uses the buffer better
@@ -298,19 +298,20 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 			// grab a block of input, doubled each time
 
 			if (rc <= 0) {
-				delete[]block;
 				break;  // an error occured so end the while()
 				// or none received so pipe is closed
 			}
 			else {
+				/*if (d->data != temp)
+					delete[] temp;*/
 				temp = new char[d->buffer_length + rc];  // replacement store
 				memcpy(temp, d->data, d->buffer_length);  // copy the current data
 				memcpy(temp + d->buffer_length, block, rc);  // copy the new data
 				delete[]d->data;  // delete the current data block
 				d->data = temp;
+				temp = NULL;
 				d->buffer_length += rc;  // update data size counter
 			}
-			delete[]block;
 		} else {
 			try {
 				sock->checkForInput(d->timeout);
@@ -391,5 +392,8 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 		}
 	}
 	d->bytesalreadysent = 0;
+	/*if (d->data != temp)
+		delete[] temp;*/
+	delete[] block;
 	return 0;
 }
