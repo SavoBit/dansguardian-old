@@ -33,7 +33,7 @@
 #include <cstdio>
 #include <unistd.h>
 #include <syslog.h>
-#include <istream>
+//#include <istream>
 #include <iostream>
 #include <fstream>
 
