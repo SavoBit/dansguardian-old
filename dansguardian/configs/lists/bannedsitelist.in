@@ -42,13 +42,24 @@ badboys.com
 
 
 #Blanket Block.  To block all sites except those in the
-#exceptionsitelist and greysitelist files remove
+#exceptionsitelist and greysitelist files, remove
 #the # from the next line to leave only a '**':
 #**
 
-#Blanket IP Block.  To block all sites specified only as an IP
+#Blanket SSL/CONNECT Block.  To block all SSL 
+#and CONNECT tunnels except to addresses in the
+#exceptionsitelist and greysitelist files, remove
+#the # from the next line to leave only a '**s':
+#**s
+
+#Blanket IP Block.  To block all sites specified only as an IP,
 #remove the # from the next line to leave only a '*ip':
 #*ip
+
+#Blanket SSL/CONNECT IP Block.  To block all SSL and CONNECT
+#tunnels to sites specified only as an IP,
+#remove the # from the next line to leave only a '*ips':
+#*ips
 
 
 # The squidGuard advert domain/URL lists are now included by default.
