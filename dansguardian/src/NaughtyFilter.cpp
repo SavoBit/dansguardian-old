@@ -858,54 +858,57 @@ void NaughtyFilter::checkPICSrating(std::string label)
 
 		if (service.contains("safesurf")) {
 			checkPICSratingSafeSurf(r);
-		}
-		if (isItNaughty) {
-			return;
+			if (isItNaughty) {
+				return;
+			}
 		}
 		if (service.contains("evaluweb")) {
 			checkPICSratingevaluWEB(r);
-		}
-		if (isItNaughty) {
-			return;
+			if (isItNaughty) {
+				return;
+			}
 		}
 		if (service.contains("microsys")) {
 			checkPICSratingCyberNOT(r);
-		}
-		if (isItNaughty) {
-			return;
+			if (isItNaughty) {
+				return;
+			}
 		}
 		if (service.contains("icra")) {
 			checkPICSratingICRA(r);
-		}
-		if (isItNaughty) {
-			return;
+			if (isItNaughty) {
+				return;
+			}
 		}
 		if (service.contains("rsac")) {
 			checkPICSratingRSAC(r);
-		}
-		if (isItNaughty) {
-			return;
+			if (isItNaughty) {
+				return;
+			}
 		}
 		if (service.contains("weburbia")) {
 			checkPICSratingWeburbia(r);
-		}
-		if (isItNaughty) {
-			return;
+			if (isItNaughty) {
+				return;
+			}
 		}
 		if (service.contains("vancouver")) {
 			checkPICSratingVancouver(r);
+			if (isItNaughty) {
+				return;
+			}
 		}
 		if (service.contains("icec")) {
 			checkPICSratingICEC(r);
-		}
-		if (isItNaughty) {
-			return;
+			if (isItNaughty) {
+				return;
+			}
 		}
 		if (service.contains("safenet")) {
 			checkPICSratingSafeNet(r);
-		}
-		if (isItNaughty) {
-			return;
+			if (isItNaughty) {
+				return;
+			}
 		}
 		// check label for word denoting rating system then pass on to the
 		// appropriate function the rating String.
