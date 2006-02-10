@@ -558,10 +558,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						return;
 					}
 				}
-				if (!authed) {
+				if ((!authed) || (filtergroup >= o.numfg)) {
 #ifdef DGDEBUG
-					std::cout << "No identity found; using defaults" << std::endl;
+					if (!authed)
+						std::cout << "No identity found; using defaults" << std::endl;
+					else
+						std::cout << "Plugin returned out-of-range filter group number; using defaults" << std::endl;
 #endif
+					authed = false;
 					clientuser = "-";
 					filtergroup = 0;  //default group - one day configurable?
 				} else {
