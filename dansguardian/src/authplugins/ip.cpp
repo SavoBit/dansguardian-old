@@ -291,11 +291,19 @@ int ipinstance::readIPMelangeList(const char *filename) {
 				std::cerr << "No filter group given; entry " << line << " in " << filename << std::endl;
 			syslog(LOG_ERR, "No filter group given; entry %s in %s", line.toCharArray(), filename);
 			warn = true;
+			continue;
 		}
 #ifdef DGDEBUG
 		std::cout << "key: " << key << std::endl;
 		std::cout << "value: " << value.toInteger() << std::endl;
 #endif
+		if (value.toInteger() > o.numfg) {
+			if (!is_daemonised)
+				std::cerr << "Filter group out of range; entry " << line << " in " << filename << std::endl;
+			syslog(LOG_ERR, "Filter group out of range; entry %s in %s", line.toCharArray(), filename);
+			warn = true;
+			continue;
+		}
 		// store the IP address (numerically, not as a string) and filter group in either the IP list, subnet list or range list
 		if (matchIP.match(key.toCharArray())) {
 			struct in_addr address;
