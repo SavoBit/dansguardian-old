@@ -114,4 +114,4 @@ SafeNetsex = 1  # 0 to 4
 SafeNetviolence = 1  # 0 to 4
 SafeNetlanguage = 1  # 0 to 4
 SafeNetgambling = 0  # 0 to 1
-SafeNetalcoholtabacco = 0 # 0 to 1
+SafeNetalcoholtobacco = 0 # 0 to 1
