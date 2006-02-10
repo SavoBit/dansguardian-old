@@ -57,7 +57,16 @@ AuthPlugin *identcreate(ConfigVar & definition)
 // checkme: needs better error reporting
 int identinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string)
 {
-	std::string clientip = peercon.getPeerIP();
+	std::string clientip;
+	if (o.use_xforwardedfor == 1) {
+		// grab the X-Forwarded-For IP if available
+		clientip = h.getXForwardedForIP();
+		// otherwise, grab the IP directly from the client connection
+		if (clientip.length() == 0)
+			clientip = peercon.getPeerIP();
+	} else {
+		clientip = peercon.getPeerIP();
+	}
 	int clientport = peercon.getPeerSourcePort();
 #ifdef DGDEBUG
 	std::cout << "Connecting to: " << clientip << std::endl;
