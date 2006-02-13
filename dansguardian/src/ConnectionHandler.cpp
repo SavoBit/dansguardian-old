@@ -1141,9 +1141,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							}
 							else if ((i == NULL) && o.fg[filtergroup]->block_downloads) {
 								// did not match the exception list
-								checkme.whatIsNaughty = o.language_list.getTranslation(800);
-								// Banned MIME Type:
-								checkme.whatIsNaughty += i;
+								checkme.whatIsNaughty = o.language_list.getTranslation(750);
+								// Blanket file download is active
+								checkme.whatIsNaughty += mimetype;
 								checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
 								checkme.isItNaughty = true;
 								checkme.whatIsNaughtyCategories = "Blanket download block.";
@@ -1213,9 +1213,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							// If downloads are not blanket blocked, block if matched.
 							if (!matched_extension && o.fg[filtergroup]->block_downloads) {
 								// did not match the exception list
-								checkme.whatIsNaughty = o.language_list.getTranslation(900);
-								// Banned extension:
-								checkme.whatIsNaughty += i;
+								checkme.whatIsNaughty = o.language_list.getTranslation(751);
+								// Blanket file download is active
 								checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
 								checkme.isItNaughty = true;
 								checkme.whatIsNaughtyCategories = "Blanket download block.";
