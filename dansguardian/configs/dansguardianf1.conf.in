@@ -36,11 +36,32 @@ greyurllist = '@DGCONFDIR@/lists/greyurllist'
 exceptionurllist = '@DGCONFDIR@/lists/exceptionurllist'
 exceptionregexpurllist = '@DGCONFDIR@/lists/exceptionregexpurllist'
 bannedregexpurllist = '@DGCONFDIR@/lists/bannedregexpurllist'
-bannedextensionlist = '@DGCONFDIR@/lists/bannedextensionlist'
-bannedmimetypelist = '@DGCONFDIR@/lists/bannedmimetypelist'
 picsfile = '@DGCONFDIR@/lists/pics'
 contentregexplist = '@DGCONFDIR@/lists/contentregexplist'
 urlregexplist = '@DGCONFDIR@/lists/urlregexplist'
+
+# Filetype filtering
+#
+# Blanket download blocking
+# If enabled, all files will be blocked, unless they are downloaded from the
+# exceptionfilesitelist, or match the exceptionextensionlist or
+# exceptionmimetypelist.
+# These lists do not override any other content filtering or virus scanning.
+# Exception lists defined above override all types of filtering, including
+# the blanket download block.
+# Defaults to disabled.
+# (on | off)
+#
+#blockdownloads = off
+#exceptionextensionlist = '@DGCONFDIR@/lists/exceptionextensionlist'
+#exceptionmimetypelist = '@DGCONFDIR@/lists/exceptionmimetypelist'
+#exceptionfilesitelist = '@DGCONFDIR@/lists/exceptionfilesitelist'
+#
+# When blanket download blocking is disabled, use the following lists to block
+# specific kinds of file downloads.
+#
+bannedextensionlist = '@DGCONFDIR@/lists/bannedextensionlist'
+bannedmimetypelist = '@DGCONFDIR@/lists/bannedmimetypelist'
 
 # Naughtyness limit
 # This the limit over which the page will be blocked.  Each weighted phrase is given
