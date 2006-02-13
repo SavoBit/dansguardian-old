@@ -56,13 +56,14 @@ void FDTunnel::reset()
 }
 
 // tunnel data from fdfrom to fdto (unfiltered)
-void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targetthroughput)
+// return false if throughput larger than target throughput
+bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targetthroughput)
 {
 	if (targetthroughput == 0) {
 #ifdef DGDEBUG
 		std::cout << "No data expected, tunnelling aborted." << std::endl;
 #endif
-		return;
+		return true;
 	}
 
 #ifdef DGDEBUG
@@ -83,7 +84,7 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targett
 
 	char buff[32768];  // buffer for the input
 	timeval timeout;  // timeval struct
-	timeout.tv_sec = 60;  // modify the struct so its a 60 sec timeout
+	timeout.tv_sec = 120;  // modify the struct so its a 120 sec timeout
 	timeout.tv_usec = 0;
 
 	fd_set fdSet;  // file descriptor set
@@ -194,4 +195,5 @@ void FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targett
 	else
 		std::cout <<"Tunnel closed."<< std::endl;
 #endif
+	return (targetthroughput > -1) ? (throughput <= targetthroughput) : true;
 }
