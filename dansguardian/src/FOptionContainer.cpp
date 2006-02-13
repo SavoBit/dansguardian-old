@@ -59,6 +59,9 @@ FOptionContainer::~FOptionContainer()
 	if (exception_regexpurl_flag) o.lm.deRefList(exception_regexpurl_list);
 	if (content_regexp_flag) o.lm.deRefList(content_regexp_list);
 	if (url_regexp_flag) o.lm.deRefList(url_regexp_list);
+	if (exception_extension_flag) o.lm.deRefList(exception_extension_list);
+	if (exception_mimetype_flag) o.lm.deRefList(exception_mimetype_list);
+	if (exception_file_site_flag) o.lm.deRefList(exception_file_site_list);
 	delete banned_page;
 }
 
@@ -77,6 +80,9 @@ void FOptionContainer::reset()
 	if (exception_regexpurl_flag) o.lm.deRefList(exception_regexpurl_list);
 	if (content_regexp_flag) o.lm.deRefList(content_regexp_list);
 	if (url_regexp_flag) o.lm.deRefList(url_regexp_list);
+	if (exception_extension_flag) o.lm.deRefList(exception_extension_list);
+	if (exception_mimetype_flag) o.lm.deRefList(exception_mimetype_list);
+	if (exception_file_site_flag) o.lm.deRefList(exception_file_site_list);
 	banned_phrase_flag = false;
 	exception_site_flag = false;
 	exception_url_flag = false;
@@ -90,6 +96,14 @@ void FOptionContainer::reset()
 	exception_regexpurl_flag = false;
 	content_regexp_flag = false;
 	url_regexp_flag = false;
+	exception_extension_flag = false;
+	exception_mimetype_flag = false;
+	exception_file_site_flag = false;
+	block_downloads = false;
+	blanketblock = false;
+	blanket_ip_block = false;
+	blanketsslblock = false;
+	blanketssl_ip_block = false;
 	banned_phrase_list_index.clear();
 	conffile.clear();
 	content_regexp_list_comp.clear();
@@ -283,6 +297,10 @@ bool FOptionContainer::read(const char *filename)
 				enable_PICS = 0;
 			}
 
+			if (findoptionS("blockdownloads") == "on") {
+				block_downloads = true;
+			}
+
 			if (enable_PICS == 1) {
 				linebuffer = findoptionS("picsfile");
 				ifstream picsfiles(linebuffer.c_str(), ios::in);  // pics file
@@ -322,21 +340,24 @@ bool FOptionContainer::read(const char *filename)
 			if (!realitycheck(String(naughtyness_limit), 1, 4, "naughtynesslimit")) {
 				return false;
 			}
-			exception_phrase_list_location = findoptionS("exceptionphraselist");
-			weighted_phrase_list_location = findoptionS("weightedphraselist");
-			banned_phrase_list_location = findoptionS("bannedphraselist");
-			banned_extension_list_location = findoptionS("bannedextensionlist");
-			banned_mimetype_list_location = findoptionS("bannedmimetypelist");
-			banned_site_list_location = findoptionS("bannedsitelist");
-			banned_url_list_location = findoptionS("bannedurllist");
-			grey_site_list_location = findoptionS("greysitelist");
-			grey_url_list_location = findoptionS("greyurllist");
-			banned_regexpurl_list_location = findoptionS("bannedregexpurllist");
-			exception_regexpurl_list_location = findoptionS("exceptionregexpurllist");
-			content_regexp_list_location = findoptionS("contentregexplist");
-			url_regexp_list_location = findoptionS("urlregexplist");
-			exceptions_site_list_location = findoptionS("exceptionsitelist");
-			exceptions_url_list_location = findoptionS("exceptionurllist");
+			std::string exception_phrase_list_location = findoptionS("exceptionphraselist");
+			std::string weighted_phrase_list_location = findoptionS("weightedphraselist");
+			std::string banned_phrase_list_location = findoptionS("bannedphraselist");
+			std::string banned_extension_list_location = findoptionS("bannedextensionlist");
+			std::string banned_mimetype_list_location = findoptionS("bannedmimetypelist");
+			std::string banned_site_list_location = findoptionS("bannedsitelist");
+			std::string banned_url_list_location = findoptionS("bannedurllist");
+			std::string grey_site_list_location = findoptionS("greysitelist");
+			std::string grey_url_list_location = findoptionS("greyurllist");
+			std::string banned_regexpurl_list_location = findoptionS("bannedregexpurllist");
+			std::string exception_regexpurl_list_location = findoptionS("exceptionregexpurllist");
+			std::string content_regexp_list_location = findoptionS("contentregexplist");
+			std::string url_regexp_list_location = findoptionS("urlregexplist");
+			std::string exceptions_site_list_location = findoptionS("exceptionsitelist");
+			std::string exceptions_url_list_location = findoptionS("exceptionurllist");
+			std::string exception_extension_list_location = findoptionS("exceptionextensionlist");
+			std::string exception_mimetype_list_location = findoptionS("exceptionmimetypelist");
+			std::string exception_file_site_list_location = findoptionS("exceptionfilesitelist");
 
 			if (enable_PICS == 1) {
 				pics_rsac_nudity = findoptionI("RSACnudity");
@@ -429,6 +450,36 @@ bool FOptionContainer::read(const char *filename)
 			std::cout << "Reading phrase, URL and site lists into memory" << std::endl;
 #endif
 
+			if (!block_downloads) {
+#ifdef DGDEBUG
+				std::cout << "Blanket download block disabled; using standard banned file lists" << std::endl;
+#endif
+				if (!readFile(banned_extension_list_location.c_str(),&banned_extension_list,false,false,"bannedextensionlist")) {
+					return false;
+				}		// file extensions
+				banned_extension_flag = true;
+				if (!readFile(banned_mimetype_list_location.c_str(),&banned_mimetype_list,false,true,"bannedmimetypelist")) {
+					return false;
+				}		// mime types
+				banned_mimetype_flag = true;
+			} else {
+#ifdef DGDEBUG
+				std::cout << "Blanket download block enabled; using exception file lists" << std::endl;
+#endif
+				if (!readFile(exception_extension_list_location.c_str(),&exception_extension_list,false,false,"exceptionextensionlist")) {
+					return false;
+				}		// file extensions
+				exception_extension_flag = true;
+				if (!readFile(exception_mimetype_list_location.c_str(),&exception_mimetype_list,false,true,"exceptionmimetypelist")) {
+					return false;
+				}		// mime types
+				exception_mimetype_flag = true;
+				if (!readFile(exception_file_site_list_location.c_str(),&exception_file_site_list,false,true,"exceptionfilesitelist")) {
+					return false;
+				}		// site exceptions
+				exception_file_site_flag = true;
+			}
+
 			if (!readbplfile(banned_phrase_list_location.c_str(), exception_phrase_list_location.c_str(), weighted_phrase_list_location.c_str())) {
 				return false;
 			}		// read banned, exception, weighted phrase list
@@ -441,14 +492,6 @@ bool FOptionContainer::read(const char *filename)
 				return false;
 			}		// url exceptions
 			exception_url_flag = true;
-			if (!readFile(banned_extension_list_location.c_str(),&banned_extension_list,false,false,"bannedextensionlist")) {
-				return false;
-			}		// file extensions
-			banned_extension_flag = true;
-			if (!readFile(banned_mimetype_list_location.c_str(),&banned_mimetype_list,false,true,"bannedmimetypelist")) {
-				return false;
-			}		// mime types
-			banned_mimetype_flag = true;
 			if (!readFile(banned_site_list_location.c_str(),&banned_site_list,false,true,"bannedsitelist")) {
 				return false;
 			}		// banned domains
@@ -791,6 +834,11 @@ bool FOptionContainer::inExceptionSiteList(String url)
 	return inSiteList(url, exception_site_list) != NULL;
 }
 
+bool FOptionContainer::inExceptionFileSiteList(String url)
+{
+	return inSiteList(url, exception_file_site_list) != NULL;
+}
+
 // look in given URL list for given URL
 char *FOptionContainer::inURLList(String &url, unsigned int list) {
 	int fl;
@@ -893,7 +941,9 @@ bool FOptionContainer::inExceptionURLList(String url)
 	return inURLList(url, exception_url_list) != NULL;
 }
 
-char *FOptionContainer::inBannedExtensionList(String url)
+// TODO: Store the modified URL somewhere, instead of re-processing it every time.
+
+char *FOptionContainer::inExtensionList(unsigned int list, String url)
 {
 	url.removeWhiteSpace();  // just in case of weird browser crap
 	url.toLower();
@@ -903,7 +953,7 @@ char *FOptionContainer::inBannedExtensionList(String url)
 	if (url.length() < 2) {	// will never match
 		return NULL;
 	}
-	return (*o.lm.l[banned_extension_list]).findEndsWith(url.toCharArray());
+	return (*o.lm.l[list]).findEndsWith(url.toCharArray());
 }
 
 // is this URL in the given regexp URL list?

@@ -59,6 +59,12 @@ public:
 	bool blanket_ip_block;
 	bool blanketsslblock;
 	bool blanketssl_ip_block;
+	
+	// File filtering mode - should banned or exception lists be used?
+	// if true, use exception lists & exception file site list; otherwise,
+	// use banned MIME type & extension lists.
+	bool block_downloads;
+	
 	int reverse_lookups;
 	int force_quick_search;
 	int bypass_mode;
@@ -147,21 +153,6 @@ public:
 	std::string magic;
 	std::string imagic;
 	std::string cookie_magic;
-	std::string banned_phrase_list_location;
-	std::string exception_phrase_list_location;
-	std::string weighted_phrase_list_location;
-	std::string banned_site_list_location;
-	std::string banned_url_list_location;
-	std::string grey_site_list_location;
-	std::string grey_url_list_location;
-	std::string banned_regexpurl_list_location;
-	std::string exception_regexpurl_list_location;
-	std::string content_regexp_list_location;
-	std::string url_regexp_list_location;
-	std::string banned_extension_list_location;
-	std::string banned_mimetype_list_location;
-	std::string exceptions_site_list_location;
-	std::string exceptions_url_list_location;
 	unsigned int banned_phrase_list;
 	unsigned int exception_site_list;
 	unsigned int exception_url_list;
@@ -175,20 +166,9 @@ public:
 	unsigned int exception_regexpurl_list;
 	unsigned int content_regexp_list;
 	unsigned int url_regexp_list;
-	bool banned_phrase_flag;
-	bool exception_site_flag;
-	bool exception_url_flag;
-	bool banned_extension_flag;
-	bool banned_mimetype_flag;
-	bool banned_site_flag;
-	bool banned_url_flag;
-	bool grey_site_flag;
-	bool grey_url_flag;
-	bool banned_regexpurl_flag;
-	bool exception_regexpurl_flag;
-	bool content_regexp_flag;
-	bool url_regexp_flag;
-	std::deque<int> banned_phrase_list_index;
+	unsigned int exception_extension_list;
+	unsigned int exception_mimetype_list;
+	unsigned int exception_file_site_list;
 	
 	// regex match lists
 	std::deque<RegExp> banned_regexpurl_list_comp;
@@ -215,12 +195,14 @@ public:
 
 	FOptionContainer():blanketblock(false), blanket_ip_block(false),
 		blanketsslblock(false), blanketssl_ip_block(false),
+		block_downloads(false), banned_page(NULL),
 		banned_phrase_flag(false), exception_site_flag(false), exception_url_flag(false),
 		banned_extension_flag(false), banned_mimetype_flag(false), banned_site_flag(false),
 		banned_url_flag(false), grey_site_flag(false), grey_url_flag(false),
 		banned_regexpurl_flag(false), exception_regexpurl_flag(false),
 		content_regexp_flag(false), url_regexp_flag(false),
-		banned_page(NULL) {};
+		exception_extension_flag(false), exception_mimetype_flag(false),
+		exception_file_site_flag(false) {};
 	~FOptionContainer();
 	bool read(const char *filename);
 	void reset();
@@ -230,10 +212,11 @@ public:
 	bool inGreySiteList(String url);
 	bool inGreyURLList(String url);
 	bool inExceptionSiteList(String url);
+	bool inExceptionFileSiteList(String url);
 	bool inExceptionURLList(String url);
 	int inBannedRegExpURLList(String url);
 	int inExceptionRegExpURLList(String url);
-	char *inBannedExtensionList(String url);
+	char *inExtensionList(unsigned int list, String url);
 	bool isIPHostname(String url);
 
 	std::deque<String> &ipToHostname(const char *ip);
@@ -244,6 +227,24 @@ public:
 private:
 	// HTML template - if it overrides the default
 	HTMLTemplate *banned_page;
+
+	bool banned_phrase_flag;
+	bool exception_site_flag;
+	bool exception_url_flag;
+	bool banned_extension_flag;
+	bool banned_mimetype_flag;
+	bool banned_site_flag;
+	bool banned_url_flag;
+	bool grey_site_flag;
+	bool grey_url_flag;
+	bool banned_regexpurl_flag;
+	bool exception_regexpurl_flag;
+	bool content_regexp_flag;
+	bool url_regexp_flag;
+	bool exception_extension_flag;
+	bool exception_mimetype_flag;
+	bool exception_file_site_flag;
+	std::deque<int> banned_phrase_list_index;
 
 	std::deque<std::string > conffile;
 
