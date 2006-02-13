@@ -18,8 +18,8 @@ useragentregexp = 'mozilla'
 # When not defined, matches everything.
 # These can be enabled separately, but when both enabled,
 # a request must match both lists.
-#managedmimetypelist = '@DGCONFDIR@/lists/downloadmanagers/managedmimetypes'
-#managedextensionlist = '@DGCONFDIR@/lists/downloadmanagers/managedextensions'
+managedmimetypelist = '@DGCONFDIR@/lists/downloadmanagers/managedmimetypelist'
+#managedextensionlist = '@DGCONFDIR@/lists/downloadmanagers/managedextensionlist'
 
 # HTML/JavaScript Template
 # The contents of this file determine what is presented to the user during
