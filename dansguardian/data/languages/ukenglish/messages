@@ -39,6 +39,9 @@
 "700","Web upload is banned."
 "701","Web upload limit exceeded."
 
+"750","Blanket file download is active and this MIME type is not on the white list: "
+"751","Blanket file download is active and this file is not matched by the white lists."
+
 "800","Banned MIME Type: "
 
 "900","Banned extension: "
