@@ -573,6 +573,7 @@ AC_CONFIG_FILES([Makefile
 		configs/authplugins/Makefile
 		configs/authplugins/ip.conf
 		configs/lists/authplugins/Makefile
+		configs/lists/downloadmanagers/Makefile
                 src/Makefile
                 src/platform.h
 		])
