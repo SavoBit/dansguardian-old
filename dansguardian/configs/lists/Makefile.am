@@ -4,7 +4,7 @@ MAINTAINERCLEANFILES = Makefile.in \
 
 DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists
 
-SUBDIRS = phraselists . contentscanners blacklists authplugins
+SUBDIRS = phraselists . contentscanners blacklists authplugins downloadmanagers
 
 WLISTS = bannedextensionlist bannediplist bannedmimetypelist \
 	 bannedregexpurllist bannedsitelist bannedurllist \
