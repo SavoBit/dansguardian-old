@@ -496,10 +496,10 @@ bool OptionContainer::read(const char *filename, int type)
 		download_dir = findoptionS("filecachedir");
 
 		filter_groups_list_location = findoptionS("filtergroupslist");
-		banned_ip_list_location = findoptionS("bannediplist");
-		exceptions_ip_list_location = findoptionS("exceptioniplist");
+		std::string banned_ip_list_location = findoptionS("bannediplist");
+		std::string exceptions_ip_list_location = findoptionS("exceptioniplist");
 		group_names_list_location = findoptionS("groupnamesfile");
-		language_list_location = languagepath + "messages";
+		std::string language_list_location = languagepath + "messages";
 		if (reporting_level == 1 || reporting_level == 2) {
 			access_denied_address = findoptionS("accessdeniedaddress");
 			access_denied_domain = access_denied_address.c_str();

@@ -93,10 +93,6 @@ public:
 
 	std::string languagepath;
 	std::string filter_groups_list_location;
-	std::string html_template_location;
-	std::string banned_ip_list_location;
-	std::string exceptions_ip_list_location;
-	std::string language_list_location;
 	std::string access_denied_address;
 	std::string log_location;
 	std::string stat_location;
@@ -104,7 +100,7 @@ public:
 	std::string urlipc_filename;
 	std::string ipipc_filename;
 	std::string pid_filename;
-	std::string group_names_list_location;
+
 	int no_daemon;
 	int no_logger;
 	unsigned int max_logitem_length;
@@ -170,6 +166,9 @@ private:
 	std::deque<std::string> conffile;
 	String conffilename;
 	int reporting_level;
+
+	std::string html_template_location;
+	std::string group_names_list_location;
 
 	bool loadDMPlugins();
 
