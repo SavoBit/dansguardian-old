@@ -192,7 +192,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 		h.addXForwardedFor(clientip);  // add squid-like entry
 	}
 	h.makePersistent();
-	h.out(&proxycon, __DGHEADER_SENDALL);
+	h.out(&peercon, &proxycon, __DGHEADER_SENDALL);
 	fdt.tunnel(peercon, proxycon);
 #ifdef DGDEBUG
 	std::cout << "NTLM - receiving step 2" << std::endl;
@@ -204,7 +204,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 #ifdef DGDEBUG
 		std::cout << "NTLM - sending step 2" << std::endl;
 #endif
-		h.out(&peercon, __DGHEADER_SENDALL);
+		h.out(NULL, &peercon, __DGHEADER_SENDALL);
 		fdt.tunnel(proxycon, peercon);
 #ifdef DGDEBUG
 		std::cout << "NTLM - receiving step 3" << std::endl;

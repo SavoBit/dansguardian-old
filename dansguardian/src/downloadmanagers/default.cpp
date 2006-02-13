@@ -139,7 +139,7 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 #ifdef DGDEBUG
 					std::cout << "sending first line of header first" << std::endl;
 #endif
-					docheader->out(peersock, __DGHEADER_SENDFIRSTLINE);
+					docheader->out(NULL,peersock, __DGHEADER_SENDFIRSTLINE);
 					(*headersent) = 1;
 				}
 #ifdef DGDEBUG
