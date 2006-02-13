@@ -25,9 +25,10 @@
 // INCLUDES
 
 #include "HTTPHeader.hpp"
-#include "DataBuffer.hpp"
+//#include "DataBuffer.hpp"
 #include "Socket.hpp"
 #include "OptionContainer.hpp"
+#include "FDTunnel.hpp"
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -51,6 +52,18 @@ extern RegExp urldecode_re;
 void HTTPHeader::setTimeout(int t)
 {
 	timeout = t;
+}
+
+// reset header object for future use
+void HTTPHeader::reset()
+{
+	header.clear();
+	//postdata.reset();
+	postdata[0] = '\0';
+	postdatalen = 0;
+	ispostupload = false;
+	waspersistent = false;
+	ispersistent = false;
 }
 
 // *
@@ -583,12 +596,13 @@ bool HTTPHeader::malformedURL(String url)
 }
 
 // is this a POST request encapsulating a file upload?
-bool HTTPHeader::isPostUpload()
+bool HTTPHeader::isPostUpload(Socket &peersock)
 {
-	if (header[0].before(" ") != "POST") {
+	if (header[0].toCharArray()[0] != 'P') {
 		return false;
 	}
-	bool answer = false;
+
+	/*bool answer = false;
 	int postlen = postdata.buffer_length;
 	int i;
 	if (postlen < 14) {	// min length for there to be a match
@@ -626,7 +640,52 @@ bool HTTPHeader::isPostUpload()
 	catch(exception & e) {
 	};
 	delete[]postdatablock;
-	return answer;
+	return answer;*/
+
+	int cl = contentLength();
+	if (((cl > 0) && (cl < 14)) || (getContentType() == "application/x-www-form-urlencoded")) {
+#ifdef DGDEBUG
+		std::cout << "Based on content length/type, is not POST upload!" << std::endl;
+#endif
+		ispostupload = false;
+		return false;
+	}
+	if (getContentType().length() > 0) {
+#ifdef DGDEBUG
+		std::cout << "Based on content length/type, is POST upload!" << std::endl;
+#endif
+		ispostupload = true;
+		return true;
+	}
+
+#ifdef DGDEBUG
+	std::cout << "Reading a line of POST data to determine content type: ";
+#endif
+	postdatalen = peersock.getLine(postdata, 14, 60);
+#ifdef DGDEBUG
+	std::cout << postdata << std::endl;
+#endif
+	if (postdatalen != 14) {
+#ifdef DGDEBUG
+		std::cout << "Is not POST upload!" << std::endl;
+#endif
+		ispostupload = false;
+		return false;
+	}
+	String conttype(postdata);
+	if (conttype.startsWithLower("content-type: ")) {
+#ifdef DGDEBUG
+		std::cout << "Is POST upload!" << std::endl;
+#endif
+		ispostupload = false;
+		return true;
+	} else {
+#ifdef DGDEBUG
+		std::cout << "Is not POST upload!" << std::endl;
+#endif
+		ispostupload = false;
+		return false;
+	}
 }
 
 // fix bugs in certain web servers that don't obey standards
@@ -1138,7 +1197,8 @@ int HTTPHeader::decode1b64(char c)
 // - this allows us to re-open the proxy connection on pconns if squid's end has
 // timed out but the client's end hasn't. not much use with NTLM, since squid
 // will throw a 407 and restart negotiation, but works well with basic & others.
-void HTTPHeader::out(Socket * sock, int sendflag, bool reconnect) throw(exception)
+// return true if any given POST body is above the specified upload limit.
+bool HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconnect) throw(exception)
 {
 	String l;  // for amalgamating to avoid conflict with the Nagel algorithm
 
@@ -1172,7 +1232,7 @@ void HTTPHeader::out(Socket * sock, int sendflag, bool reconnect) throw(exceptio
 			}
 		}
 		if (sendflag == __DGHEADER_SENDFIRSTLINE) {
-			return;
+			return false;
 		}
 	}
 
@@ -1215,15 +1275,47 @@ void HTTPHeader::out(Socket * sock, int sendflag, bool reconnect) throw(exceptio
 		break;
 	}
 
-	if (postdata.buffer_length > 0) {
+	/*if (postdata.buffer_length > 0) {
 		postdata.out(sock);
+	}*/
+	if (header[0].toCharArray()[0] == 'P') {
+		if (postdatalen > 0) {
+#ifdef DGDEBUG
+			std::cout << "Sending initial POST data chunk" << std::endl;
+#endif
+			sock->writeToSockete(postdata, postdatalen, 0, timeout);
+		}
+#ifdef DGDEBUG
+		std::cout << "Opening tunnel for remainder of POST data" << std::endl;
+#endif
+		FDTunnel fdt;
+		return !fdt.tunnel(*peersock, *sock, false, ispostupload ? o.max_upload_size : -1);
+	}
+	return false;
+}
+
+// discard remainder of POST data
+void HTTPHeader::discard(Socket *sock)
+{
+	static char fred[4096];
+	int cl = contentLength() - postdatalen;
+	int rc;
+	while (cl > 0) {
+		rc = sock->readFromSocket(fred, ((cl > 4096) ? 4096 : cl), 0, timeout, false);
+		if (rc > 0)
+			cl -= rc;
+		else
+			break;
 	}
 }
 
 void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfig)
 {
 	header.clear();
-	postdata.reset();
+	//postdata.reset();
+	postdata[0] = '\0';
+	postdatalen = 0;
+	ispostupload = false;
 
 	// the RFCs don't specify a max header line length so this should be
 	// dynamic really.  Pointed out (well reminded actually) by Daniel Robbins
@@ -1255,10 +1347,10 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 
 	checkheader(allowpersistent);  // sort out a few bits in the header
 
-	int length = 0;
+	/*int length = 0;
 	String requestMethod = header[0].before(" ");
 	if (!requestMethod.contains("/") && (length = contentLength()) > 0) {
 		// if it's a request (not reply) with content, grab the data and store it
 		postdata.read(sock, length);  // get the DataBuffer to read the data
-	}
+	}*/
 }

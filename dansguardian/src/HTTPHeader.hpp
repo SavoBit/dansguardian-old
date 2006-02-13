@@ -35,7 +35,7 @@
 #include <deque>
 
 #include "String.hpp"
-#include "DataBuffer.hpp"
+//#include "DataBuffer.hpp"
 #include "Socket.hpp"
 #include "RegExp.hpp"
 
@@ -46,8 +46,11 @@ class HTTPHeader
 {
 public:
 	std::deque<String> header;
-	DataBuffer postdata;
+	//DataBuffer postdata;
 	unsigned int port;
+
+	// reset header object for future use
+	void reset();
 
 	// network communication funcs
 
@@ -59,7 +62,11 @@ public:
 	// - this allows us to re-open the proxy connection on pconns if squid's end has
 	// timed out but the client's end hasn't. not much use with NTLM, since squid
 	// will throw a 407 and restart negotiation, but works well with basic & others.
-	void out(Socket *sock, int sendflag, bool reconnect = false) throw(exception);
+	// return true if any given POST body is above the specified upload limit.
+	bool out(Socket *peersock, Socket *sock, int sendflag, bool reconnect = false) throw(exception);
+
+	// discard remainder of POST data
+	void discard(Socket *sock);
 	
 	// header value and type checks
 
@@ -92,7 +99,7 @@ public:
 	// detailed value/type checks
 
 	bool malformedURL(String url);
-	bool isPostUpload();
+	bool isPostUpload(Socket &peersock);
 	String getAuthType();
 	String url();
 
@@ -128,6 +135,10 @@ public:
 private:
 	// timeout for socket operations
 	int timeout;
+
+	char postdata[14];
+	int postdatalen;
+	bool ispostupload;
 
 	bool ispersistent, waspersistent;
 
