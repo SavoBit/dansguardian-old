@@ -472,6 +472,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				
 				// reset header, docheader & docbody
 				// headers *should* take care of themselves on the next in()
+				// actually not entirely true for docheader - we may read
+				// certain properties of it (in denyAccess) before we've
+				// actually performed the next in(), so make sure we do a full
+				// reset now.
+				docheader.reset();
 				docbody.reset();
 				// more?
 			} else {
@@ -782,12 +787,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				|| isourwebserver)
 			{
 				proxysock.readyForOutput(10);  // exception on timeout or error
-				header.out(&proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
+				header.out(&peerconn, &proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
 				// if this is not a CONNECT request, check the returned headers for persistency flags
 				if (!isconnect && persist) {
 					docheader.in(&proxysock, persist);
 					persist = docheader.isPersistent();
-					docheader.out(&peerconn, __DGHEADER_SENDALL);
+					docheader.out(NULL, &peerconn, __DGHEADER_SENDALL);
 				}
 				try {
 					fdt.reset();  // make a tunnel object
@@ -871,12 +876,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						|| isourwebserver)
 					{
 						proxysock.readyForOutput(10);  // exception on timeout or error
-						header.out(&proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
+						header.out(&peerconn, &proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
 						// if this is not a CONNECT request, check the returned headers for persistency flags
 						if (!isconnect && persist) {
 							docheader.in(&proxysock, persist);
 							persist = docheader.isPersistent();
-							docheader.out(&peerconn, __DGHEADER_SENDALL);
+							docheader.out(NULL, &peerconn, __DGHEADER_SENDALL);
 						}
 						try {
 							fdt.reset();  // make a tunnel object
@@ -916,7 +921,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			if (isconnect && !isbypass && !isexception) {
 				// send header to proxy
 				proxysock.readyForOutput(10);
-				header.out(&proxysock, __DGHEADER_SENDALL, true);
+				header.out(NULL, &proxysock, __DGHEADER_SENDALL, true);
 				// get header from proxy
 				proxysock.checkForInput(120);
 				docheader.in(&proxysock, persist);
@@ -949,9 +954,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// can't filter content of CONNECT
 				if (!wasrequested) {
 					proxysock.readyForOutput(10);  // exception on timeout or error
-					header.out(&proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
+					header.out(NULL, &proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
 				} else {
-					docheader.out(&peerconn, __DGHEADER_SENDALL);
+					docheader.out(NULL, &peerconn, __DGHEADER_SENDALL);
 				}
 				try {
 #ifdef DGDEBUG
@@ -974,6 +979,23 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				return;  // connection dealt with so exit
 			}
 
+			if (!isexception && !isbypass && (o.max_upload_size > -1) && header.isPostUpload(peerconn))
+			{
+				if ((o.max_upload_size == 0) || (header.contentLength() > o.max_upload_size)) {
+#ifdef DGDEBUG
+					std::cout << "Detected POST upload violation by Content-Length header - discarding rest of POST data..." << std::endl;
+#endif
+					header.discard(&peerconn);
+					checkme.whatIsNaughty = o.max_upload_size == 0 ? o.language_list.getTranslation(700) : o.language_list.getTranslation(701);
+					// Web upload is banned.
+					checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+					checkme.whatIsNaughtyCategories = "Web upload.";
+					checkme.isItNaughty = true;
+					ispostblock = true;
+
+				}
+			}
+
 			if (!checkme.isItNaughty) {
 				// the request is ok, so we can	now pass it to the proxy, and check the returned header
 
@@ -983,134 +1005,137 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// send header to proxy
 				if (!wasrequested) {
 					proxysock.readyForOutput(10);
-					header.out(&proxysock, __DGHEADER_SENDALL, true);
-					// get header from proxy
-					proxysock.checkForInput(120);
-					docheader.in(&proxysock, persist);
-					persist = docheader.isPersistent();
-				}
-
+					ispostblock = header.out(&peerconn, &proxysock, __DGHEADER_SENDALL, true) && !isexception && !isbypass;
+					if (ispostblock) {
 #ifdef DGDEBUG
-				std::cout << "got header from proxy" << std::endl;
-				if (!persist)
-					std::cout << "header says close, so not persisting" << std::endl;
+						std::cout << "Detected POST upload violation by monitoring size of streamed content - discarding rest of POST data..." << std::endl;
 #endif
-				wasrequested = true;  // so we know where we are later
-
-				// if we're not careful, we can end up accidentally setting the bypass cookie twice.
-				// because of the code flow, this second cookie ends up with timestamp 0, and is always disallowed.
-				if (isbypass && !isvirusbypass && !iscookiebypass) {
-#ifdef DGDEBUG
-					std::cout<<"Setting GBYPASS cookie; bypasstimestamp = "<<bypasstimestamp<<std::endl;
-#endif
-					docheader.setCookie("GBYPASS", hashedCookie(&urldomain, filtergroup, &clientip, bypasstimestamp).toCharArray());
+						header.discard(&peerconn);
+						checkme.whatIsNaughty = o.language_list.getTranslation(701);
+						// Web upload limit exceeded.
+						checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+						checkme.whatIsNaughtyCategories = "Web upload.";
+						checkme.isItNaughty = true;
+					} else {
+						// get header from proxy
+						proxysock.checkForInput(120);
+						docheader.in(&proxysock, persist);
+						persist = docheader.isPersistent();
+					}
 				}
 				
-				// don't run scanTest on redirections or head requests
-				// actually, you *can* get redirections with content: check the RFCs!
-				if (runav && ishead) { // (docheader.isRedirection() || ishead)) {
+				if (!checkme.isItNaughty) {
 #ifdef DGDEBUG
-					std::cout << "Request is HEAD; disabling runav" << std::endl;
+					std::cout << "got header from proxy" << std::endl;
+					if (!persist)
+						std::cout << "header says close, so not persisting" << std::endl;
 #endif
-					runav = false;
-				}
+					wasrequested = true;  // so we know where we are later
 
-				// don't even bother scan testing if the content-length header indicates the file is larger than the maximum size we'll scan
-				// - based on patch supplied by cahya (littlecahya@yahoo.de)
-				// be careful: contentLength is signed, and max_content_filecache_scan_size is unsigned
-				int cl = docheader.contentLength();
-				if (runav) {
-					if (cl == 0)
+					// if we're not careful, we can end up accidentally setting the bypass cookie twice.
+					// because of the code flow, this second cookie ends up with timestamp 0, and is always disallowed.
+					if (isbypass && !isvirusbypass && !iscookiebypass) {
+#ifdef DGDEBUG
+						std::cout<<"Setting GBYPASS cookie; bypasstimestamp = "<<bypasstimestamp<<std::endl;
+#endif
+						docheader.setCookie("GBYPASS", hashedCookie(&urldomain, filtergroup, &clientip, bypasstimestamp).toCharArray());
+					}
+					
+					// don't run scanTest on redirections or head requests
+					// actually, you *can* get redirections with content: check the RFCs!
+					if (runav && ishead) { // (docheader.isRedirection() || ishead)) {
+#ifdef DGDEBUG
+						std::cout << "Request is HEAD; disabling runav" << std::endl;
+#endif
 						runav = false;
-					else if ((cl > 0) && (cl > o.max_content_filecache_scan_size))
-						runav = false;
-				}
+					}
 
-				// now that we have the proxy's header too, we can make a better informed decision on whether or not to scan.
-				// this used to be done before we'd grabbed the proxy's header, rendering exceptionvirusmimetypelist useless,
-				// and exceptionvirusextensionlist less effective, because we didn't have a Content-Disposition header.
-				// checkme: split scanTest into two parts? we can check the site & URL lists long before we get here, then
-				// do the rest of the checks later.
-				if (runav) {
-					runav = false;
+					// don't even bother scan testing if the content-length header indicates the file is larger than the maximum size we'll scan
+					// - based on patch supplied by cahya (littlecahya@yahoo.de)
+					// be careful: contentLength is signed, and max_content_filecache_scan_size is unsigned
+					int cl = docheader.contentLength();
+					if (runav) {
+						if (cl == 0)
+							runav = false;
+						else if ((cl > 0) && (cl > o.max_content_filecache_scan_size))
+							runav = false;
+					}
+
+					// now that we have the proxy's header too, we can make a better informed decision on whether or not to scan.
+					// this used to be done before we'd grabbed the proxy's header, rendering exceptionvirusmimetypelist useless,
+					// and exceptionvirusextensionlist less effective, because we didn't have a Content-Disposition header.
+					// checkme: split scanTest into two parts? we can check the site & URL lists long before we get here, then
+					// do the rest of the checks later.
+					if (runav) {
+						runav = false;
 #ifdef DGDEBUG
-					std::cerr << "cs plugins:" << o.csplugins.size() << std::endl;
+						std::cerr << "cs plugins:" << o.csplugins.size() << std::endl;
 #endif
-					//send header to plugin here needed
-					//also send user and group
-					int csrc = 0;
+						//send header to plugin here needed
+						//also send user and group
+						int csrc = 0;
 #ifdef DGDEBUG
-					int j = 0;
+						int j = 0;
 #endif
-					for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
+						for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
 #ifdef DGDEBUG
-						std::cerr << "running scanTest " << j << std::endl;
+							std::cerr << "running scanTest " << j << std::endl;
 #endif
-						csrc = ((CSPlugin*)(*i))->scanTest(&header, &docheader, clientuser.c_str(), filtergroup, clientip.c_str());
+							csrc = ((CSPlugin*)(*i))->scanTest(&header, &docheader, clientuser.c_str(), filtergroup, clientip.c_str());
 #ifdef DGDEBUG
-						std::cerr << "scanTest " << j << " returned: " << csrc << std::endl;
+							std::cerr << "scanTest " << j << " returned: " << csrc << std::endl;
 #endif
-						if (csrc > 0) {
-							sendtoscanner.push_back(true);
-							runav = true;
-						} else {
-							if (csrc < 0)
-								syslog(LOG_ERR, "scanTest returned error: %d", csrc);
-							sendtoscanner.push_back(false);
+							if (csrc > 0) {
+								sendtoscanner.push_back(true);
+								runav = true;
+							} else {
+								if (csrc < 0)
+									syslog(LOG_ERR, "scanTest returned error: %d", csrc);
+								sendtoscanner.push_back(false);
+							}
+#ifdef DGDEBUG
+							j++;
+#endif
+						}
+					}
+#ifdef DGDEBUG
+					std::cerr << "runav = " << runav << std::endl;
+#endif
+
+					// no need to check bypass mode, exception mode, auth required headers, or banned ip/user (the latter get caught by requestChecks later)
+					// checkme: surely redirections don't have a MIME type either? why do *any* checking on them - we just force them to be un-naughty later!
+					if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.authRequired() /*&& !docheader.isRedirection()*/)
+					{
+						mimetype = docheader.getContentType().toCharArray();
+
+						unsigned int p = (*o.fg[filtergroup]).banned_mimetype_list;
+						if ((i = (*o.lm.l[p]).findInList((char *) mimetype.c_str())) != NULL) {
+							checkme.whatIsNaughty = o.language_list.getTranslation(800);
+							// Banned MIME Type:
+							checkme.whatIsNaughty += i;
+							checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+							checkme.isItNaughty = true;
+							checkme.whatIsNaughtyCategories = "Banned MIME Type.";
 						}
 #ifdef DGDEBUG
-						j++;
-#endif
-					}
-				}
-#ifdef DGDEBUG
-				std::cerr << "runav = " << runav << std::endl;
+						std::cout << mimetype.length() << std::endl;
+						std::cout << ":" << mimetype;
+						std::cout << ":" << std::endl;
 #endif
 
-				// no need to check bypass mode, exception mode, auth required headers, or banned ip/user (the latter get caught by requestChecks later)
-				// checkme: surely redirections don't have a MIME type either? why do *any* checking on them - we just force them to be un-naughty later!
-				if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.authRequired() /*&& !docheader.isRedirection()*/)
-				{
-					mimetype = docheader.getContentType().toCharArray();
-
-					unsigned int p = (*o.fg[filtergroup]).banned_mimetype_list;
-					if ((i = (*o.lm.l[p]).findInList((char *) mimetype.c_str())) != NULL) {
-						checkme.whatIsNaughty = o.language_list.getTranslation(800);
-						// Banned MIME Type:
-						checkme.whatIsNaughty += i;
-						checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
-						checkme.isItNaughty = true;
-						checkme.whatIsNaughtyCategories = "Banned MIME Type.";
-					}
+						if (!checkme.isItNaughty /*&& !docheader.isRedirection()*/) {
+							// Can't ban file extensions of URLs that just redirect
+							String tempurl = urld;
+							String tempdispos = docheader.disposition();
+							if (tempdispos.length() > 1) {
+								// dispos filename must take presidense
 #ifdef DGDEBUG
-					std::cout << mimetype.length() << std::endl;
-					std::cout << ":" << mimetype;
-					std::cout << ":" << std::endl;
+								std::cout << "Disposition filename:" << tempdispos << ":" << std::endl;
 #endif
-
-					if (!checkme.isItNaughty /*&& !docheader.isRedirection()*/) {
-						// Can't ban file extensions of URLs that just redirect
-						String tempurl = urld;
-						String tempdispos = docheader.disposition();
-						if (tempdispos.length() > 1) {
-							// dispos filename must take presidense
-#ifdef DGDEBUG
-							std::cout << "Disposition filename:" << tempdispos << ":" << std::endl;
-#endif
-							// The function expects a url so we have to
-							// generate a psudo one.
-							tempdispos = "http://foo.bar/" + tempdispos;
-							if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempdispos)) != NULL) {
-								checkme.whatIsNaughty = o.language_list.getTranslation(900);
-								// Banned extension:
-								checkme.whatIsNaughty += i;
-								checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
-								checkme.isItNaughty = true;
-								checkme.whatIsNaughtyCategories = "Banned extension.";
-							}
-						} else {
-							if (!tempurl.contains("?")) {
-								if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempurl)) != NULL) {
+								// The function expects a url so we have to
+								// generate a psudo one.
+								tempdispos = "http://foo.bar/" + tempdispos;
+								if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempdispos)) != NULL) {
 									checkme.whatIsNaughty = o.language_list.getTranslation(900);
 									// Banned extension:
 									checkme.whatIsNaughty += i;
@@ -1118,12 +1143,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 									checkme.isItNaughty = true;
 									checkme.whatIsNaughtyCategories = "Banned extension.";
 								}
-							}
-							else if (String(mimetype.c_str()).contains("application/")) {
-								while (tempurl.endsWith("?")) {
-									tempurl.chop();
-								}
-								while (tempurl.contains("/")) {	// no slash no url
+							} else {
+								if (!tempurl.contains("?")) {
 									if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempurl)) != NULL) {
 										checkme.whatIsNaughty = o.language_list.getTranslation(900);
 										// Banned extension:
@@ -1131,48 +1152,63 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 										checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
 										checkme.isItNaughty = true;
 										checkme.whatIsNaughtyCategories = "Banned extension.";
-										break;
 									}
-									while (tempurl.contains("/") && !tempurl.endsWith("?")) {
+								}
+								else if (String(mimetype.c_str()).contains("application/")) {
+									while (tempurl.endsWith("?")) {
 										tempurl.chop();
 									}
-									tempurl.chop();  // get rid of the ?
+									while (tempurl.contains("/")) {	// no slash no url
+										if ((i = (*o.fg[filtergroup]).inBannedExtensionList(tempurl)) != NULL) {
+											checkme.whatIsNaughty = o.language_list.getTranslation(900);
+											// Banned extension:
+											checkme.whatIsNaughty += i;
+											checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+											checkme.isItNaughty = true;
+											checkme.whatIsNaughtyCategories = "Banned extension.";
+											break;
+										}
+										while (tempurl.contains("/") && !tempurl.endsWith("?")) {
+											tempurl.chop();
+										}
+										tempurl.chop();  // get rid of the ?
+									}
 								}
 							}
 						}
 					}
-				}
 
-				// check header sent to proxy - this could be done before the send, but we
-				// want to wait until after the MIME type & extension checks, because they may
-				// act as a quicker rejection. also so as not to pre-emptively ban currently
-				// un-authed users.
-				if (!isbypass && !isexception && !checkme.isItNaughty && !docheader.authRequired()) {
-					requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup,
-						&ispostblock, isbanneduser, isbannedip);
-				}
+					// check header sent to proxy - this could be done before the send, but we
+					// want to wait until after the MIME type & extension checks, because they may
+					// act as a quicker rejection. also so as not to pre-emptively ban currently
+					// un-authed users.
+					if (!isbypass && !isexception && !checkme.isItNaughty && !docheader.authRequired()) {
+						requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup,
+							&ispostblock, isbanneduser, isbannedip);
+					}
 
-				// check body from proxy
-				// can't do content filtering on HEAD or redirections (no content)
-				// actually, redirections CAN have content
-				if (!checkme.isItNaughty /*&& !docheader.isRedirection()*/ && (cl != 0) && !ishead) {
-					if (docheader.isContentType("text") || runav) {
-						// don't search the cache if scan_clean_cache disabled & runav true (won't have been cached)
-						// also don't search cache for auth required headers (same reason)
-						if (o.url_cache_number > 0 && !(!o.scan_clean_cache && runav) && !docheader.authRequired()) {
-							if (wasClean(urld, filtergroup)) {
-								wasclean = true;
-								cachehit = true;
-								runav = false;
+					// check body from proxy
+					// can't do content filtering on HEAD or redirections (no content)
+					// actually, redirections CAN have content
+					if (!checkme.isItNaughty /*&& !docheader.isRedirection()*/ && (cl != 0) && !ishead) {
+						if (docheader.isContentType("text") || runav) {
+							// don't search the cache if scan_clean_cache disabled & runav true (won't have been cached)
+							// also don't search cache for auth required headers (same reason)
+							if (o.url_cache_number > 0 && !(!o.scan_clean_cache && runav) && !docheader.authRequired()) {
+								if (wasClean(urld, filtergroup)) {
+									wasclean = true;
+									cachehit = true;
+									runav = false;
 #ifdef DGDEBUG
-								std::cout << "url was clean skipping content and AV checking" << std::endl;
+									std::cout << "url was clean skipping content and AV checking" << std::endl;
 #endif
+								}
 							}
+							waschecked = true;
+							contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
+								&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
+								&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified);
 						}
-						waschecked = true;
-						contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
-							&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
-							&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified);
 					}
 				}
 			}
@@ -1218,7 +1254,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 			if (wasrequested == false) {
 				proxysock.readyForOutput(10);  // exceptions on error/timeout
-				header.out(&proxysock, __DGHEADER_SENDALL, true);  // exceptions on error/timeout
+				header.out(&peerconn, &proxysock, __DGHEADER_SENDALL, true);  // exceptions on error/timeout
 				proxysock.checkForInput(120);  // exceptions on error/timeout
 				docheader.in(&proxysock, persist);  // get reply header from proxy
 				persist = docheader.isPersistent();
@@ -1228,13 +1264,13 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 			peerconn.readyForOutput(10);  // exceptions on error/timeout
 			if (headersent == 1) {
-				docheader.out(&peerconn, __DGHEADER_SENDREST);  // send rest of header to client
+				docheader.out(NULL, &peerconn, __DGHEADER_SENDREST);  // send rest of header to client
 #ifdef DGDEBUG
 				std::cout << "sent rest header to client" << std::endl;
 #endif
 			}
 			else if (headersent == 0) {
-				docheader.out(&peerconn, __DGHEADER_SENDALL);  // send header to client
+				docheader.out(NULL, &peerconn, __DGHEADER_SENDALL);  // send header to client
 #ifdef DGDEBUG
 				std::cout << "sent all header to client" << std::endl;
 #endif
@@ -1671,10 +1707,10 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 				// Banned Regular Expression URL found.
 				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_regexpurl_list_ref[j]]).category.toCharArray();
 			}
-			else if ((o.max_upload_size > -1) && (*header).isPostUpload())
+			/*else if ((o.max_upload_size > -1) && (*header).isPostUpload())
 			{
 #ifdef DGDEBUG
-				std::cout << "is post upload" << std::endl;
+				std::cout << "Checking POST upload limit" << std::endl;
 #endif
 				if (o.max_upload_size == 0) {
 					(*checkme).whatIsNaughty = o.language_list.getTranslation(700);
@@ -1683,16 +1719,17 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 					(*checkme).whatIsNaughtyCategories = "Web upload.";
 					(*checkme).isItNaughty = true;
 					(*ispostblock) = true;
-				}
-				else if ((*header).contentLength() > o.max_upload_size) {
+				} else if (header->contentLength() > o.max_upload_size) {
+#ifdef DGDEBUG
+					std::cout << "Detected POST upload violation by Content-Length header" << std::endl;
+#endif
 					(*checkme).whatIsNaughty = o.language_list.getTranslation(701);
 					// Web upload limit exceeded.
 					(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
 					(*checkme).whatIsNaughtyCategories = "Web upload.";
 					(*checkme).isItNaughty = true;
-					(*ispostblock) = true;
 				}
-			}
+			}*/
 		}
 		// look for URLs within URLs - ban, for example, images originating from banned sites during a Google image search.
 		if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).deep_url_analysis == 1) {
