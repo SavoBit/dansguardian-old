@@ -36,7 +36,9 @@ AC_CHECK_HEADER([endian.h],
     [AC_DEFINE(HAVE_SYS_ENDIAN_H, [], [Define if sys/endian.h exists])],
     [AC_CHECK_HEADER([machine/endian.h],
       [AC_DEFINE(HAVE_MACHINE_ENDIAN_H, [], [Define if machine/endian.h exists])],
-      [AC_MSG_ERROR([no endian.h found! (or sys/endian.h, or machine/endian.h)])]
+      # hmm... no endian.h. try this instead.
+      [AC_MSG_WARN([no endian.h found! (or sys/endian.h, or machine/endian.h)])
+      AC_C_BIGENDIAN()]
     )]
   )]
 )

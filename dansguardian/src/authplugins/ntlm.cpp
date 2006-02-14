@@ -29,15 +29,15 @@
 #include <iconv.h>
 
 #ifdef HAVE_ENDIAN_H
-#include <endian.h>
+# include <endian.h>
 #else
-#ifdef HAVE_SYS_ENDIAN_H
-#include <sys/endian.h>
-#else
-#ifdef HAVE_MACHINE_ENDIAN_H
-#include <machine/endian.h>
-#endif
-#endif
+# ifdef HAVE_SYS_ENDIAN_H
+#  include <sys/endian.h>
+# else
+#  ifdef HAVE_MACHINE_ENDIAN_H
+#   include <machine/endian.h>
+#  endif
+# endif
 #endif
 
 
@@ -48,39 +48,37 @@ extern OptionContainer o;
 // NTLM username grabbing needs to be independent of endianness
 
 #ifdef HAVE_BYTESWAP_H
-#include <byteswap.h>
-#define bswap16(x) bswap_16(x)
-#define bswap32(x) bswap_32(x)
+# include <byteswap.h>
+# define bswap16(x) bswap_16(x)
+# define bswap32(x) bswap_32(x)
 #else
-#ifndef bswap16
-#define bswap16(x) (((((u_int16_t)x) >> 8) & 0xff) | ((((u_int16_t)x) & 0xff) << 8))
-#endif
-#ifndef bswap32
-#define bswap32(x) (((((u_int32_t)x) & 0xff000000) >> 24) | ((((u_int32_t)x) & 0x00ff0000) >>  8) | \
+# ifndef bswap16
+#  define bswap16(x) (((((u_int16_t)x) >> 8) & 0xff) | ((((u_int16_t)x) & 0xff) << 8))
+# endif
+# ifndef bswap32
+#  define bswap32(x) (((((u_int32_t)x) & 0xff000000) >> 24) | ((((u_int32_t)x) & 0x00ff0000) >>  8) | \
 	((((u_int32_t)x) & 0x0000ff00) <<  8) | ((((u_int32_t)x) & 0x000000ff) << 24))
-#endif
+# endif
 #endif
 
-#ifdef __BYTE_ORDER
+#ifndef WORDS_BIGENDIAN
+# ifdef __BYTE_ORDER
+#  if __BYTE_ORDER == __BIG_ENDIAN
+#   define WORDS_BIGENDIAN 1
+#  endif
+# else
+#  if _BYTE_ORDER == _BIG_ENDIAN
+#   define WORDS_BIGENDIAN 1
+#  endif
+# endif
+#endif
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-#define SSWAP(x) (bswap16((x)))
-#define WSWAP(x) (bswap32((x)))
+#ifdef WORDS_BIGENDIAN
+# define SSWAP(x) (bswap16((x)))
+# define WSWAP(x) (bswap32((x)))
 #else
-#define SSWAP(x) (x)
-#define WSWAP(x) (x)
-#endif
-
-#else
-
-#if _BYTE_ORDER == _BIG_ENDIAN
-#define SSWAP(x) (bswap16((x)))
-#define WSWAP(x) (bswap32((x)))
-#else
-#define SSWAP(x) (x)
-#define WSWAP(x) (x)
-#endif
-
+# define SSWAP(x) (x)
+# define WSWAP(x) (x)
 #endif
 
 
