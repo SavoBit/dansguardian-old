@@ -474,11 +474,11 @@ bool FOptionContainer::read(const char *filename)
 					return false;
 				}		// mime types
 				exception_mimetype_flag = true;
-				if (!readFile(exception_file_site_list_location.c_str(),&exception_file_site_list,false,true,"exceptionfilesitelist")) {
-					return false;
-				}		// site exceptions
-				exception_file_site_flag = true;
 			}
+			if (!readFile(exception_file_site_list_location.c_str(),&exception_file_site_list,false,true,"exceptionfilesitelist")) {
+				return false;
+			}		// download site exceptions
+			exception_file_site_flag = true;
 
 			if (!readbplfile(banned_phrase_list_location.c_str(), exception_phrase_list_location.c_str(), weighted_phrase_list_location.c_str())) {
 				return false;
