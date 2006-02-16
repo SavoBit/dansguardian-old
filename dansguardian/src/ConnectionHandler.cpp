@@ -1108,8 +1108,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					{
 						bool download_exception = false;
 						
-						// If in blanket download block mode, check the exception file site list
-						if (o.fg[filtergroup]->block_downloads && (o.fg[filtergroup]->inExceptionFileSiteList(urld))) {
+						// If in blanket download block mode, check the exception file site list. Actually, this is useful outside blanket block mode too...
+						if (/*o.fg[filtergroup]->block_downloads &&*/ (o.fg[filtergroup]->inExceptionFileSiteList(urld))) {
 							download_exception = true;
 						}
 
@@ -1579,13 +1579,12 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		
 		std::string stringcode = String(code).toCharArray();
 		std::string stringgroup(String(filtergroup+1).toCharArray());
-		stringgroup = "(filter" + stringgroup + ") " + o.fg[filtergroup]->name;
 		
 		switch (o.log_file_format) {
 		case 4:
-			logline = when +"\t"+ who + "\t" + (clienthost ? *clienthost : from) + "\t" + where.toCharArray() + "\t" + what + "\t"
+			logline = when +"\t"+ who + "\t" + from + "\t" + where.toCharArray() + "\t" + what + "\t"
 				+ how.toCharArray() + "\t" + ssize + "\t" + sweight + "\t" + (cat ? (*cat) : "") +  "\t" + stringgroup + "\t"
-				+ stringcode + "\t" + mimetype + "\n";
+				+ stringcode + "\t" + mimetype + "\t" + (clienthost ? *clienthost : "-") + "\t" + o.fg[filtergroup]->name + "\n";
 			break;
 		case 3:
 			{
@@ -1643,14 +1642,14 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 				break;
 			}
 		case 2:
-			logline = "\"" + when +"\",\""+ who + "\",\"" + (clienthost ? *clienthost : from) + "\",\"" + where.toCharArray() + "\",\"" + what + "\",\""
+			logline = "\"" + when +"\",\""+ who + "\",\"" + from + "\",\"" + where.toCharArray() + "\",\"" + what + "\",\""
 				+ how.toCharArray() + "\",\"" + ssize + "\",\"" + sweight + "\",\"" + (cat ? (*cat) : "") +  "\",\"" + stringgroup + "\",\""
-				+ stringcode + "\",\"" + mimetype + "\"\n";
+				+ stringcode + "\",\"" + mimetype + "\",\"" + (clienthost ? *clienthost : "-") + "\",\"" + o.fg[filtergroup]->name + "\"\n";
 			break;
 		default:
-			logline = when +" "+ who + " " + (clienthost ? *clienthost : from) + " " + where.toCharArray() + " " + what + " "
+			logline = when +" "+ who + " " + from + " " + where.toCharArray() + " " + what + " "
 				+ how.toCharArray() + " " + ssize + " " + sweight + " " + (cat ? (*cat) : "") +  " " + stringgroup + " "
-				+ stringcode + " " + mimetype + "\n";
+				+ stringcode + " " + mimetype + " " + (clienthost ? *clienthost : "-") + " " + o.fg[filtergroup]->name + "\n";
 		}
 
 		// connect to dedicated logging proc
