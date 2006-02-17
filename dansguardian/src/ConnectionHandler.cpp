@@ -1375,6 +1375,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					}
 					sendurl += tempfilename + "&M=" + tempfilemime + "&D=" + tempfiledis;
 					docbody.dm_plugin->sendLink(peerconn, sendurl, url);
+					// can't persist after this - DM plugins don't generally send a Content-Length.
+					persist = false;
 				} else {
 #ifdef DGDEBUG
 					std::cout << "sending body to client" << std::endl;
