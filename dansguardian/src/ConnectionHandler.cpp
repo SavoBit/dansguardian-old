@@ -1161,7 +1161,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						}
 
 						// Perform extension matching - if not already matched the exception MIME list
-						if (!download_exception && !checkme.isItNaughty /*&& !docheader.isRedirection()*/) {
+						if (!download_exception /*&& !checkme.isItNaughty && !docheader.isRedirection()*/) {
 							// Can't ban file extensions of URLs that just redirect
 							String tempurl = urld;
 							String tempdispos = docheader.disposition();
@@ -1227,6 +1227,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 								checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
 								checkme.isItNaughty = true;
 								checkme.whatIsNaughtyCategories = "Banned extension.";
+							}
+							else if (matched_extension && (o.fg[filtergroup]->block_downloads)) {
+								// intention is to match either/or of the MIME & extension lists
+								// so if it gets this far, un-naughty it (may have been naughtied by the MIME type list)
+								checkme.isItNaughty = false;
 							}
 						}
 					}
