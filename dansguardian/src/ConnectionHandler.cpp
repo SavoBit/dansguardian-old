@@ -226,6 +226,7 @@ void ConnectionHandler::addToClean(String &url, const int fg)
 	std::string myurl = "g ";
 	myurl += url.after("://").toCharArray();
 	myurl[1] = fg+1;
+	myurl += "\n";
 	try {
 		ipcsock.writeString(myurl.c_str());  // throws on err
 	}

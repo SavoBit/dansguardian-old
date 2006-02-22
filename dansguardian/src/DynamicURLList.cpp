@@ -72,9 +72,15 @@ void DynamicURLList::flush()
 int DynamicURLList::posInList(const char *url)
 {
 	if (items == 0) {
+#ifdef DGDEBUG
+		std::cout << "url list cache is empty" << std::endl;
+#endif
 		// if the list is empty, indicate that the entry should go in pos 0
 		return -1;
 	}
+#ifdef DGDEBUG
+		std::cout << "url list cache: performing search..." << std::endl;
+#endif
 	return search(0, items - 1, url);
 }
 
@@ -87,7 +93,45 @@ int DynamicURLList::search(int a, int s, const char *url)
 	int m = (a + s) / 2;
 	// look up the url pointed to by this entry in the index
 	char *i = index[m] * 1000 + urls;
-	int c = strcmp(i,url);
+
+#ifdef DGDEBUG
+	std::cout << "url list cache: comparing " << i << " to " << url << std::endl;
+#endif
+
+	int alen = strlen(i);
+	int blen = strlen(url);
+	int maxlen = alen < blen ? alen : blen;
+	char *apos = (char *) i;
+	char *bpos = (char *) url;
+	int j = 0;
+	int c = 0;
+	unsigned char achar;
+	unsigned char bchar;
+	while (j < maxlen) {
+		achar = apos[0];
+		bchar = bpos[0];
+		if (achar > bchar) {
+			c = 1;
+			break;
+		}
+		if (achar < bchar) {
+			c = -1;
+			break;
+		}
+		j++;
+		apos++;
+		bpos++;
+	}
+	if (c == 0) {
+		if (alen > blen) {
+			c = 1;
+		}
+		else if (alen < blen) {
+			c = -1;
+		}
+	}
+	// otherwise, assume both equal
+
 	// we found the entry
 	if (c == 0)
 		return m;
@@ -160,7 +204,7 @@ bool DynamicURLList::inURLList(const char *url, const int fg)
 	}
 
 #ifdef DGDEBUG
-	std::cout << "pos:" << pos << std::endl;
+	std::cout << "pos: " << pos << std::endl;
 #endif
 
 	// if we have found an entry, also check to see that it hasn't gone inactive.
