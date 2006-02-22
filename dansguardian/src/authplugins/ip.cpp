@@ -297,7 +297,7 @@ int ipinstance::readIPMelangeList(const char *filename) {
 		std::cout << "key: " << key << std::endl;
 		std::cout << "value: " << value.toInteger() << std::endl;
 #endif
-		if (value.toInteger() > o.numfg) {
+		if ((value.toInteger() < 1) || (value.toInteger() > o.filter_groups)) {
 			if (!is_daemonised)
 				std::cerr << "Filter group out of range; entry " << line << " in " << filename << std::endl;
 			syslog(LOG_ERR, "Filter group out of range; entry %s in %s", line.toCharArray(), filename);

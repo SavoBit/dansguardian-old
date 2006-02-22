@@ -563,7 +563,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						return;
 					}
 				}
-				if ((!authed) || (filtergroup >= o.numfg)) {
+				if ((!authed) || (filtergroup < 0) || (filtergroup >= o.numfg)) {
 #ifdef DGDEBUG
 					if (!authed)
 						std::cout << "No identity found; using defaults" << std::endl;
