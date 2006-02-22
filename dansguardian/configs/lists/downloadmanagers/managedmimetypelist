@@ -24,6 +24,7 @@ application/x-x509-ca-cert
 application/pkix-cert
 application/keychain_access
 # exe
+application/octet-stream
 application/exe
 application/x-exe
 application/dos-exe
