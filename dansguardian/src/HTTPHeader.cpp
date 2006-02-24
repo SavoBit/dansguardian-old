@@ -567,7 +567,7 @@ bool HTTPHeader::malformedURL(String url)
 	}
 	if (host.length() < 2) {
 #ifdef DGDEBUG
-		std::cout << "host len to small" << std::endl;
+		std::cout << "host len too small" << std::endl;
 #endif
 		return true;
 	}
@@ -725,6 +725,9 @@ void HTTPHeader::checkheader(bool allowpersistent)
 				ispersistent = true;
 			}
 		}
+		else if (header[i].startsWith("host:")) {
+			header[i] = "Host:" + header[i].after(":");
+		}
 #ifdef DGDEBUG
 		std::cout << header[i] << std::endl;
 #endif
@@ -784,6 +787,10 @@ String HTTPHeader::url()
 					}
 				}
 			}
+			if (port == 0)
+				port = 80;
+			// Squid doesn't like requests in this format. Work around the fact.
+			header[0] = requestType() + " " + answer + " HTTP/" + header[0].after(" HTTP/");
 		} else {	// must be in the form GET http://foo.bar:80/ HTML/1.0
 			if (!answer.after("://").contains("/")) {
 				answer += "/";  // needed later on so correct host is extracted
