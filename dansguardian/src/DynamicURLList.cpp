@@ -94,9 +94,9 @@ int DynamicURLList::search(int a, int s, const char *url)
 	// look up the url pointed to by this entry in the index
 	char *i = index[m] * 1000 + urls;
 
-#ifdef DGDEBUG
+/*#ifdef DGDEBUG
 	std::cout << "url list cache: comparing " << i << " to " << url << std::endl;
-#endif
+#endif*/
 
 	int alen = strlen(i);
 	int blen = strlen(url);
