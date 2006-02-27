@@ -3,7 +3,7 @@
 # 2004,2005 - Daniel Barron
 
 AC_PREREQ(2.57)
-AC_INIT(dansguardian, 2.9.6.0)
+AC_INIT(dansguardian, 2.9.6.1)
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([dgconfig.h])
 
@@ -492,21 +492,36 @@ else
 	AC_DEFINE([ENABLE_NTLM],[],[Define to enable NTLM auth plugin])
 	# now need to check if they're using an iconv library, rather
 	# than a native iconv implementation
-	AC_MSG_CHECKING(for iconv)
 	AC_ARG_WITH(libiconv,
-		[AC_HELP_STRING([--with-libiconv@<:@=NONE@:>@], [Use this if compiling on a system which requires an external iconv library (only used in conjunction with NTLM auth plugin). Set to search path, or "yes" if no non-standard search path is required.])],
+		[AC_HELP_STRING([--with-libiconv@<:@=NONE@:>@], [Specify non-standard search path on a system which requires an external iconv library (only used in conjunction with NTLM auth plugin).])],
 		[ # check for header & func (in library) in given prefix
-		if test "x$withval" = "xyes" | test "x$withval" = "x"; then
-			LIBS="-liconv ${LIBS}"
-		else
-			CPPFLAGS="${CPPFLAGS} -I${withval}/include"
-			LIBS="-L${withval}/lib -liconv ${LIBS}"
-		fi
-		AC_CHECK_LIB(iconv, iconv, [AC_MSG_RESULT(linked)], [AC_MSG_ERROR([--with-libiconv used, but no libiconv found! (needed by NTLM plugin)])])
+			if test "x$withval" != "x"; then
+				CPPFLAGS="${CPPFLAGS} -I${withval}/include"
+				LIBS="-L${withval}/lib -liconv ${LIBS}"
+			fi
+			AC_CHECK_LIB(iconv, iconv, [AC_MSG_RESULT(linked)], [
+				AC_MSG_RESULT(no)
+				AC_CHECK_LIB(iconv, libiconv, [AC_MSG_RESULT(linked)], [
+					AC_MSG_ERROR([no libiconv found in given search path! (needed by NTLM plugin)])
+				])
+			])
 		],
 		[ # check for native header & func (no library)
-		AC_CHECK_FUNCS(iconv, [AC_MSG_RESULT(native)], [AC_MSG_ERROR([--with-libiconv not used, but no native iconv found! (needed by NTLM plugin)])])
-		])
+			AC_CHECK_FUNCS(iconv, [AC_MSG_RESULT(native)], [
+				AC_MSG_RESULT(no)
+				# native not found, so look for linked
+				LIBS="-liconv ${LIBS}"
+				AC_CHECK_LIB(iconv, iconv, [
+					AC_MSG_RESULT(linked)
+				], [
+					AC_MSG_RESULT(no)
+					AC_CHECK_LIB(iconv, libiconv, [AC_MSG_RESULT(linked)], [
+						AC_MSG_ERROR([no native or standard library iconv function found! (needed by NTLM plugin - try again with "--with-libiconv"?)])
+					])
+				])
+			])
+		]
+	)
 fi],
 [
 	AC_MSG_RESULT(no)
