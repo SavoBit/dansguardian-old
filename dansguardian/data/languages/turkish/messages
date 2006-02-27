@@ -1,55 +1,54 @@
 # DansGuardian messages file in Turkish
-#
-# Translation by Görkem Cetin
+# Translation by Ozgur Karatas
+# trdocmaster at dansguardian dot org
 
-"1","Eriþim Engellendi"
+"1","Erisim Engellendi"
 
-"100","IP adresinizin web taramasý yapmasý engellenmiþtir: "
-"101","IP adresinizin web taramasý yapmasý engellenmiþtir."
-"102","Kullanýcý adýnýzýn web taramasý yapmasý engellenmiþtir: "
+"100","Bu IP adresi ile internete erisim engellenmistir: "
+"101","Bu IP ile internete erisim engellenmistir."
+"102","Bu kullanici adi ile internete erisim engellenmistir.: "
 
-"200","Ýstenen URL hatalýdýr."
+"200","Gitmek istediginiz URL hatalidir."
 
-"300","Yasaklý bir ifade bulundu: "
-"301","Yasaklý ifade bulundu."
+"300","Yasaklanmis bir ifade iceren sayfaya girmeye calisiyorsunuz: "
+"301","Sistem yoneticisi tarafindan engellenmis bir ifade tespit edildi."
 
-"400","Yasaklý ifade(ler) bulundu: "
-"401","Yasaklý ifade(ler) bulundu."
-"402","Aðýrlýklý ifade limiti: "
-"403","Aðýrlýklý ifade limiti aþýldý."
+"400","Yasaklanmis kelimeler bulundu: "
+"401","Yasaklanmis kelimeler tespit edildi."
+"402","Engellenmis ifadelerin limiti asildi: "
+"403","Engellenmis kelime limiti asildi."
 
-"500","Yasaklý site: "
-"501","Yasaklý URL: "
-"502","Blanket Block is active and that site is not on the white list."
-"503","Yasaklanmýþ düzenli ifade (URL): "
-"504","Yasaklanmýþ düzenli ifade bulundu."
-"505","Blanket IP Block is active and that address is an IP only address."
+"500","Yasaklanmis Site: "
+"501","Yasaklanmis URL: "
+"502","Erisilebilir listesinde bulunmayan bir siteye giremezsiniz."
+"503","Yasaklanmis düzensiz ifade (URL): "
+"504","Yasaklanmis duzensiz ifadeye rastlandi."
+"505","Bu IP adresinin asagidaki siteye girisi engellenmistir."
 
-"600","Exception client IP match."
-"601","Exception client user match."
-"602","Exception site match."
-"603","Exception URL match."
-"604","Exception phrase found: "
-"605","Combination exception phrase found: "
-"606","Bypass URL exception."
-"607","Bypass cookie exception."
-"608","Scan bypass URL exception."
-"609","Exception regular expression URL match: "
-# 606,607 by Daniel Barron - corrections welcome
+"600","Ayricalikli IP adresine sahipsiniz."
+"601","Ayricalikli kullanici adina sahipsiniz."
+"602","Ayricalikli bir siteye girdiniz."
+"603","Ayricalikli bir URL adresine girdiniz."
+"604","Ayricalikli ifade bulundu: "
+"605","Kombinasyonu ertelenmis ifade bulundu: "
+"606","URL adresi ayricalikli listesine alinmalidir."
+"607","Bu sitede cookie kesfedildi."
+"608","Ayricalikli URL adresi taraniyor."
+"609","Ayricalikli duzenlenmis url adresi: "
 
-"700","Web üzerinden dosya gönderimi yasaklanmýþtýr."
-"701","Web üzerinden dosyas gönderme sýnýrý geçilmiþtir."
+"700","Internet üzerinden dosya gönderimi yasaklanmistir."
+"701","Internet üzerinden dosya gönderimi sinirini astiniz."
 
-"800","Yasaklanan MIME Türü: "
+"800","Yasaklanmis MIME Türü: "
 
-"900","Yasaklanan dosya uzantýsý: "
+"900","Yasaklanmis dosya uzantisi: "
 
-"1000","Üstteki sitedeki resim sýnýrý aþýldý."
+"1000","Bu sitedeki resim siniri asildi."
 
-"1100","Virus or bad content detected."
-"1101","Advert blocked"
+"1100","Virus ve kotu icerige rastlandi."
+"1101","Site bloklandi. Adware veya spyware tespit edildi."
 
-"1200","Please wait - downloading to be scanned..."
-"1210","Download Complete.  Starting scan..."
-"1220","Scan complete.</p><p>Click here to download: "
-"1230","File no longer available"
+"1200","Lutfen bekleyiniz, icerik taranarak yukleniyor.."
+"1210","Yukleme bitti,  taramadan geciriliyor.."
+"1220","Tarama bitti. </p><p>Yuklemek icin tiklayiniz: "
+"1230","Dosya uzunlugu gecersizdir."
