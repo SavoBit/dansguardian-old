@@ -493,11 +493,13 @@ else
 	# now need to check if they're using an iconv library, rather
 	# than a native iconv implementation
 	AC_ARG_WITH(libiconv,
-		[AC_HELP_STRING([--with-libiconv@<:@=NONE@:>@], [Specify non-standard search path on a system which requires an external iconv library (only used in conjunction with NTLM auth plugin).])],
+		[AC_HELP_STRING([--with-libiconv@<:@=NONE@:>@], [Specify search path on a system which requires an external iconv library (only used in conjunction with NTLM auth plugin).])],
 		[ # check for header & func (in library) in given prefix
 			if test "x$withval" != "x"; then
 				CPPFLAGS="${CPPFLAGS} -I${withval}/include"
 				LIBS="-L${withval}/lib -liconv ${LIBS}"
+			else
+				LIBS="-liconv ${LIBS}"
 			fi
 			AC_CHECK_LIB(iconv, iconv, [AC_MSG_RESULT(linked)], [
 				AC_MSG_RESULT(no)
