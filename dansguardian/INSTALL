@@ -31,7 +31,7 @@ As of 2.9.3.1, iconv support is necessary for using the NTLM auth
 plugin. Some systems (e.g. Linux) provide this as part of their core
 API; others (e.g. FreeBSD) require an external iconv library to be
 installed. The "--with-libiconv" configure option enables linking with
-an external library. Charsets UTF-16LE and UTF-8 must be supported.
+an external iconv library. Charsets UTF-16LE and UTF-8 must be supported.
 
 For the library-based ClamAV scanner (not applicable to the ClamD scanner),
 the "clamav-config" program must be available in your PATH during build
@@ -92,10 +92,9 @@ You may change with the configure options:
   enable-fancydm   (enable support for the 'fancy' download manager)
   enable-pcre      (enable support for PCRE instead of GNU regex library)
   enable-ntlm      (enable support for the NTLM auth plugin)
-  with-libiconv    (for platforms without native iconv (only used in
-                    conjunction with enable-ntlm). set to "yes" to enable
-                    basic libiconv support, or to a directory prefix if
-                    libiconv is installed in a non-standard location)
+  with-libiconv    (non-standard search path for iconv library,
+                    for platforms without native iconv (only used in
+                    conjunction with enable-ntlm))
   with-zlib        (specify optional non-standard prefix for zlib
                     lib & include directories)
   
