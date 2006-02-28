@@ -92,7 +92,7 @@ int HTTPHeader::contentLength()
 	if (temp.startsWith("304"))
 		return 0;
 	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the header
-		if (header[i].startsWith("Content-Length:")) {
+		if (header[i].startsWithLower("Content-Length:")) {
 			temp = header[i].after(" ");
 			return temp.toInteger();
 		}
@@ -106,7 +106,7 @@ String HTTPHeader::getAuthType()
 {
 	String temp;
 	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("Proxy-Authorization:")) {
+		if (header[i].startsWithLower("Proxy-Authorization:")) {
 			temp = header[i].after(" ").before(" ");
 			return temp;
 		}
@@ -132,7 +132,7 @@ String HTTPHeader::disposition()
 {
 	String filename;
 	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the header
-		if (header[i].startsWith("Content-Disposition:")) {
+		if (header[i].startsWithLower("Content-Disposition:")) {
 			filename = header[i].after("filename").after("=");
 			if (filename.contains(";"))
 				filename = filename.before(";");
@@ -157,7 +157,7 @@ String HTTPHeader::userAgent()
 {
 	String agent;
 	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("User-Agent:")) {
+		if (header[i].startsWithLower("User-Agent:")) {
 			agent = header[i].after(" ");
 			return agent;
 		}
@@ -172,7 +172,7 @@ String HTTPHeader::getContentType()
 	int j;
 	unsigned char c;
 	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("Content-Type:")) {
+		if (header[i].startsWithLower("Content-Type:")) {
 			mimetype = header[i].after(" ");
 			j = 0;
 			while (j < (signed) mimetype.length()) {
@@ -207,7 +207,7 @@ std::string HTTPHeader::getXForwardedForIP()
 {
 	String line;
 	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("X-Forwarded-For:")) {
+		if (header[i].startsWithLower("X-Forwarded-For:")) {
 			line = header[i].after("or: ");
 			line.chop();
 			return std::string(line.toCharArray());
@@ -249,7 +249,7 @@ std::string HTTPHeader::getAuthData()
 bool HTTPHeader::isCompressed()
 {
 	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("Content-Encoding:")) {
+		if (header[i].startsWithLower("Content-Encoding:")) {
 			if (header[i].indexOf("identity") != -1) {
 				// http1.1 says this
 				// should not be here, but not must not
@@ -269,7 +269,7 @@ String HTTPHeader::contentEncoding()
 {
 	String ce;
 	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("Content-Encoding:")) {
+		if (header[i].startsWithLower("Content-Encoding:")) {
 			ce = header[i].after("Content-Encoding: ");
 			ce.toLower();
 			return ce;
@@ -295,7 +295,7 @@ void HTTPHeader::addXForwardedFor(std::string clientip)
 void HTTPHeader::setContentLength(int newlen)
 {
 	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("Content-Length:")) {
+		if (header[i].startsWithLower("Content-Length:")) {
 			header[i] = "Content-Length: " + String(newlen);
 			break;
 		}
@@ -361,7 +361,7 @@ void HTTPHeader::removeEncoding(int newlen)
 	bool donelength = false;
 	bool doneencoding = false;
 	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("Content-Length:")) {
+		if (header[i].startsWithLower("Content-Length:")) {
 			header[i] = "Content-Length: " + String(newlen);
 			donelength = true;
 		}
@@ -369,7 +369,7 @@ void HTTPHeader::removeEncoding(int newlen)
 		// accept-encoding header that we don't support, we won't be getting anything
 		// back again that we don't support, in theory. leave new code commented
 		// unless it proves to be necessary further down the line. PRA 20-10-2005
-		else if (header[i].startsWith("Content-Encoding:")) {
+		else if (header[i].startsWithLower("Content-Encoding:")) {
 /*#ifdef DGDEBUG
 			std::cout << std::endl << "Stripping Content-Encoding header" <<std::endl;
 			std::cout << "Old: " << header[i] <<std::endl;
@@ -435,7 +435,7 @@ void HTTPHeader::setURL(String &url) {
 	bool donehost = false;
 	bool doneport = false;
 	for (int i = 1; i < (signed)header.size(); i++) {
-		if (header[i].startsWith("Host:")) {
+		if (header[i].startsWithLower("Host:")) {
 #ifdef DGDEBUG
 			std::cout << "setURL: header[] line changed from: " << header[i] << std::endl;
 #endif
@@ -445,7 +445,7 @@ void HTTPHeader::setURL(String &url) {
 #endif
 			donehost = true;
 		}
-		else if (header[i].startsWith("Port:")) {
+		else if (header[i].startsWithLower("Port:")) {
 #ifdef DGDEBUG
 			std::cout << "setURL: header[] line changed from: " << header[i] << std::endl;
 #endif
@@ -725,7 +725,7 @@ void HTTPHeader::checkheader(bool allowpersistent)
 				ispersistent = true;
 			}
 		}
-		else if (header[i].startsWith("host:")) {
+		else if (header[i].startsWithLower("host:")) {
 			header[i] = "Host:" + header[i].after(":");
 		}
 #ifdef DGDEBUG
@@ -766,7 +766,7 @@ String HTTPHeader::url()
 		int i;
 		if (answer[0] == '/') {	// must be the latter above
 			for (i = 1; i < (signed) header.size(); i++) {
-				if (header[i].startsWith("Host:")) {
+				if (header[i].startsWithLower("Host:")) {
 					hostname = header[i].after(":");
 					hostname.removeMultiChar(' ');
 					if (hostname.contains(":")) {
@@ -780,7 +780,7 @@ String HTTPHeader::url()
 						break;  // need to keep parsing to get port
 					}
 				}
-				else if (header[i].startsWith("Port:")) {
+				else if (header[i].startsWithLower("Port:")) {
 					port = header[i].after(" ").toInteger();
 					if (port == 0 || port > 65535) {
 						port = 80;
@@ -867,7 +867,7 @@ String HTTPHeader::getCookie(const char *cookie)
 {
 	String line;
 	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWith("Cookie:")) {
+		if (header[i].startsWithLower("Cookie:")) {
 			line = header[i].after("ie: ");
 			if (line.contains(cookie)) {	// We know we have the cookie
 				line = line.after(cookie);
