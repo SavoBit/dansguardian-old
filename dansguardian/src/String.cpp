@@ -388,10 +388,12 @@ bool String::startsWith(const String s)
 }
 
 // does this string start with the given text after conversion to lowercase?
+// (pass the search string in in lowercase; only the text being searched
+// is converted)
 bool String::startsWithLower(const String s)
 {
 	for (int i = 0; i < s.sl; i++) {
-		if (tolower(data[i]) != tolower(s.data[i]))
+		if (tolower(data[i]) != s.data[i])
 			return false;
 	}
 	return true;
