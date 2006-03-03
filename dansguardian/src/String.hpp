@@ -94,6 +94,8 @@ public:
 	bool startsWith(const String s);
 	bool endsWith(const String s);
 	// does this string start with the given text after conversion to lowercase?
+	// (pass the search string in in lowercase; only the text being searched
+	// is converted)
 	bool startsWithLower(const String s);
 	// does it contain this text?
 	bool contains(const char *s);
