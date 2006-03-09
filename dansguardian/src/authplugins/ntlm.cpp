@@ -237,7 +237,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 			l = SSWAP(a->user.len);
 			o = WSWAP(a->user.offset);
 
-			if ((l > 0) && (o >= 0) && (o + l) <= (int)sizeof(a->payload) && (l <= 255)) {
+			if ((l > 0) && (o >= 0) && (o + l) <= (int)sizeof(a->payload) && (l <= 254)) {
 				// everything is in range
 				// note offsets are from start of packet - not the start of the payload area
 				memcpy((void *)username, (const void *)&(auth.buf[o]),l);
@@ -256,6 +256,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 					int l2 = 256;
 					local_iconv_adaptor(iconv, ic, &inptr, (size_t*)&l, &outptr, (size_t*)&l2);
 					iconv_close(ic);
+					username2[256 - l2] = '\0';
 #ifdef DGDEBUG
 					std::cout << "NTLM - got username (converted from UTF-16LE) " << username2 << std::endl;
 #endif
