@@ -100,6 +100,7 @@ int main(int argc, char *argv[])
 		if (argv[i][0] == '-') {
 			for (unsigned int j = 1; j < strlen(argv[i]); j++) {
 				char option = argv[i][j];
+				bool dobreak = false;
 				switch (option) {
 				case 'P':
 					return 0;
@@ -137,6 +138,7 @@ int main(int argc, char *argv[])
 				case 'c':
 					if (++i < argc) {
 						configfile = argv[i];
+						dobreak = true;  // broken-ness of this option reported by Jason Gauthier 2006-03-09
 					}
 					break;
 				case 'h':
@@ -148,13 +150,14 @@ int main(int argc, char *argv[])
 					std::cout << "  -N Do not go into the background." << std::endl;
 					std::cout << "  -q causes DansGuardian to kill any running copy." << std::endl;
 					std::cout << "  -Q kill any running copy AND start a new one with current options." << std::endl;
-					std::cout << "  -s shows the parent process PID." << std::endl;
+					std::cout << "  -s shows the parent process PID and exits." << std::endl;
 					std::cout << "  -r closes all connections and reloads config files by issuing a HUP," << std::endl;
 					std::cout << "     but this does not reset the maxchildren option." << std::endl;
 					std::cout << "  -g gently restarts by not closing all current connections and only reloads" << std::endl
 						<< "     filter group config files by issuing a USR1." << std::endl;
 					return 0;
 				}
+				if (dobreak) break;
 			}
 		}
 	}
