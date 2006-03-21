@@ -94,6 +94,10 @@ protected:
 	socklen_t peer_adr_length;
 	// socket FD
 	int sck;
+	// internal buffer
+	char buffer[1024];
+	int buffstart;
+	int bufflen;
 
 	// constructor - sets default values. override this if you actually wish to create a default socket.
 	BaseSocket();

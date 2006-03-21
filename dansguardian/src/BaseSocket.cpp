@@ -30,6 +30,10 @@
 #include <stdexcept>
 #include <syslog.h>
 
+#ifdef DGDEBUG
+#include <iostream>
+#endif
+
 // GLOBALS
 extern bool reloadconfig;
 
@@ -58,11 +62,11 @@ int selectEINTR(int numfds, fd_set * readfds, fd_set * writefds, fd_set * except
 // code as well as functions for testing and working with the socket FDs.
 
 // constructor - override this if desired to create an actual socket at startup
-BaseSocket::BaseSocket():timeout(5), sck(-1)
+BaseSocket::BaseSocket():timeout(5), sck(-1), buffstart(0), bufflen(0)
 {}
 
 // create socket from FD - must be overridden to clear the relevant address structs
-BaseSocket::BaseSocket(int fd):timeout(5)
+BaseSocket::BaseSocket(int fd):timeout(5), buffstart(0), bufflen(0)
 {
 	sck = fd;
 }
@@ -85,6 +89,8 @@ void BaseSocket::baseReset()
 		sck = -1;
 	}
 	timeout = 5;
+	buffstart = 0;
+	bufflen = 0;
 }
 
 // mark a socket as a listening server socket
@@ -120,6 +126,8 @@ void BaseSocket::close()
 		::close(sck);
 		sck = -1;
 	}
+	buffstart = 0;
+	bufflen = 0;
 }
 
 // set the socket-wide timeout
@@ -137,6 +145,8 @@ int BaseSocket::getTimeout()
 // non-blocking check to see if there is data waiting on socket
 bool BaseSocket::checkForInput()
 {
+	if ((bufflen - buffstart) > 0)
+		return true;
 	fd_set fdSet;
 	FD_ZERO(&fdSet);  // clear the set
 	FD_SET(sck, &fdSet);  // add fd to the set
@@ -201,21 +211,55 @@ void BaseSocket::readyForOutput(int timeout, bool honour_reloadconfig) throw(exc
 // read a line from the socket, can be told to break on config reloads
 int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadconfig) throw(exception)
 {
-	char b[1];
-	int rc;
+	// first, return what's left from the previous buffer read, if anything
 	int i = 0;
+	if ((bufflen - buffstart) > 0) {
+#ifdef DGDEBUG
+		std::cout << "data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
+#endif
+		for (int j = buffstart; j < bufflen; j++) {
+			buffstart++;
+			if (buffer[j] == '\n') {
+				buff[i] = '\0';  // ...terminate string & return what read
+				return i;
+			}
+			buff[i++] = buffer[j];
+		}
+		if (buffstart == bufflen) {
+			buffstart = 0;
+			bufflen = 0;
+		}
+	}
 	while (i < (size - 1)) {
-		rc = readFromSocket(b, 1, 0, timeout, true, honour_reloadconfig);
-		if (rc < 0) {
+		try {
+			checkForInput(timeout, honour_reloadconfig);
+		} catch(exception & e) {
+			throw runtime_error(string("Can't read from socket: ") + strerror(errno));  // on error
+		}
+		bufflen = recv(sck, buffer, 1024, 0);
+#ifdef DGDEBUG
+		std::cout << "read into buffer; bufflen: " << bufflen << std::endl;
+#endif
+		if (bufflen < 0) {
+			if (errno == EINTR && (honour_reloadconfig ? !reloadconfig : true)) {
+				continue;
+			}
 			throw runtime_error(string("Can't read from socket: ") + strerror(errno));  // on error
 		}
 		//if socket closed or newline received...
-		if ((rc == 0) || (b[0] == '\n')) {
+		if (bufflen == 0) {
 			buff[i] = '\0';  // ...terminate string & return what read
 			return i;
 		}
-		buff[i] = b[0];
-		i++;
+		buffstart = 0;
+		for (int j = 0; j < bufflen; j++) {
+			buffstart++;
+			if (buffer[j] == '\n') {
+				buff[i] = '\0';  // ...terminate string & return what read
+				return i;
+			}
+			buff[i++] = buffer[j];
+		}
 	}
 	// oh dear - buffer end reached before we found a newline
 	buff[i] = '\0';
@@ -273,6 +317,26 @@ int BaseSocket::readFromSocketn(char *buff, int len, unsigned int flags, int tim
 {
 	int cnt, rc;
 	cnt = len;
+	
+	// first, return what's left from the previous buffer read, if anything
+	int i = 0;
+	if ((bufflen - buffstart) > 0) {
+#ifdef DGDEBUG
+		std::cout << "readFromSocketn: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
+#endif
+		for (int j = buffstart; j < bufflen; j++) {
+			buff[i++] = buffer[j];
+			buffstart++;
+			cnt--;
+			if (cnt == 0)
+				return len;
+		}
+		if (buffstart == bufflen) {
+			buffstart = 0;
+			bufflen = 0;
+		}
+	}
+	
 	while (cnt > 0) {
 		try {
 			checkForInput(timeout);  // throws exception on error or timeout
@@ -280,7 +344,7 @@ int BaseSocket::readFromSocketn(char *buff, int len, unsigned int flags, int tim
 		catch(exception & e) {
 			return -1;
 		}
-		rc = recv(sck, buff, len, flags);
+		rc = recv(sck, buff+i, cnt, flags);
 		if (rc < 0) {
 			if (errno == EINTR) {
 				continue;
@@ -299,6 +363,24 @@ int BaseSocket::readFromSocketn(char *buff, int len, unsigned int flags, int tim
 // read what's available and return error status - can be told not to do an initial checkForInput, and to break on reloads
 int BaseSocket::readFromSocket(char *buff, int len, unsigned int flags, int timeout, bool check_first, bool honour_reloadconfig)
 {
+	// first, return what's left from the previous buffer read, if anything
+	int i = 0;
+	if ((bufflen - buffstart) > 0) {
+#ifdef DGDEBUG
+		std::cout << "readFromSocket: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
+#endif
+		for (int j = buffstart; j < bufflen; j++) {
+			buff[i++] = buffer[j];
+			buffstart++;
+			if (i == len)
+				return len;
+		}
+		if (buffstart == bufflen) {
+			buffstart = 0;
+			bufflen = 0;
+		}
+	}
+	
 	int rc;
 	if (check_first) {
 		try {
@@ -308,7 +390,7 @@ int BaseSocket::readFromSocket(char *buff, int len, unsigned int flags, int time
 		}
 	}
 	while (true) {
-		rc = recv(sck, buff, len, flags);
+		rc = recv(sck, buff+i, len-i, flags);
 		if (rc < 0) {
 			if (errno == EINTR && (honour_reloadconfig ? !reloadconfig : true)) {
 				continue;
@@ -316,5 +398,5 @@ int BaseSocket::readFromSocket(char *buff, int len, unsigned int flags, int time
 		}
 		break;
 	}
-	return rc;
+	return rc + i;
 }
