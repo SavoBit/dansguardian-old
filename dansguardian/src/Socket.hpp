@@ -32,6 +32,7 @@
 
 class Socket : public BaseSocket
 {
+	friend class FDTunnel;
 public:
 	// create INET socket & clear address structs
 	Socket();
