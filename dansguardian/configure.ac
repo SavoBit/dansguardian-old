@@ -312,6 +312,11 @@ else
 fi
 AM_CONDITIONAL(HAVE_PCRE, test "x$pcre" = "xtrue")
 
+# by default, we do not need the content scanner list or config directories, nor the download manager list directory
+cslists=false
+csconfigs=false
+dmlists=false
+
 # asking user if they want clamav support
 AC_MSG_CHECKING(for libclamav support)
 AC_ARG_ENABLE(
@@ -358,6 +363,8 @@ else
 	fi
 
 	clamav=true
+	cslists=true
+	csconfigs=true
 	CLAMAVSUPPORT=""
 fi
 ],
@@ -384,6 +391,8 @@ clamd,
 else
 	AC_MSG_RESULT(yes)
 	clamd=true
+	cslists=true
+	csconfigs=true
 	CLAMDSUPPORT=""
 	AC_DEFINE([ENABLE_CLAMD],[],[Define to enable ClamD content scanner])
 fi],
@@ -408,6 +417,8 @@ icap,
 else
 	AC_MSG_RESULT(yes)
 	icap=true
+	cslists=true
+	csconfigs=true
 	AC_DEFINE([ENABLE_ICAP],[],[Define to enable ICAP content scanner])
 	ICAPSUPPORT=""
 fi],
@@ -432,6 +443,8 @@ kavd,
 else
 	AC_MSG_RESULT(yes)
 	kavd=true
+	cslists=true
+	csconfigs=true
 	KAVDSUPPORT=""
 	AC_DEFINE([ENABLE_KAVD],[],[Define to enable KAVD content scanner])
 fi],
@@ -451,6 +464,10 @@ dnl detecting kaspersky antivirus client
 KAVAVSUPPORT="!! Unimplemented !! "
 AC_SUBST(KAVAVSUPPORT)
 
+# install CS configs and lists if necessary
+AM_CONDITIONAL(NEED_CSLISTS, test "x$cslists" = "xtrue")
+AM_CONDITIONAL(NEED_CSCONFIGS, test "x$csconfigs" = "xtrue")
+
 # asking user if they want fancy downloadmanager support
 AC_MSG_CHECKING(for fancy download manager support)
 AC_ARG_ENABLE(
@@ -463,11 +480,13 @@ fancydm,
 else
 	AC_MSG_RESULT(yes)
 	fancydm=true
+	dmlists=true
 	FANCYSUPPORT=""
 	AC_DEFINE([ENABLE_FANCYDM],[],[Define to enable fancy download manager])
 fi],
 [
 	fancydm=true
+	dmlists=true
 	FANCYSUPPORT=""
 	AC_MSG_RESULT(yes)
 	AC_DEFINE([ENABLE_FANCYDM],[],[Define to enable fancy download manager])
@@ -475,6 +494,9 @@ fi],
 )
 AM_CONDITIONAL(ENABLE_FANCYDM, test "x$fancydm" = "xtrue")
 AC_SUBST(FANCYSUPPORT)
+
+# install DM lists if necessary
+AM_CONDITIONAL(NEED_DMLISTS, test "x$dmlists" = "xtrue")
 
 # asking user if they want NTLM auth support
 AC_MSG_CHECKING(for NTLM support)
