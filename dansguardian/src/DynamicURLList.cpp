@@ -43,7 +43,7 @@ extern bool is_daemonised;
 
 // constructor - initialise values to empty defaults
 DynamicURLList::DynamicURLList()
-:index(new unsigned int[0]), urlreftime(new unsigned long int[0]), urls(new char[0]), groups(new std::string[0]), size(0), agepos(0), timeout(0)
+:index(NULL), urlreftime(NULL), urls(NULL), groups(NULL), size(0), agepos(0), timeout(0)
 {
 }
 
