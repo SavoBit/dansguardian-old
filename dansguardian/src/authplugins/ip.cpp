@@ -279,6 +279,9 @@ int ipinstance::readIPMelangeList(const char *filename) {
 		// ignore comments
 		if (buffer[0] == '#')
 			continue;
+		// ignore blank lines
+		if (strlen(buffer) < 10)
+			continue;
 		line = buffer;
 		// split into key & value
 		if (line.contains("=")) {
