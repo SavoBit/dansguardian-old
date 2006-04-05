@@ -40,7 +40,7 @@ extern bool is_daemonised;
 
 ImageContainer::ImageContainer()
 {
-	image = new char[0];
+	image = NULL;
 	imagelength = 0;
 }
 
@@ -53,6 +53,7 @@ ImageContainer::~ImageContainer()
 void ImageContainer::reset()
 {
 	delete[]image;
+	image = NULL;
 	mimetype = "";
 	imagelength = 0;
 }
@@ -93,6 +94,8 @@ bool ImageContainer::read(const char *filename)
 	imagefile.seekg(0, ios::beg);
 
 	if (imagelength) {
+		if (image != NULL)
+			delete[] image;
 		image = new char[imagelength + 1];
 		imagefile.read(image, imagelength);
 		if (!imagefile.good()) {
