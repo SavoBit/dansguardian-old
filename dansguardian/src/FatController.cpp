@@ -488,6 +488,8 @@ int handle_connections(UDSocket &pipe)
 		h.handleConnection(*peersock, peersockip, peersockport/*, socknum*/);  // deal with the connection
 		delete peersock;
 	}
+	if (!(++cycle) && o.logchildprocs)
+		syslog(LOG_ERR, "Child has handled %d requests and is exiting", o.maxage_children);
 #ifdef DGDEBUG
 	if (reloadconfig) {
 		std::cout << "child been told to exit by hup" << std::endl;
@@ -705,6 +707,8 @@ bool check_kid_readystatus(int tofind)
 		}
 		if (childrenstates[f] == 0) {
 			found = true;
+		} else {
+			found = false;
 		}
 	}
 	// if unbusy found then true otherwise false
@@ -1269,16 +1273,16 @@ int fc_controlit()
 			if (!is_daemonised) {
 				std::cerr << "Error binding server socket (is something else running on the filter port and ip?" << std::endl;
 			}
-			syslog(LOG_ERR, "%s","Error binding server socket (is something else running on the filter port and ip?");
+			syslog(LOG_ERR, "Error binding server socket (is something else running on the filter port and ip?");
 		return 1;
 		}
 	} else {
 		// listen/bind to a port on any interface
 		if (serversockets.bindSingle(o.filter_port)) {
 			if (!is_daemonised) {
-				std::cerr << "Error binding server socket (is something else running on the filter port? [" << o.filter_port << "])" << std::endl;
+				std::cerr << "Error binding server socket: [" << o.filter_port << "] (" << strerror(errno) << ")" << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Error binding server socket (is something else running on the filter port?");
+			syslog(LOG_ERR, "Error binding server socket: [%d] (%s)", o.filter_port, strerror(errno));
 			return 1;
 		}
 	}
@@ -1510,11 +1514,6 @@ int fc_controlit()
 	std::cout << "Parent process sig handlers done" << std::endl;
 #endif
 
-	struct timeval quicksleep;  // used later on for a short sleep
-	quicksleep.tv_sec = 0;
-	quicksleep.tv_usec = 10000;  // = 10ms = 0.01sec
-	struct timeval qscopy;  // copy to use as select() can modify
-
 	numchildren = 0;  // to keep count of our children
 	busychildren = 0;  // to keep count of our children
 	freechildren = 0;  // to keep count of our children
@@ -1673,7 +1672,7 @@ int fc_controlit()
 			for (i = o.max_children; i < fds; i++) {
 				if ((pids[i].revents & (POLLERR | POLLHUP | POLLNVAL)) > 0) {
 					ttg = true;
-					syslog(LOG_ERR, "%s", "Error with main listening socket.  Exiting.");
+					syslog(LOG_ERR, "Error with main listening socket.  Exiting.");
 					continue;
 				}
 				if ((pids[i].revents & POLLIN) > 0) {
@@ -1681,15 +1680,18 @@ int fc_controlit()
 					failurecount = 0;  // something is clearly working so reset count
 					if (freechildren < 1 && numchildren < o.max_children) {
 						if (!preforked) {
-							rc = prefork(1);
+							int num = o.prefork_children;
+							if ((o.max_children - numchildren) < num)
+								num = o.max_children - numchildren;
+							if (o.logchildprocs)
+								syslog(LOG_ERR, "Under load - Spawning %d process(es)", num);
+							rc = prefork(num);
 							if (rc < 0) {
-								syslog(LOG_ERR, "%s", "Error forking 1 extra process.");
+								syslog(LOG_ERR, "Error forking %d extra process(es).", num);
 								failurecount++;
 							}
 							preforked = true;
 						}
-						qscopy = quicksleep;  // use copy as select() can modify it
-						select(0, NULL, NULL, NULL, &qscopy);  // is a very quick sleep()
 						continue;
 					}
 					if (freechildren > 0) {
@@ -1698,18 +1700,19 @@ int fc_controlit()
 #endif
 						tellchild_accept(getfreechild(), i - o.max_children);
 					} else {
-						qscopy = quicksleep;  // use copy as select() can modify it
-						select(0, NULL, NULL, NULL, &qscopy);  // is a very quick sleep()
+						usleep(1000);
 					}
 				}
 			}
 		}
 
 		if (freechildren < o.minspare_children && !preforked && numchildren < o.max_children) {
+			if (o.logchildprocs)
+				syslog(LOG_ERR, "Fewer than %d free children - Spawning %d process(es)", o.minspare_children, o.prefork_children);
 			rc = prefork(o.prefork_children);
 			preforked = true;
 			if (rc < 0) {
-				syslog(LOG_ERR, "%s", "Error forking preforkchildren extra processes.");
+				syslog(LOG_ERR, "Error forking preforkchildren extra processes.");
 				failurecount++;
 			}
 		}
@@ -1720,6 +1723,8 @@ int fc_controlit()
 		if (freechildren > o.maxspare_children) {
 			time(&tnow);
 			if ((tnow - tmaxspare) > (2 * 60)) {	// 2 * 60
+				if (o.logchildprocs)
+					syslog(LOG_ERR, "More than %d free children - Killing %d process(es)", o.maxspare_children, freechildren - o.maxspare_children);
 				cullchildren(freechildren - o.maxspare_children);
 			}
 		}
@@ -1727,7 +1732,7 @@ int fc_controlit()
 		// yield CPU for a while. this loop does not explicitly sleep other
 		// than when polling FDs; when connections are coming in at a rate of
 		// knots, it effectively turns into a busy loop. this should help.
-		usleep(1000);
+		//usleep(1000);
 	}
 	cullchildren(numchildren);  // remove the fork pool of spare children
 	for (int i = 0; i < o.max_children; i++) {
