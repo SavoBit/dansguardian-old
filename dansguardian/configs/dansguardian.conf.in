@@ -478,6 +478,12 @@ logconnectionhandlingerrors = on
 
 # Fork pool options
 
+# If on, this causes DG to write to the log file whenever child processes are
+# created or destroyed (other than by crashes). This information can help in
+# understanding and tuning the following parameters, but is not generally
+# useful in production.
+logchildprocesshandling = off
+
 # sets the maximum number of processes to spawn to handle the incoming
 # connections.  Max value usually 250 depending on OS.
 # On large sites you might want to try 180.
