@@ -789,11 +789,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			{
 				proxysock.readyForOutput(10);  // exception on timeout or error
 				header.out(&peerconn, &proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
-				// if this is not a CONNECT request, check the returned headers for persistency flags
-				if (!isconnect && persist) {
-					docheader.in(&proxysock, persist);
-					persist = docheader.isPersistent();
-					docheader.out(NULL, &peerconn, __DGHEADER_SENDALL);
+				docheader.in(&proxysock, persist);
+				persist = docheader.isPersistent();
+				docheader.out(NULL, &peerconn, __DGHEADER_SENDALL);
+				// only open a two-way tunnel on CONNECT if the return code indicates success
+				if (!(docheader.returnCode() == 200)) {
+					isconnect = false;
 				}
 				try {
 					fdt.reset();  // make a tunnel object
@@ -878,11 +879,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					{
 						proxysock.readyForOutput(10);  // exception on timeout or error
 						header.out(&peerconn, &proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
-						// if this is not a CONNECT request, check the returned headers for persistency flags
-						if (!isconnect && persist) {
-							docheader.in(&proxysock, persist);
-							persist = docheader.isPersistent();
-							docheader.out(NULL, &peerconn, __DGHEADER_SENDALL);
+						docheader.in(&proxysock, persist);
+						persist = docheader.isPersistent();
+						docheader.out(NULL, &peerconn, __DGHEADER_SENDALL);
+						// only open a two-way tunnel on CONNECT if the return code indicates success
+						if (!(docheader.returnCode() == 200)) {
+							isconnect = false;
 						}
 						try {
 							fdt.reset();  // make a tunnel object
@@ -930,14 +932,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 				wasrequested = true;
 				
-				if (docheader.authRequired()) {
+				if (!(docheader.returnCode() == 200)) {
 #ifdef DGDEBUG
-					std::cout << "CONNECT request requires proxy authentication - doing standard filtering on auth required response" << std::endl;
+					std::cout << "CONNECT request response not 200 - doing standard filtering on auth required response" << std::endl;
 #endif
 					isconnect = false;
 				} else {
 #ifdef DGDEBUG
-					std::cout << "CONNECT request does not require proxy authentication - attempting pre-emptive ban" << std::endl;
+					std::cout << "CONNECT request response is 200 - attempting pre-emptive ban" << std::endl;
 #endif
 					// if its a connect and we don't do filtering on it now then
 					// it will get tunneled and not filtered.  We can't tunnel later
