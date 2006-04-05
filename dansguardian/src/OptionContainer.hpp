@@ -62,6 +62,7 @@ public:
 	int use_xforwardedfor;
 	//int preemptive_banning;
 	int logconerror;
+	bool logchildprocs;
 	int url_cache_number;
 	int url_cache_age;
 	int phrase_filter_mode;

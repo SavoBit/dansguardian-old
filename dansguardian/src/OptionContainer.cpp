@@ -420,6 +420,11 @@ bool OptionContainer::read(const char *filename, int type)
 		} else {
 			logconerror = 0;
 		}
+		if (findoptionS("logchildprocesshandling") == "on") {
+			logchildprocs = true;
+		} else {
+			logchildprocs = false;
+		}
 
 		if (findoptionS("reverseaddresslookups") == "on") {
 			reverse_lookups = 1;
