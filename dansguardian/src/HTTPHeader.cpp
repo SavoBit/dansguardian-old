@@ -677,7 +677,7 @@ bool HTTPHeader::isPostUpload(Socket &peersock)
 #ifdef DGDEBUG
 		std::cout << "Is POST upload!" << std::endl;
 #endif
-		ispostupload = false;
+		ispostupload = true;
 		return true;
 	} else {
 #ifdef DGDEBUG
@@ -696,39 +696,15 @@ void HTTPHeader::checkheader(bool allowpersistent)
 	waspersistent = false;
 	ispersistent = false;
 	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the headers
-		//
-		// any case-sensitivity related corrections now not needed,
-		// as headers are now searched using startsWithLower
-		// (Nerijus Baliunas 2006-02-28 / PRA 2006-03-01)
-		//
-		// checkme:
-		// in future, a worthwhile perfomance increase might be gained
-		// by "indexing" the headers as we read them in, instead of
-		// performing full-text searches every time we want a piece
-		// of info. PRA 2006-03-01
-		//
-		/*if (header[i].startsWithLower("content-length:")) {
-			header[i] = "Content-Length:" + header[i].after(":");
+		// HTTP 1.1 is persistent by default
+		if ((i == 0) && (header[i].after("HTTP/") == "1.1")) {
+			waspersistent = true;
+			ispersistent = true;
 		}
-		else if (header[i].startsWithLower("x-forwarded-for:")) {
-			header[i] = "X-Forwarded-For:" + header[i].after(":");
-		}
-		else if (header[i].startsWithLower("content-type:")) {
-			header[i] = "Content-Type:" + header[i].after(":");
-		}
-		else if (header[i].startsWithLower("content-disposition:")) {
-			header[i] = "Content-Disposition:" + header[i].after(":");
-		}
-		else if (header[i].startsWithLower("content-encoding:")) {
-			header[i] = "Content-Encoding:" + header[i].after(":");
-		}
-		else*/ if (header[i].startsWithLower("accept-encoding:")) {
+		else if (header[i].startsWithLower("accept-encoding:")) {
 			header[i] = "Accept-Encoding:" + header[i].after(":");
 			header[i] = modifyEncodings(header[i]) + "\r";
 		}
-		/*else if (header[i].startsWithLower("proxy-authorization:")) {
-			header[i] = "Proxy-Authorization:" + header[i].after(":");
-		}*/
 		else if (header[i].startsWithLower("proxy-connection: keep-alive") || header[i].startsWithLower("connection: keep-alive")) {
 			waspersistent = true;
 			if (!allowpersistent) {
@@ -738,12 +714,14 @@ void HTTPHeader::checkheader(bool allowpersistent)
 				ispersistent = true;
 			}
 		}
-		/*else if (header[i].startsWithLower("host:")) {
-			header[i] = "Host:" + header[i].after(":");
-		}*/
 #ifdef DGDEBUG
 		std::cout << header[i] << std::endl;
 #endif
+	}
+	// if a request was HTTP 1.1 and there was no proxy-connection header, we may need to add one
+	if ((!allowpersistent) && ispersistent) {
+		header.push_back("Proxy-Connection: Close\r");
+		ispersistent = false;
 	}
 }
 
@@ -768,13 +746,11 @@ String HTTPHeader::url()
 	} else {
 		answer = answer.before(" http/");  // just in case!
 	}
-//cout << answer << endl;
 	if (requestType() == "CONNECT") {
 		if (!answer.startsWith("https://")) {
 			answer = "https://" + answer;
 		}
 	}
-//cout << answer << endl;
 	if (answer.length()) {
 		int i;
 		if (answer[0] == '/') {	// must be the latter above
@@ -1105,7 +1081,7 @@ String HTTPHeader::hexToChar(String n)
 	if (n.length() < 2) {
 		return n;
 	}
-	char *buf = new char[2];
+	static char buf[2];
 	unsigned int a, b;
 	unsigned char c;
 	a = n[0];
