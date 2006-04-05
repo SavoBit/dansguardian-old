@@ -47,7 +47,7 @@ extern OptionContainer o;
 
 // Constructor - set default values
 ListContainer::ListContainer():refcount(1), parent(false), filedate(0), used(false), bannedpfiledate(0), exceptionpfiledate(0), weightedpfiledate(0),
-	sourceisexception(false), sourcestartswith(false), sourcefilters(0), data(new char[0]), graphdata(new int[0]), graphitems(0),
+	sourceisexception(false), sourcestartswith(false), sourcefilters(0), data(NULL), graphdata(NULL), graphitems(0),
 	data_length(0), data_memory(0), items(0), isSW(false), issorted(false), graphused(false), force_quick_search(0),
 	sthour(0), stmin(0), endhour(0), endmin(0), istimelimited(false)
 {
@@ -73,8 +73,8 @@ void ListContainer::reset()
 	for (unsigned int i = 0; i < morelists.size(); i++) {
 		o.lm.deRefList(morelists[i]);
 	}
-	data = new char[0];
-	graphdata = new int[0];
+	data = NULL;
+	graphdata = NULL;
 	graphitems = 0;
 	data_length = 0;
 	data_memory = 0;
