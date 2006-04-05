@@ -70,6 +70,15 @@ bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targett
 	if (targetthroughput < 0)
 		std::cout << "Tunnelling without known content-length" << std::endl;
 #endif
+	if ((sockfrom.bufflen - sockfrom.buffstart) > 0) {
+#ifdef DGDEBUG
+		std::cout << "Data in fdfrom's buffer; sending " << (sockfrom.bufflen - sockfrom.buffstart) << " bytes" << std::endl;
+#endif
+		sockto.writeToSocket(sockfrom.buffer + sockfrom.buffstart, sockfrom.bufflen - sockfrom.buffstart, 0, 120, false);
+		throughput += sockfrom.bufflen - sockfrom.buffstart;
+		sockfrom.bufflen = 0;
+		sockfrom.buffstart = 0;
+	}
 
 	int maxfd, rc, fdfrom, fdto;
 
