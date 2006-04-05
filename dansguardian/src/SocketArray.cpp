@@ -102,10 +102,10 @@ int SocketArray::bindAll(std::deque<String> &ips, int port)
 #endif
 		if (drawer[i].bind(ips[i].toCharArray(), port)) {
 			if (!is_daemonised) {
-				std::cerr << "Error binding server socket (is something else running on the filter port and ip? ["
-					<< port << " " << ips[i] << " " << i << "])" << std::endl;
+				std::cerr << "Error binding server socket: ["
+					<< port << " " << ips[i] << " " << i << "] (" << strerror(errno) << ")" << std::endl;
 			}
-			syslog(LOG_ERR, "%s","Error binding socket (is something else running on the port and ip?");
+			syslog(LOG_ERR, "Error binding socket: [%d %s %d] (%s)", port, ips[i], i, strerror(errno));
 			return -1;
 		}
 	}
