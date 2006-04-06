@@ -10,6 +10,7 @@ audio/x-wav
 audio/x-realaudio
 audio/x-pn-realaudio
 audio/vnd.rn-realaudio
+application/ogg
 video/mpeg
 video/x-mpeg2
 video/acorn-replay
