@@ -1727,7 +1727,7 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 			(*checkme).isItNaughty = true;
 		}
 
-		if (!(*checkme).isItNaughty && !(bblock || bsslblock)) {
+		if (!(*checkme).isItNaughty) {
 			bool bipblock = o.fg[filtergroup]->blanket_ip_block;
 			bool bsslipblock = isssl && (o.fg[filtergroup]->blanketssl_ip_block);
 			if (isIPHostnameStrip(temp) && (bipblock || bsslipblock)) {
