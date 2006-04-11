@@ -23,6 +23,7 @@
 #include "SocketArray.hpp"
 
 #include <syslog.h>
+#include <cerrno>
 
 
 // GLOBALS
@@ -105,7 +106,7 @@ int SocketArray::bindAll(std::deque<String> &ips, int port)
 				std::cerr << "Error binding server socket: ["
 					<< port << " " << ips[i] << " " << i << "] (" << strerror(errno) << ")" << std::endl;
 			}
-			syslog(LOG_ERR, "Error binding socket: [%d %s %d] (%s)", port, ips[i], i, strerror(errno));
+			syslog(LOG_ERR, "Error binding socket: [%d %s %d] (%s)", port, ips[i].toCharArray(), i, strerror(errno));
 			return -1;
 		}
 	}
