@@ -77,7 +77,7 @@ int fancydm::init(void* args)
 	if (fname.length() > 0) {
 		// read the template file, and return OK on success, error on failure.
 		fname = o.languagepath + fname;
-		return progresspage.readTemplateFile(fname.toCharArray(), "-FILENAME-|-FILESIZE-") ? 0 : -1;
+		return progresspage.readTemplateFile(fname.toCharArray(), "-FILENAME-|-FILESIZE-|-SERVERIP-") ? 0 : -1;
 	} else {
 		// eek! there's no template option in our config.
 		if (!is_daemonised)
@@ -198,8 +198,11 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 						else if (message == "-FILESIZE-") {
 							message = String(expectedsize);
 						}
+						else if (message == "-SERVERIP-") {
+							message = peersock->getLocalIP();
+						}
 						else if ((i == penultimate) || ((*(i+1))[0] != '-')) {
-								newline = true;
+							newline = true;
 						}
 						peersock->writeString(message.toCharArray());
 						// preserve line breaks from the original template file
