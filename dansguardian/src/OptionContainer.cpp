@@ -230,23 +230,26 @@ bool OptionContainer::read(const char *filename, int type)
 			return false;
 		}
 
-		max_upload_size = findoptionI("maxuploadsize") * 1024;
+		max_upload_size = findoptionI("maxuploadsize");
 		if (!realitycheck(String(max_upload_size), 1, 8, "maxuploadsize")) {
 			return false;
 		}		// check its a reasonable value
-		max_content_filter_size = findoptionI("maxcontentfiltersize") * 1024;
-		if (!realitycheck(String(max_content_filter_size), 1, 8, "maxcontentfiltersize")) {
+		max_upload_size = max_upload_size * 1024;
+		max_content_filter_size = findoptionI("maxcontentfiltersize");
+		if (!realitycheck(String(max_content_filter_size), 1, 6, "maxcontentfiltersize")) {
 			return false;
 		}		// check its a reasonable value
-		max_content_ramcache_scan_size = findoptionI("maxcontentramcachescansize") * 1024;
-		if (!realitycheck(String(max_content_ramcache_scan_size), 1, 8, "maxcontentramcachescansize")) {
+		max_content_filter_size = max_content_filter_size * 1024;
+		max_content_ramcache_scan_size = findoptionI("maxcontentramcachescansize");
+		if (!realitycheck(String(max_content_ramcache_scan_size), 1, 7, "maxcontentramcachescansize")) {
 			return false;
 		}
-
-		max_content_filecache_scan_size = findoptionI("maxcontentfilecachescansize") * 1024;
+		max_content_ramcache_scan_size = max_content_ramcache_scan_size * 1024;
+		max_content_filecache_scan_size = findoptionI("maxcontentfilecachescansize");
 		if (!realitycheck(String(max_content_filecache_scan_size), 1, 8, "maxcontentfilecachescansize")) {
 			return false;
 		}
+		max_content_filecache_scan_size = max_content_ramcache_scan_size * 1024;
 		if (max_content_ramcache_scan_size == 0) {
 			max_content_ramcache_scan_size = max_content_filecache_scan_size;
 		}
