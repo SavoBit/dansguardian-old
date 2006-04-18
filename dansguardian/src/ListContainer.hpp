@@ -27,6 +27,7 @@
 
 #include "platform.h"
 
+#include <vector>
 #include <deque>
 #include <string>
 #include "String.hpp"
@@ -37,7 +38,7 @@
 class ListContainer
 {
 public:
-	std::deque<int> combilist;
+	std::vector<int> combilist;
 	int refcount;
 	bool parent;
 	int filedate;
@@ -51,7 +52,7 @@ public:
 	String sourcefile;  // used for non-phrase lists only
 	String category;
 	String lastcategory;
-	std::deque<unsigned int> morelists;  // has to be non private as reg exp compiler needs to access these
+	std::vector<unsigned int> morelists;  // has to be non private as reg exp compiler needs to access these
 
 	ListContainer();
 	~ListContainer();
@@ -95,7 +96,7 @@ public:
 	String getListCategoryAt(int index, int *catindex = NULL);
 	String getListCategoryAtD(int index);
 
-	std::deque<unsigned int > graphSearch(char *doc, int len);
+	void graphSearch(std::deque<unsigned int >& result, char *doc, int len);
 
 private:
 	bool sourceisexception;
@@ -104,16 +105,16 @@ private:
 	char *data;
 	int *graphdata;
 	int graphitems;
-	std::deque<unsigned int > slowgraph;
+	std::vector<unsigned int > slowgraph;
 	unsigned int data_length;
 	unsigned int data_memory;
 	int items;
 	bool isSW;
 	bool issorted;
 	bool graphused;
-	std::deque<unsigned int > list;
-	std::deque<int > weight;
-	std::deque<int > itemtype;  // 0=banned, 1=weighted, -1=exception
+	std::vector<unsigned int > list;
+	std::vector<int > weight;
+	std::vector<int > itemtype;  // 0=banned, 1=weighted, -1=exception
 	int force_quick_search;
 	
 	//time-limited lists - only items (sites, URLs), not phrases
@@ -122,8 +123,8 @@ private:
 	bool istimelimited;
 
 	//categorised lists - both phrases & items
-	std::deque<String > listcategory;
-	std::deque<int > categoryindex;
+	std::vector<String > listcategory;
+	std::vector<int > categoryindex;
 
 
 	bool readAnotherItemList(const char *filename, bool startswith, int filters);
