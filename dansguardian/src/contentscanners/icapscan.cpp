@@ -35,6 +35,12 @@
 #include <netdb.h>		// for gethostby
 
 
+// DEFINES
+
+#define ICAP_CONTINUE DGCS_MAX+1
+#define ICAP_NODATA DGCS_MAX+2
+
+
 // GLOBALS
 
 extern OptionContainer o;
@@ -47,7 +53,7 @@ extern bool is_daemonised;
 class icapinstance:public CSPlugin
 {
 public:
-	icapinstance(ConfigVar & definition):CSPlugin(definition) {};
+	icapinstance(ConfigVar & definition):CSPlugin(definition), usepreviews(false), previewsize(0) {};
 
 	int scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
 		const char *ip, const char *object, unsigned int objectsize);
@@ -57,14 +63,18 @@ public:
 	int init(void* args);
 
 private:
-	// ICAP server IP and port
+	// ICAP server hostname, IP and port
+	String icaphost;
 	String icapip;
 	unsigned int icapport;
 	// URL for the AV service
 	String icapurl;
+	// whether or not to send ICAP message previews, and the preview object size
+	bool usepreviews;
+	unsigned int previewsize;
 
 	// Send ICAP request headers to server
-	bool doHeaders(Socket & icapsock, unsigned int objectsize, const char *filename);
+	bool doHeaders(Socket & icapsock, /*HTTPHeader *reqheader,*/ HTTPHeader *respheader, unsigned int objectsize);
 	// Check data returned from ICAP server and return one of our standard return codes
 	int doScan(Socket & icapsock);
 };
@@ -93,26 +103,71 @@ int icapinstance::init(void* args)
 	if (icapurl.length() < 3) {
 		if (!is_daemonised)
 			std::cerr << "Error reading icapurl option." << std::endl;
-		syslog(LOG_ERR, "%s", "Error reading icapurl option.");
+		syslog(LOG_ERR, "Error reading icapurl option.");
 		return DGCS_ERROR;
 		// it would be far better to do a test connection
 	}
-	String icaphost = icapurl.after("//");
+	icaphost = icapurl.after("//");
 	icapport = icaphost.after(":").before("/").toInteger();
-	icaphost = icaphost.before(":");
+	if (icapport == 0) {
+		icapport = 1344;
+	}
+	icaphost = icaphost.before("/").before(":");
 	struct hostent *host;
 	if ((host = gethostbyname(icaphost.toCharArray())) == 0) {
 		if (!is_daemonised)
 			std::cerr << "Error resolving icap host address." << std::endl;
-		syslog(LOG_ERR, "%s", "Error resolving icap host address.");
+		syslog(LOG_ERR, "Error resolving icap host address.");
 		return DGCS_ERROR;
 	}
 	icapip = inet_ntoa(*(struct in_addr *) host->h_addr_list[0]);
-//    char *h_addr_list = (*host->h_addr_list);
 
-	//  icapip = h_addr_list[0];
 #ifdef DGDEBUG
 	std::cerr << "ICAP server address:" << icapip << std::endl;
+#endif
+
+	// try to connect to the ICAP server and perform an OPTIONS request
+	Socket icapsock;
+	try {
+		String line = "OPTIONS " + icapurl + " ICAP/1.0\r\nHost: " + icaphost + "\r\n\r\n";
+		icapsock.connect(icapip.toCharArray(), icapport);
+		icapsock.writeString(line.toCharArray());
+		// parse the response
+		char buff[8192];
+		// first line - look for 200 OK
+		icapsock.getLine(buff, 8192, o.content_scanner_timeout);
+		line = buff;
+#ifdef DGDEBUG
+		std::cout << "ICAP/1.0 OPTIONS response:" << std::endl << line << std::endl;
+#endif
+		if (line.after(" ").before(" ") != "200") {
+			throw std::runtime_error("Response not 200 OK");
+		}
+		while (icapsock.getLine(buff, 8192, o.content_scanner_timeout) > 0) {
+			line = buff;
+#ifdef DGDEBUG
+			std::cout << line << std::endl;
+#endif
+			if (line.startsWith("\r")) {
+				break;
+			}
+			else if (line.startsWith("Preview:")) {
+				usepreviews = true;
+				previewsize = line.after(": ").toInteger();
+			}
+		}
+		icapsock.close();
+	} catch(exception& e) {
+		if (!is_daemonised)
+			std::cerr << "ICAP server did not respond to OPTIONS request: " << e.what() << std::endl;
+		syslog(LOG_ERR, "ICAP server did not respond to OPTIONS request: %s", e.what());
+		return DGCS_ERROR;
+	}
+#ifdef DGDEBUG
+	if (usepreviews)
+		std::cout << "Message previews enabled; size: " << previewsize << std::endl;
+	else
+		std::cout << "Message previews disabled" << std::endl;
 #endif
 	return DGCS_OK;
 }
@@ -123,24 +178,57 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 {
 	lastvirusname = lastmessage = "";
 
-	String filename = requestheader->url();
-	filename = filename.after("://").after("/");
-
 	Socket icapsock;
 
-	if (not doHeaders(icapsock, objectsize, filename.toCharArray())) {
+	if (not doHeaders(icapsock, /*requestheader,*/ docheader, objectsize)) {
 		icapsock.close();
 		return DGCS_SCANERROR;
 	}
 #ifdef DGDEBUG
 	std::cerr << "About to send memory data to icap" << std::endl;
+	if (usepreviews && (objectsize > previewsize))
+		std::cerr << "Sending preview first" << std::endl;
 #endif
-	try {
-		if (!icapsock.writeToSocket((char *) object, objectsize, 0, 60)) {
-			throw exception();
-		}
+	unsigned int sent = 0;
+	if (usepreviews && (objectsize > previewsize)) {
+		try {
+			if (!icapsock.writeToSocket((char*) object, previewsize, 0, o.content_scanner_timeout)) {
+				throw std::runtime_error("standard error");
+			}
+			sent += previewsize;
+			icapsock.writeString("\r\n0\r\n\r\n");
+			int rc = doScan(icapsock);
+			if (rc != ICAP_CONTINUE)
+				return rc;
+			// some servers send "continue" immediately followed by another response
+			if (icapsock.checkForInput()) {
+				int rc = doScan(icapsock);
+				if (rc != ICAP_NODATA)
+					return rc;
+			}
+			char objectsizehex[32];
+			snprintf(objectsizehex, sizeof(objectsizehex), "%x\r\n", objectsize-previewsize);
+			icapsock.writeString(objectsizehex);
+		} catch (exception& e) {
 #ifdef DGDEBUG
-		std::cout << "total sent to icap:" << objectsize << std::endl;
+			std::cerr << "Exception sending message preview to ICAP: " << e.what() << std::endl;
+#endif
+			// this *might* just be an early response & closed connection
+			if (icapsock.checkForInput()) {
+				int rc = doScan(icapsock);
+				if (rc != ICAP_NODATA)
+					return rc;
+			}
+			icapsock.close();
+			lastmessage = "Exception sending message preview to ICAP";
+			syslog(LOG_ERR, "Exception sending message preview to ICAP: %s", e.what());
+			return DGCS_SCANERROR;		
+		}
+	}
+	try {
+		icapsock.writeToSockete((char*) object + sent, objectsize - sent, 0, o.content_scanner_timeout);
+#ifdef DGDEBUG
+		std::cout << "total sent to icap: " << objectsize << std::endl;
 #endif
 		icapsock.writeString("\r\n0\r\n\r\n");  // end marker
 #ifdef DGDEBUG
@@ -148,8 +236,14 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 #endif
 	} catch(exception & e) {
 #ifdef DGDEBUG
-		std::cerr << "Exception memory file to ICAP:" << e.what() << std::endl;
+		std::cerr << "Exception sending memory file to ICAP: " << e.what() << std::endl;
 #endif
+		// this *might* just be an early response & closed connection
+		if (icapsock.checkForInput()) {
+			int rc = doScan(icapsock);
+			if (rc != ICAP_NODATA)
+				return rc;
+		}
 		icapsock.close();
 		lastmessage = "Exception sending memory file to ICAP";
 		syslog(LOG_ERR, "Exception sending memory file to ICAP: %s", e.what());
@@ -163,7 +257,6 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename)
 {
 	lastmessage = lastvirusname = "";
-	char filesizehex[32];
 	int filefd = open(filename, O_RDONLY);
 	if (filefd < 0) {
 #ifdef DGDEBUG
@@ -177,28 +270,88 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 	unsigned int filesize = lseek(filefd, 0, SEEK_END);
 
 	Socket icapsock;
-	if (not doHeaders(icapsock, filesize, filename)) {
+	if (not doHeaders(icapsock, /*requestheader,*/ docheader, filesize)) {
 		icapsock.close();
 		close(filefd);
 		return DGCS_SCANERROR;
 	}
-#ifdef DGDEBUG
-	std::cerr << "About to send file data to icap" << std::endl;
-#endif
+
 	lseek(filefd, 0, SEEK_SET);
 	unsigned int sent = 0;
-	char *data = new char[256 * 1024];  // 256k
+	char *data = new char[previewsize];
+
+#ifdef DGDEBUG
+	std::cerr << "About to send file data to icap" << std::endl;
+	if (usepreviews && (filesize > previewsize))
+		std::cerr << "Sending preview first" << std::endl;
+#endif
+	if (usepreviews && (filesize > previewsize)) {
+		try {
+			while (sent < previewsize) {
+				int rc = readEINTR(filefd, data, previewsize);
+				if (rc < 0) {
+					throw std::runtime_error("could not read from file");
+				}
+				if (rc == 0) {
+					break;  // should never happen
+				}
+				if (!icapsock.writeToSocket(data, rc, 0, o.content_scanner_timeout)) {
+					throw std::runtime_error("could not write to socket");
+				}
+				sent += rc;
+			}
+			icapsock.writeString("\r\n0\r\n\r\n");
+			int rc = doScan(icapsock);
+			if (rc != ICAP_CONTINUE) {
+				delete[] data;
+				close(filefd);
+				return rc;
+			}
+			// some servers send "continue" immediately followed by another response
+			if (icapsock.checkForInput()) {
+				int rc = doScan(icapsock);
+				if (rc != ICAP_NODATA) {
+					delete[] data;
+					close(filefd);
+					return rc;
+				}
+			}
+			char objectsizehex[32];
+			snprintf(objectsizehex, sizeof(objectsizehex), "%x\r\n", filesize-previewsize);
+			icapsock.writeString(objectsizehex);
+		} catch (exception& e) {
+#ifdef DGDEBUG
+			std::cerr << "Exception sending message preview to ICAP: " << e.what() << std::endl;
+#endif
+			icapsock.close();
+			lastmessage = "Exception sending message preview to ICAP";
+			syslog(LOG_ERR, "Exception sending message preview to ICAP: %s", e.what());
+			delete[] data;
+			close(filefd);
+			// this *might* just be an early response & closed connection
+			if (icapsock.checkForInput()) {
+				int rc = doScan(icapsock);
+				if (rc != ICAP_NODATA)
+					return rc;
+			}
+			return DGCS_SCANERROR;		
+		}
+	}
+
+	delete[] data;
+	data = new char[256 * 1024];  // 256k
+
 	try {
 		while (sent < filesize) {
 			int rc = readEINTR(filefd, data, 256 * 1024);
 #ifdef DGDEBUG
-			std::cout << "reading icap file rc:" << rc << std::endl;
+			std::cout << "reading icap file rc: " << rc << std::endl;
 #endif
 			if (rc < 0) {
 #ifdef DGDEBUG
 				std::cout << "error reading icap file so throwing exception" << std::endl;
 #endif
-				throw exception();
+				throw std::runtime_error("could not read from file");
 			}
 			if (rc == 0) {
 #ifdef DGDEBUG
@@ -206,14 +359,12 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 #endif
 				break;  // should never happen
 			}
-			if (!icapsock.writeToSocket(data, rc, 0, 60)) {
-				throw exception();
-			}
+			icapsock.writeToSockete(data, rc, 0, o.content_scanner_timeout);
 			sent += rc;
-#ifdef DGDEBUG
-			std::cout << "total sent to icap:" << sent << std::endl;
-#endif
 		}
+#ifdef DGDEBUG
+		std::cout << "total sent to icap: " << sent << std::endl;
+#endif
 		icapsock.writeString("\r\n0\r\n\r\n");  // end marker
 #ifdef DGDEBUG
 		std::cout << "file was sent to icap" << std::endl;
@@ -221,21 +372,27 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 	}
 	catch(exception & e) {
 #ifdef DGDEBUG
-		std::cerr << "Exception sending file to ICAP:" << e.what() << std::endl;
+		std::cerr << "Exception sending file to ICAP: " << e.what() << std::endl;
 #endif
 		lastmessage = "Exception sending file to ICAP";
 		syslog(LOG_ERR, "Exception sending file to ICAP: %s", e.what());
 		delete[]data;
 		close(filefd);
+		// this *might* just be an early response & closed connection
+		if (icapsock.checkForInput()) {
+			int rc = doScan(icapsock);
+			if (rc != ICAP_NODATA)
+				return rc;
+		}
 		return DGCS_SCANERROR;
 	}
 	close(filefd);
-
+	delete[] data;
 	return doScan(icapsock);
 }
 
 // send ICAP request headers, returning success or failure
-bool icapinstance::doHeaders(Socket & icapsock, unsigned int objectsize, const char *filename)
+bool icapinstance::doHeaders(Socket & icapsock, /*HTTPHeader *reqheader,*/ HTTPHeader *respheader, unsigned int objectsize)
 {
 	int rc = icapsock.connect(icapip.toCharArray(), icapport);
 	if (rc) {
@@ -247,27 +404,45 @@ bool icapinstance::doHeaders(Socket & icapsock, unsigned int objectsize, const c
 		return false;
 	}
 	char objectsizehex[32];
-	String encapsulatedheader = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + String((long) objectsize) + "\r\n\r\n";
-	snprintf(objectsizehex, sizeof(objectsizehex), "%x\r\n", objectsize);
-	String httpresponseheader = "GET ";
-	httpresponseheader += filename;
-	httpresponseheader += " HTTP/1.1\r\n\r\n";
+	// encapsulated HTTP request header:
+	// use a dummy unless it proves absolutely necessary to do otherwise,
+	// as using real data could lead to e.g. yet another source of password
+	// leakage over the network.
+	String encapsulatedheader = "GET / HTTP/1.0\r\n\r\n";
+	// body chunk size in hex - either full body, or just preview
+	if (usepreviews && (objectsize > previewsize)) {
+		snprintf(objectsizehex, sizeof(objectsizehex), "%x\r\n", previewsize);
+	} else {
+		snprintf(objectsizehex, sizeof(objectsizehex), "%x\r\n", objectsize);
+	}
+	// encapsulated HTTP response header:
+	// use real data, because scanners can use this to aid the process
+	/*String httpresponseheader;
+	for (std::deque<String>::iterator i = respheader->header.begin(); i != respheader->header.end(); i++) {
+		httpresponseheader += (*i) + "\r\n";
+	}
+	httpresponseheader += "\r\n";*/
+	String httpresponseheader = "HTTP/1.0 200 OK\r\n\r\n";
+	// ICAP header itself
 	String icapheader =
-		"RESPMOD " + icapurl + " ICAP/1.0\r\nAllow: 204\r\nEncapsulated: " + "req-hdr=0, res-hdr=" + String(httpresponseheader.length()) + ", res-body=" + String(httpresponseheader.length() + encapsulatedheader.length()) +
-		"\r\n\r\n";
+		"RESPMOD " + icapurl + " ICAP/1.0\r\nHost: " + icaphost + "\r\nAllow: 204\r\nEncapsulated: req-hdr=0, res-hdr=" + String(encapsulatedheader.length()) + ", res-body=" + String(httpresponseheader.length() + encapsulatedheader.length());
+	if (usepreviews && (objectsize > previewsize)) {
+		icapheader += "\r\nPreview: " + String(previewsize);
+	}
+	icapheader += "\r\n\r\n";
 
 #ifdef DGDEBUG
-	std::cerr << "About to send icapheader:\n" << icapheader << httpresponseheader << encapsulatedheader << objectsizehex << std::endl;
+	std::cerr << "About to send icapheader:\n" << icapheader << encapsulatedheader << httpresponseheader << objectsizehex << std::endl;
 #endif
 	try {
 		icapsock.writeString(icapheader.toCharArray());
-		icapsock.writeString(httpresponseheader.toCharArray());
 		icapsock.writeString(encapsulatedheader.toCharArray());
+		icapsock.writeString(httpresponseheader.toCharArray());
 		icapsock.writeString(objectsizehex);
 	}
 	catch(exception & e) {
 #ifdef DGDEBUG
-		std::cerr << "Exception sending headers to ICAP:" << e.what() << std::endl;
+		std::cerr << "Exception sending headers to ICAP: " << e.what() << std::endl;
 #endif
 		lastmessage = "Exception sending headers to ICAP";
 		syslog(LOG_ERR, "Exception sending headers to ICAP: %s", e.what());
@@ -282,10 +457,12 @@ int icapinstance::doScan(Socket & icapsock)
 	char *data = new char[8192];
 	try {
 		String line;
-		icapsock.getLine(data, 8192, o.content_scanner_timeout);
+		int rc = icapsock.getLine(data, 8192, o.content_scanner_timeout);
+		if (rc == 0)
+			return ICAP_NODATA;
 		line = data;
 #ifdef DGDEBUG
-		std::cout << "reply from icap:" << line << std::endl;
+		std::cout << "reply from icap: " << line << std::endl;
 #endif
 		// reply is of the format:
 		// ICAP/1.0 204 No Content Necessary (etc)
@@ -296,9 +473,20 @@ int icapinstance::doScan(Socket & icapsock)
 #ifdef DGDEBUG
 			std::cerr << "ICAP says clean!" << std::endl;
 #endif
-			icapsock.close();
 			delete[]data;
 			return DGCS_CLEAN;
+		} else if (returncode == "100") {
+#ifdef DGDEBUG
+			std::cerr << "ICAP says continue!" << std::endl;
+#endif
+			// discard rest of headers (usually just a blank line)
+			while (icapsock.getLine(data, 8192, o.content_scanner_timeout) > 0) {
+				line = data;
+				if (line.startsWith("\r"))
+					break;
+			}
+			delete[]data;
+			return ICAP_CONTINUE;
 		}
 		else if (returncode == "200") {
 #ifdef DGDEBUG
@@ -307,11 +495,10 @@ int icapinstance::doScan(Socket & icapsock)
 			while (icapsock.getLine(data, 8192, o.content_scanner_timeout) > 0) {
 				line = data;
 #ifdef DGDEBUG
-				std::cout << "more reply from icap:" << line << std::endl;
+				std::cout << "more reply from icap: " << line << std::endl;
 #endif
 				if (line.contains("X-Infection-Found")) {
 					lastvirusname = line.after("Threat=").before(";");
-					icapsock.close();
 					delete[]data;
 					return DGCS_INFECTED;
 				}
@@ -332,16 +519,20 @@ int icapinstance::doScan(Socket & icapsock)
 				// do not receive X-Infection-Found or the end marker, and
 				// the socket is never closed! PRA 13-10-2005
 				
-				else if (line.startsWith("0")) {	// end marker
+				else if (line.startsWith("\r")) {	// end marker
 					break;
 				}
 			}
+			// even if we don't find an X-Infection-Found header,
+			// the file is still infected!
+			delete[] data;
+			lastvirusname = "Unknown";
+			return DGCS_INFECTED;
 		}
 		else if (returncode == "404") {
 #ifdef DGDEBUG
 			std::cerr << "ICAP says no such service!" << std::endl;
 #endif
-			icapsock.close();
 			lastmessage = "ICAP reports no such service";
 			syslog(LOG_ERR, "ICAP reports no such service; check your server URL");
 			delete[]data;
@@ -350,7 +541,6 @@ int icapinstance::doScan(Socket & icapsock)
 #ifdef DGDEBUG
 			std::cerr << "ICAP returned unrecognised response code: " << returncode << std::endl;
 #endif
-			icapsock.close();
 			lastmessage = "ICAP returned unrecognised response code.";
 			syslog(LOG_ERR, "ICAP returned unrecognised response code: %s", returncode.toCharArray());
 			delete[]data;
@@ -360,9 +550,8 @@ int icapinstance::doScan(Socket & icapsock)
 	}
 	catch(exception & e) {
 #ifdef DGDEBUG
-		std::cerr << "Exception getting reply from ICAP:" << e.what() << std::endl;
+		std::cerr << "Exception getting reply from ICAP: " << e.what() << std::endl;
 #endif
-		icapsock.close();
 		lastmessage = "Exception getting reply from ICAP.";
 		syslog(LOG_ERR, "Exception getting reply from ICAP: %s", e.what());
 		delete[]data;
@@ -370,6 +559,5 @@ int icapinstance::doScan(Socket & icapsock)
 	}
 	// it is generally NOT a good idea, when using virus scanning,
 	// to continue as if nothing went wrong by default!
-	icapsock.close();
 	return DGCS_SCANERROR;
 }
