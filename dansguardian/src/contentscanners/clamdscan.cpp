@@ -55,6 +55,8 @@ public:
 private:
 	// ClamD UNIX domain socket path
 	String udspath;
+	// File path prefix for chrooted ClamD
+	String pathprefix;
 };
 
 
@@ -87,6 +89,10 @@ int clamdinstance::init(void* args)
 		// it would be far better to do a test connection to the file but
 		// could not be arsed for now
 	}
+
+	// read in path prefix
+	pathprefix = cv["pathprefix"];
+
 	return DGCS_OK;
 }
 
@@ -109,7 +115,12 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 		return DGCS_SCANERROR;
 	};
 	String command = "SCAN ";
-	command += filename;
+	if (pathprefix.length()) {
+		String fname(filename);
+		command += fname.after(pathprefix.toCharArray());
+	} else {
+		command += filename;
+	}
 	command += "\r\n";
 #ifdef DGDEBUG
 	std::cerr << "clamdscan command:" << command << std::endl;

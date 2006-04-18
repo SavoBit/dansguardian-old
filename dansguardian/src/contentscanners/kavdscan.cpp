@@ -54,6 +54,8 @@ public:
 private:
 	// UNIX domain socket path for KAVD
 	String udspath;
+	// File path prefix for chrooted KAVD
+	String pathprefix;
 };
 
 // class factory code *MUST* be included in every plugin
@@ -82,6 +84,10 @@ int kavdinstance::init(void* args)
 		// it would be far better to do a test connection to the file but
 		// could not be arsed for now
 	}
+
+	// read in path prefix
+	pathprefix = cv["pathprefix"];
+
 	return DGCS_OK;
 }
 
@@ -105,7 +111,12 @@ int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 		return DGCS_SCANERROR;
 	};
 	String command = "SCAN bPQRSTUW ";
-	command += filename;
+	if (pathprefix.length()) {
+		String fname(filename);
+		command += fname.after(pathprefix.toCharArray());
+	} else {
+		command += filename;
+	}
 	command += "\r\n";
 #ifdef DGDEBUG
 	std::cerr << "kavdscan command:" << command << std::endl;
