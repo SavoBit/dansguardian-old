@@ -216,9 +216,9 @@ int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadcon
 	// first, return what's left from the previous buffer read, if anything
 	int i = 0;
 	if ((bufflen - buffstart) > 0) {
-#ifdef DGDEBUG
+/*#ifdef DGDEBUG
 		std::cout << "data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
-#endif
+#endif*/
 		int tocopy = size;
 		if ((bufflen - buffstart) < size)
 			tocopy = bufflen - buffstart;
@@ -332,9 +332,9 @@ int BaseSocket::readFromSocketn(char *buff, int len, unsigned int flags, int tim
 	
 	// first, return what's left from the previous buffer read, if anything
 	if ((bufflen - buffstart) > 0) {
-#ifdef DGDEBUG
+/*#ifdef DGDEBUG
 		std::cout << "readFromSocketn: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
-#endif
+#endif*/
 		int tocopy = len;
 		if ((bufflen - buffstart) < len)
 			tocopy = bufflen - buffstart;
@@ -376,9 +376,9 @@ int BaseSocket::readFromSocket(char *buff, int len, unsigned int flags, int time
 	int cnt = len;
 	int tocopy = 0;
 	if ((bufflen - buffstart) > 0) {
-#ifdef DGDEBUG
+/*#ifdef DGDEBUG
 		std::cout << "readFromSocket: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
-#endif
+#endif*/
 		tocopy = len;
 		if ((bufflen - buffstart) < len)
 			tocopy = bufflen - buffstart;
