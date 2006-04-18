@@ -531,7 +531,8 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 
 	// this line here searches for phrases contained in the list - the rest of the code is all sorting
 	// through it to find the categories, weightings, types etc. of what has actually been found.
-	std::deque<unsigned int> found = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).graphSearch(file, l);
+	std::deque<unsigned int> found;
+	(*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).graphSearch(found, file, l);
 
 	// cache reusable iterators
 	std::deque<unsigned int>::iterator foundtop = found.begin();
@@ -544,7 +545,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 	std::string combifound = "";
 	std::string combisofar = "";
 
-	std::deque<int>::iterator combicurrent = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.begin();
+	std::vector<int>::iterator combicurrent = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.begin();
 
 	while (combicurrent != o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.end()) {
 		index = *combicurrent;
