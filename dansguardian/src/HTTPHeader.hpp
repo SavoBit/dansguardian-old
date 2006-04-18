@@ -136,6 +136,18 @@ private:
 	// timeout for socket operations
 	int timeout;
 
+	// header index pointers
+	String *phost;
+	String *pport;
+	String *pcontentlength;
+	String *pcontenttype;
+	String *pproxyauthorization;
+	String *pcontentdisposition;
+	String *puseragent;
+	String *pxforwardedfor;
+	String *pcontentencoding;
+	String *pproxyconnection;
+
 	char postdata[14];
 	int postdatalen;
 	bool ispostupload;

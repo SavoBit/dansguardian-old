@@ -25,7 +25,6 @@
 // INCLUDES
 
 #include "HTTPHeader.hpp"
-//#include "DataBuffer.hpp"
 #include "Socket.hpp"
 #include "OptionContainer.hpp"
 #include "FDTunnel.hpp"
@@ -75,27 +74,25 @@ void HTTPHeader::reset()
 // grab request type (GET, HEAD etc.)
 String HTTPHeader::requestType()
 {
-	return header[0].before(" ");
+	return header.front().before(" ");
 }
 
 // grab return code
 int HTTPHeader::returnCode()
 {
-	return header[0].after(" ").before(" ").toInteger();
+	return header.front().after(" ").before(" ").toInteger();
 }
 
 // grab content length
 int HTTPHeader::contentLength()
 {
 	// code 304 - not modified - no content
-	String temp = header[0].after(" ");
+	String temp = header.front().after(" ");
 	if (temp.startsWith("304"))
 		return 0;
-	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the header
-		if (header[i].startsWithLower("content-length:")) {
-			temp = header[i].after(" ");
-			return temp.toInteger();
-		}
+	if (pcontentlength != NULL) {
+		temp = pcontentlength->after(" ");
+		return temp.toInteger();
 	}
 	// no content-length header - we don't know
 	return -1;
@@ -104,12 +101,8 @@ int HTTPHeader::contentLength()
 // grab the auth type
 String HTTPHeader::getAuthType()
 {
-	String temp;
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWithLower("proxy-authorization:")) {
-			temp = header[i].after(" ").before(" ");
-			return temp;
-		}
+	if (pproxyauthorization != NULL) {
+		return pproxyauthorization->after(" ").before(" ");
 	}
 	return "";
 }
@@ -117,10 +110,7 @@ String HTTPHeader::getAuthType()
 // check the request's return code to see if it's an auth required message
 bool HTTPHeader::authRequired()
 {
-	String temp = header[0].after(" ");
-	/*if (temp.contains(" ")) {
-		temp = temp.before(" ");
-	}*/
+	String temp = header.front().after(" ");
 	if (temp.startsWith("407")) {
 		return true;
 	}
@@ -130,24 +120,21 @@ bool HTTPHeader::authRequired()
 // grab content disposition
 String HTTPHeader::disposition()
 {
-	String filename;
-	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the header
-		if (header[i].startsWithLower("content-disposition:")) {
-			filename = header[i].after("filename").after("=");
-			if (filename.contains(";"))
-				filename = filename.before(";");
-			filename.removeWhiteSpace();  // incase of trailing space
-			if (filename.contains("\"")) {
-				return filename.after("\"").before("\"");
-			}
-			return filename;
-			// example format:
-			// Content-Disposition: attachment; filename="filename.ext"
-			// Content-Disposition: attachment; filename=filename.ext
-			// Content-Disposition: filename="filename.ext"
-			// 3rd format encountered from download script on realVNC's
-			// website. notice it does not contain any semicolons! PRA 4-11-2005
+	if (pcontentdisposition != NULL) {
+		String filename = pcontentdisposition->after("filename").after("=");
+		if (filename.contains(";"))
+			filename = filename.before(";");
+		filename.removeWhiteSpace();  // incase of trailing space
+		if (filename.contains("\"")) {
+			return filename.after("\"").before("\"");
 		}
+		return filename;
+		// example format:
+		// Content-Disposition: attachment; filename="filename.ext"
+		// Content-Disposition: attachment; filename=filename.ext
+		// Content-Disposition: filename="filename.ext"
+		// 3rd format encountered from download script on realVNC's
+		// website. notice it does not contain any semicolons! PRA 4-11-2005
 	}
 	return "";  // it finds the header proposed filename
 }
@@ -155,12 +142,8 @@ String HTTPHeader::disposition()
 // grab the user agent
 String HTTPHeader::userAgent()
 {
-	String agent;
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWithLower("user-agent:")) {
-			agent = header[i].after(" ");
-			return agent;
-		}
+	if (puseragent != NULL) {
+		return puseragent->after(" ");
 	}
 	return "";
 }
@@ -168,28 +151,25 @@ String HTTPHeader::userAgent()
 // grab the content type header
 String HTTPHeader::getContentType()
 {
-	String mimetype;
-	int j;
-	unsigned char c;
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWithLower("content-type:")) {
-			mimetype = header[i].after(" ");
-			j = 0;
-			while (j < (signed) mimetype.length()) {
-				c = mimetype[j];
-				if (c == ' ' || c == ';' || c < 32) {	// remove the
-					mimetype = mimetype.subString(0, j);
-					// extra info not needed
-					j = 0;
-				}
-				j++;
+	if (pcontenttype != NULL) {
+		int j;
+		unsigned char c;
+		String mimetype = pcontenttype->after(" ");
+		j = 0;
+		while (j < (signed) mimetype.length()) {
+			c = mimetype[j];
+			if (c == ' ' || c == ';' || c < 32) {	// remove the
+				mimetype = mimetype.subString(0, j);
+				// extra info not needed
+				j = 0;
 			}
-			mimetype.toLower();
-			if (mimetype.length() < 1) {
-				return "-";
-			}
-			return mimetype;
+			j++;
 		}
+		mimetype.toLower();
+		if (mimetype.length() < 1) {
+			return "-";
+		}
+		return mimetype;
 	}
 	return "-";
 }
@@ -205,13 +185,10 @@ bool HTTPHeader::isContentType(String t)
 // Jimmy Myrick (jmyrick@tiger1.tiger.org)
 std::string HTTPHeader::getXForwardedForIP()
 {
-	String line;
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWithLower("x-forwarded-for:")) {
-			line = header[i].after(": ");
-			line.chop();
-			return std::string(line.toCharArray());
-		}
+	if (pxforwardedfor != NULL) {
+		String line = pxforwardedfor->after(": ");
+		line.chop();
+		return std::string(line.toCharArray());
 	}
 	return "";
 }
@@ -224,7 +201,7 @@ bool HTTPHeader::isRedirection()
 	if (header.size() < 1) {
 		return false;
 	}			// sometimes get called b 4 read
-	String answer = header[0].after(" ").before(" ");
+	String answer = header.front().after(" ").before(" ");
 	if (answer[0] == '3' && answer.length() == 3) {
 		return true;
 	}
@@ -235,12 +212,9 @@ bool HTTPHeader::isRedirection()
 // returns base64-decoding of the chunk of data after the auth type string
 std::string HTTPHeader::getAuthData()
 {
-	String line;
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWithLower("proxy-authorization:")) {
-			line = header[i].after(" ").after(" ");
-			return decodeb64(line);  // it's base64 MIME encoded
-		}
+	if (pproxyauthorization != NULL) {
+		String line = pproxyauthorization->after(" ").after(" ");
+		return decodeb64(line);  // it's base64 MIME encoded
 	}
 	return "";
 }
@@ -248,18 +222,16 @@ std::string HTTPHeader::getAuthData()
 // do we have a non-identity content encoding? this means body is compressed
 bool HTTPHeader::isCompressed()
 {
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWithLower("content-encoding:")) {
-			if (header[i].indexOf("identity") != -1) {
-				// http1.1 says this
-				// should not be here, but not must not
-				return false;
-			}
-#ifdef DGDEBUG
-			std::cout << "is compressed" << std::endl;
-#endif
-			return true;  // i.e. encoded with something other than clear
+	if (pcontentencoding != NULL) {
+		if (pcontentencoding->indexOf("identity") != -1) {
+			// http1.1 says this
+			// should not be here, but not must not
+			return false;
 		}
+#ifdef DGDEBUG
+		std::cout << "is compressed" << std::endl;
+#endif
+		return true;  // i.e. encoded with something other than clear
 	}
 	return false;
 }
@@ -267,13 +239,10 @@ bool HTTPHeader::isCompressed()
 // grab content encoding header
 String HTTPHeader::contentEncoding()
 {
-	String ce;
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWithLower("content-encoding:")) {
-			ce = header[i].after(": ");
-			ce.toLower();
-			return ce;
-		}
+	if (pcontentencoding != NULL) {
+		String ce = pcontentencoding->after(": ");
+		ce.toLower();
+		return ce;
 	}
 	return "";  // we need a default don't we?
 }
@@ -294,11 +263,8 @@ void HTTPHeader::addXForwardedFor(std::string clientip)
 // set content length header to report given lenth
 void HTTPHeader::setContentLength(int newlen)
 {
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWithLower("content-length:")) {
-			header[i] = "Content-Length: " + String(newlen);
-			break;
-		}
+	if (pcontentlength != NULL) {
+		(*pcontentlength) = "Content-Length: " + String(newlen);
 	}
 }
 
@@ -307,22 +273,16 @@ void HTTPHeader::makePersistent(bool persist)
 {
 	if (persist) {
 		if (waspersistent && !ispersistent) {
-			for (int i = 0; i < (signed) header.size(); i++) {
-				if (header[i].startsWithLower("proxy-connection:") || header[i].startsWithLower("connection:")) {
-					header[i] = header[i].before(":") + ": Keep-Alive\r";
-					ispersistent = true;
-					break;
-				}
+			if (pproxyconnection != NULL) {
+				(*pproxyconnection) = pproxyconnection->before(":") + ": Keep-Alive\r";
+				ispersistent = true;
 			}
 		}
 	} else {
 		if (ispersistent) {
-			for (int i = 0; i < (signed) header.size(); i++) {
-				if (header[i].startsWithLower("proxy-connection:") || header[i].startsWithLower("connection:")) {
-					header[i] = header[i].before(":") + ": Close\r";
-					ispersistent = false;
-					break;
-				}
+			if (pproxyconnection != NULL) {
+				(*pproxyconnection) = pproxyconnection->before(":") + ": Close\r";
+				ispersistent = false;
 			}
 		}
 	}
@@ -358,48 +318,40 @@ String HTTPHeader::modifyEncodings(String e)
 // set content length to report the given length, and strip content encoding
 void HTTPHeader::removeEncoding(int newlen)
 {
-	bool donelength = false;
-	bool doneencoding = false;
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWithLower("content-length:")) {
-			header[i] = "Content-Length: " + String(newlen);
-			donelength = true;
-		}
-		// this may all be overkill. since we strip everything out of the outgoing
-		// accept-encoding header that we don't support, we won't be getting anything
-		// back again that we don't support, in theory. leave new code commented
-		// unless it proves to be necessary further down the line. PRA 20-10-2005
-		else if (header[i].startsWithLower("content-encoding:")) {
+	if (pcontentlength != NULL) {
+		(*pcontentlength) = "Content-Length: " + String(newlen);
+	}
+	// this may all be overkill. since we strip everything out of the outgoing
+	// accept-encoding header that we don't support, we won't be getting anything
+	// back again that we don't support, in theory. leave new code commented
+	// unless it proves to be necessary further down the line. PRA 20-10-2005
+	if (pcontentencoding != NULL) {
 /*#ifdef DGDEBUG
-			std::cout << std::endl << "Stripping Content-Encoding header" <<std::endl;
-			std::cout << "Old: " << header[i] <<std::endl;
+		std::cout << std::endl << "Stripping Content-Encoding header" <<std::endl;
+		std::cout << "Old: " << header[i] <<std::endl;
 #endif
-			// only strip supported compression types
-			String temp = header[i].after(":");
-			temp.removeWhiteSpace();
-			String newheader;
-			// iterate over comma-separated list of encodings
-			while (temp.length() != 0) {
-				if (!(temp.startsWith("gzip") || temp.startsWith("deflate"))) {
-					// add other, unstripped encoding types back into the header
-					if (newheader.length() != 0)
-						newheader += ", ";
-					newheader += (temp.before(",").length() != 0 ? temp.before(",") : temp);
-				}
-				temp = temp.after(",");
-				temp.removeWhiteSpace();
+		// only strip supported compression types
+		String temp = header[i].after(":");
+		temp.removeWhiteSpace();
+		String newheader;
+		// iterate over comma-separated list of encodings
+		while (temp.length() != 0) {
+			if (!(temp.startsWith("gzip") || temp.startsWith("deflate"))) {
+				// add other, unstripped encoding types back into the header
+				if (newheader.length() != 0)
+					newheader += ", ";
+				newheader += (temp.before(",").length() != 0 ? temp.before(",") : temp);
 			}
-			if (newheader.length() == 0)*/
-				header[i] = "X-DansGuardian-Removed: Content-Encoding";
-/*			else
-				header[i] = "Content-Encoding: "+newheader;
-#ifdef DGDEBUG
-			std::cout << "New: " << header[i] << std::endl << std::endl;
-#endif*/
-			doneencoding = true;
+			temp = temp.after(",");
+			temp.removeWhiteSpace();
 		}
-		if (donelength && doneencoding)
-			break;
+		if (newheader.length() == 0)*/
+			(*pcontentencoding) = "X-DansGuardian-Removed: Content-Encoding";
+/*			else
+			header[i] = "Content-Encoding: "+newheader;
+#ifdef DGDEBUG
+		std::cout << "New: " << header[i] << std::endl << std::endl;
+#endif*/
 	}
 }
 
@@ -425,38 +377,30 @@ void HTTPHeader::setURL(String &url) {
 	}
 
 #ifdef DGDEBUG
-	std::cout << "setURL: header[0] changed from: " << header[0] << std::endl;
+	std::cout << "setURL: header.front() changed from: " << header.front() << std::endl;
 #endif
-	header[0] = header[0].before(" ") + " " + url + " " + header[0].after(" ").after(" ");
+	header.front() = header.front().before(" ") + " " + url + " " + header.front().after(" ").after(" ");
 #ifdef DGDEBUG
-	std::cout << " to: " << header[0] << std::endl;
+	std::cout << " to: " << header.front() << std::endl;
 #endif
 
-	bool donehost = false;
-	bool doneport = false;
-	for (int i = 1; i < (signed)header.size(); i++) {
-		if (header[i].startsWithLower("host:")) {
+	if (phost != NULL) {
 #ifdef DGDEBUG
-			std::cout << "setURL: header[] line changed from: " << header[i] << std::endl;
+		std::cout << "setURL: header[] line changed from: " << (*phost) << std::endl;
 #endif
-			header[i] = String("Host: ") + hostname + "\r";
+		(*phost) = String("Host: ") + hostname + "\r";
 #ifdef DGDEBUG
-			std::cout << " to " << header[i] << std::endl;
+		std::cout << " to " << (*phost) << std::endl;
 #endif
-			donehost = true;
-		}
-		else if (header[i].startsWithLower("port:")) {
+	}
+	if (pport != NULL) {
 #ifdef DGDEBUG
-			std::cout << "setURL: header[] line changed from: " << header[i] << std::endl;
+		std::cout << "setURL: header[] line changed from: " << (*pport) << std::endl;
 #endif
-			header[i] = String("Port: ") + port + "\r";
+		(*pport) = String("Port: ") + port + "\r";
 #ifdef DGDEBUG
-			std::cout << " to " << header[i] << std::endl;
+		std::cout << " to " << (*pport) << std::endl;
 #endif
-			doneport = true;
-		}
-		if (donehost && doneport)
-			break;
 	}
 }
 
@@ -598,7 +542,7 @@ bool HTTPHeader::malformedURL(String url)
 // is this a POST request encapsulating a file upload?
 bool HTTPHeader::isPostUpload(Socket &peersock)
 {
-	if (header[0].toCharArray()[0] != 'P') {
+	if (header.front().toCharArray()[0] != 'P') {
 		return false;
 	}
 
@@ -693,34 +637,87 @@ bool HTTPHeader::isPostUpload(Socket &peersock)
 // are case-insensitive. - Anonymous SF Poster, 2006-02-23
 void HTTPHeader::checkheader(bool allowpersistent)
 {
+	// reset persistency flags
 	waspersistent = false;
 	ispersistent = false;
-	for (int i = 0; i < (signed) header.size(); i++) {	// check each line in the headers
+	// reset header index pointers
+	phost = NULL;
+	pport = NULL;
+	pcontentlength = NULL;
+	pcontenttype = NULL;
+	pproxyauthorization = NULL;
+	pcontentdisposition = NULL;
+	puseragent = NULL;
+	pxforwardedfor = NULL;
+	pcontentencoding = NULL;
+	pproxyconnection = NULL;
+
+	// are these headers outgoing, or incoming?
+	bool outgoing = true;
+	if (header.front().startsWith("HT"))
+		outgoing = false;
+
+	bool first = true;
+	for (std::deque<String>::iterator i = header.begin(); i != header.end(); i++) {	// check each line in the headers
 		// HTTP 1.1 is persistent by default
-		if ((i == 0) && (header[i].after("HTTP/") == "1.1")) {
+		if (first && (i->after("HTTP/") == "1.1")) {
 			waspersistent = true;
 			ispersistent = true;
+			first = false;
 		}
-		else if (header[i].startsWithLower("accept-encoding:")) {
-			header[i] = "Accept-Encoding:" + header[i].after(":");
-			header[i] = modifyEncodings(header[i]) + "\r";
+		// index headers - try to perform the checks in the order the average browser sends the headers.
+		// also only do the necessary checks for the header type (sent/received).
+		else if (outgoing && (phost == NULL) && i->startsWithLower("host:")) {
+			phost = &(*i);
 		}
-		else if (header[i].startsWithLower("proxy-connection: keep-alive") || header[i].startsWithLower("connection: keep-alive")) {
+		else if (outgoing && (puseragent == NULL) && i->startsWithLower("user-agent:")) {
+			puseragent = &(*i);
+		}
+		else if (outgoing && i->startsWithLower("accept-encoding:")) {
+			(*i) = "Accept-Encoding:" + i->after(":");
+			(*i) = modifyEncodings(*i) + "\r";
+		}
+		else if ((pcontenttype == NULL) && i->startsWithLower("content-type:")) {
+			pcontenttype = &(*i);
+		}
+		else if ((pcontentlength == NULL) && i->startsWithLower("content-length:")) {
+			pcontentlength = &(*i);
+		}
+		// is this ever sent outgoing?
+		else if ((pcontentdisposition == NULL) && i->startsWithLower("content-disposition:")) {
+			pcontentdisposition = &(*i);
+		}
+		else if ((!outgoing) && (pcontentencoding == NULL) && i->startsWithLower("content-encoding:")) {
+			pcontentencoding = &(*i);
+		}
+		else if ((pproxyauthorization == NULL) && i->startsWithLower("proxy-authorization:")) {
+			pproxyauthorization = &(*i);
+		}
+		else if ((pproxyconnection == NULL) && (i->startsWithLower("proxy-connection: keep-alive") || i->startsWithLower("connection: keep-alive"))) {
 			waspersistent = true;
 			if (!allowpersistent) {
 				ispersistent = false;
-				header[i] = header[i].before(":") + ": Close\r";
+				(*i) = i->before(":") + ": Close\r";
 			} else {
 				ispersistent = true;
 			}
+			pproxyconnection = &(*i);
+		}
+		else if (outgoing && (pxforwardedfor == NULL) && i->startsWithLower("x-forwarded-for:")) {
+			pxforwardedfor = &(*i);
+		}
+		// this one's non-standard, so check for it last
+		else if (outgoing && (pport = NULL) && i->startsWithLower("port:")) {
+			pport = &(*i);
 		}
 #ifdef DGDEBUG
-		std::cout << header[i] << std::endl;
+		std::cout << (*i) << std::endl;
 #endif
 	}
 	// if a request was HTTP 1.1 and there was no proxy-connection header, we may need to add one
 	if ((!allowpersistent) && ispersistent) {
 		header.push_back("Proxy-Connection: Close\r");
+		pproxyconnection = &(header.back());
 		ispersistent = false;
 	}
 }
@@ -739,7 +736,7 @@ String HTTPHeader::url()
 {
 	port = 0;
 	String hostname;
-	String answer = header[0].after(" ");
+	String answer = header.front().after(" ");
 	answer.removeMultiChar(' ');
 	if (answer.after(" ").startsWith("HTTP/")) {
 		answer = answer.before(" HTTP/");
@@ -752,34 +749,28 @@ String HTTPHeader::url()
 		}
 	}
 	if (answer.length()) {
-		int i;
 		if (answer[0] == '/') {	// must be the latter above
-			for (i = 1; i < (signed) header.size(); i++) {
-				if (header[i].startsWithLower("host:")) {
-					hostname = header[i].after(":");
-					hostname.removeMultiChar(' ');
-					if (hostname.contains(":")) {
-						hostname = hostname.before(":");  // chop off the port bit but it should never be there
-					}
-					hostname.removeWhiteSpace();  // remove rubbish like
-					// ^M and blanks
-					hostname = "http://" + hostname;
-					answer = hostname + answer;
-					if (port > 0) {
-						break;  // need to keep parsing to get port
-					}
+			if (phost != NULL) {
+				hostname = *phost;
+				hostname.removeMultiChar(' ');
+				if (hostname.contains(":")) {
+					hostname = hostname.before(":");  // chop off the port bit but it should never be there
 				}
-				else if (header[i].startsWithLower("port:")) {
-					port = header[i].after(" ").toInteger();
-					if (port == 0 || port > 65535) {
-						port = 80;
-					}
+				hostname.removeWhiteSpace();  // remove rubbish like
+				// ^M and blanks
+				hostname = "http://" + hostname;
+				answer = hostname + answer;
+			}
+			if (pport != NULL) {
+				port = pport->after(" ").toInteger();
+				if (port == 0 || port > 65535) {
+					port = 80;
 				}
 			}
 			if (port == 0)
 				port = 80;
 			// Squid doesn't like requests in this format. Work around the fact.
-			header[0] = requestType() + " " + answer + " HTTP/" + header[0].after(" HTTP/");
+			header.front() = requestType() + " " + answer + " HTTP/" + header.front().after(" HTTP/");
 		} else {	// must be in the form GET http://foo.bar:80/ HTML/1.0
 			if (!answer.after("://").contains("/")) {
 				answer += "/";  // needed later on so correct host is extracted
@@ -829,10 +820,10 @@ void HTTPHeader::chopBypass(String url, bool infectionbypass)
 	if (url.contains(infectionbypass ? "GIBYPASS=" : "GBYPASS=")) {
 		if (url.contains(infectionbypass ? "?GIBYPASS=" : "?GBYPASS=")) {
 			String bypass = url.after(infectionbypass ? "?GIBYPASS=" : "?GBYPASS=");
-			header[0] = header[0].before(infectionbypass ? "?GIBYPASS=" : "?GBYPASS=") + header[0].after(bypass.toCharArray());
+			header.front() = header.front().before(infectionbypass ? "?GIBYPASS=" : "?GBYPASS=") + header.front().after(bypass.toCharArray());
 		} else {
 			String bypass = url.after(infectionbypass ? "&GIBYPASS=" : "&GBYPASS=");
-			header[0] = header[0].before(infectionbypass ? "&GIBYPASS=" : "&GBYPASS=") + header[0].after(bypass.toCharArray());
+			header.front() = header.front().before(infectionbypass ? "&GIBYPASS=" : "&GBYPASS=") + header.front().after(bypass.toCharArray());
 		}
 	}
 }
@@ -843,10 +834,10 @@ void HTTPHeader::chopScanBypass(String url)
 	if (url.contains("GSBYPASS=")) {
 		if (url.contains("?GSBYPASS=")) {
 			String bypass = url.after("?GSBYPASS=");
-			header[0] = header[0].before("?GSBYPASS=") + header[0].after(bypass.toCharArray());
+			header.front() = header.front().before("?GSBYPASS=") + header.front().after(bypass.toCharArray());
 		} else {
 			String bypass = url.after("&GSBYPASS=");
-			header[0] = header[0].before("&GSBYPASS=") + header[0].after(bypass.toCharArray());
+			header.front() = header.front().before("&GSBYPASS=") + header.front().after(bypass.toCharArray());
 		}
 	}
 }
@@ -855,9 +846,10 @@ void HTTPHeader::chopScanBypass(String url)
 String HTTPHeader::getCookie(const char *cookie)
 {
 	String line;
-	for (int i = 0; i < (signed) header.size(); i++) {
-		if (header[i].startsWithLower("cookie:")) {
-			line = header[i].after(": ");
+	// TODO - do away with loop here somehow, or otherwise speed it up?
+	for (std::deque<String>::iterator i = header.begin(); i != header.end(); i++) {
+		if (i->startsWithLower("cookie:")) {
+			line = i->after(": ");
 			if (line.contains(cookie)) {	// We know we have the cookie
 				line = line.after(cookie);
 				line.lop();  // Get rid of the '='
@@ -1200,7 +1192,7 @@ bool HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 
 	if (sendflag == __DGHEADER_SENDALL || sendflag == __DGHEADER_SENDFIRSTLINE) {
 		if (header.size() > 0) {
-			l = header[0] + "\n";
+			l = header.front() + "\n";
 #ifdef DGDEBUG
 			std::cout << "headertoclient:" << l << std::endl;
 #endif
@@ -1234,8 +1226,8 @@ bool HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 
 	l = "";
 
-	for (int i = 1; i < (signed) header.size(); i++) {
-		l += header[i] + "\n";
+	for (std::deque<String>::iterator i = header.begin() + 1; i != header.end(); i++) {
+		l += (*i) + "\n";
 	}
 	l += "\r\n";
 
@@ -1262,7 +1254,7 @@ bool HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 				if (rc)
 					throw exception();
 				// include the first line on the retry
-				l = header[0] + "\n" + l;
+				l = header.front() + "\n" + l;
 				continue;
 			}
 			throw exception();
@@ -1274,7 +1266,7 @@ bool HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 	/*if (postdata.buffer_length > 0) {
 		postdata.out(sock);
 	}*/
-	if (header[0].toCharArray()[0] == 'P') {
+	if (header.front().toCharArray()[0] == 'P') {
 		if (postdatalen > 0) {
 #ifdef DGDEBUG
 			std::cout << "Sending initial POST data chunk" << std::endl;
@@ -1344,7 +1336,7 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 	checkheader(allowpersistent);  // sort out a few bits in the header
 
 	/*int length = 0;
-	String requestMethod = header[0].before(" ");
+	String requestMethod = header.front().before(" ");
 	if (!requestMethod.contains("/") && (length = contentLength()) > 0) {
 		// if it's a request (not reply) with content, grab the data and store it
 		postdata.read(sock, length);  // get the DataBuffer to read the data
