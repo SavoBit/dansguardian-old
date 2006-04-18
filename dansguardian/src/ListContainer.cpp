@@ -896,9 +896,8 @@ int ListContainer::bmsearch(char *file, int fl, std::string s)
 // Format of the data is each entry has 64 int values with format of:
 // [letter][last letter flag][num links][from phrase][link0][link1]...
 
-std::deque<unsigned int> ListContainer::graphSearch(char *doc, int len)
+void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int len)
 {
-	std::deque<unsigned int> result;
 	int i, j, k;
 	int sl;
 	int ppos;
@@ -914,7 +913,7 @@ std::deque<unsigned int> ListContainer::graphSearch(char *doc, int len)
 	}
 	
 	if (force_quick_search == 1 || graphitems == 0) {
-		return result;
+		return;
 	}
 	
 	int ml;
@@ -991,7 +990,6 @@ std::deque<unsigned int> ListContainer::graphSearch(char *doc, int len)
 		}
 	}
 	delete[]stack;
-	return result;
 }
 
 void ListContainer::graphAdd(String s, int inx, int item)
