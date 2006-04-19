@@ -74,7 +74,7 @@ private:
 	unsigned int previewsize;
 
 	// Send ICAP request headers to server
-	bool doHeaders(Socket & icapsock, /*HTTPHeader *reqheader,*/ HTTPHeader *respheader, unsigned int objectsize);
+	bool doHeaders(Socket & icapsock, HTTPHeader *reqheader, HTTPHeader *respheader, unsigned int objectsize);
 	// Check data returned from ICAP server and return one of our standard return codes
 	int doScan(Socket & icapsock);
 };
@@ -180,7 +180,7 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 
 	Socket icapsock;
 
-	if (not doHeaders(icapsock, /*requestheader,*/ docheader, objectsize)) {
+	if (not doHeaders(icapsock, requestheader, docheader, objectsize)) {
 		icapsock.close();
 		return DGCS_SCANERROR;
 	}
@@ -270,7 +270,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 	unsigned int filesize = lseek(filefd, 0, SEEK_END);
 
 	Socket icapsock;
-	if (not doHeaders(icapsock, /*requestheader,*/ docheader, filesize)) {
+	if (not doHeaders(icapsock, requestheader, docheader, filesize)) {
 		icapsock.close();
 		close(filefd);
 		return DGCS_SCANERROR;
@@ -392,7 +392,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 }
 
 // send ICAP request headers, returning success or failure
-bool icapinstance::doHeaders(Socket & icapsock, /*HTTPHeader *reqheader,*/ HTTPHeader *respheader, unsigned int objectsize)
+bool icapinstance::doHeaders(Socket & icapsock, HTTPHeader *reqheader, HTTPHeader *respheader, unsigned int objectsize)
 {
 	int rc = icapsock.connect(icapip.toCharArray(), icapport);
 	if (rc) {
@@ -408,7 +408,7 @@ bool icapinstance::doHeaders(Socket & icapsock, /*HTTPHeader *reqheader,*/ HTTPH
 	// use a dummy unless it proves absolutely necessary to do otherwise,
 	// as using real data could lead to e.g. yet another source of password
 	// leakage over the network.
-	String encapsulatedheader = "GET / HTTP/1.0\r\n\r\n";
+	String encapsulatedheader = "GET " + reqheader->url() + " HTTP/1.0\r\n\r\n";
 	// body chunk size in hex - either full body, or just preview
 	if (usepreviews && (objectsize > previewsize)) {
 		snprintf(objectsizehex, sizeof(objectsizehex), "%x\r\n", previewsize);
