@@ -147,6 +147,8 @@ private:
 	String *pxforwardedfor;
 	String *pcontentencoding;
 	String *pproxyconnection;
+	// cached result of url()
+	std::string cachedurl;
 
 	char postdata[14];
 	int postdatalen;

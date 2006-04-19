@@ -402,6 +402,7 @@ void HTTPHeader::setURL(String &url) {
 		std::cout << " to " << (*pport) << std::endl;
 #endif
 	}
+	cachedurl = url.toCharArray();
 }
 
 // Does a regexp search and replace.
@@ -651,6 +652,8 @@ void HTTPHeader::checkheader(bool allowpersistent)
 	pxforwardedfor = NULL;
 	pcontentencoding = NULL;
 	pproxyconnection = NULL;
+	// reset cached url() result
+	cachedurl = "";
 
 	// are these headers outgoing, or incoming?
 	bool outgoing = true;
@@ -734,6 +737,8 @@ void HTTPHeader::checkheader(bool allowpersistent)
 
 String HTTPHeader::url()
 {
+	if (cachedurl.length() > 0)
+		return cachedurl;
 	port = 0;
 	String hostname;
 	String answer = header.front().after(" ");
@@ -751,8 +756,7 @@ String HTTPHeader::url()
 	if (answer.length()) {
 		if (answer[0] == '/') {	// must be the latter above
 			if (phost != NULL) {
-				hostname = *phost;
-				hostname.removeMultiChar(' ');
+				hostname = phost->after(" ");
 				if (hostname.contains(":")) {
 					hostname = hostname.before(":");  // chop off the port bit but it should never be there
 				}
@@ -802,6 +806,7 @@ String HTTPHeader::url()
 #ifdef DGDEBUG
 	std::cout << "from header url:" << answer << std::endl;
 #endif
+	cachedurl = answer.toCharArray();
 	return answer;
 }
 
