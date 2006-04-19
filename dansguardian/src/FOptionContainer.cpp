@@ -211,7 +211,7 @@ bool FOptionContainer::read(const char *filename)
 		String temp_reporting_level = findoptionS("reportinglevel");
 		if (temp_reporting_level != "") {
 			reporting_level = temp_reporting_level.toInteger();
-			if ((reporting_level < 0) || (reporting_level > 3)) {
+			if ((reporting_level < -1) || (reporting_level > 3)) {
 				if (!is_daemonised)
 					std::cerr << "Invalid reportinglevel: " << reporting_level << std::endl;
 				syslog(LOG_ERR, "Invalid reportinglevel: %d", reporting_level);
