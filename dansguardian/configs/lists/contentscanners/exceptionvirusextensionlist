@@ -28,8 +28,8 @@
 # Image files not to scan
 .gif
 .png
+.tiff
 .ico
 # http://www.kb.cert.org/vuls/id/297462
 #.jpg
 #.jpeg
-
