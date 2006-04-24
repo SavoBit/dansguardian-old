@@ -332,6 +332,37 @@ String String::subString(int start, int l)
 	return (String(data + start, l));
 }
 
+// return integer from hex string
+int String::hexToInteger() {
+	int n = 0;         // position in string
+	int m = 0;         // position in digit[] to shift
+	int count;         // loop index
+	int intValue = 0;  // integer value of hex string
+	int digit[5];      // hold values to convert
+	while (n < 4) {
+		if (data[n]=='\0')
+			break;
+		if (data[n] > '0' && data[n] < '9' )
+			digit[n] = data[n] & 0x0f;
+		else if ((data[n] >='a' && data[n] <= 'f') || (data[n] >='A' && data[n] <= 'F'))
+			digit[n] = (data[n] & 0x0f) + 9;
+		else break;
+		n++;
+	}
+	count = n;
+	m = n - 1;
+	n = 0;
+	while(n < count) {
+		// digit[n] is value of hex digit at position n
+		// (m << 2) is the number of positions to shift
+		// OR the bits into return value
+		intValue = intValue | (digit[n] << (m << 2));
+		m--;
+		n++;
+	}
+	return (intValue);
+}
+
 // decode %xx to individual characters (checkme: i'm sure this is duplicated elsewhere...)
 void String::hexDecode()
 {

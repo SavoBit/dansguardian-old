@@ -81,6 +81,8 @@ public:
 	// convert to integer/long integer
 	int toInteger();
 	long int toLong();
+	// return integer from hex string
+	int hexToInteger();
 	// case conversions
 	void toLower();
 	void toUpper();
