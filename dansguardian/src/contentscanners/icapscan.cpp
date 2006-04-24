@@ -53,7 +53,8 @@ extern bool is_daemonised;
 class icapinstance:public CSPlugin
 {
 public:
-	icapinstance(ConfigVar & definition):CSPlugin(definition), usepreviews(false), previewsize(0) {};
+	icapinstance(ConfigVar & definition):CSPlugin(definition), usepreviews(false), previewsize(0),
+		supportsXIF(false), needsBody(false) {};
 
 	int scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
 		const char *ip, const char *object, unsigned int objectsize);
@@ -72,11 +73,14 @@ private:
 	// whether or not to send ICAP message previews, and the preview object size
 	bool usepreviews;
 	unsigned int previewsize;
+	// supports X-Infection-Found and/or needs us to look at the whole body
+	bool supportsXIF;
+	bool needsBody;
 
 	// Send ICAP request headers to server
 	bool doHeaders(Socket & icapsock, HTTPHeader *reqheader, HTTPHeader *respheader, unsigned int objectsize);
 	// Check data returned from ICAP server and return one of our standard return codes
-	int doScan(Socket & icapsock);
+	int doScan(Socket & icapsock, HTTPHeader * docheader, const char* object, unsigned int objectsize);
 };
 
 
@@ -141,7 +145,11 @@ int icapinstance::init(void* args)
 		std::cout << "ICAP/1.0 OPTIONS response:" << std::endl << line << std::endl;
 #endif
 		if (line.after(" ").before(" ") != "200") {
-			throw std::runtime_error("Response not 200 OK");
+			if (!is_daemonised)
+				std::cerr << "ICAP response not 200 OK" << std::endl;
+			syslog(LOG_ERR, "ICAP response not 200 OK");
+			return DGCS_WARNING;
+			//throw std::runtime_error("Response not 200 OK");
 		}
 		while (icapsock.getLine(buff, 8192, o.content_scanner_timeout) > 0) {
 			line = buff;
@@ -154,6 +162,16 @@ int icapinstance::init(void* args)
 			else if (line.startsWith("Preview:")) {
 				usepreviews = true;
 				previewsize = line.after(": ").toInteger();
+			}
+			else if (line.startsWith("Server:")) {
+				if (line.contains("AntiVir-WebGate")) {
+					needsBody = true;
+				}
+			}
+			else if (line.startsWith("X-Allow-Out:")) {
+				if (line.contains("X-Infection-Found")) {
+					supportsXIF = true;
+				}
 			}
 		}
 		icapsock.close();
@@ -197,12 +215,12 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 			}
 			sent += previewsize;
 			icapsock.writeString("\r\n0\r\n\r\n");
-			int rc = doScan(icapsock);
+			int rc = doScan(icapsock, docheader, object, objectsize);
 			if (rc != ICAP_CONTINUE)
 				return rc;
 			// some servers send "continue" immediately followed by another response
 			if (icapsock.checkForInput()) {
-				int rc = doScan(icapsock);
+				int rc = doScan(icapsock, docheader, object, objectsize);
 				if (rc != ICAP_NODATA)
 					return rc;
 			}
@@ -215,7 +233,7 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 #endif
 			// this *might* just be an early response & closed connection
 			if (icapsock.checkForInput()) {
-				int rc = doScan(icapsock);
+				int rc = doScan(icapsock, docheader, object, objectsize);
 				if (rc != ICAP_NODATA)
 					return rc;
 			}
@@ -240,7 +258,7 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 #endif
 		// this *might* just be an early response & closed connection
 		if (icapsock.checkForInput()) {
-			int rc = doScan(icapsock);
+			int rc = doScan(icapsock, docheader, object, objectsize);
 			if (rc != ICAP_NODATA)
 				return rc;
 		}
@@ -250,7 +268,7 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 		return DGCS_SCANERROR;
 	}
 
-	return doScan(icapsock);
+	return doScan(icapsock, docheader, object, objectsize);
 }
 
 // send file contents for scanning
@@ -279,6 +297,8 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 	lseek(filefd, 0, SEEK_SET);
 	unsigned int sent = 0;
 	char *data = new char[previewsize];
+	char *object = new char[100];
+	int objectsize = 0;
 
 #ifdef DGDEBUG
 	std::cerr << "About to send file data to icap" << std::endl;
@@ -298,10 +318,12 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 				if (!icapsock.writeToSocket(data, rc, 0, o.content_scanner_timeout)) {
 					throw std::runtime_error("could not write to socket");
 				}
+				memcpy(object, data, (rc > 100) ? 100 : rc);
+				objectsize += (rc > 100) ? 100 : rc;
 				sent += rc;
 			}
 			icapsock.writeString("\r\n0\r\n\r\n");
-			int rc = doScan(icapsock);
+			int rc = doScan(icapsock, docheader, object, objectsize);
 			if (rc != ICAP_CONTINUE) {
 				delete[] data;
 				close(filefd);
@@ -309,7 +331,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 			}
 			// some servers send "continue" immediately followed by another response
 			if (icapsock.checkForInput()) {
-				int rc = doScan(icapsock);
+				int rc = doScan(icapsock, docheader, object, objectsize);
 				if (rc != ICAP_NODATA) {
 					delete[] data;
 					close(filefd);
@@ -330,7 +352,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 			close(filefd);
 			// this *might* just be an early response & closed connection
 			if (icapsock.checkForInput()) {
-				int rc = doScan(icapsock);
+				int rc = doScan(icapsock, docheader, object, objectsize);
 				if (rc != ICAP_NODATA)
 					return rc;
 			}
@@ -359,6 +381,8 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 #endif
 				break;  // should never happen
 			}
+			memcpy(object + objectsize, data, (rc > (100-objectsize)) ? (100-objectsize) : rc);
+			objectsize += (rc > (100-objectsize)) ? (100-objectsize) : rc;
 			icapsock.writeToSockete(data, rc, 0, o.content_scanner_timeout);
 			sent += rc;
 		}
@@ -380,7 +404,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 		close(filefd);
 		// this *might* just be an early response & closed connection
 		if (icapsock.checkForInput()) {
-			int rc = doScan(icapsock);
+			int rc = doScan(icapsock, docheader, object, objectsize);
 			if (rc != ICAP_NODATA)
 				return rc;
 		}
@@ -388,7 +412,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 	}
 	close(filefd);
 	delete[] data;
-	return doScan(icapsock);
+	return doScan(icapsock, docheader, object, objectsize);
 }
 
 // send ICAP request headers, returning success or failure
@@ -452,7 +476,7 @@ bool icapinstance::doHeaders(Socket & icapsock, HTTPHeader *reqheader, HTTPHeade
 }
 
 // check data received from ICAP server and interpret as virus name & return value
-int icapinstance::doScan(Socket & icapsock)
+int icapinstance::doScan(Socket & icapsock, HTTPHeader * docheader, const char* object, unsigned int objectsize)
 {
 	char *data = new char[8192];
 	try {
@@ -480,9 +504,12 @@ int icapinstance::doScan(Socket & icapsock)
 			std::cerr << "ICAP says continue!" << std::endl;
 #endif
 			// discard rest of headers (usually just a blank line)
+			// this is so we are in the right place in the data stream to
+			// call doScan() again later, because people like Symantec seem
+			// to think sending code 100 then code 204 one after the other
+			// is not an abuse of the ICAP specification.
 			while (icapsock.getLine(data, 8192, o.content_scanner_timeout) > 0) {
-				line = data;
-				if (line.startsWith("\r"))
+				if (data[0] == 13)
 					break;
 			}
 			delete[]data;
@@ -490,41 +517,81 @@ int icapinstance::doScan(Socket & icapsock)
 		}
 		else if (returncode == "200") {
 #ifdef DGDEBUG
-			std::cerr << "ICAP says INFECTED!" << std::endl;
+			std::cerr << "ICAP says maybe not clean!" << std::endl;
 #endif
 			while (icapsock.getLine(data, 8192, o.content_scanner_timeout) > 0) {
+				if (data[0] == 13)	// end marker
+					break;
 				line = data;
+				// Symantec's engine gives us the virus name in the ICAP headers
+				if (supportsXIF && line.startsWith("X-Infection-Found")) {
 #ifdef DGDEBUG
-				std::cout << "more reply from icap: " << line << std::endl;
+					std::cout << "ICAP says infected! (X-Infection-Found)" << std::endl;
 #endif
-				if (line.contains("X-Infection-Found")) {
 					lastvirusname = line.after("Threat=").before(";");
 					delete[]data;
 					return DGCS_INFECTED;
 				}
-
-				//NOTE: If the socket gets closed by the other end here, it is
-				//possible for this marker to never be found. This could also be
-				//caused by poorly implemented ICAP servers/DoS (latter unlikely
-				//cos the ICAP server in DG config. would need hijacking).
-				//The reason for this is that getline returns '\n' when
-				//reading from a closed socket, and this is not sufficient for
-				//breaking this loop. We may need to be more clever and actually
-				//obey the ICAP body size and/or enforce limits.
-				//See Socket::getline() in Socket.cpp
-				
-				// New socket code alleviates some of the above fears -
-				// BaseSocket::getLine() is better behaved when reading from
-				// closed sockets, so now we only have problems if we both
-				// do not receive X-Infection-Found or the end marker, and
-				// the socket is never closed! PRA 13-10-2005
-				
-				else if (line.startsWith("\r")) {	// end marker
-					break;
+			}
+			// AVIRA's Antivir gives us 200 in all cases, so
+			// - unfortunately - we must pay attention to the encapsulated
+			// header/body.
+			if (needsBody) {
+				// grab & compare the HTTP return code from modified response
+				// if it's been modified, assume there's an infection
+				icapsock.getLine(data, 8192, o.content_scanner_timeout);
+				line = data;
+#ifdef DGDEBUG
+				std::cout << "Comparing original return code to modified:" << std::endl << docheader->header.front() << std::endl << line << std::endl;
+#endif
+				int respmodReturnCode = line.after(" ").before(" ").toInteger();
+				if (respmodReturnCode != docheader->returnCode()) {
+#ifdef DGDEBUG
+					std::cerr << "ICAP says infected! (returned header comparison)" << std::endl;
+#endif
+					delete[] data;
+					lastvirusname = "Unknown";
+					return DGCS_INFECTED;
+				}
+				// ok - headers were identical, so look at encapsulated body
+				// discard the rest of the encapsulated headers
+				while (icapsock.getLine(data, 8192, o.content_scanner_timeout) > 0) {
+					if (data[0] == 13)
+						break;
+				}
+				// grab body chunk size
+#ifdef DGDEBUG
+				std::cout << "Comparing original body data to modified" << std::endl;
+#endif
+				icapsock.getLine(data, 8192, o.content_scanner_timeout);
+				line = data;
+				int bodysize = line.hexToInteger();
+				// get, say, the first 100 bytes and compare them to what we
+				// originally sent to see if it has been modified
+				unsigned int chunksize = (bodysize < 100) ? bodysize : 100;
+				if (chunksize > objectsize)
+					chunksize = objectsize;
+				icapsock.readFromSocket(data, chunksize, 0, o.content_scanner_timeout);
+				if (memcmp(data, object, chunksize) == 0) {
+#ifdef DGDEBUG
+					std::cerr << "ICAP says clean!" << std::endl;
+#endif
+					delete[]data;
+					return DGCS_CLEAN;
+				} else {
+#ifdef DGDEBUG
+					std::cerr << "ICAP says infected! (body byte comparison)" << std::endl;
+#endif
+					delete[] data;
+					lastvirusname = "Unknown";
+					return DGCS_INFECTED;
 				}
 			}
 			// even if we don't find an X-Infection-Found header,
 			// the file is still infected!
+#ifdef DGDEBUG
+			std::cerr << "ICAP says infected! (no further tests)" << std::endl;
+#endif
 			delete[] data;
 			lastvirusname = "Unknown";
 			return DGCS_INFECTED;
