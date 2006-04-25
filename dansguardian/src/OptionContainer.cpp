@@ -189,7 +189,11 @@ bool OptionContainer::read(const char *filename, int type)
 			soft_restart = 0;
 		}
 
-
+#ifdef __EMAIL
+		// Email notification patch by J. Gauthier
+		mailer = findoptionS("mailer");
+#endif
+	   
 		// the dansguardian.conf and pics files get amalgamated into one
 		// deque.  They are only seperate files for clarity.
 

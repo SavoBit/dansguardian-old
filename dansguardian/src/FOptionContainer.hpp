@@ -55,6 +55,19 @@ public:
 	int createlistcachefiles;
 	int enable_PICS;
 	int deep_url_analysis;
+
+#ifdef __EMAIL
+	// Email notification patch by J. Gauthier
+	int notifyav;
+	int notifycontent;
+	int use_smtp;
+	int violations;
+	int current_violations;
+	int threshold;
+	long threshold_stamp;
+	int byuser;
+#endif
+
 	bool blanketblock;
 	bool blanket_ip_block;
 	bool blanketsslblock;
@@ -153,6 +166,17 @@ public:
 	std::string magic;
 	std::string imagic;
 	std::string cookie_magic;
+
+#ifdef __EMAIL
+	// Email notification patch by J. Gauthier
+	std::string mailfrom;
+	std::string avadmin;
+	std::string contentadmin;   
+	std::string avsubject;
+	std::string contentsubject;   
+	std::string violationbody;
+#endif
+   
 	unsigned int banned_phrase_list;
 	unsigned int exception_site_list;
 	unsigned int exception_url_list;
@@ -169,7 +193,8 @@ public:
 	unsigned int exception_extension_list;
 	unsigned int exception_mimetype_list;
 	unsigned int exception_file_site_list;
-	
+
+   
 	// regex match lists
 	std::deque<RegExp> banned_regexpurl_list_comp;
 	std::deque<String> banned_regexpurl_list_source;
@@ -218,7 +243,7 @@ public:
 	int inExceptionRegExpURLList(String url);
 	char *inExtensionList(unsigned int list, String url);
 	bool isIPHostname(String url);
-
+   
 	std::deque<String> &ipToHostname(const char *ip);
 	
 	// get HTML template for this group

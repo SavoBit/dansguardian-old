@@ -108,6 +108,12 @@ public:
 	int anonymise_logs;
 	int log_ad_blocks;
 	int soft_restart;
+
+#ifdef __EMAIL
+	// Email notification patch by J. Gauthier
+	std::string mailer;   
+#endif
+
 	std::string daemon_user;
 	std::string daemon_group;
 	int max_upload_size;

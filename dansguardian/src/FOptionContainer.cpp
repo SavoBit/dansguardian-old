@@ -206,7 +206,96 @@ bool FOptionContainer::read(const char *filename)
 		} else {
 			disable_content_scan = 0;
 		}
-		
+
+#ifdef __EMAIL
+		// Email notification patch by J. Gauthier
+		if (findoptionS("usesmtp") == "on") {
+			use_smtp = 1;
+		} else {
+			use_smtp = 0;
+		}
+
+		if (findoptionS("thresholdbyuser") == "on") {
+			byuser = 1;
+		} else {
+			byuser = 0;
+		}	   
+
+		if (findoptionS("notifyav") == "on") {
+			if (use_smtp == 0) {
+				if (!is_daemonised)
+					std::cerr << "notifyav cannot be on while usesmtp is off." << std::endl;
+				syslog(LOG_ERR, "notifyav cannot be on while usesmtp is off.");
+				return false;
+			}
+			notifyav = 1;
+		} else {
+			notifyav = 0;
+		}
+
+		if (findoptionS("notifycontent") == "on") {
+			if (use_smtp == 0) {
+				if (!is_daemonised)
+					std::cerr << "notifycontent cannot be on while usesmtp is off." << std::endl;
+				syslog(LOG_ERR, "notifycontent cannot be on while usesmtp is off.");
+				return false;
+			}
+			notifycontent = 1;
+		} else {
+			notifycontent = 0;
+		}
+
+		violations = findoptionI("violations");
+		current_violations=0;
+		violationbody="";
+		threshold = findoptionI("threshold");
+
+		avadmin = findoptionS("avadmin");
+		if (avadmin.length()==0) {
+			if (notifyav==1) {
+				if (!is_daemonised)
+					std::cerr << "avadmin cannot be blank while notifyav is on." << std::endl;
+				syslog(LOG_ERR, "avadmin cannot be blank while notifyav is on.");
+				return false;
+			}
+		}
+
+		contentadmin = findoptionS("contentadmin");
+		if (contentadmin.length()==0) {
+			if (use_smtp == 1) {		   
+				if (!is_daemonised)		   
+					std::cerr << "contentadmin cannot be blank while usesmtp is on." << std::endl;
+				syslog(LOG_ERR, "contentadmin cannot be blank while usesmtp is on.");
+				return false;
+			}
+		}
+
+		mailfrom = findoptionS("mailfrom");
+		if (mailfrom.length()==0) {
+			if (use_smtp == 1) {
+				if (!is_daemonised)		   
+					std::cerr << "mailfrom cannot be blank while usesmtp is on." << std::endl;
+				syslog(LOG_ERR, "mailfrom cannot be blank while usesmtp is on.");
+				return false;
+			}
+		}	   
+		avsubject = findoptionS("avsubject");
+		if (avsubject.length()==0 && notifyav==1 && use_smtp==1) {
+			if (!is_daemonised)		   
+				std::cerr << "avsubject cannot be blank while notifyav is on." << std::endl;
+			syslog(LOG_ERR, "avsubject cannot be blank while notifyav is on.");
+			return false;
+		}
+
+		contentsubject = findoptionS("contentsubject");
+		if (contentsubject.length()==0 && use_smtp) {
+			if (!is_daemonised)		   
+				std::cerr << "contentsubject cannot be blank while usesmtp is on." << std::endl;
+			syslog(LOG_ERR, "contentsubject cannot be blank while usesmtp is on.");
+			return false;
+		}
+#endif
+	   
 		// override default reporting level
 		String temp_reporting_level = findoptionS("reportinglevel");
 		if (temp_reporting_level != "") {
