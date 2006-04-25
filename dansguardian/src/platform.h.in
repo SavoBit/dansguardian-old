@@ -83,4 +83,8 @@
 	#define __NTLM
 #endif
 
+#ifdef ENABLE_EMAIL
+	#define __EMAIL
+#endif
+
 #endif //ifndef __H_PLATFORM

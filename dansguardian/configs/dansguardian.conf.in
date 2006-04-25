@@ -580,3 +580,8 @@ logadblocks = off
 # on|off ( defaults to off )
 softrestart = off
 
+# Mail program
+# Path (sendmail-compatible) email program, with options.
+# Not used if usesmtp is disabled (filtergroup specific).
+@EMAILSUPPORT@mailer = '/usr/sbin/sendmail -t'
+

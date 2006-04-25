@@ -210,3 +210,70 @@ deepurlanalysis = off
 # e.g. @DGDATADIR@/languages/ukenglish/custom.html
 #
 #htmltemplate = 'custom.html'
+
+
+# Email reporting - original patch by J. Gauthier
+
+# Use SMTP
+# If on, will enable system wide events to be reported by email.
+# need to configure smtp server (see 'mailer' in global config)
+# and email recipients
+# default usesmtp = off
+@EMAILSUPPORT@usesmtp = off
+
+# mailfrom
+# who the email would come from
+# example: mailfrom = 'dansguardian@mycompany.com'
+@EMAILSUPPORT@mailfrom = ''
+
+# avadmin
+# who the virus emails go to (if notify av is on)
+# example: avadmin = 'admin@mycompany.com'
+@EMAILSUPPORT@avadmin = ''
+
+# contentdmin
+# who the content emails go to (when thresholds are exceeded)
+# and contentnotify is on
+# default contentadmin = 'admin@mycompany.com'
+@EMAILSUPPORT@contentadmin = ''
+
+# avsubject
+# Subject of the email sent when a virus is caught.
+# only applicable if notifyav is on
+# example avsubject = 'dansguardian virus block'
+@EMAILSUPPORT@avsubject = 'dansguardian virus block'
+
+# content
+# Subject of the email sent when violation thresholds are exceeded
+# default subject = 'dansguardian violation'
+@EMAILSUPPORT@contentsubject = 'dansguardian violation'
+
+# notifyAV
+# This will send a notification, if usesmtp/notifyav is on, any time an infection
+# is is found. 
+# Important: If this option is off, viruses will still be recorded like a
+# content infraction.
+@EMAILSUPPORT@notifyav = off
+
+# notifycontent
+# This will send a notification, if usesmtp is on, based on thresholds
+# below
+@EMAILSUPPORT@notifycontent = off
+
+# thresholdbyuser
+# results are only predictable with user authenticated configs
+# if enabled the violation/threshold count is kept track of by the user
+@EMAILSUPPORT@thresholdbyuser = off
+
+#violations
+# number of violations before notification
+# setting to 0 will never trigger a notification
+@EMAILSUPPORT@violations = 0
+
+#threshold
+# this is in seconds. If 'violations' occur in 'threshold' seconds, then
+# a notification is made.
+# if this is set to 0, then whenever the set number of violations are made a 
+# notifaction will be sent.
+@EMAILSUPPORT@threshold = 0
+
