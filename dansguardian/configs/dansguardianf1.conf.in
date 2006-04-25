@@ -216,7 +216,7 @@ deepurlanalysis = off
 
 # Use SMTP
 # If on, will enable system wide events to be reported by email.
-# need to configure smtp server (see 'mailer' in global config)
+# need to configure mail program (see 'mailer' in global config)
 # and email recipients
 # default usesmtp = off
 @EMAILSUPPORT@usesmtp = off
@@ -234,18 +234,18 @@ deepurlanalysis = off
 # contentdmin
 # who the content emails go to (when thresholds are exceeded)
 # and contentnotify is on
-# default contentadmin = 'admin@mycompany.com'
+# example: contentadmin = 'admin@mycompany.com'
 @EMAILSUPPORT@contentadmin = ''
 
 # avsubject
 # Subject of the email sent when a virus is caught.
 # only applicable if notifyav is on
-# example avsubject = 'dansguardian virus block'
+# default avsubject = 'dansguardian virus block'
 @EMAILSUPPORT@avsubject = 'dansguardian virus block'
 
 # content
 # Subject of the email sent when violation thresholds are exceeded
-# default subject = 'dansguardian violation'
+# default contentsubject = 'dansguardian violation'
 @EMAILSUPPORT@contentsubject = 'dansguardian violation'
 
 # notifyAV
