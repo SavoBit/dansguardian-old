@@ -44,8 +44,10 @@
 
 #ifdef __GCCVER3
 #include <istream>
+#include <map>
 #else
 #include <istream.h>
+#include <map.h>
 #endif
 
 
@@ -375,8 +377,8 @@ int prefork(int num)
 			// right - let's do our job!
 			UDSocket sock(sv[1]);
 			int rc = handle_connections(sock);
-			
-			// ok - job done, time to tidy up.	
+
+			// ok - job done, time to tidy up.
 			_exit(rc);  // baby go bye bye
 		} else {
 			// I am the parent
@@ -521,7 +523,7 @@ bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
 	// usually 500 so max time a child hangs around is lonngggg
 	// it needs to be a long block to stop the machine needing to page in
 	// the process
-	
+
 	// check the message from the parent
 	if (rc < 1) {
 		return false;
@@ -772,7 +774,7 @@ void tellchild_accept(int num, int whichsock)
 		deletechild(childrenpids[num], -1);
 		return;
 	}
-	
+
 	// check for response from child
 	char buf;
 	try {
@@ -813,8 +815,30 @@ int log_listener(std::string log_location, int logconerror)
 	}
 	UDSocket* ipcpeersock;  // the socket which will contain the ipc connection
 	int rc, ipcsockfd;
+
 	char *logline = new char[8192];
 
+#ifdef __EMAIL
+	// Email notification patch by J. Gauthier
+	char *vbody_temp = new char[8192];   
+   
+	map<string,int> violation_map;
+	map<string,int> timestamp_map;   
+	map<string,string> vbody_map;
+
+	int curv_tmp, stamp_tmp, byuser;
+	int smtppid;
+#endif
+	
+	String where, what, how;
+	std::string cr = "\n";
+   
+	std::string cat, clienthost, from, who, mimetype;
+	int port, size, isnaughty, isexception, istext, code;
+	int cachehit, wasinfected, wasscanned, naughtiness, filtergroup;
+	long tv_sec, tv_usec;
+	int contentmodified, urlmodified, matchedip;   
+	
 	ofstream logfile(log_location.c_str(), ios::app);
 	if (logfile.fail()) {
 		syslog(LOG_ERR, "%s", "Error opening/creating log file.");
@@ -827,27 +851,26 @@ int log_listener(std::string log_location, int logconerror)
 	ipcsockfd = loggersock.getFD();
 
 	fd_set fdSet;  // our set of fds (only 1) that select monitors for us
-	fd_set fdcpy;  // select modifes the set so we need to use a copy
+	fd_set fdcpy;  // select modifies the set so we need to use a copy
 	FD_ZERO(&fdSet);  // clear the set
 	FD_SET(ipcsockfd, &fdSet);  // add ipcsock to the set
-
 	while (true) {		// loop, essentially, for ever
-
 		fdcpy = fdSet;  // take a copy
 		rc = select(ipcsockfd + 1, &fdcpy, NULL, NULL, NULL);  // block
+
 		// until something happens
 		if (rc < 0) {	// was an error
 			if (errno == EINTR) {
 				continue;  // was interupted by a signal so restart
 			}
 			if (logconerror == 1) {
-				syslog(LOG_ERR, "%s", "ipc rc<0. (Ignorable)");
+				syslog(LOG_ERR, "ipc rc<0. (Ignorable)");
 			}
 			continue;
 		}
 		if (rc < 1) {
 			if (logconerror == 1) {
-				syslog(LOG_ERR, "%s", "ipc rc<0. (Ignorable)");
+				syslog(LOG_ERR, "ipc rc<1. (Ignorable)");
 			}
 			continue;
 		}
@@ -859,36 +882,483 @@ int log_listener(std::string log_location, int logconerror)
 			if (ipcpeersock->getFD() < 0) {
 				delete ipcpeersock;
 				if (logconerror == 1) {
-					syslog(LOG_ERR, "%s", "Error accepting ipc. (Ignorable)");
+					syslog(LOG_ERR, "Error accepting ipc. (Ignorable)");
 				}
 				continue;  // if the fd of the new socket < 0 there was error
 				// but we ignore it as its not a problem
 			}
-			try {
-				rc = ipcpeersock->getLine(logline, 8192, 3, true);  // throws on err
-			}
-			catch(exception & e) {
-				delete ipcpeersock;
-				if (logconerror == 1) {
-					syslog(LOG_ERR, "%s", "Error reading ipc. (Ignorable)");
+
+			// Formatting code migration from ConnectionHandler
+			// and email notification code based on patch provided
+			// by J. Gauthier
+
+			// read in the various parts of the log string
+			bool error = false;
+			int itemcount = 0;
+			while(itemcount < 24) {
+				try {
+					rc = ipcpeersock->getLine(logline, 8192, 3, true);  // throws on err
+					if (rc < 0) {
+						delete ipcpeersock;
+						if (!is_daemonised)
+							std::cout << "Error reading from log socket" <<std::endl;
+						syslog(LOG_ERR, "Error reading from log socket");
+						error = true;
+						break;
+					}
+					else {
+						switch (itemcount) {
+						case 0:
+							isexception = atoi(logline);
+							break;
+						case 1:
+							cat = logline;
+							break;
+						case 2:
+							isnaughty = atoi(logline);
+							break;
+						case 3:
+							naughtiness = atoi(logline);
+							break;
+						case 4:
+							istext = atoi(logline);
+							break;
+						case 5:
+							where = logline;
+							break;
+						case 6:
+							how = logline;
+							break;
+						case 7:
+							who = logline;
+							break;
+						case 8:
+							what = logline;
+							break;
+						case 9:
+							from = logline;
+							break;
+						case 10:
+							port = atoi(logline);
+							break;
+						case 11:
+							wasscanned = atoi(logline);
+							break;
+						case 12:
+							wasinfected = atoi(logline);
+							break;
+						case 13:
+							contentmodified = atoi(logline);
+							break;
+						case 14:
+							urlmodified = atoi(logline);
+							break;
+						case 15:
+							size = atoi(logline);
+							break;
+						case 16:
+							filtergroup = atoi(logline);
+							break;
+						case 17:
+							code = atoi(logline);
+							break;
+						case 18:
+							cachehit = atoi(logline);
+							break;
+						case 19:
+							mimetype = logline;
+							break;
+						case 20:
+							tv_sec = atol(logline);
+							break;
+						case 21:
+							tv_usec = atol(logline);
+							break;
+						case 22:
+							clienthost = logline;
+							break;
+						case 23:
+							matchedip = atoi(logline);
+						}
+					}
 				}
-				continue;
+				catch(exception & e) {
+					delete ipcpeersock;
+					if (logconerror == 1)
+						syslog(LOG_ERR, "Error reading ipc. (Ignorable)");
+					error = true;
+					break;
+				}
+				itemcount++;
 			}
-			logfile << logline << std::endl;  // append the line
+
+			// don't build the log line if we couldn't read all the component parts
+			if (error)
+				continue;
+
+			// Start building the log line
+
+			if (port != 0 && port != 80) {
+				// put port numbers of non-standard HTTP requests into the logged URL
+				String newwhere = where.toCharArray();
+				if (newwhere.after("://").contains("/")) {
+					String proto, host, path;
+					proto = newwhere.before("://");
+					host = newwhere.after("://");
+					path = host.after("/");
+					host = host.before("/");
+					newwhere = proto;
+					newwhere += "://";
+					newwhere += host;
+					newwhere += ":";
+					newwhere += String((int) port);
+					newwhere += "/";
+					newwhere += path;
+					where = newwhere.toCharArray();
+				} else {
+					where += ":";
+					where += String((int) port).toCharArray();
+				}
+			}
+
+			// stamp log entries so they stand out/can be searched
+			if (isnaughty) {
+				what = "*DENIED* " + what;
+			}
+			else if (isexception) {
+				if (o.log_exception_hits == 1) {
+					what = "*EXCEPTION* " + what;
+				} else {
+					what = "";
+				}
+			}
+		   
+			if (wasscanned) {
+				if (wasinfected) {
+					what = "*INFECTED* " + what;
+				} else {
+					what = "*SCANNED* " + what;
+				}
+			}
+			if (contentmodified) {
+				what = "*CONTENTMOD* " + what;
+			}
+			if (urlmodified) {
+				what = "*URLMOD* " + what;
+			}
+
+			// start making the log entry proper
+			std::string builtline, year, month, day, hour, min, sec, when, ssize, sweight, vbody;
+
+			// "when" not used in format 3
+			if (o.log_file_format != 3) {
+				String temp;
+				time_t tnow;  // to hold the result from time()
+				struct tm *tmnow;  // to hold the result from localtime()
+				time(&tnow);  // get the time after the lock so all entries in order
+				tmnow = localtime(&tnow);  // convert to local time (BST, etc)
+				year = String(tmnow->tm_year + 1900).toCharArray();
+				month = String(tmnow->tm_mon + 1).toCharArray();
+				day = String(tmnow->tm_mday).toCharArray();
+				hour = String(tmnow->tm_hour).toCharArray();
+				temp = String(tmnow->tm_min);
+				if (temp.length() == 1) {
+					temp = "0" + temp;
+				}
+				min = temp.toCharArray();
+				temp = String(tmnow->tm_sec);
+				if (temp.length() == 1) {
+					temp = "0" + temp;
+				}
+				sec = temp.toCharArray();
+				when = year + "." + month + "." + day + " " + hour + ":" + min + ":" + sec;
+				// truncate long log items
+				/*if ((o.max_logitem_length > 0) && (when.length() > o.max_logitem_length))
+					when = when.substr(0, o.max_logitem_length);*/
+			}
+
+			sweight = String(naughtiness).toCharArray();
+			ssize = String(size).toCharArray();
+
+			// truncate long log items
+			if (o.max_logitem_length > 0) {
+				where.limitLength(o.max_logitem_length);
+				if ((cat.c_str() != NULL) && (cat.length() > o.max_logitem_length)) {
+					cat = cat.substr(0, o.max_logitem_length);
+				}
+				if (what.length() > o.max_logitem_length) {
+					what = what.subString(0, o.max_logitem_length);
+				}
+				/*if (who.length() > o.max_logitem_length)
+					who = who.substr(0, o.max_logitem_length);
+				if (from.length() > o.max_logitem_length)
+					from = from.substr(0, o.max_logitem_length);
+				how.limitLength(o.max_logitem_length);
+				if (ssize.length() > o.max_logitem_length)
+					ssize = ssize.substr(0, o.max_logitem_length);*/
+			}
+
+			// put client hostname in log if enabled.
+			// for banned & exception IP/hostname matches, we want to output exactly what was matched against,
+			// be it hostname or IP - therefore only do lookups here when we don't already have a cached hostname,
+			// and we don't have a straight IP match agaisnt the banned or exception IP lists.
+			if ((o.log_client_hostnames == 1) && (clienthost.c_str() == NULL) && !matchedip && (o.anonymise_logs != 1)) {
 #ifdef DGDEBUG
-			std::cout << logline << std::endl;
+				std::cout<<"logclienthostnames enabled but reverseclientiplookups disabled; lookup forced."<<std::endl;
+#endif
+				std::deque<String> names = o.fg[0]->ipToHostname(from.c_str());
+				if (names.size() > 0)
+					clienthost = names.front().toCharArray();
+			}
+
+			// blank out IP, hostname and username if desired
+			if (o.anonymise_logs == 1) {
+				who = "";
+				from = "0.0.0.0";
+				//delete clienthost;
+				clienthost[0]=0;
+			}
+
+			std::string stringcode = String(code).toCharArray();
+			std::string stringgroup(String(filtergroup+1).toCharArray());
+
+			switch (o.log_file_format) {
+			case 4:
+				builtline = when +"\t"+ who + "\t" + from + "\t" + where.toCharArray() + "\t" + what.toCharArray() + "\t" + how.toCharArray()
+					+ "\t" + ssize + "\t" + sweight + "\t" + ( (cat.length() > 0) ? cat : "") +  "\t" + stringgroup + "\t"
+					+ stringcode + "\t" + mimetype + "\t" + ( (clienthost.length() > 0) ? clienthost : "-") + "\t" + o.fg[filtergroup]->name;
+				break;
+			case 3:
+				{
+					// as utime and duration are only logged in format 3, their creation is best done here, not in all cases.
+					std::string duration, utime, hier, hitmiss;
+					struct timeval theend;
+					gettimeofday(&theend, NULL);
+					long durationsecs, durationusecs;
+					durationsecs = (theend.tv_sec - tv_sec);
+					durationusecs = theend.tv_usec - tv_usec;
+					durationusecs = (durationusecs / 1000) + durationsecs * 1000;
+					String temp = String((int) durationusecs);
+					while (temp.length() < 6) {
+						temp = " " + temp;
+					}
+					duration = temp.toCharArray();
+					temp = String((int) (theend.tv_usec / 1000));
+					while (temp.length() < 3) {
+						temp = "0" + temp;
+					}
+					if (temp.length() > 3) {
+						temp = "999";
+					}
+					utime = temp.toCharArray();
+					utime = "." + utime;
+					utime = String((int) theend.tv_sec).toCharArray() + utime;
+
+					if (code == 403) {
+						hitmiss = "TCP_DENIED/403";
+					} else {
+						if (cachehit) {
+							hitmiss = "TCP_HIT/";
+							hitmiss += stringcode;
+						} else {
+							hitmiss = "TCP_MISS/";
+							hitmiss += stringcode;
+						}
+					}
+					hier = "DEFAULT_PARENT/";
+					hier += o.proxy_ip;
+
+					/*if (o.max_logitem_length > 0) {
+						if (utime.length() > o.max_logitem_length)
+							utime = utime.substr(0, o.max_logitem_length);
+						if (duration.length() > o.max_logitem_length)
+							duration = duration.substr(0, o.max_logitem_length);
+						if (hier.length() > o.max_logitem_length)
+							hier = hier.substr(0, o.max_logitem_length);
+						if (hitmiss.length() > o.max_logitem_length)
+							hitmiss = hitmiss.substr(0, o.max_logitem_length);
+					}*/
+
+					builtline = utime + " " + duration + " " + ( (clienthost.length() > 0) ? clienthost : from) + " " + hitmiss + " " + ssize + " "
+						+ how.toCharArray() + " " + where.toCharArray() + " " + who + " " + hier + " " + mimetype ;
+					break;
+				}
+			case 2:
+				builtline = "\"" + when  +"\",\""+ who + "\",\"" + from + "\",\"" + where.toCharArray() + "\",\"" + what.toCharArray() + "\",\""
+					+ how.toCharArray() + "\",\"" + ssize + "\",\"" + sweight + "\",\"" + ( (cat.length() > 0) ? cat : "") +  "\",\"" + stringgroup + "\",\""
+					+ stringcode + "\",\"" + mimetype + "\",\"" + ( (clienthost.length() > 0) ? clienthost : "-") + "\",\"" + o.fg[filtergroup]->name + "\"";
+				break;
+			default:
+
+				builtline = when +" "+ who + " " + from + " " + where.toCharArray() + " " + what.toCharArray() + " "
+					+ how.toCharArray() + " " + ssize + " " + sweight + " " + ( (cat.length() > 0) ? cat : "") +  " " + stringgroup + " "
+					+ stringcode + " " + mimetype + " " + ( (clienthost.length() > 0) ? clienthost : "-") + " " + o.fg[filtergroup]->name;
+			}
+		   
+			logfile << builtline << std::endl;  // append the line
+#ifdef DGDEBUG
+			std::cout << itemcount << " " << builtline << std::endl;
 #endif
 			delete ipcpeersock;  // close the connection
-#ifdef DGDEBUG
-			std::cout << "logged" << std::endl;
+
+#ifdef __EMAIL
+			// do the notification work here, but fork for speed
+			if (o.fg[filtergroup]->use_smtp==true) {
+
+				// run through the gambit to find out of we're sending notification
+				// because if we're not.. then fork()ing is a waste of time.
+
+				// virus
+				if ((wasscanned && wasinfected) && (o.fg[filtergroup]->notifyav==1))  {
+					if ((smtppid = fork() == 0))  {
+						FILE* mail = popen (o.mailer.c_str(), "w");
+						if (mail==NULL) {
+							syslog(LOG_ERR, "Unable to contact defined mailer.");
+						}
+						else {
+							fprintf(mail, "To: %s\n", o.fg[filtergroup]->avadmin.c_str());
+							fprintf(mail, "From: %s\n", o.fg[filtergroup]->mailfrom.c_str());
+							fprintf(mail, "Subject: %s\n", o.fg[filtergroup]->avsubject.c_str());
+							fprintf(mail, "A virus was detected by DansGuardian.\n\n");
+							fprintf(mail, "%-10s%s\n", "Data/Time:", when.c_str());
+							if (who != "-")
+								fprintf(mail, "%-10s%s\n", "User:", who.c_str());
+							fprintf(mail, "%-10s%s (%s)\n", "From:", from.c_str(),  ((clienthost.c_str()!=NULL) ? clienthost.c_str() : "-"));
+							fprintf(mail, "%-10s%s\n", "Where:", where.toCharArray());
+							fprintf(mail, "%-10s%s\n", "Why:", what.after(": ").toCharArray());
+							fprintf(mail, "%-10s%s\n", "Method:", how.toCharArray());
+							fprintf(mail, "%-10s%s\n", "Size:", ssize.c_str());
+							fprintf(mail, "%-10s%s\n", "Weight:", sweight.c_str());
+							if (cat.c_str()!=NULL)
+								fprintf(mail, "%-10s%s\n", "Category:", cat.c_str());
+							fprintf(mail, "%-10s%s\n", "Mime type:", mimetype.c_str());
+							fprintf(mail, "%-10s%s\n", "Group:", o.fg[filtergroup]->name.c_str());
+							fprintf(mail, "%-10s%s\n", "HTTP resp:", stringcode.c_str());
+
+							pclose(mail);
+						}
+						// child exits
+						_exit(0);				 
+					}
+				}
+
+				// naughty OR virus 
+				else if (isnaughty || (wasscanned && wasinfected)) {
+					byuser = o.fg[filtergroup]->byuser;
+
+					// if no violations so far by this user/group,
+					// reset threshold counters 
+					if (byuser) {
+						if (!violation_map[who]) {
+							// set the time of the first violation
+							timestamp_map[who] = time(0);
+							vbody_map[who] = "";
+						}
+					}
+					else if (!o.fg[filtergroup]->current_violations) {
+						// set the time of the first violation 
+						o.fg[filtergroup]->threshold_stamp = time(0);
+						o.fg[filtergroup]->violationbody="";
+					}
+
+					// increase per-user or per-group violation count
+					if (byuser)
+						violation_map[who]++;
+					else
+						o.fg[filtergroup]->current_violations++;
+
+					// construct email report
+					sprintf(vbody_temp, "%-10s%s\n", "Data/Time:", when.c_str());
+					vbody+=vbody_temp;
+
+					if ((!byuser) && (who != "-")) {
+						sprintf(vbody_temp, "%-10s%s\n", "User:", who.c_str());
+						vbody+=vbody_temp;
+					}
+					sprintf(vbody_temp, "%-10s%s (%s)\n", "From:", from.c_str(),  ((clienthost.c_str()!=NULL) ? clienthost.c_str() : "-"));
+					vbody+=vbody_temp;				 
+					sprintf(vbody_temp, "%-10s%s\n", "Where:", where.toCharArray());
+					vbody+=vbody_temp;				 
+					sprintf(vbody_temp, "%-10s%s\n", "Why:", what.before(": ").toCharArray());
+					vbody+=vbody_temp;				 
+					sprintf(vbody_temp, "%-10s%s\n", "Method:", how.toCharArray());
+					vbody+=vbody_temp;				 
+					sprintf(vbody_temp, "%-10s%s\n", "Size:", ssize.c_str());
+					vbody+=vbody_temp;				 
+					sprintf(vbody_temp, "%-10s%s\n", "Weight:", sweight.c_str());
+					vbody+=vbody_temp;				 
+					if (cat.c_str()!=NULL) {
+						sprintf(vbody_temp, "%-10s%s\n", "Category:", cat.c_str());
+						vbody+=vbody_temp;
+					}
+					sprintf(vbody_temp, "%-10s%s\n", "Mime type:", mimetype.c_str());
+					vbody+=vbody_temp;				 
+					sprintf(vbody_temp, "%-10s%s\n", "Group:", o.fg[filtergroup]->name.c_str());
+					vbody+=vbody_temp;				 
+					sprintf(vbody_temp, "%-10s%s\n\n", "HTTP resp:", stringcode.c_str());
+					vbody+=vbody_temp;
+					
+					// store the report with the group/user
+					if (byuser) {
+						vbody_map[who]+=vbody;
+						curv_tmp = violation_map[who];
+						stamp_tmp = timestamp_map[who];
+					}
+					else {
+						o.fg[filtergroup]->violationbody+=vbody;
+						curv_tmp = o.fg[filtergroup]->current_violations;
+						stamp_tmp = o.fg[filtergroup]->threshold_stamp;
+					}
+
+					// if threshold exceeded, send mail
+					if (curv_tmp >= o.fg[filtergroup]->violations) {
+						if ((o.fg[filtergroup]->threshold == 0) || ( (time(0) - stamp_tmp) <= o.fg[filtergroup]->threshold)) {
+							if ((smtppid = fork() == 0)) {
+								FILE* mail = popen (o.mailer.c_str(), "w");
+								if (mail==NULL) {
+									syslog(LOG_ERR, "Unable to contact defined mailer.");
+								}
+								else {
+									fprintf(mail, "To: %s\n", o.fg[filtergroup]->contentadmin.c_str());
+									fprintf(mail, "From: %s\n", o.fg[filtergroup]->mailfrom.c_str());
+
+									if (byuser)
+										fprintf(mail, "Subject: %s (%s)\n", o.fg[filtergroup]->contentsubject.c_str(), who.c_str());
+									else
+										fprintf(mail, "Subject: %s\n", o.fg[filtergroup]->contentsubject.c_str());
+
+									fprintf(mail, "%i violation%s ha%s occured within %i seconds.\n",
+										curv_tmp,
+										(curv_tmp==1)?"":"s",
+										(curv_tmp==1)?"s":"ve",									 
+										o.fg[filtergroup]->threshold);
+
+									fprintf(mail, "%s\n\n", "This exceeds the notification threshold.");
+									if (byuser)
+										fprintf(mail, "%s", vbody_map[who].c_str());
+									else
+										fprintf(mail, "%s", o.fg[filtergroup]->violationbody.c_str());
+										pclose(mail);
+									}
+								// child exits
+								_exit(0);
+							}
+						}
+						if (byuser)
+							violation_map[who]=0;
+						else
+							o.fg[filtergroup]->current_violations=0;
+					}
+				} // end naughty OR virus
+			} // end usesmtp
 #endif
+
 			continue;  // go back to listening
 		}
-		// should never get here
-		syslog(LOG_ERR, "%s", "Something wicked has ipc happened");
-
 	}
-	delete[]logline;
+	// should never get here
+	syslog(LOG_ERR, "%s", "Something wicked has ipc happened");
+
 	logfile.close();  // close the file
 	loggersock.close();
 	return 1;  // It is only possible to reach here with an error
@@ -1346,7 +1816,7 @@ int fc_controlit()
 			return 1;
 		}
 	}
-	
+
 	if (o.max_ips > 0) {
 		if (iplistsock.bind((char*) o.ipipc_filename.c_str())) {	// bind to file
 			if (!is_daemonised) {
@@ -1443,7 +1913,7 @@ int fc_controlit()
 			_exit(0);  // is reccomended for child and daemons to use this instead
 		}
 	}
-	
+
 	// and for IP list listener
 	if (o.max_ips > 0) {
 		iplistpid = fork();
@@ -1728,7 +2198,7 @@ int fc_controlit()
 				cullchildren(freechildren - o.maxspare_children);
 			}
 		}
-		
+
 		// yield CPU for a while. this loop does not explicitly sleep other
 		// than when polling FDs; when connections are coming in at a rate of
 		// knots, it effectively turns into a busy loop. this should help.
