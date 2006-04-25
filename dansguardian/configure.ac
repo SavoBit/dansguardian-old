@@ -3,7 +3,7 @@
 # 2004,2005 - Daniel Barron
 
 AC_PREREQ(2.57)
-AC_INIT(dansguardian, 2.9.6.3)
+AC_INIT(dansguardian, 2.9.7.0)
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([dgconfig.h])
 
@@ -555,6 +555,28 @@ fi],
 )
 AM_CONDITIONAL(ENABLE_NTLM, test "x$ntlm" = "xtrue")
 AC_SUBST(NTLMSUPPORT)
+
+# asking the user if they want email notifications
+AC_MSG_CHECKING(for email notification support)
+AC_ARG_ENABLE(
+email,
+[AC_HELP_STRING([--enable-email@<:@=no@:>@], [Enable support for email reporting functionality])],
+[ if test "x$enableval" = "xyes"; then
+	email=true
+	EMAILSUPPORT=""
+	AC_MSG_RESULT(yes)
+	AC_DEFINE([ENABLE_EMAIL],[],[Define to enable email reporting])
+else
+	email=false
+	EMAILSUPPORT="#!! Not compiled !!"
+	AC_MSG_RESULT(no)
+fi],
+[
+	email=false
+	EMAILSUPPORT="#!! Not compiled !!"
+	AC_MSG_RESULT(no)
+])
+AC_SUBST(EMAILSUPPORT)
 
 AC_DEFINE_UNQUOTED([DG_CONFIGURE_OPTIONS], ["$ac_configure_args"], [Record configure-time options])
 
