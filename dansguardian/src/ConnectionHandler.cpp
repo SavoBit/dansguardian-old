@@ -713,7 +713,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					//urld = header.decode(url);  // unneeded really
 
 					doLog(clientuser, clientip, url, header.port, exceptionreason,
-						rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits, false, &thestart,
+						rtype, docsize, NULL, false, isexception, false, &thestart,
 						cachehit, 200, mimetype, wasinfected, wasscanned, 0, filtergroup);
 
 					if (o.delete_downloaded_temp_files == 1) {
@@ -804,8 +804,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					docsize = fdt.throughput;
 					if (!isourwebserver) {	// don't log requests to the web server
 						String rtype = header.requestType();
-						doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception,
-							o.log_exception_hits, false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
+						doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, false, isexception,
+							false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
 							mimetype, wasinfected, wasscanned, 0, filtergroup);
 					}
 				}
@@ -894,8 +894,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							docsize = fdt.throughput;
 							if (!isourwebserver) {	// don't log requests to the web server
 								String rtype = header.requestType();
-								doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false, isexception,
-									o.log_exception_hits, false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
+								doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, false, isexception,
+									false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
 									mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup,
 									// content wasn't modified, but URL was
 									false, true);
@@ -970,8 +970,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					fdt.tunnel(proxysock, peerconn, true);  // not expected to exception
 					docsize = fdt.throughput;
 					String rtype = header.requestType();
-					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, o.ll, false,
-						isexception, o.log_exception_hits, false, &thestart,
+					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, false,
+						isexception, false, &thestart,
 						cachehit, (wasrequested ? docheader.returnCode() : 200), mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup, false, urlmodified);
 				}
 				catch(exception & e) {
@@ -1304,7 +1304,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				std::cout<<"Category: "<<checkme.whatIsNaughtyCategories<<std::endl;
 #endif
 				doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
-					rtype, docsize, &checkme.whatIsNaughtyCategories, o.ll, true, false, 0, false, &thestart,
+					rtype, docsize, &checkme.whatIsNaughtyCategories, true, false, false, &thestart,
 					cachehit, 403, mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup, contentmodified, urlmodified);
 				if (denyAccess(&peerconn, &proxysock, &header, &docheader, &url, &checkme, &clientuser,&clientip, filtergroup, ispostblock, headersent, wasinfected, scanerror))
 				{
@@ -1341,7 +1341,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				if (!docheader.authRequired() && !pausedtoobig) {
 					String rtype = header.requestType();
 					doLog(clientuser, clientip, url, header.port, exceptionreason,
-						rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits,
+						rtype, docsize, NULL, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, filtergroup, contentmodified, urlmodified);
 				}
@@ -1411,7 +1411,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					docsize += fdt.throughput;
 					String rtype = header.requestType();
 					doLog(clientuser, clientip, url, header.port, exceptionreason,
-						rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits,
+						rtype, docsize, NULL, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, filtergroup, contentmodified, urlmodified);
 				}
@@ -1424,7 +1424,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				docsize = fdt.throughput;
 				String rtype = header.requestType();
 				doLog(clientuser, clientip, url, header.port, exceptionreason,
-					rtype, docsize, NULL, o.ll, false, isexception, o.log_exception_hits,
+					rtype, docsize, NULL, false, isexception,
 					docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 					wasinfected, wasscanned, checkme.naughtiness, filtergroup, contentmodified, urlmodified);
 			}
@@ -1451,229 +1451,79 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 // decide whether or not to perform logging, categorise the log entry, and write it.
 void ConnectionHandler::doLog(std::string &who, std::string &from, String &where, unsigned int &port,
-		std::string &what, String &how, int &size, std::string *cat, int &loglevel, bool isnaughty,
-		bool isexception, int logexceptions, bool istext, struct timeval *thestart, bool cachehit,
+		std::string &what, String &how, int &size, std::string *cat, bool isnaughty,
+		bool isexception, bool istext, struct timeval *thestart, bool cachehit,
 		int code, std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness, int filtergroup,
 		bool contentmodified, bool urlmodified)
 {
+
 	// don't log if logging disabled entirely, or if it's an ad block and ad logging is disabled
-	if ((loglevel == 0) || ((cat != NULL) && (o.log_ad_blocks == 0) && (strstr(cat->c_str(),"ADs") != NULL))) {
+	if ((o.ll == 0) || ((cat != NULL) && (o.log_ad_blocks == 0) && (strstr(cat->c_str(),"ADs") != NULL))) {
 #ifdef DGDEBUG
-		if ((loglevel != 0) && (cat != NULL))
+		if ((o.ll != 0) && (cat != NULL))
 			std::cout << "Not logging AD blocks" << std::endl;
 #endif
 		return;
 	}
-	else if ((isexception && logexceptions == 1)
-		|| isnaughty || loglevel == 3 || (loglevel == 2 && istext))
+
+	String data, cr("\n");
+
+	if ((isexception && o.log_exception_hits == 1)
+		|| isnaughty || o.ll == 3 || (o.ll == 2 && istext))
 	{
-		if (port != 0 && port != 80) {
-			// put port numbers of non-standard HTTP requests into the logged URL
-			String newwhere = where.toCharArray();
-			if (newwhere.after("://").contains("/")) {
-				String proto, host, path;
-				proto = newwhere.before("://");
-				host = newwhere.after("://");
-				path = host.after("/");
-				host = host.before("/");
-				newwhere = proto;
-				newwhere += "://";
-				newwhere += host;
-				newwhere += ":";
-				newwhere += String((int) port);
-				newwhere += "/";
-				newwhere += path;
-				where = newwhere.toCharArray();
-			} else {
-				where += ":";
-				where += String((int) port).toCharArray();
-			}
-		}
-		
-		// stamp log entries so they stand out/can be searched
-		if (isnaughty) {
-			what = "*DENIED* " + what;
-		}
-		else if (isexception) {
-			if (logexceptions == 1) {
-				what = "*EXCEPTION* " + what;
-			} else {
-				what = "";
-			}
-		}
-		if (wasscanned) {
-			if (wasinfected) {
-				what = "*INFECTED* " + what;
-			} else {
-				what = "*SCANNED* " + what;
-			}
-		}
-		if (contentmodified) {
-			what = "*CONTENTMOD* " + what;
-		}
-		if (urlmodified) {
-			what = "*URLMOD* " + what;
-		}
-
-		// start making the log entry proper
-		std::string logline, year, month, day, hour, min, sec, when, ssize, sweight;
-
-		// "when" not used in format 3
-		if (o.log_file_format != 3) {
-			String temp;
-			time_t tnow;  // to hold the result from time()
-			struct tm *tmnow;  // to hold the result from localtime()
-			time(&tnow);  // get the time after the lock so all entries in order
-			tmnow = localtime(&tnow);  // convert to local time (BST, etc)
-			year = String(tmnow->tm_year + 1900).toCharArray();
-			month = String(tmnow->tm_mon + 1).toCharArray();
-			day = String(tmnow->tm_mday).toCharArray();
-			hour = String(tmnow->tm_hour).toCharArray();
-			temp = String(tmnow->tm_min);
-			if (temp.length() == 1) {
-				temp = "0" + temp;
-			}
-			min = temp.toCharArray();
-			temp = String(tmnow->tm_sec);
-			if (temp.length() == 1) {
-				temp = "0" + temp;
-			}
-			sec = temp.toCharArray();
-			when = year + "." + month + "." + day + " " + hour + ":" + min + ":" + sec;
-			// truncate long log items
-			/*if ((o.max_logitem_length > 0) && (when.length() > o.max_logitem_length))
-				when = when.substr(0, o.max_logitem_length);*/
-		}
-		
-		sweight = String(naughtiness).toCharArray();
-		ssize = String(size).toCharArray();
-
-		// truncate long log items
-		if (o.max_logitem_length > 0) {
-			where.limitLength(o.max_logitem_length);
-			if ((cat != NULL) && (cat->length() > o.max_logitem_length)) {
-				(*cat) = cat->substr(0, o.max_logitem_length);
-			}
-			if (what.length() > o.max_logitem_length) {
-				what = what.substr(0, o.max_logitem_length);
-			}
-			/*if (who.length() > o.max_logitem_length)
-				who = who.substr(0, o.max_logitem_length);
-			if (from.length() > o.max_logitem_length)
-				from = from.substr(0, o.max_logitem_length);
-			how.limitLength(o.max_logitem_length);
-			if (ssize.length() > o.max_logitem_length)
-				ssize = ssize.substr(0, o.max_logitem_length);*/
-		}
-		
-		// put client hostname in log if enabled.
-		// for banned & exception IP/hostname matches, we want to output exactly what was matched against,
-		// be it hostname or IP - therefore only do lookups here when we don't already have a cached hostname,
-		// and we don't have a straight IP match agaisnt the banned or exception IP lists.
-		if ((o.log_client_hostnames == 1) && (clienthost == NULL) && !matchedip && (o.anonymise_logs != 1)) {
-#ifdef DGDEBUG
-			std::cout<<"logclienthostnames enabled but reverseclientiplookups disabled; lookup forced."<<std::endl;
-#endif
-			std::deque<String> names = o.fg[0]->ipToHostname(from.c_str());
-			if (names.size() > 0)
-				clienthost = new std::string(names.front().toCharArray());
-		}
-
-		// blank out IP, hostname and username if desired
-		if (o.anonymise_logs == 1) {
-			who = "";
-			from = "0.0.0.0";
-			delete clienthost;
-			clienthost = NULL;
-		}
-		
-		std::string stringcode = String(code).toCharArray();
-		std::string stringgroup(String(filtergroup+1).toCharArray());
-		
-		switch (o.log_file_format) {
-		case 4:
-			logline = when +"\t"+ who + "\t" + from + "\t" + where.toCharArray() + "\t" + what + "\t"
-				+ how.toCharArray() + "\t" + ssize + "\t" + sweight + "\t" + (cat ? (*cat) : "") +  "\t" + stringgroup + "\t"
-				+ stringcode + "\t" + mimetype + "\t" + (clienthost ? *clienthost : "-") + "\t" + o.fg[filtergroup]->name + "\n";
-			break;
-		case 3:
-			{
-				// as utime and duration are only logged in format 3, their creation is best done here, not in all cases.
-				std::string duration, utime, hier, hitmiss;
-				struct timeval theend;
-				gettimeofday(&theend, NULL);
-				long durationsecs, durationusecs;
-				durationsecs = theend.tv_sec - (*thestart).tv_sec;
-				durationusecs = theend.tv_usec - (*thestart).tv_usec;
-				durationusecs = (durationusecs / 1000) + durationsecs * 1000;
-				String temp = String((int) durationusecs);
-				while (temp.length() < 6) {
-					temp = " " + temp;
-				}
-				duration = temp.toCharArray();
-				temp = String((int) (theend.tv_usec / 1000));
-				while (temp.length() < 3) {
-					temp = "0" + temp;
-				}
-				if (temp.length() > 3) {
-					temp = "999";
-				}
-				utime = temp.toCharArray();
-				utime = "." + utime;
-				utime = String((int) theend.tv_sec).toCharArray() + utime;
-
-				if (code == 403) {
-					hitmiss = "TCP_DENIED/403";
-				} else {
-					if (cachehit) {
-						hitmiss = "TCP_HIT/";
-						hitmiss += stringcode;
-					} else {
-						hitmiss = "TCP_MISS/";
-						hitmiss += stringcode;
-					}
-				}
-				hier = "DEFAULT_PARENT/";
-				hier += o.proxy_ip;
-
-				/*if (o.max_logitem_length > 0) {
-					if (utime.length() > o.max_logitem_length)
-						utime = utime.substr(0, o.max_logitem_length);
-					if (duration.length() > o.max_logitem_length)
-						duration = duration.substr(0, o.max_logitem_length);
-					if (hier.length() > o.max_logitem_length)
-						hier = hier.substr(0, o.max_logitem_length);
-					if (hitmiss.length() > o.max_logitem_length)
-						hitmiss = hitmiss.substr(0, o.max_logitem_length);
-				}*/
-
-				logline = utime + " " + duration + " " + (clienthost ? *clienthost : from) + " " + hitmiss + " " + ssize + " "
-					+ how.toCharArray() + " " + where.toCharArray() + " " + who + " " + hier + " " + mimetype + "\n";
-				break;
-			}
-		case 2:
-			logline = "\"" + when +"\",\""+ who + "\",\"" + from + "\",\"" + where.toCharArray() + "\",\"" + what + "\",\""
-				+ how.toCharArray() + "\",\"" + ssize + "\",\"" + sweight + "\",\"" + (cat ? (*cat) : "") +  "\",\"" + stringgroup + "\",\""
-				+ stringcode + "\",\"" + mimetype + "\",\"" + (clienthost ? *clienthost : "-") + "\",\"" + o.fg[filtergroup]->name + "\"\n";
-			break;
-		default:
-			logline = when +" "+ who + " " + from + " " + where.toCharArray() + " " + what + " "
-				+ how.toCharArray() + " " + ssize + " " + sweight + " " + (cat ? (*cat) : "") +  " " + stringgroup + " "
-				+ stringcode + " " + mimetype + " " + (clienthost ? *clienthost : "-") + " " + o.fg[filtergroup]->name + "\n";
-		}
-
 		// connect to dedicated logging proc
 		UDSocket ipcsock;
 		if (ipcsock.getFD() < 0) {
-			syslog(LOG_ERR, "%s", "Error creating ipc socket to log");
+			if (!is_daemonised)
+				std::cout << "Error creating IPC socket to log" << std::endl;
+			syslog(LOG_ERR, "Error creating IPC socket to log");
 			return;
 		}
 		if (ipcsock.connect((char *) o.ipc_filename.c_str()) < 0) {
-			syslog(LOG_ERR, "%s", "Error connecting via ipc to log");
+			if (!is_daemonised)
+				std::cout << "Error connecting via IPC socket to log" << std::endl;
+			syslog(LOG_ERR, "Error connecting via IPC socket to log");
 			ipcsock.close();
 			return;
 		}
-		ipcsock.writeString(logline.c_str());
+
+		// Formatting code moved into log_listener in FatController.cpp
+		// Original patch by J. Gauthier
+
+#ifdef DGDEBUG
+		std::cout << "Building raw log data string... ";
+#endif
+
+		data = String(isexception)+cr;
+		data += ( cat ? *cat : "") +cr;
+		data += String(isnaughty)+cr;
+		data += String(naughtiness)+cr;
+		data += String(istext)+cr;
+		data += where+cr;
+		data += what+cr;
+		data += how+cr;
+		data += who+cr;
+		data += from+cr;
+		data += String(port)+cr;
+		data += String(wasscanned)+cr;
+		data += String(wasinfected)+cr;
+		data += String(contentmodified)+cr;
+		data += String(urlmodified)+cr;
+		data += String(size)+cr;
+		data += String(filtergroup)+cr;
+		data += String(code)+cr;
+		data += String(cachehit)+cr;
+		data += String(mimetype)+cr; 
+		data += String((*thestart).tv_sec)+cr;
+		data += String((*thestart).tv_usec)+cr;
+		data += ( clienthost ? *clienthost : "" ) + cr;
+		data += String(matchedip)+cr;
+
+#ifdef DGDEBUG   
+		//std::cout << "Log data: " << data.toCharArray() << endl;
+		std::cout << "...built" << std::endl;
+#endif
+		ipcsock.writeString(data.toCharArray());
 		ipcsock.close();
 	}
 }

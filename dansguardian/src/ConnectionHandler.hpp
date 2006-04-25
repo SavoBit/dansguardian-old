@@ -49,8 +49,8 @@ private:
 
 	// write a log entry containing the given data (if required)
 	void doLog(std::string &who, std::string &from, String &where, unsigned int &port,
-		std::string &what, String &how, int &size, std::string *cat, int &loglevel, bool isnaughty,
-		bool isexception, int logexceptions, bool istext, struct timeval *thestart, bool cachehit, int code,
+		std::string &what, String &how, int &size, std::string *cat, bool isnaughty,
+		bool isexception, bool istext, struct timeval *thestart, bool cachehit, int code,
 		std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness, int filtergroup,
 		bool contentmodified = false, bool urlmodified = false);
 
