@@ -702,7 +702,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				//correct header to the client then delete the temp file
 				String tempfilename = url.after("GSBYPASS=").after("&N=");
 				String tempfilemime = tempfilename.after("&M=");
-				String tempfiledis = tempfilemime.after("&D=");
+				String tempfiledis = header.decode(tempfilemime.after("&D="));
+#ifdef DGDEBUG
+				std::cout << "Original filename: " << tempfiledis << std::endl;
+#endif
 				String rtype = header.requestType();
 				tempfilemime = tempfilemime.before("&D=");
 				tempfilename = o.download_dir + "/tf" + tempfilename.before("&M=");
@@ -1361,17 +1364,16 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					// GSBYPASS=hash(ip+url+tempfilename+mime+disposition+secret)
 					// &N=tempfilename&M=mimetype&D=dispos
 
-#ifdef DGDEBUG
-					std::cout << "sending magic link to client" << std::endl;
-#endif
-
 					String ip = clientip;
 					String tempfilename = docbody.tempfilepath.after("/tf");
 					String tempfilemime = docheader.getContentType();
-					String tempfiledis = docheader.disposition();
+					String tempfiledis = miniURLEncode(docheader.disposition().toCharArray()).c_str();
 					String secret = (*o.fg[filtergroup]).magic.c_str();
 					String magic = ip + url + tempfilename + tempfilemime + tempfiledis + secret;
 					String hashed = magic.md5();
+#ifdef DGDEBUG
+					std::cout << "sending magic link to client: " << ip << " " << url << " " << tempfilename << " " << tempfilemime << " " << tempfiledis << " " << secret << " " << hashed << std::endl;
+#endif
 					String sendurl = url;
 					if (!sendurl.after("://").contains("/")) {
 						sendurl += "/";
