@@ -1046,49 +1046,63 @@ char *FOptionContainer::inExtensionList(unsigned int list, String url)
 }
 
 // is this URL in the given regexp URL list?
-int FOptionContainer::inRegExpURLList(String &url, std::deque<RegExp> &list_comp)
+int FOptionContainer::inRegExpURLList(String &url, std::deque<RegExp> &list_comp, std::deque<unsigned int> &list_ref, unsigned int list)
 {
 #ifdef DGDEBUG
 	std::cout<<"inRegExpURLList: "<<url<<std::endl;
 #endif
-	url.removeWhiteSpace();  // just in case of weird browser crap
-	url.toLower();
-	// chop off the PTP (ht(f)tp(s)://)
-	/*String ptp;
-	if (url.contains("//")) {
-		ptp = url.before("//");
-		url = url.after("//");
-	}*/
+	// check parent list's time limit
+	if (o.lm.l[list]->isNow()) {
+		url.removeWhiteSpace();  // just in case of weird browser crap
+		url.toLower();
+		// chop off the PTP (ht(f)tp(s)://)
+		/*String ptp;
+		if (url.contains("//")) {
+			ptp = url.before("//");
+			url = url.after("//");
+		}*/
 	
-	// whilst it would be nice to have regexes be able to match the PTP,
-	// it has been assumed for too long that the URL string does not start with one,
-	// and we don't want to break regexes that look explicitly for the start of
-	// the string. changes here have therefore been reverted. 2005-12-07
-	url.removePTP();
-	if (url.contains("/")) {
-		String tpath = "/";
-		tpath += url.after("/");
-		url = url.before("/");
-		tpath.hexDecode();
-		tpath.realPath();
-		url += tpath;  // will resolve ../ and %2e2e/ and // etc
-	}
-	if (url.endsWith("/")) {
-		url.chop();  // chop off trailing / if any
-	}
-	// re-add the PTP
-	/*if (ptp.length() > 0)
-		url = ptp + "//" + url;*/
+		// whilst it would be nice to have regexes be able to match the PTP,
+		// it has been assumed for too long that the URL string does not start with one,
+		// and we don't want to break regexes that look explicitly for the start of
+		// the string. changes here have therefore been reverted. 2005-12-07
+		url.removePTP();
+		if (url.contains("/")) {
+			String tpath = "/";
+			tpath += url.after("/");
+			url = url.before("/");
+			tpath.hexDecode();
+			tpath.realPath();
+			url += tpath;  // will resolve ../ and %2e2e/ and // etc
+		}
+		if (url.endsWith("/")) {
+			url.chop();  // chop off trailing / if any
+		}
+		// re-add the PTP
+		/*if (ptp.length() > 0)
+			url = ptp + "//" + url;*/
 #ifdef DGDEBUG
-	std::cout<<"inRegExpURLList (processed): "<<url<<std::endl;
+		std::cout<<"inRegExpURLList (processed): "<<url<<std::endl;
 #endif
-	unsigned int i;
-	for (i = 0; i < list_comp.size(); i++) {
-		list_comp[i].match(url.toCharArray());
-		if (list_comp[i].matched()) {
-			return i;
+		unsigned int i = 0;
+		for (std::deque<RegExp>::iterator j = list_comp.begin(); j != list_comp.end(); j++) {
+			j->match(url.toCharArray());
+			if (j->matched()) {
+				if (o.lm.l[list_ref[i]]->isNow())
+					return i;
+#ifdef DGDEBUG
+				else
+					std::cout << "Outside included regexp list's time limit" << std::endl;
+#endif
+			}
+			i++;
 		}
 	}
+#ifdef DGDEBUG
+	else {
+		std::cout << "Outside top level regexp list's time limit" << std::endl;
+	}
+#endif
 	return -1;
 }
 
@@ -1098,12 +1112,15 @@ int FOptionContainer::inBannedRegExpURLList(String url)
 #ifdef DGDEBUG
 	std::cout<<"inBannedRegExpURLList"<<std::endl;
 #endif
-	return inRegExpURLList(url, banned_regexpurl_list_comp);
+	return inRegExpURLList(url, banned_regexpurl_list_comp, banned_regexpurl_list_ref, banned_regexpurl_list);
 }
 
 int FOptionContainer::inExceptionRegExpURLList(String url)
 {
-	return inRegExpURLList(url, exception_regexpurl_list_comp);
+#ifdef DGDEBUG
+	std::cout<<"inExceptionRegExpURLList"<<std::endl;
+#endif
+	return inRegExpURLList(url, exception_regexpurl_list_comp, exception_regexpurl_list_ref, exception_regexpurl_list);
 }
 
 // reverse DNS lookup on IP. be aware that this can return multiple results, unlike a standard lookup.
