@@ -623,7 +623,7 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::
 	else if (reverse_client_ip_lookups == 1) {
 		std::deque<String > hostnames = (*fg[0]).ipToHostname((*ip).c_str());
 		bool result;
-		for (std::deque<String> iterator i = hostnames.begin(); i != hostnames.end(); i++) {
+		for (std::deque<String>::iterator i = hostnames.begin(); i != hostnames.end(); i++) {
 			result = list.inList(i->toCharArray());
 			if (result) {
 				// return the matched host name for logging purposes
