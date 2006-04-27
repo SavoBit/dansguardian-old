@@ -1619,29 +1619,6 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 				// Banned Regular Expression URL found.
 				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_regexpurl_list_ref[j]]).category.toCharArray();
 			}
-			/*else if ((o.max_upload_size > -1) && (*header).isPostUpload())
-			{
-#ifdef DGDEBUG
-				std::cout << "Checking POST upload limit" << std::endl;
-#endif
-				if (o.max_upload_size == 0) {
-					(*checkme).whatIsNaughty = o.language_list.getTranslation(700);
-					// Web upload is banned.
-					(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-					(*checkme).whatIsNaughtyCategories = "Web upload.";
-					(*checkme).isItNaughty = true;
-					(*ispostblock) = true;
-				} else if (header->contentLength() > o.max_upload_size) {
-#ifdef DGDEBUG
-					std::cout << "Detected POST upload violation by Content-Length header" << std::endl;
-#endif
-					(*checkme).whatIsNaughty = o.language_list.getTranslation(701);
-					// Web upload limit exceeded.
-					(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-					(*checkme).whatIsNaughtyCategories = "Web upload.";
-					(*checkme).isItNaughty = true;
-				}
-			}*/
 		}
 		// look for URLs within URLs - ban, for example, images originating from banned sites during a Google image search.
 		if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).deep_url_analysis == 1) {
