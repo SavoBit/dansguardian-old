@@ -831,6 +831,7 @@ void HTTPHeader::chopBypass(String url, bool infectionbypass)
 			header.front() = header.front().before(infectionbypass ? "&GIBYPASS=" : "&GBYPASS=") + header.front().after(bypass.toCharArray());
 		}
 	}
+	cachedurl = "";
 }
 
 // same for scan bypass
@@ -845,6 +846,7 @@ void HTTPHeader::chopScanBypass(String url)
 			header.front() = header.front().before("&GSBYPASS=") + header.front().after(bypass.toCharArray());
 		}
 	}
+	cachedurl = "";
 }
 
 // I'm not proud of this... --Ernest
@@ -1015,6 +1017,10 @@ bool HTTPHeader::isScanBypassURL(String * url, const char *magic, const char *cl
 	String tohash = clientip + url_left + tempfilename + tempfilemime + tempfiledis + magic;
 	String hashed = tohash.md5();
 
+#ifdef DGDEBUG
+	std::cout << "checking hash: " << clientip << " " << url_left << " " << tempfilename << " " << " " << tempfilemime << " " << tempfiledis << " " << magic << " " << hashed << std::endl;
+#endif
+
 	if (hashed == url_hash) {
 		return true;
 	}
@@ -1062,6 +1068,9 @@ String HTTPHeader::decode(String s)
 		n = urldecode_re.result(match).c_str();
 		n.lop();  // remove %
 		result += hexToChar(n);
+#ifdef DGDEBUG
+		std::cout << "encoded: " << urldecode_re.result(match) << " decoded: " << hexToChar(n) << " string so far: " << result << std::endl;
+#endif
 		pos = offset + 3;
 	}
 	if (size > pos) {
@@ -1092,6 +1101,10 @@ String HTTPHeader::hexToChar(String n)
 	else if (a >= '0' && a <= '9') {
 		a -= 48;
 	}
+	else {
+		n = "%" + n;
+		return n;
+	}
 	if (b >= 'a' && b <= 'f') {
 		b -= 87;
 	}
@@ -1101,15 +1114,14 @@ String HTTPHeader::hexToChar(String n)
 	else if (b >= '0' && b <= '9') {
 		b -= 48;
 	}
-	c = a * 16 + b;
-	if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-		|| (c >= '0' && c <= '9') || (c == '-')) {
-		buf[0] = c;
-		buf[1] = '\0';
-		n = buf;
-	} else {
+	else {
 		n = "%" + n;
+		return n;
 	}
+	c = a * 16 + b;
+	buf[0] = c;
+	buf[1] = '\0';
+	n = buf;
 	return n;
 }
 
