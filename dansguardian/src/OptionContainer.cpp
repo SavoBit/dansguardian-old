@@ -623,8 +623,8 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::
 	else if (reverse_client_ip_lookups == 1) {
 		std::deque<String > hostnames = (*fg[0]).ipToHostname((*ip).c_str());
 		bool result;
-		for (unsigned int i = 0; i < hostnames.size(); i++) {
-			result = list.inList(hostnames[i].toCharArray());
+		for (std::deque<String> iterator i = hostnames.begin(); i != hostnames.end(); i++) {
+			result = list.inList(i->toCharArray());
 			if (result) {
 				// return the matched host name for logging purposes
 				// hey.. since the lookup is the hard part, not the logging,
@@ -632,16 +632,16 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::
 				// that triggered the match?
 				//if (log_client_hostnames == 1) {
 					delete host;
-					host = new std::string(hostnames[i].toCharArray());
-	#ifdef DGDEBUG
+					host = new std::string(i->toCharArray());
+#ifdef DGDEBUG
 					std::cout<<"Found hostname: "<<(*host)<<std::endl;
-	#endif
+#endif
 				//}
 				return true;
 			}
 		}
-		if ((log_client_hostnames == 1) && (host == NULL))
-				host = new std::string(hostnames.front().toCharArray());
+		if ((log_client_hostnames == 1) && (host == NULL) && (hostnames.size() > 0))
+			host = new std::string(hostnames.front().toCharArray());
 	}
 	return false;
 }
