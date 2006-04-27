@@ -653,7 +653,8 @@ bool FOptionContainer::read(const char *filename)
 		if (!realitycheck(String(bypass_mode), 1, 4, "bypass")) {
 			return false;
 		}
-		if (bypass_mode != 0) {
+		// we use the "magic" key here both for filter bypass *and* for filter bypass after virus scan (fancy DM).
+		if ((bypass_mode != 0) || (disable_content_scan != 1)) {
 			magic = findoptionS("bypasskey");
 			if (magic.length() < 9) {
 				std::string s(16u, ' ');
