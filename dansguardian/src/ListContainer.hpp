@@ -97,6 +97,8 @@ public:
 	String getListCategoryAtD(int index);
 
 	void graphSearch(std::deque<unsigned int >& result, char *doc, int len);
+	
+	bool isNow();
 
 private:
 	bool sourceisexception;
@@ -156,7 +158,6 @@ private:
 	std::string toLower(std::string s);
 	//categorised & time-limited lists support
 	bool readTimeTag(String * tag);
-	bool isNow();
 	int getCategoryIndex(String * lcat);
 };
 
