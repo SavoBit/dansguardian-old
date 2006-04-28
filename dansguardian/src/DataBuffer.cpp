@@ -319,6 +319,10 @@ void DataBuffer::out(Socket * sock) throw(exception)
 			std::cout << "total sent from temp:" << sent << std::endl;
 #endif
 		}
+		close(tempfilefd);
+		tempfilefd = -1;
+		tempfilesize = 0;
+		unlink(tempfilepath.toCharArray());
 	} else {
 #ifdef DGDEBUG
 		std::cout << "Sending " << buffer_length - bytesalreadysent << " bytes from RAM (" << buffer_length << " in buffer; " << bytesalreadysent << " already sent)" << std::endl;
