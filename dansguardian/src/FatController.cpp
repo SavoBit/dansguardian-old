@@ -927,13 +927,13 @@ int log_listener(std::string log_location, int logconerror)
 							where = logline;
 							break;
 						case 6:
-							how = logline;
+							what = logline;
 							break;
 						case 7:
-							who = logline;
+							how = logline;
 							break;
 						case 8:
-							what = logline;
+							who = logline;
 							break;
 						case 9:
 							from = logline;
