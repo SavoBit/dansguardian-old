@@ -133,8 +133,10 @@ int icapinstance::init(void* args)
 	// try to connect to the ICAP server and perform an OPTIONS request
 	Socket icapsock;
 	try {
+		if (icapsock.connect(icapip.toCharArray(), icapport) < 0) {
+			throw std::runtime_error("Could not connect to server");
+		}
 		String line = "OPTIONS " + icapurl + " ICAP/1.0\r\nHost: " + icaphost + "\r\n\r\n";
-		icapsock.connect(icapip.toCharArray(), icapport);
 		icapsock.writeString(line.toCharArray());
 		// parse the response
 		char buff[8192];
