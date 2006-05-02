@@ -131,12 +131,12 @@ bool ConnectionHandler::gotIPs(std::string ipstr) {
 		return false;
 	UDSocket ipcsock;
 	if (ipcsock.getFD() < 0) {
-		syslog(LOG_ERR, "%s","Error creating ipc socket to IP cache");
+		syslog(LOG_ERR, "Error creating ipc socket to IP cache");
 		return false;
 	}
 	// TODO: put in proper file name check
 	if (ipcsock.connect((char*) o.ipipc_filename.c_str()) < 0) {  // connect to dedicated ip list proc
-		syslog(LOG_ERR, "%s","Error connecting via ipc to IP cache");
+		syslog(LOG_ERR, "Error connecting via ipc to IP cache");
 		return false;
 	}
 	char reply;
@@ -164,11 +164,11 @@ bool ConnectionHandler::wasClean(String &url, const int fg)
 		return false;
 	UDSocket ipcsock;
 	if (ipcsock.getFD() < 0) {
-		syslog(LOG_ERR, "%s", "Error creating ipc socket to url cache");
+		syslog(LOG_ERR, "Error creating ipc socket to url cache");
 		return false;
 	}
 	if (ipcsock.connect((char *) o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
-		syslog(LOG_ERR, "%s", "Error connecting via ipc to url cache");
+		syslog(LOG_ERR, "Error connecting via ipc to url cache");
 		ipcsock.close();
 		return false;
 	}
@@ -213,7 +213,7 @@ void ConnectionHandler::addToClean(String &url, const int fg)
 		return;
 	UDSocket ipcsock;
 	if (ipcsock.getFD() < 0) {
-		syslog(LOG_ERR, "%s", "Error creating ipc socket to url cache");
+		syslog(LOG_ERR, "Error creating ipc socket to url cache");
 		return;
 	}
 	if (ipcsock.connect((char *) o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
@@ -390,7 +390,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 			std::cerr << "Error connecting to proxy" << std::endl;
 #endif
-			syslog(LOG_ERR, "%s", "Error connecting to proxy");
+			syslog(LOG_ERR, "Error connecting to proxy");
 			return;  // if we can't connect to the proxy, there is no point
 			// in continuing
 		}
@@ -1063,6 +1063,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					if (runav) {
 						if (cl == 0)
 							runav = false;
+						// TODO - re-enable once the fancy DM is able to more robustly handle oversized partial downloads
 						else if ((cl > 0) && (cl > o.max_content_filecache_scan_size))
 							runav = false;
 					}
