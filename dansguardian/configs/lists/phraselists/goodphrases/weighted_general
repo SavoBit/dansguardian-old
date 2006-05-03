@@ -171,7 +171,7 @@
 <fallacy><-5>
 <family problems><-30>
 <fan site><-20>
-<faq><-10>
+<faq><-30>
 <fda approved><-40>
 <fda-approved><-40>
 <federal court><-10>
@@ -390,7 +390,6 @@
 <xxx>,<beer><-10>
 <xxx>,<drought><-20>
 <you shall not>,<material>,<violates><-10>
-
 < flight><-10>
 < airline><-10>
 < chicken>,<breast><-50>
@@ -400,3 +399,6 @@
 < marriage><-30>
 < lawyer><-30>
 < vacation><-5>
+
+
+

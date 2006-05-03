@@ -16,10 +16,12 @@
 <hide referrer information><30>
 <show url entry form><30>
 <remove all cookies><30>
+<remove all scripts><20>
 <dmirror><30>
 <cgi>,<prox>,<nph><30>
 <nph-proxy><100>
 <nph-pro><50>
+<cgiproxy><50>
 
 #CECID
 <cecid><100>
