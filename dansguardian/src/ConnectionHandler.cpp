@@ -1263,9 +1263,13 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					// can't do content filtering on HEAD or redirections (no content)
 					// actually, redirections CAN have content
 					if (!checkme.isItNaughty /*&& !docheader.isRedirection()*/ && (cl != 0) && !ishead) {
-						if (docheader.isContentType("text") || runav) {
+						if ((docheader.isContentType("text") && !isexception) || runav) {
 							// don't search the cache if scan_clean_cache disabled & runav true (won't have been cached)
 							// also don't search cache for auth required headers (same reason)
+
+							// checkme: does not searching the cache if scan_clean_cache is disabled break the fancy DM's bypass stuff?
+							// probably, since it uses a "magic" status code in the cache; easier than coding yet another hash type.
+
 							if (o.url_cache_number > 0 && !(!o.scan_clean_cache && runav) && !docheader.authRequired()) {
 								if (wasClean(urld, filtergroup)) {
 									wasclean = true;
@@ -1276,6 +1280,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 								}
 							}
+							// despite the debug note above, we do still go through contentFilter for cached non-exception HTML,
+							// as content replacement rules need to be applied.
 							waschecked = true;
 							contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
 								&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
