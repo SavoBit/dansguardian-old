@@ -116,7 +116,8 @@ public:
 	void makePersistent(bool persist = true);
 
 	// do URL decoding (%xx) on string
-	String decode(String s);
+	// decode everything, or just numbers, letters and -
+	String decode(String s, bool decodeAll = false);
 
 	// Bypass URL & Cookie funcs
 	
@@ -160,7 +161,7 @@ private:
 	void checkheader(bool allowpersistent);
 
 	// convert %xx back to original character
-	String hexToChar(String n);
+	String hexToChar(String n, bool all = false);
 	// base64 decode an individual char
 	int decode1b64(char c);
 	// base64 decode a complete string

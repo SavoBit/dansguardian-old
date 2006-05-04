@@ -1039,7 +1039,7 @@ bool HTTPHeader::isScanBypassURL(String * url, const char *magic, const char *cl
 
 // URL decoding (%xx)
 // uses regex pre-compiled on startup
-String HTTPHeader::decode(String s)
+String HTTPHeader::decode(String s, bool decodeAll)
 {
 	if (s.length() < 3) {
 		return s;
@@ -1067,7 +1067,7 @@ String HTTPHeader::decode(String s)
 		}
 		n = urldecode_re.result(match).c_str();
 		n.lop();  // remove %
-		result += hexToChar(n);
+		result += hexToChar(n, decodeAll);
 #ifdef DGDEBUG
 		std::cout << "encoded: " << urldecode_re.result(match) << " decoded: " << hexToChar(n) << " string so far: " << result << std::endl;
 #endif
@@ -1082,7 +1082,7 @@ String HTTPHeader::decode(String s)
 }
 
 // turn %xx back into original character
-String HTTPHeader::hexToChar(String n)
+String HTTPHeader::hexToChar(String n, bool all)
 {
 	if (n.length() < 2) {
 		return n;
@@ -1119,9 +1119,14 @@ String HTTPHeader::hexToChar(String n)
 		return n;
 	}
 	c = a * 16 + b;
-	buf[0] = c;
-	buf[1] = '\0';
-	n = buf;
+	if (all || (c >= 'a' && c <= 'z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '-')) {
+		buf[0] = c;
+		buf[1] = '\0';
+		n = buf;
+	} else {
+		n = "%" + n;
+		return n;
+	}
 	return n;
 }
 
