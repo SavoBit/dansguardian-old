@@ -28,3 +28,15 @@ managedextensionlist = '@DGCONFDIR@/lists/downloadmanagers/managedextensionlist'
 # the process - allowing the page to be modified to reflect current progress.
 # This option generates a path of the form <languagedir>/<language>/<template>
 template = 'fancydmtemplate.html'
+
+# Maximum download size
+# When a file with unknown content length gets handled by the fancy DM,
+# something must be done in the case that the file is found to be too large
+# to scan (i.e. larger than maxcontentfilecachescansize).
+# As of 2.9.7.0, a warning will be issued to the user that the fancy DM may
+# not be able to cache the entire file, and the file will continue to be
+# downloaded to disk (but not scanned) until it reaches this size, at which
+# point the user will simply have to re-download the file (the URL won't be
+# scanned again).
+# The size is in kibibytes (i.e. 10240 = 10Mb)
+maxdownloadsize = 80000
