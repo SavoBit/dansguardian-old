@@ -32,6 +32,11 @@
 
 // DECLARATIONS
 
+// check the URL cache to see if we've already flagged an address as clean
+bool wasClean(String &url, const int fg);
+// add a known clean URL to the cache
+void addToClean(String &url, const int fg);
+
 // the ConnectionHandler class - handles filtering, scanning, and blocking of
 // data passed between a client and the external proxy.
 class ConnectionHandler
@@ -56,11 +61,6 @@ private:
 
 	// perform URL encoding on a string
 	std::string miniURLEncode(const char *s);
-
-	// check the URL cache to see if we've already flagged an address as clean
-	bool wasClean(String &url, const int fg);
-	// add a known clean URL to the cache
-	void addToClean(String &url, const int fg);
 
 	// when using IP address counting - have we got any remaining free IPs?
 	bool gotIPs(std::string ipstr);

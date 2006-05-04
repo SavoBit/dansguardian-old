@@ -55,6 +55,98 @@ extern bool reloadconfig;
 
 // IMPLEMENTATION
 
+//
+// URL cache funcs
+//
+
+// check the URL cache to see if we've already flagged an address as clean
+bool wasClean(String &url, const int fg)
+{
+	if (reloadconfig)
+		return false;
+	UDSocket ipcsock;
+	if (ipcsock.getFD() < 0) {
+		syslog(LOG_ERR, "Error creating ipc socket to url cache");
+		return false;
+	}
+	if (ipcsock.connect((char *) o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
+		syslog(LOG_ERR, "Error connecting via ipc to url cache");
+		ipcsock.close();
+		return false;
+	}
+	std::string myurl = " ";
+	myurl += url.after("://").toCharArray();
+	myurl[0] = fg+1;
+	myurl += "\n";
+#ifdef DGDEBUG
+	std::cout << "sending cache search request: " << myurl;
+#endif
+	try {
+		ipcsock.writeString(myurl.c_str());  // throws on err
+	}
+	catch(exception & e) {
+#ifdef DGDEBUG
+		std::cerr << "Exception writing to url cache" << std::endl;
+		std::cerr << e.what() << std::endl;
+#endif
+		syslog(LOG_ERR, "Exception writing to url cache");
+		syslog(LOG_ERR, e.what());
+	}
+	char reply;
+	try {
+		ipcsock.readFromSocket(&reply, 1, 0, 6);  // throws on err
+	}
+	catch(exception & e) {
+#ifdef DGDEBUG
+		std::cerr << "Exception reading from url cache" << std::endl;
+		std::cerr << e.what() << std::endl;
+#endif
+		syslog(LOG_ERR, "Exception reading from url cache");
+		syslog(LOG_ERR, e.what());
+	}
+	ipcsock.close();
+	return reply == 'Y';
+}
+
+// add a known clean URL to the cache
+void addToClean(String &url, const int fg)
+{
+	if (reloadconfig)
+		return;
+	UDSocket ipcsock;
+	if (ipcsock.getFD() < 0) {
+		syslog(LOG_ERR, "Error creating ipc socket to url cache");
+		return;
+	}
+	if (ipcsock.connect((char *) o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
+		syslog(LOG_ERR, "Error connecting via ipc to url cache");
+#ifdef DGDEBUG
+		std::cout << "Error connecting via ipc to url cache" << std::endl;
+#endif
+		return;
+	}
+	std::string myurl = "g ";
+	myurl += url.after("://").toCharArray();
+	myurl[1] = fg+1;
+	myurl += "\n";
+	try {
+		ipcsock.writeString(myurl.c_str());  // throws on err
+	}
+	catch(exception & e) {
+#ifdef DGDEBUG
+		std::cerr << "Exception adding to url cache" << std::endl;
+		std::cerr << e.what() << std::endl;
+#endif
+		syslog(LOG_ERR, "Exception adding to url cache");
+		syslog(LOG_ERR, e.what());
+	}
+	ipcsock.close();
+}
+
+//
+// ConnectionHandler class
+//
+
 // strip the URL down to just the IP/hostname, then do an isIPHostname on the result
 bool ConnectionHandler::isIPHostnameStrip(String url)
 {
@@ -155,90 +247,6 @@ bool ConnectionHandler::gotIPs(std::string ipstr) {
 	}
 	ipcsock.close();
 	return reply == 'Y';
-}
-
-// check the URL cache to see if we've already flagged an address as clean
-bool ConnectionHandler::wasClean(String &url, const int fg)
-{
-	if (reloadconfig)
-		return false;
-	UDSocket ipcsock;
-	if (ipcsock.getFD() < 0) {
-		syslog(LOG_ERR, "Error creating ipc socket to url cache");
-		return false;
-	}
-	if (ipcsock.connect((char *) o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
-		syslog(LOG_ERR, "Error connecting via ipc to url cache");
-		ipcsock.close();
-		return false;
-	}
-	std::string myurl = " ";
-	myurl += url.after("://").toCharArray();
-	myurl[0] = fg+1;
-	myurl += "\n";
-#ifdef DGDEBUG
-	std::cout << "sending cache search request: " << myurl;
-#endif
-	try {
-		ipcsock.writeString(myurl.c_str());  // throws on err
-	}
-	catch(exception & e) {
-#ifdef DGDEBUG
-		std::cerr << "Exception writing to url cache" << std::endl;
-		std::cerr << e.what() << std::endl;
-#endif
-		syslog(LOG_ERR, "Exception writing to url cache");
-		syslog(LOG_ERR, e.what());
-	}
-	char reply;
-	try {
-		ipcsock.readFromSocket(&reply, 1, 0, 6);  // throws on err
-	}
-	catch(exception & e) {
-#ifdef DGDEBUG
-		std::cerr << "Exception reading from url cache" << std::endl;
-		std::cerr << e.what() << std::endl;
-#endif
-		syslog(LOG_ERR, "Exception reading from url cache");
-		syslog(LOG_ERR, e.what());
-	}
-	ipcsock.close();
-	return reply == 'Y';
-}
-
-// add a known clean URL to the cache
-void ConnectionHandler::addToClean(String &url, const int fg)
-{
-	if (reloadconfig)
-		return;
-	UDSocket ipcsock;
-	if (ipcsock.getFD() < 0) {
-		syslog(LOG_ERR, "Error creating ipc socket to url cache");
-		return;
-	}
-	if (ipcsock.connect((char *) o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
-		syslog(LOG_ERR, "Error connecting via ipc to url cache");
-#ifdef DGDEBUG
-		std::cout << "Error connecting via ipc to url cache" << std::endl;
-#endif
-		return;
-	}
-	std::string myurl = "g ";
-	myurl += url.after("://").toCharArray();
-	myurl[1] = fg+1;
-	myurl += "\n";
-	try {
-		ipcsock.writeString(myurl.c_str());  // throws on err
-	}
-	catch(exception & e) {
-#ifdef DGDEBUG
-		std::cerr << "Exception adding to url cache" << std::endl;
-		std::cerr << e.what() << std::endl;
-#endif
-		syslog(LOG_ERR, "Exception adding to url cache");
-		syslog(LOG_ERR, e.what());
-	}
-	ipcsock.close();
 }
 
 // send a file to the client - used during bypass of blocked downloads
@@ -702,7 +710,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				//correct header to the client then delete the temp file
 				String tempfilename = url.after("GSBYPASS=").after("&N=");
 				String tempfilemime = tempfilename.after("&M=");
-				String tempfiledis = header.decode(tempfilemime.after("&D="));
+				String tempfiledis = header.decode(tempfilemime.after("&D="), true);
 #ifdef DGDEBUG
 				std::cout << "Original filename: " << tempfiledis << std::endl;
 #endif
@@ -1063,7 +1071,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					if (runav) {
 						if (cl == 0)
 							runav = false;
-						// TODO - re-enable once the fancy DM is able to more robustly handle oversized partial downloads
 						else if ((cl > 0) && (cl > o.max_content_filecache_scan_size))
 							runav = false;
 					}
