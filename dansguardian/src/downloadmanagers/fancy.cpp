@@ -21,12 +21,14 @@
 #include "../DownloadManager.hpp"
 #include "../OptionContainer.hpp"
 #include "../HTMLTemplate.hpp"
+#include "../ConnectionHandler.hpp"
 
 #include <syslog.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <iostream>
+#include <math.h>
 
 
 // GLOBALS
@@ -40,7 +42,8 @@ extern bool is_daemonised;
 class fancydm:public DMPlugin
 {
 public:
-	fancydm(ConfigVar & definition):DMPlugin(definition) {};
+	fancydm(ConfigVar & definition):DMPlugin(definition),
+		toobig_unscanned(false), toobig_notdownloaded(false) {};
 	int in(DataBuffer * d, Socket * sock, Socket * peersock, HTTPHeader * requestheader,
 		HTTPHeader * docheader, bool wantall, int *headersent, bool * toobig);
 
@@ -49,7 +52,25 @@ public:
 	void sendLink(Socket &peersock, String &linkurl, String &prettyurl);
 
 private:
+	// customisable fancy DM template
 	HTMLTemplate progresspage;
+	
+	// upper (non-scanned) file download size limit
+	// part of "multi-stage" downloads for when content length is unknown:
+	// - start downloading & hope for the best
+	// - if too large, warn the user, but keep downloading (won't be scanned)
+	// - if larger than upper limit also, kill download.
+	unsigned int upperlimit;
+	
+	// was file too large to be scanned?
+	bool toobig_unscanned;
+	// was file so large as to not even be downloaded?
+	bool toobig_notdownloaded;
+
+	// format an integer in seconds as hours:minutes:seconds
+	std::string timestring(const int seconds);
+	// format a number of bytes as a number of Gb/Mb/Kb
+	String bytestring(const int bytes);
 };
 
 
@@ -73,6 +94,14 @@ int fancydm::init(void* args)
 	// call inherited init
 	DMPlugin::init(args);
 
+	// read in absolute max download limit
+	upperlimit = cv["maxdownloadsize"].toInteger() * 1024;
+	if (upperlimit <= o.max_content_filecache_scan_size)
+		upperlimit = 0;
+#ifdef DGDEBUG
+	std::cout << "Upper download limit: " << upperlimit << std::endl;
+#endif
+
 	String fname = cv["template"];
 	if (fname.length() > 0) {
 		// read the template file, and return OK on success, error on failure.
@@ -90,14 +119,24 @@ int fancydm::init(void* args)
 // call template's downloadlink JavaScript function
 void fancydm::sendLink(Socket &peersock, String &linkurl, String &prettyurl)
 {
-	String mess = "<script language='javascript'>\n<!--\ndownloadlink(\""+linkurl+"\",\""+prettyurl+"\");\n//-->\n</script>\n";
+	String mess = "<script language='javascript'>\n<!--\ndownloadlink(\""+linkurl+"\",\""+prettyurl
+		+ "\"," + (toobig_notdownloaded ? "2" : (toobig_unscanned ? "1" : "0"))
+		+ ");\n//-->\n</script>\n";
 	peersock.writeString(mess.toCharArray());
 	// send text-only version for non-JS-enabled browsers
 	// 1220 "Scan complete.</p><p>Click here to download: "
+	// 1221 "Download complete; file not scanned.</p><p>Click here to download: "
+	// 1222 "File too large to cache.</p><p>Click here to re-download, bypassing virus scanning: "
 	mess = "<noscript><p>";
-	mess += o.language_list.getTranslation(1220);
-	mess += "<a href=\"" + linkurl + "\">" + prettyurl + "</a></p></noscript></body></html>\n";
+	mess += o.language_list.getTranslation(toobig_notdownloaded ? 1222 : (toobig_unscanned ? 1221 : 1220));
+	mess += "<a href=\"" + linkurl + "\">" + prettyurl + "</a></p></noscript>";
 	peersock.writeString(mess.toCharArray());
+	peersock.writeString("<!-- force flush -->\r\n");
+	peersock.writeString("</body></html>\n");
+	if (toobig_notdownloaded) {
+		// add URL to clean cache (for all groups)
+		addToClean(prettyurl, o.filter_groups + 1);
+	}
 }
 
 // download body for this request
@@ -121,7 +160,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	int rc;
 
 	unsigned int newsize;
-	unsigned int expectedsize = docheader->contentLength();
+	int expectedsize = docheader->contentLength();
 	unsigned int bytessec = 0;
 	unsigned int bytesgot = 0;
 	int percentcomplete = 0;
@@ -133,6 +172,8 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	bool geteverything = false;
 	if ((expectedsize < 0) && !(docheader->isPersistent()))
 		geteverything = true;
+	if (expectedsize < 0)
+		expectedsize = 0;
 
 	bool initialsent = false;
 
@@ -148,6 +189,10 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	struct timeval nowadays;
 	gettimeofday(&themdays, NULL);
 	gettimeofday(&starttime, NULL);
+	
+	toobig_unscanned = false;
+	toobig_notdownloaded = false;
+	bool secondstage = false;
 	
 	// buffer size for streaming downloads
 	unsigned int blocksize = 32768;
@@ -222,18 +267,21 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 				std::cout << "trickle delay - sending progress..." << std::endl;
 #endif
 				message = "Downloading status: ";
-				if (expectedsize > 0) {
-					// Output a call to template's JavaScript progressupdate function
-					jsmessage = "<script language='javascript'>\n<!--\nprogressupdate(" + String(bytesgot) + "," + String(bytessec) + ");\n//-->\n</script>";
-					peersock->writeString(jsmessage.toCharArray());
-					// send text only version for non-JS-enabled browsers.
+				// Output a call to template's JavaScript progressupdate function
+				jsmessage = "<script language='javascript'>\n<!--\nprogressupdate(" + String(bytesgot) + "," + String(bytessec) + ");\n//-->\n</script>";
+				peersock->writeString(jsmessage.toCharArray());
+				// send text only version for non-JS-enabled browsers.
+				// checkme: translation?
+				if (geteverything) {
+					message = "<noscript><p>Time remaining: unknown; "
+						+ bytestring(bytessec) + "/s; total downloaded: " + bytestring(bytesgot) + "</p></noscript>\n";
+				} else {
 					percentcomplete = bytesgot/(expectedsize/100);
 					eta = (expectedsize-bytesgot)/bytessec;
-					// checkme: translation?
-					message = "<noscript><p>" + String(percentcomplete) + "%, ETA " + String(eta) + " sec, "
-						+ String(bytessec) + " bytes/sec, total downloaded " + String(bytesgot) + "</p></noscript>\n";
-					peersock->writeString(message.toCharArray());
+					message = "<noscript><p>" + String(percentcomplete) + "%, time remaining: " + timestring(eta) + "; "
+						+ bytestring(bytessec) + "/s; total downloaded: " + bytestring(bytesgot) + "</p></noscript>\n";
 				}
+				peersock->writeString(message.toCharArray());
 				peersock->writeString("<!-- force flush -->\r\n");
 			}
 		}
@@ -259,12 +307,52 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 					d->tempfilesize = d->buffer_length;
 				}
 			} else if (bytesgot > o.max_content_filecache_scan_size) {
-				// if swapped to disk and file too large for that too, then give up
-#ifdef DGDEBUG
-				std::cout << "fancydm: file too big to be scanned, halting download" << std::endl;
-#endif
 				(*toobig) = true;
-				break;
+				toobig_unscanned = true;
+				if (geteverything && (upperlimit > 0)) {
+					// multi-stage download enabled, and we don't know content length
+					if ((!secondstage) && initialsent) {
+						secondstage = true;
+						// send download size warning message
+						jsmessage = "<script language='javascript'>\n<!--\ndownloadwarning(" + String(upperlimit) + ");\n//-->\n</script>";
+						peersock->writeString(jsmessage.toCharArray());
+						// text-only version
+						message = "<noscript><p>";
+						// 1201 Warning: file too large to scan. If you suspect that this file is larger than
+						// 1202 , then refresh to download directly.
+						message += o.language_list.getTranslation(1201);
+						message += bytestring(upperlimit);
+						message += o.language_list.getTranslation(1202);
+						message += "</p></noscript>\n";
+						peersock->writeString(message.toCharArray());
+						peersock->writeString("<!-- force flush -->\r\n");
+						// add URL to clean cache (for all groups)
+						String url = requestheader->url();
+						addToClean(url, o.filter_groups + 1);
+#ifdef DGDEBUG
+						std::cout << "fancydm: file too big to be scanned, entering second stage of download" << std::endl;
+#endif
+					}
+
+					// too large to even download, let alone scan
+					if (bytesgot > upperlimit) {
+#ifdef DGDEBUG
+						std::cout << "fancydm: file too big to be downloaded, halting second stage of download" << std::endl;
+#endif
+						toobig_unscanned = false;
+						toobig_notdownloaded = true;
+						break;
+					}
+				} else {
+					// multi-stage download disabled, or we know content length
+					// if swapped to disk and file too large for that too, then give up
+#ifdef DGDEBUG
+					std::cout << "fancydm: file too big to be scanned, halting download" << std::endl;
+#endif
+					toobig_unscanned = false;
+					toobig_notdownloaded = true;
+					break;
+				}
 			}
 		} else {
 			if (bytesgot > o.max_content_filter_size) {
@@ -360,7 +448,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 #ifdef DGDEBUG
 				std::cerr << "error buffering complete to disk so skipping disk buffering" << std::endl;
 #endif
-				syslog(LOG_ERR, "%s", "error buffering complete to disk so skipping disk buffering");
+				syslog(LOG_ERR, "error buffering complete to disk so skipping disk buffering");
 			} else {
 				writeEINTR(d->tempfilefd, d->data, d->buffer_length);
 				swappedtodisk = true;
@@ -371,12 +459,16 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 		// Output a call to template's JavaScript nowscanning function
 		peersock->writeString("<script language='javascript'>\n<!--\nnowscanning();\n//-->\n</script>\n");
 		// send text-only version
-		// 1210 "Download Complete.  Starting scan..."
-		message = "<noscript><p>";
-		message += o.language_list.getTranslation(1210);
-		message += "</p></noscript>\n";
-		peersock->writeString(message.toCharArray());
-		(*d).preservetemp = true;
+		// 1210 "Download Complete. Starting scan..."
+		if (!(toobig_unscanned || toobig_notdownloaded)) {
+			message = "<noscript><p>";
+			message += o.language_list.getTranslation(1210);
+			message += "</p></noscript>\n";
+			peersock->writeString(message.toCharArray());
+		}
+		// only keep full downloads
+		if (!toobig_notdownloaded)
+			(*d).preservetemp = true;
 		(*d).dontsendbody = true;
 	}
 
@@ -399,4 +491,29 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 		delete[] temp;*/
 	delete[] block;
 	return 0;
+}
+
+// format an integer in seconds as hours:minutes:seconds
+std::string fancydm::timestring(const int seconds)
+{
+	int hours = (int)floor((float)seconds/3600);
+	int minutes = (int)floor(((float)seconds/60)-(hours*3600));
+	int remainingseconds = seconds-(minutes*60)-(hours*3600);
+	char result[9];
+	snprintf(result, 9, "%02i:%02i:%02i", hours, minutes, remainingseconds);
+	return result;
+}
+// format a number of bytes as a number of Gb/Mb/Kb
+String fancydm::bytestring(const int bytes)
+{
+	int b = (int)floor((float)bytes/(1024*1024*1024));
+	if (b > 0)
+		return String(b)+" Gb";
+	b = (int)floor((float)bytes/(1024*1024));
+	if (b > 0)
+		return String(b)+" Mb";
+	b = (int)floor((float)bytes/1024);
+	if (b > 0)
+		return String(b)+" Kb";
+	return String(b)+" bytes";
 }
