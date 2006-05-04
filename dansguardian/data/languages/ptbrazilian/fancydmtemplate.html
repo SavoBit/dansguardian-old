@@ -1,31 +1,92 @@
 <html>
 	<head>
-	<title>Baixando -FILENAME- (-FILESIZE- bytes)</title>
+	<title>Downloading -FILENAME- (-FILESIZE- bytes)</title>
 	<script	language='javascript'>
 	<!--
+		var scanned = 1;
+		var fs = -FILESIZE-;
+		function timestring(seconds) {
+			var hours = Math.floor(seconds/3600);
+			var minutes = Math.floor((seconds/60) - (hours*3600));
+			var seconds = seconds - (minutes*60) - (hours*3600);
+			var string = "";
+			if (hours > 0) {
+				if (hours < 10)
+					string = "0"+hours;
+				else
+					string = hours;
+				string += ":";
+			}
+			if (minutes > 0) {
+				if (minutes < 10)
+					string += "0"+minutes;
+				else
+					string += minutes;
+			} else {
+				string += "00";
+			}
+			string += ":";
+			if (seconds > 0) {
+				if (seconds < 10)
+					string += "0"+seconds;
+				else
+					string += seconds;
+			} else {
+				string += "00";
+			}
+			return string;
+		}
+		function filesizestring(bytes) {
+			var gb = Math.floor(bytes/1073741824);
+			if (gb > 0)
+				return gb.toString()+" Gb";
+			var mb = Math.floor(bytes/1048576);
+			if (mb > 0)
+				return mb.toString()+" Mb";
+			var kb = Math.floor(bytes/1024);
+			if (kb > 0)
+				return kb.toString()+" Kb";
+			return bytes.toString()+" bytes";
+		}
 		function progressupdate(got, speed) {
-			var sofar = (got/-FILESIZE-)*16;
-			for (var i = 1; i <=sofar; i++)
-				document.getElementById('progress'+i).style.backgroundColor = 'blue';
-			var msg = Math.round((got/-FILESIZE-)*100)+"%, ETA "+Math.round((-FILESIZE--got)/speed)+" seg, "+speed+" bytes/sec, total baixado "+got+" bytes";
-			document.statsform.stats.value = msg;
-			document.statsform.stats.size = msg.length;
+			var msg;
+			if (fs > 0) {
+				var sofar = (got/fs)*16;
+				for (var i = 1; i <=sofar; i++)
+					document.getElementById('progress'+i).style.backgroundColor = 'blue';
+				msg = Math.round((got/-FILESIZE-)*100)+"%, time remaining: "+timestring(Math.round((fs-got)/speed))+"; "+filesizestring(speed)+"/s; total downloaded: "+filesizestring(got);
+			} else {
+				msg = "Time remaining: unknown; "+filesizestring(speed)+"/s; total downloaded: "+filesizestring(got);
+			}
+			document.getElementById('message1').innerHTML = msg;
 		}
 		function nowscanning() {
 			for (var i = 1; i <=16; i++)
 				document.getElementById('progress'+i).style.backgroundColor = 'blue';
-			var msg = "Download completo! verificando por virus agora...";
-			document.statsform.stats.value = msg;
-			document.statsform.stats.size = msg.length;
+			if (scanned == 1) {
+				var msg = "Download complete! Now scanning...";
+				document.getElementById('message1').innerHTML = msg;
+			}
 		}
-		function downloadlink(rawlink, prettylink) {
-			var msg = "Arquivo verificado";
-			document.statsform.stats.value = msg;
-			document.statsform.stats.size = msg.length;
-			setTimeout("document.location='"+rawlink+"'", 5000);
-			document.write("<center>Você será redirecionado em 5 segundos, caso isso não ocorra, clique no link abaixo:<br /><a href='"+rawlink+"'>"+prettylink+"</a></center></body></html>");
+		function downloadlink(rawlink, prettylink, type) {
+			if (type == 0)
+				var msg = "File scanned";
+			else if (type == 1)
+				var msg = "File downloaded, but not scanned due to size";
+			else if (type == 2)
+				var msg = "File too large to cache, please download directly";
+			document.getElementById('message1').innerHTML = msg;
+			if (type != 2)
+				document.getElementById('message2').innerHTML = "<a href='"+rawlink+"'>"+prettylink+"</a>";
+			else
+				document.getElementById('message2').innerHTML = "<a href='"+prettylink+"'>"+prettylink+"</a>";
+			document.write("</body></html>");
 		}
-		//-->
+		function downloadwarning(sizelimit) {
+			scanned = 0;
+			document.getElementById('message2').innerHTML = "Warning: File too large for content scanning. If you suspect that this file is larger than "+filesizestring(sizelimit)+", refresh this page to download directly.";
+		}
+	//-->
 	</script>
 	</head>
 <body>
@@ -52,7 +113,7 @@ document.write(unescape("\
 <span id='progress16'>%26nbsp; %26nbsp;</span> \
 </div>\
 </td></tr></table>\
-<center><form name='statsform'><input type='text' name='stats' value='' readonly=true></input></form></center>"));
+<center><p><tt id='message1'></tt></p><p id='message2' style='color: #600;'></p></center>"));
 //-->
 </script>
 
@@ -60,6 +121,8 @@ document.write(unescape("\
 The available variables are as follows:
 - FILENAME- gives the name of the file being downloaded
 - FILESIZE- gives the size of the file in bytes
+
+- FILESIZE- of zero indicates that file size is not known
 
 You need to remove the space between the - and the variable to use them
 in your HTML.  They are there above so extra processing is not required.
@@ -76,14 +139,32 @@ progressupdate(got, speed)
 
 nowscanning()
 	This is called once downloading is complete, and scanning has
-	begin.
+	begun. (Note: scanning has not actually begun if downloadwarning()
+	has been called at some point.)
 
-downloadlink(rawlink, prettylink)
+downloadlink(rawlink, prettylink, type)
 	This is called after scanning has completed, and the file is
 	ready to be sent to the user.
 	Parameters:
 	rawlink - the URL from which the scanned file can be grabbed
 	prettylink - the original URL which triggered the fancy download manager
+	type - the status of the download/scan:
+		0 - downloaded & scanned
+		1 - downloaded, but too big to have been scanned
+		2 - too big to be completely downloaded
+	codes 1 and 2 can only be encountered on files for which the content
+	length is not known in advance. "rawlink" should be ignored for code 2.
+
+downloadwarning(sizelimit)
+	This is called when a file with unknown content-length has exceeded
+	the configured maxcontentfilecachescansize. Used to warn the user
+	that the fancy DM may not be able to retrieve the entire file,
+	and that they should download directly (refresh the page; the URL will
+	have been added to DG's clean cache) if they know it to be larger
+	than sizelimit.
+	sizelimit - the value of the fancy DM's maxdownloadsize. If a file
+		exceeds this limit also, the fancy DM cannot continue
+		(will trigger downloadlink status type 2).
 
 Please note that the fancy download manager also outputs content contained in
 <noscript> tags, for browsers which disable or do not support javascript. If you

@@ -48,10 +48,17 @@
 
 "1000","PICS labeling level exceeded on the above site."
 
-"1100","Virus or bad content detected:"
+"1100","Virus or bad content detected."
 "1101","Advert blocked"
 
-"1200","Please wait - downloading to be scanned..."
-"1210","Download Complete.  Starting scan..."
+"1200","Please wait - downloading file for scanning..."
+"1201","Warning: file too large to scan. If you suspect that this file is larger than "
+"1202",", then refresh this page to download directly."
+
+"1210","Download Complete. Starting scan..."
+
 "1220","Scan complete.</p><p>Click here to download: "
+"1221","Download complete; file not scanned.</p><p>Click here to download: "
+"1222","File too large to cache.</p><p>Click here to re-download, bypassing scan: "
+
 "1230","File no longer available"
