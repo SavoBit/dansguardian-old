@@ -221,7 +221,11 @@ bool DynamicURLList::inURLList(const char *url, const int fg)
 #endif
 			return false;
 		}
-		if (groups[index[pos]].find((char)fg, 0) == std::string::npos) {
+		// o.filter_groups + 1 is a special case, meaning clean for all groups
+		std::string lookfor;
+		lookfor += (char)fg;
+		lookfor += (char)o.filter_groups + 1;
+		if (groups[index[pos]].find_first_of(lookfor) == std::string::npos) {
 #ifdef DGDEBUG
 			std::cout << "found but url not flagged clean for this group: " << fg << " (is clean for: ";
 			for (unsigned int j = 0; j < groups[index[pos]].length(); j++) {
