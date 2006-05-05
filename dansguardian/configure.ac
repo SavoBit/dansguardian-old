@@ -265,7 +265,7 @@ AC_SUBST(DGLOGLOCATION)
 AC_MSG_CHECKING(for PCRE support)
 AC_ARG_ENABLE(
 pcre,
-[AC_HELP_STRING([--enable-pcre@<:@=no@:>@], [Enable support for the PCRE library])],
+[AC_HELP_STRING([--enable-pcre@<:@=yes@:>@], [Enable support for the PCRE library])],
 [ if test "x$enableval" = "xno"; then
 	pcre=false
 	AC_MSG_RESULT(no)
@@ -274,9 +274,9 @@ else
 	AC_MSG_RESULT(yes)
 fi
 ],
-[ # disable by default
-	pcre=false
-	AC_MSG_RESULT(no)
+[ # enable by default
+	pcre=true
+	AC_MSG_RESULT(yes)
 ]
 )
 if test "x$pcre" = "xtrue"; then
