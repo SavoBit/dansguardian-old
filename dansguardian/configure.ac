@@ -133,9 +133,17 @@ AC_FUNC_MEMCMP
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_STAT
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([dup2 gethostbyaddr gettimeofday inet_ntoa memset select])
-AC_CHECK_FUNCS([socket strerror strstr strtol])
+AC_CHECK_FUNCS([dup2 gettimeofday memset select])
+AC_CHECK_FUNCS([strerror strstr strtol])
 AC_CHECK_FUNCS([setuid setgid umask seteuid setreuid setlocale strdup])
+AC_SEARCH_LIBS([gethostbyname], [nsl])
+AC_SEARCH_LIBS([socket], [socket], [], [
+	AC_CHECK_LIB(
+		[socket], [socket], [LIBS="-lsocket -lnsl $LIBS"],
+		[], [-lnsl]
+	)
+])
+AC_SEARCH_LIBS([inet_aton], [resolv])
 
 AC_CACHE_SAVE
 
