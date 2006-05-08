@@ -99,6 +99,15 @@ int BaseSocket::listen(int queue)
 	return ::listen(sck, queue);
 }
 
+// "template adaptor" for accept - basically, let G++ do the hard work of
+// figuring out the type of the third parameter ;)
+template <typename T>
+inline int local_accept_adaptor (int (*accept_func)(int, struct sockaddr*, T),
+	int sck, struct sockaddr *acc_adr, socklen_t *acc_adr_length)
+{
+  return accept_func (sck, acc_adr, (T) acc_adr_length);
+}
+
 // receive an incoming connection & return FD
 // call this in accept methods of derived classes, which should pass in empty sockaddr & socklen_t to be filled out
 int BaseSocket::baseAccept(struct sockaddr *acc_adr, socklen_t *acc_adr_length)
@@ -109,8 +118,7 @@ int BaseSocket::baseAccept(struct sockaddr *acc_adr, socklen_t *acc_adr_length)
 	// but everyone else as:
 	// int accept(int s, struct sockaddr *addr, socklen_t *addrlen);
 	// NB: except 10.4, which seems to use the more standard definition. grrr.
-	int newfd =::accept(sck, acc_adr, (ACCEPT_TYPE *) acc_adr_length);
-	return newfd;
+	return local_accept_adaptor(::accept, sck, acc_adr, acc_adr_length);
 }
 
 // return socket's FD - please use sparingly and DO NOT do manual data transfer using it

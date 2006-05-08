@@ -83,38 +83,37 @@ AC_CHECK_HEADERS([zlib.h])
 if ! test "x$staticzlib" = "xtrue"; then
 	AC_CHECK_LIB(z, gzdopen, [AC_MSG_RESULT(yes)], [AC_MSG_ERROR([no zlib!])])
 fi
-#AM_CONDITIONAL(STATIC_ZLIB, test "x$staticzlib" = "xtrue")
 
-# check whether accept() wants an int* or a socklen_t* as third argument
-AC_MSG_CHECKING([type of 3rd argument to accept()])
-AC_TRY_COMPILE([
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-int accept (int, struct sockaddr *, int *);
-], [],[
-	AC_MSG_RESULT([int*])
-	AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[int], [type for 3rd argument to accept()])
-],[
-	AC_TRY_COMPILE([
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-int accept (int, struct sockaddr *, socklen_t *);
-	],[],[
-		AC_MSG_RESULT([socklen_t*])
-		AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[socklen_t], [type for 3rd argument to accept()])
-    ], [
-		AC_MSG_RESULT([size_t*])
-		AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[size_t], [type for 3rd argument to accept()])
-    ])
-])
+dnl # check whether accept() wants an int* or a socklen_t* as third argument
+dnl AC_MSG_CHECKING([type of 3rd argument to accept()])
+dnl AC_TRY_COMPILE([
+dnl #ifdef HAVE_SYS_TYPES_H
+dnl #include <sys/types.h>
+dnl #endif
+dnl #ifdef HAVE_SYS_SOCKET_H
+dnl #include <sys/socket.h>
+dnl #endif
+dnl int accept (int, struct sockaddr *, int *);
+dnl ], [],[
+dnl 	AC_MSG_RESULT([int*])
+dnl 	AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[int], [type for 3rd argument to accept()])
+dnl ],[
+dnl 	AC_TRY_COMPILE([
+dnl #ifdef HAVE_SYS_TYPES_H
+dnl #include <sys/types.h>
+dnl #endif
+dnl #ifdef HAVE_SYS_SOCKET_H
+dnl #include <sys/socket.h>
+dnl #endif
+dnl int accept (int, struct sockaddr *, socklen_t *);
+dnl 	],[],[
+dnl 		AC_MSG_RESULT([socklen_t*])
+dnl 		AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[socklen_t], [type for 3rd argument to accept()])
+dnl     ], [
+dnl 		AC_MSG_RESULT([size_t*])
+dnl 		AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[size_t], [type for 3rd argument to accept()])
+dnl     ])
+dnl ])
 
 AC_CACHE_SAVE
 
