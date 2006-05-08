@@ -42,14 +42,16 @@
 
 #Pornography
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_chinese> #ALPHA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_danish> #ALPHA#
-.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_dutch> #ALPHA#
+.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_dutch> #BETA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_french>
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_german>
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_italian>
+.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_japanese> #ALPHA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_portuguese>
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_spanish> #ALPHA#
-.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_russian> #ALPHA#
+.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_russian> #BETA#
 .Include<@DGCONFDIR@/lists/phraselists/nudism/weighted>
 
 #Bad Words - swearing
@@ -80,20 +82,25 @@
 #.Include<@DGCONFDIR@/lists/phraselists/chat/weighted_italian>
 
 #Webmail
-#.Include<@DGCONFDIR@/lists/phraselists/webmail/weighted> #ALPHA#
+#.Include<@DGCONFDIR@/lists/phraselists/webmail/weighted> #BETA#
 #Note that if you enable the webmail weighted list you should also disable 
 #the "exception_email" list in the exceptionphraselist file.
 
-#Productivity
+#Forums
+#.Include<@DGCONFDIR@/lists/phraselists/forums/weighted> #BETA#
+
+#Gambling
 #.Include<@DGCONFDIR@/lists/phraselists/gambling/weighted>
 #.Include<@DGCONFDIR@/lists/phraselists/gambling/weighted_portuguese>
-.Include<@DGCONFDIR@/lists/phraselists/warezhacking/weighted>
+
+#Productivity
+#.Include<@DGCONFDIR@/lists/phraselists/games/weighted> #ALPHA#
+#.Include<@DGCONFDIR@/lists/phraselists/news/weighted> #ALPHA#
 #.Include<@DGCONFDIR@/lists/phraselists/personals/weighted>
 #.Include<@DGCONFDIR@/lists/phraselists/personals/weighted_portuguese>
-#.Include<@DGCONFDIR@/lists/phraselists/games/weighted> #ALPHA#
 #.Include<@DGCONFDIR@/lists/phraselists/sport/weighted> #ALPHA#
-#.Include<@DGCONFDIR@/lists/phraselists/news/weighted> #ALPHA#
 
 #System Management and Security
 .Include<@DGCONFDIR@/lists/phraselists/malware/weighted> #ALPHA#
-.Include<@DGCONFDIR@/lists/phraselists/proxies/weighted> #BETA#
+.Include<@DGCONFDIR@/lists/phraselists/proxies/weighted>
+.Include<@DGCONFDIR@/lists/phraselists/warezhacking/weighted>

@@ -16,12 +16,14 @@
 <hide referrer information><30>
 <show url entry form><30>
 <remove all cookies><30>
+<recommended for anonymity><60>
 <remove all scripts><20>
 <dmirror><30>
 <cgi>,<prox>,<nph><30>
 <nph-proxy><100>
 <nph-pro><50>
 <cgiproxy><50>
+<location via proxy><100>
 
 #CECID
 <cecid><100>
@@ -30,6 +32,10 @@
 <filter banned words><30>
 <please enter url to access><100>
 
+#Arbitroweb
+<arbitroweb><100>
+<Popular Places>,<arbitroweb><150>
+
 #General Proxy Lists
 < anonymous >,< transparent >,< prox><50>
 <keep your identity hidden><50>
@@ -37,6 +43,7 @@
 <anonymous>,<surfing><50>
 <anonymous>,<internet><50>
 <high anonymity><30>
+< anonymity>,<proxy><70>
 < proxy><5>
 < proxies><30>
 <public prox><30>
@@ -50,3 +57,9 @@
 <bypassing dans guardian><50>
 <bypass dansguardian><50>
 <bypass web filter><30>
+
+#Proxy and Filter bypass
+<bypass>,<proxy><75>
+<bypass>,<website blocking><75>
+<bypass>,<website filter><75>
+<bypass>,<web filter><75>

@@ -33,7 +33,7 @@
 #(altavista.com\/video\/)
 
 #Block Cgiproxy, Poxy, PHProxy and other Web-based proxies
-(cecid.php|nph-proxy|nph-pro|/dmirror|cgiproxy)
+(cecid.php|nph-webpr|nph-pro|/dmirror|cgiproxy|phpwebproxy)
 
 #Block websites containing proxies
 (anonymizer|proxify|megaproxy)
