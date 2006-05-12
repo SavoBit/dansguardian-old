@@ -195,7 +195,6 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 #ifdef DGDEBUG
 	std::cout << "NTLM - receiving step 2" << std::endl;
 #endif
-	h.header.clear();
 	h.in(&proxycon, true);
 
 	if (h.authRequired()) {
@@ -207,7 +206,6 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 #ifdef DGDEBUG
 		std::cout << "NTLM - receiving step 3" << std::endl;
 #endif
-		h.header.clear();
 		h.in(&peercon, true);
 
 #ifdef DGDEBUG
