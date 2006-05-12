@@ -1209,10 +1209,11 @@ int log_listener(std::string log_location, int logconerror)
 							fprintf(mail, "%-10s%s\n", "Data/Time:", when.c_str());
 							if (who != "-")
 								fprintf(mail, "%-10s%s\n", "User:", who.c_str());
-							fprintf(mail, "%-10s%s (%s)\n", "From:", from.c_str(),  ((clienthost.c_str()!=NULL) ? clienthost.c_str() : "-"));
+							fprintf(mail, "%-10s%s (%s)\n", "From:", from.c_str(),  ((clienthost.length() > 0) ? clienthost.c_str() : "-"));
 							fprintf(mail, "%-10s%s\n", "Where:", where.c_str());
 							// specifically, the virus name comes after message 1100 ("Virus or bad content detected.")
-							fprintf(mail, "%-10s%s\n", "Why:", what.after(o.language_list.getTranslation(1100)+" ").toCharArray());
+							String swhat(what);
+							fprintf(mail, "%-10s%s\n", "Why:", swhat.after(o.language_list.getTranslation(1100)).toCharArray() + 1);
 							fprintf(mail, "%-10s%s\n", "Method:", how.c_str());
 							fprintf(mail, "%-10s%s\n", "Size:", ssize.c_str());
 							fprintf(mail, "%-10s%s\n", "Weight:", sweight.c_str());
@@ -1262,26 +1263,26 @@ int log_listener(std::string log_location, int logconerror)
 						sprintf(vbody_temp, "%-10s%s\n", "User:", who.c_str());
 						vbody+=vbody_temp;
 					}
-					sprintf(vbody_temp, "%-10s%s (%s)\n", "From:", from.c_str(),  ((clienthost.c_str()!=NULL) ? clienthost.c_str() : "-"));
-					vbody+=vbody_temp;				 
+					sprintf(vbody_temp, "%-10s%s (%s)\n", "From:", from.c_str(),  ((clienthost.length() > 0) ? clienthost.c_str() : "-"));
+					vbody+=vbody_temp;
 					sprintf(vbody_temp, "%-10s%s\n", "Where:", where.c_str());
-					vbody+=vbody_temp;				 
-					sprintf(vbody_temp, "%-10s%s\n", "Why:", what.before(": ").toCharArray());
-					vbody+=vbody_temp;				 
+					vbody+=vbody_temp;
+					sprintf(vbody_temp, "%-10s%s\n", "Why:", what.c_str());
+					vbody+=vbody_temp;
 					sprintf(vbody_temp, "%-10s%s\n", "Method:", how.c_str());
-					vbody+=vbody_temp;				 
+					vbody+=vbody_temp;
 					sprintf(vbody_temp, "%-10s%s\n", "Size:", ssize.c_str());
-					vbody+=vbody_temp;				 
+					vbody+=vbody_temp;
 					sprintf(vbody_temp, "%-10s%s\n", "Weight:", sweight.c_str());
-					vbody+=vbody_temp;				 
+					vbody+=vbody_temp;
 					if (cat.c_str()!=NULL) {
 						sprintf(vbody_temp, "%-10s%s\n", "Category:", cat.c_str());
 						vbody+=vbody_temp;
 					}
 					sprintf(vbody_temp, "%-10s%s\n", "Mime type:", mimetype.c_str());
-					vbody+=vbody_temp;				 
+					vbody+=vbody_temp;
 					sprintf(vbody_temp, "%-10s%s\n", "Group:", o.fg[filtergroup]->name.c_str());
-					vbody+=vbody_temp;				 
+					vbody+=vbody_temp;
 					sprintf(vbody_temp, "%-10s%s\n\n", "HTTP resp:", stringcode.c_str());
 					vbody+=vbody_temp;
 					
