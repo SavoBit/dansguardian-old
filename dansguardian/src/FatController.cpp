@@ -830,14 +830,14 @@ int log_listener(std::string log_location, int logconerror)
 	int smtppid;
 #endif
 	
-	String where, what, how;
+	//String where, what, how;
 	std::string cr = "\n";
    
-	std::string cat, clienthost, from, who, mimetype;
+	std::string where, what, how, cat, clienthost, from, who, mimetype;
 	int port, size, isnaughty, isexception, istext, code;
 	int cachehit, wasinfected, wasscanned, naughtiness, filtergroup;
 	long tv_sec, tv_usec;
-	int contentmodified, urlmodified, matchedip;   
+	int contentmodified, urlmodified;   
 	
 	ofstream logfile(log_location.c_str(), ios::app);
 	if (logfile.fail()) {
@@ -895,7 +895,7 @@ int log_listener(std::string log_location, int logconerror)
 			// read in the various parts of the log string
 			bool error = false;
 			int itemcount = 0;
-			while(itemcount < 24) {
+			while(itemcount < 23) {
 				try {
 					rc = ipcpeersock->getLine(logline, 8192, 3, true);  // throws on err
 					if (rc < 0) {
@@ -977,8 +977,6 @@ int log_listener(std::string log_location, int logconerror)
 						case 22:
 							clienthost = logline;
 							break;
-						case 23:
-							matchedip = atoi(logline);
 						}
 					}
 				}
@@ -1000,7 +998,7 @@ int log_listener(std::string log_location, int logconerror)
 
 			if (port != 0 && port != 80) {
 				// put port numbers of non-standard HTTP requests into the logged URL
-				String newwhere = where.toCharArray();
+				String newwhere = where.c_str();
 				if (newwhere.after("://").contains("/")) {
 					String proto, host, path;
 					proto = newwhere.before("://");
@@ -1074,7 +1072,7 @@ int log_listener(std::string log_location, int logconerror)
 				when = year + "." + month + "." + day + " " + hour + ":" + min + ":" + sec;
 				// truncate long log items
 				/*if ((o.max_logitem_length > 0) && (when.length() > o.max_logitem_length))
-					when = when.substr(0, o.max_logitem_length);*/
+					when.resize(o.max_logitem_length);*/
 			}
 
 			sweight = String(naughtiness).toCharArray();
@@ -1082,33 +1080,21 @@ int log_listener(std::string log_location, int logconerror)
 
 			// truncate long log items
 			if (o.max_logitem_length > 0) {
-				where.limitLength(o.max_logitem_length);
-				if ((cat.c_str() != NULL) && (cat.length() > o.max_logitem_length)) {
-					cat = cat.substr(0, o.max_logitem_length);
-				}
-				if (what.length() > o.max_logitem_length) {
-					what = what.subString(0, o.max_logitem_length);
-				}
+				//where.limitLength(o.max_logitem_length);
+				if (cat.length() > o.max_logitem_length)
+					cat.resize(o.max_logitem_length);
+				if (what.length() > o.max_logitem_length)
+					what.resize(o.max_logitem_length);
+				if (where.length() > o.max_logitem_length)
+					where.resize(o.max_logitem_length);
 				/*if (who.length() > o.max_logitem_length)
-					who = who.substr(0, o.max_logitem_length);
+					who.resize(o.max_logitem_length);
 				if (from.length() > o.max_logitem_length)
-					from = from.substr(0, o.max_logitem_length);
-				how.limitLength(o.max_logitem_length);
+					from.resize(o.max_logitem_length);
+				if (how.length() > o.max_logitem_length)
+					how.resize(o.max_logitem_length);
 				if (ssize.length() > o.max_logitem_length)
-					ssize = ssize.substr(0, o.max_logitem_length);*/
-			}
-
-			// put client hostname in log if enabled.
-			// for banned & exception IP/hostname matches, we want to output exactly what was matched against,
-			// be it hostname or IP - therefore only do lookups here when we don't already have a cached hostname,
-			// and we don't have a straight IP match agaisnt the banned or exception IP lists.
-			if ((o.log_client_hostnames == 1) && (clienthost.c_str() == NULL) && !matchedip && (o.anonymise_logs != 1)) {
-#ifdef DGDEBUG
-				std::cout<<"logclienthostnames enabled but reverseclientiplookups disabled; lookup forced."<<std::endl;
-#endif
-				std::deque<String> names = o.fg[0]->ipToHostname(from.c_str());
-				if (names.size() > 0)
-					clienthost = names.front().toCharArray();
+					ssize.resize(o.max_logitem_length);*/
 			}
 
 			// blank out IP, hostname and username if desired
@@ -1124,9 +1110,9 @@ int log_listener(std::string log_location, int logconerror)
 
 			switch (o.log_file_format) {
 			case 4:
-				builtline = when +"\t"+ who + "\t" + from + "\t" + where.toCharArray() + "\t" + what.toCharArray() + "\t" + how.toCharArray()
-					+ "\t" + ssize + "\t" + sweight + "\t" + ( (cat.length() > 0) ? cat : "") +  "\t" + stringgroup + "\t"
-					+ stringcode + "\t" + mimetype + "\t" + ( (clienthost.length() > 0) ? clienthost : "-") + "\t" + o.fg[filtergroup]->name;
+				builtline = when +"\t"+ who + "\t" + from + "\t" + where + "\t" + what + "\t" + how
+					+ "\t" + ssize + "\t" + sweight + "\t" + cat +  "\t" + stringgroup + "\t"
+					+ stringcode + "\t" + mimetype + "\t" + clienthost + "\t" + o.fg[filtergroup]->name;
 				break;
 			case 3:
 				{
@@ -1170,29 +1156,29 @@ int log_listener(std::string log_location, int logconerror)
 
 					/*if (o.max_logitem_length > 0) {
 						if (utime.length() > o.max_logitem_length)
-							utime = utime.substr(0, o.max_logitem_length);
+							utime.resize(o.max_logitem_length);
 						if (duration.length() > o.max_logitem_length)
-							duration = duration.substr(0, o.max_logitem_length);
+							duration.resize(o.max_logitem_length);
 						if (hier.length() > o.max_logitem_length)
-							hier = hier.substr(0, o.max_logitem_length);
+							hier.resize(o.max_logitem_length);
 						if (hitmiss.length() > o.max_logitem_length)
-							hitmiss = hitmiss.substr(0, o.max_logitem_length);
+							hitmiss.resize(o.max_logitem_length);
 					}*/
 
 					builtline = utime + " " + duration + " " + ( (clienthost.length() > 0) ? clienthost : from) + " " + hitmiss + " " + ssize + " "
-						+ how.toCharArray() + " " + where.toCharArray() + " " + who + " " + hier + " " + mimetype ;
+						+ how + " " + where + " " + who + " " + hier + " " + mimetype ;
 					break;
 				}
 			case 2:
-				builtline = "\"" + when  +"\",\""+ who + "\",\"" + from + "\",\"" + where.toCharArray() + "\",\"" + what.toCharArray() + "\",\""
-					+ how.toCharArray() + "\",\"" + ssize + "\",\"" + sweight + "\",\"" + ( (cat.length() > 0) ? cat : "") +  "\",\"" + stringgroup + "\",\""
-					+ stringcode + "\",\"" + mimetype + "\",\"" + ( (clienthost.length() > 0) ? clienthost : "-") + "\",\"" + o.fg[filtergroup]->name + "\"";
+				builtline = "\"" + when  +"\",\""+ who + "\",\"" + from + "\",\"" + where + "\",\"" + what + "\",\""
+					+ how + "\",\"" + ssize + "\",\"" + sweight + "\",\"" + cat +  "\",\"" + stringgroup + "\",\""
+					+ stringcode + "\",\"" + mimetype + "\",\"" + clienthost + "\",\"" + o.fg[filtergroup]->name + "\"";
 				break;
 			default:
 
-				builtline = when +" "+ who + " " + from + " " + where.toCharArray() + " " + what.toCharArray() + " "
-					+ how.toCharArray() + " " + ssize + " " + sweight + " " + ( (cat.length() > 0) ? cat : "") +  " " + stringgroup + " "
-					+ stringcode + " " + mimetype + " " + ( (clienthost.length() > 0) ? clienthost : "-") + " " + o.fg[filtergroup]->name;
+				builtline = when +" "+ who + " " + from + " " + where + " " + what + " "
+					+ how + " " + ssize + " " + sweight + " " + cat +  " " + stringgroup + " "
+					+ stringcode + " " + mimetype + " " + clienthost + " " + o.fg[filtergroup]->name;
 			}
 		   
 			logfile << builtline << std::endl;  // append the line
@@ -1209,7 +1195,7 @@ int log_listener(std::string log_location, int logconerror)
 				// because if we're not.. then fork()ing is a waste of time.
 
 				// virus
-				if ((wasscanned && wasinfected) && (o.fg[filtergroup]->notifyav==1))  {
+				if ((wasscanned && wasinfected) && (o.fg[filtergroup]->notifyav))  {
 					if ((smtppid = fork() == 0))  {
 						FILE* mail = popen (o.mailer.c_str(), "w");
 						if (mail==NULL) {
@@ -1224,9 +1210,10 @@ int log_listener(std::string log_location, int logconerror)
 							if (who != "-")
 								fprintf(mail, "%-10s%s\n", "User:", who.c_str());
 							fprintf(mail, "%-10s%s (%s)\n", "From:", from.c_str(),  ((clienthost.c_str()!=NULL) ? clienthost.c_str() : "-"));
-							fprintf(mail, "%-10s%s\n", "Where:", where.toCharArray());
-							fprintf(mail, "%-10s%s\n", "Why:", what.after(": ").toCharArray());
-							fprintf(mail, "%-10s%s\n", "Method:", how.toCharArray());
+							fprintf(mail, "%-10s%s\n", "Where:", where.c_str());
+							// specifically, the virus name comes after message 1100 ("Virus or bad content detected.")
+							fprintf(mail, "%-10s%s\n", "Why:", what.after(o.language_list.getTranslation(1100)+" ").toCharArray());
+							fprintf(mail, "%-10s%s\n", "Method:", how.c_str());
 							fprintf(mail, "%-10s%s\n", "Size:", ssize.c_str());
 							fprintf(mail, "%-10s%s\n", "Weight:", sweight.c_str());
 							if (cat.c_str()!=NULL)
@@ -1243,7 +1230,7 @@ int log_listener(std::string log_location, int logconerror)
 				}
 
 				// naughty OR virus 
-				else if (isnaughty || (wasscanned && wasinfected)) {
+				else if ((isnaughty || (wasscanned && wasinfected)) && (o.fg[filtergroup]->notifycontent)) {
 					byuser = o.fg[filtergroup]->byuser;
 
 					// if no violations so far by this user/group,
@@ -1277,11 +1264,11 @@ int log_listener(std::string log_location, int logconerror)
 					}
 					sprintf(vbody_temp, "%-10s%s (%s)\n", "From:", from.c_str(),  ((clienthost.c_str()!=NULL) ? clienthost.c_str() : "-"));
 					vbody+=vbody_temp;				 
-					sprintf(vbody_temp, "%-10s%s\n", "Where:", where.toCharArray());
+					sprintf(vbody_temp, "%-10s%s\n", "Where:", where.c_str());
 					vbody+=vbody_temp;				 
 					sprintf(vbody_temp, "%-10s%s\n", "Why:", what.before(": ").toCharArray());
 					vbody+=vbody_temp;				 
-					sprintf(vbody_temp, "%-10s%s\n", "Method:", how.toCharArray());
+					sprintf(vbody_temp, "%-10s%s\n", "Method:", how.c_str());
 					vbody+=vbody_temp;				 
 					sprintf(vbody_temp, "%-10s%s\n", "Size:", ssize.c_str());
 					vbody+=vbody_temp;				 
