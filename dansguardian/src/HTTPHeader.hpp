@@ -132,6 +132,8 @@ public:
 	void chopScanBypass(String url);
 	// add cookie to outgoing headers with given name & value
 	void setCookie(const char *cookie, const char *value);
+	
+	HTTPHeader():dirty(true) { reset(); };
 
 private:
 	// timeout for socket operations
@@ -156,6 +158,8 @@ private:
 	bool ispostupload;
 
 	bool ispersistent, waspersistent;
+
+	bool dirty;
 
 	// check & fix headers from servers that don't obey standards
 	void checkheader(bool allowpersistent);

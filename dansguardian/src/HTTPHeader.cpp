@@ -56,13 +56,30 @@ void HTTPHeader::setTimeout(int t)
 // reset header object for future use
 void HTTPHeader::reset()
 {
-	header.clear();
-	//postdata.reset();
-	postdata[0] = '\0';
-	postdatalen = 0;
-	ispostupload = false;
-	waspersistent = false;
-	ispersistent = false;
+	if (dirty) {
+		header.clear();
+		//postdata.reset();
+		postdata[0] = '\0';
+		postdatalen = 0;
+		ispostupload = false;
+		waspersistent = false;
+		ispersistent = false;
+
+		cachedurl = "";
+
+		phost = NULL;
+		pport = NULL;
+		pcontentlength = NULL;
+		pcontenttype = NULL;
+		pproxyauthorization = NULL;
+		pcontentdisposition = NULL;
+		puseragent = NULL;
+		pxforwardedfor = NULL;
+		pcontentencoding = NULL;
+		pproxyconnection = NULL;
+		
+		dirty = false;
+	}
 }
 
 // *
@@ -638,23 +655,6 @@ bool HTTPHeader::isPostUpload(Socket &peersock)
 // are case-insensitive. - Anonymous SF Poster, 2006-02-23
 void HTTPHeader::checkheader(bool allowpersistent)
 {
-	// reset persistency flags
-	waspersistent = false;
-	ispersistent = false;
-	// reset header index pointers
-	phost = NULL;
-	pport = NULL;
-	pcontentlength = NULL;
-	pcontenttype = NULL;
-	pproxyauthorization = NULL;
-	pcontentdisposition = NULL;
-	puseragent = NULL;
-	pxforwardedfor = NULL;
-	pcontentencoding = NULL;
-	pproxyconnection = NULL;
-	// reset cached url() result
-	cachedurl = "";
-
 	// are these headers outgoing, or incoming?
 	bool outgoing = true;
 	if (header.front().startsWith("HT"))
@@ -1321,11 +1321,8 @@ void HTTPHeader::discard(Socket *sock)
 
 void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfig)
 {
-	header.clear();
-	//postdata.reset();
-	postdata[0] = '\0';
-	postdatalen = 0;
-	ispostupload = false;
+	if (dirty) reset();
+	dirty = true;
 
 	// the RFCs don't specify a max header line length so this should be
 	// dynamic really.  Pointed out (well reminded actually) by Daniel Robbins
