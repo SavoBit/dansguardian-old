@@ -58,7 +58,7 @@ int proxyinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, st
 	// extract username
 	string = h.getAuthData();
 	if (string.length() > 0) {
-		string = string.substr(0, string.find_first_of(':'));
+		string.resize(string.find_first_of(':'));
 		return DGAUTH_OK;
 	}
 	return DGAUTH_NOMATCH;

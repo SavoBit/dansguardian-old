@@ -803,7 +803,7 @@ bool OptionContainer::readFilterGroupConf()
 			}
 			getline(groupnamesfile, groupname);
 			groupname = groupname.substr(groupname.find('\'',0)+1);
-			groupname = groupname.substr(0,groupname.rfind('\'',groupname.length()-1));
+			groupname.resize(groupname.rfind('\'',groupname.length()-1));
 #ifdef DGDEBUG
 			std::cout << "Group name: " << groupname << std::endl;
 #endif
