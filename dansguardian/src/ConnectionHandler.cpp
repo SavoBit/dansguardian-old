@@ -434,6 +434,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				syslog(LOG_ERR, "Served %d requests on this connection so far", pcount);
 				std::cout << clientip << std::endl;
 #endif
+				header.reset();
 				try {
 					header.in(&peerconn, true, true);  // get header from client, allowing persistency and breaking on reloadconfig
 				} catch (exception &e) {
@@ -487,6 +488,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// reset now.
 				docheader.reset();
 				docbody.reset();
+				checkme.reset();  // our filter object
 				// more?
 			} else {
 				// reset flags & objects next time round the loop
@@ -828,7 +830,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				return;  // connection dealt with so exit
 			}
 
-			checkme.reset();  // our filter object
 			checkme.filtergroup = filtergroup;
 
 			if ((o.max_ips > 0) && (!gotIPs(clientip))) {
@@ -1035,6 +1036,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						proxysock.checkForInput(120);
 						docheader.in(&proxysock, persist);
 						persist = docheader.isPersistent();
+						wasrequested = true;  // so we know where we are later
 					}
 				}
 				
@@ -1044,7 +1046,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					if (!persist)
 						std::cout << "header says close, so not persisting" << std::endl;
 #endif
-					wasrequested = true;  // so we know where we are later
 
 					// if we're not careful, we can end up accidentally setting the bypass cookie twice.
 					// because of the code flow, this second cookie ends up with timestamp 0, and is always disallowed.
@@ -1315,11 +1316,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 			// then we deny. previously, this checked the isbypass flag too; now, since bypass requests only undergo the same checking
 			// as exceptions, it needn't. and in fact it mustn't, if bypass requests are to be virus scanned/blocked in the same manner as exceptions.
+			// make sure we keep track of whether or not logging has been performed, as we may be in stealth mode and don't want to double log.
+			bool logged = false;
 			if (checkme.isItNaughty) {
 				String rtype = header.requestType();
 #ifdef DGDEBUG
 				std::cout<<"Category: "<<checkme.whatIsNaughtyCategories<<std::endl;
 #endif
+				logged = true;
 				doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
 					rtype, docsize, &checkme.whatIsNaughtyCategories, true, false, false, &thestart,
 					cachehit, 403, mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup, contentmodified, urlmodified);
@@ -1357,7 +1361,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			if (waschecked) {
 				if (!docheader.authRequired() && !pausedtoobig) {
 					String rtype = header.requestType();
-					doLog(clientuser, clientip, url, header.port, exceptionreason,
+					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
 						rtype, docsize, NULL, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, filtergroup, contentmodified, urlmodified);
@@ -1426,7 +1430,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					fdt.tunnel(proxysock, peerconn, false, docheader.contentLength() - docsize);
 					docsize += fdt.throughput;
 					String rtype = header.requestType();
-					doLog(clientuser, clientip, url, header.port, exceptionreason,
+					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
 						rtype, docsize, NULL, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, filtergroup, contentmodified, urlmodified);
@@ -1439,7 +1443,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				fdt.tunnel(proxysock, peerconn, false, docheader.contentLength());
 				docsize = fdt.throughput;
 				String rtype = header.requestType();
-				doLog(clientuser, clientip, url, header.port, exceptionreason,
+				if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
 					rtype, docsize, NULL, false, isexception,
 					docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 					wasinfected, wasscanned, checkme.naughtiness, filtergroup, contentmodified, urlmodified);
@@ -1503,6 +1507,19 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 			return;
 		}
 
+		// put client hostname in log if enabled.
+		// for banned & exception IP/hostname matches, we want to output exactly what was matched against,
+		// be it hostname or IP - therefore only do lookups here when we don't already have a cached hostname,
+		// and we don't have a straight IP match agaisnt the banned or exception IP lists.
+		if ((o.log_client_hostnames == 1) && (clienthost == NULL) && !matchedip && (o.anonymise_logs != 1)) {
+#ifdef DGDEBUG
+			std::cout<<"logclienthostnames enabled but reverseclientiplookups disabled; lookup forced."<<std::endl;
+#endif
+			std::deque<String> names = o.fg[0]->ipToHostname(from.c_str());
+			if (names.size() > 0)
+				clienthost = new std::string(names.front().toCharArray());
+		}
+
 		// Formatting code moved into log_listener in FatController.cpp
 		// Original patch by J. Gauthier
 
@@ -1511,7 +1528,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 #endif
 
 		data = String(isexception)+cr;
-		data += ( cat ? *cat : "") +cr;
+		data += ( cat ? (*cat) + cr : cr);
 		data += String(isnaughty)+cr;
 		data += String(naughtiness)+cr;
 		data += String(istext)+cr;
@@ -1532,8 +1549,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		data += String(mimetype)+cr; 
 		data += String((*thestart).tv_sec)+cr;
 		data += String((*thestart).tv_usec)+cr;
-		data += ( clienthost ? *clienthost : "" ) + cr;
-		data += String(matchedip)+cr;
+		data += ( clienthost ? (*clienthost) + cr : cr);
 
 #ifdef DGDEBUG   
 		//std::cout << "Log data: " << data.toCharArray() << endl;
