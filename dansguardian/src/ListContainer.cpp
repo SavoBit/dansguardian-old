@@ -43,11 +43,20 @@ extern bool is_daemonised;
 extern OptionContainer o;
 
 
+// DEFINES
+
+/*#define ROOTNODESIZE 260
+#define MAXROOTLINKS ROOTNODESIZE-4*/
+#define GRAPHENTRYSIZE 64
+#define MAXLINKS GRAPHENTRYSIZE-4
+//#define ROOTOFFSET ROOTNODESIZE - GRAPHENTRYSIZE
+
+
 // IMPLEMENTATION
 
 // Constructor - set default values
 ListContainer::ListContainer():refcount(1), parent(false), filedate(0), used(false), bannedpfiledate(0), exceptionpfiledate(0), weightedpfiledate(0),
-	sourceisexception(false), sourcestartswith(false), sourcefilters(0), data(NULL), graphdata(NULL), graphitems(0),
+	sourceisexception(false), sourcestartswith(false), sourcefilters(0), data(NULL), graphdata(NULL), maxchildnodes(0), graphitems(0),
 	data_length(0), data_memory(0), items(0), isSW(false), issorted(false), graphused(false), force_quick_search(0),
 	sthour(0), stmin(0), endhour(0), endmin(0), istimelimited(false)
 {
@@ -58,7 +67,7 @@ ListContainer::~ListContainer()
 {
 	delete[]data;
 	if (graphused) {
-		delete[]graphdata;
+		free(graphdata);
 	}
 	for (unsigned int i = 0; i < morelists.size(); i++) {
 		o.lm.deRefList(morelists[i]);
@@ -69,12 +78,14 @@ ListContainer::~ListContainer()
 void ListContainer::reset()
 {
 	delete[]data;
-	delete[]graphdata;
+	if (graphused)
+		free(graphdata);
 	for (unsigned int i = 0; i < morelists.size(); i++) {
 		o.lm.deRefList(morelists[i]);
 	}
 	data = NULL;
 	graphdata = NULL;
+	maxchildnodes = 0;
 	graphitems = 0;
 	data_length = 0;
 	data_memory = 0;
@@ -708,9 +719,15 @@ void ListContainer::makeGraph(int fqs)
 	std::string s;
 	std::string lasts;
 	graphused = true;
-	graphdata = new int[64 * data_length];
+
+#ifdef DGDEBUG
+	std::cout << "Bytes needed for phrase tree in worst-case scenario: " << (sizeof(int) * ((GRAPHENTRYSIZE * data_length) /*+ ROOTOFFSET*/)) << std::endl;
+	prolificroot = false;
+	secondmaxchildnodes = 0;
+#endif
+
+	graphdata = (int*) calloc((GRAPHENTRYSIZE * data_length) /*+ ROOTOFFSET*/, sizeof(int));
 	graphitems++;
-	memset(graphdata, 0, sizeof(int) * 64 * data_length);
 	std::deque<unsigned int> sizelist;
 
 	for (i = 0; i < items; i++) {
@@ -722,6 +739,16 @@ void ListContainer::makeGraph(int fqs)
 		s = getItemAt(data + list[sizelist[i]]);
 		graphAdd(s.c_str(), 0, sizelist[i]);
 	}
+
+#ifdef DGDEBUG
+	std::cout << "Bytes actually needed for phrase tree: " << (sizeof(int) * ((GRAPHENTRYSIZE * graphitems) /*+ ROOTOFFSET*/)) << std::endl;
+	std::cout << "Most prolific node has " << maxchildnodes << " children" << std::endl;
+	std::cout << "It " << (prolificroot ? "is" : "is not") << " the root node" << std::endl;
+	std::cout << "Second most prolific node has " << secondmaxchildnodes << " children" << std::endl;
+#endif
+
+	graphdata = (int*) realloc(graphdata, sizeof(int) * ((GRAPHENTRYSIZE * graphitems)/* + ROOTOFFSET*/));
+
 	int ml = graphdata[2];
 	int branches;
 
@@ -794,9 +821,9 @@ void ListContainer::graphSizeSort(int l, int r, std::deque<unsigned int> *sizeli
 int ListContainer::graphFindBranches(unsigned int pos)
 {
 	int branches = 0;
-	int links = graphdata[pos * 64 + 2];
+	int links = graphdata[pos * GRAPHENTRYSIZE + 2];
 	for (int i = 0; i < links; i++) {
-		branches += graphFindBranches(graphdata[pos * 64 + 4 + i]);
+		branches += graphFindBranches(graphdata[pos * GRAPHENTRYSIZE + 4 + i]);
 	}
 	if (links > 1) {
 		branches += links - 1;
@@ -808,14 +835,14 @@ int ListContainer::graphFindBranches(unsigned int pos)
 // copy all phrases starting from a given root link into the slowgraph
 void ListContainer::graphCopyNodePhrases(unsigned int pos)
 {
-	int links = graphdata[pos * 64 + 2];
+	int links = graphdata[pos * GRAPHENTRYSIZE + 2];
 	int i;
 	for (i = 0; i < links; i++) {
-		graphCopyNodePhrases(graphdata[pos * 64 + 4 + i]);
+		graphCopyNodePhrases(graphdata[pos * GRAPHENTRYSIZE + 4 + i]);
 	}
 	bool found = false;
 	int size = slowgraph.size();
-	unsigned int phrasenumber = graphdata[pos * 64 + 3];
+	unsigned int phrasenumber = graphdata[pos * GRAPHENTRYSIZE + 3];
 	for (i = 0; i < size; i++) {
 		if (slowgraph[i] == phrasenumber) {
 			found = true;
@@ -893,7 +920,7 @@ int ListContainer::bmsearch(char *file, int fl, std::string s)
 	return count;
 }
 
-// Format of the data is each entry has 64 int values with format of:
+// Format of the data is each entry has GRAPHENTRYSIZE int values with format of:
 // [letter][last letter flag][num links][from phrase][link0][link1]...
 
 void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int len)
@@ -917,8 +944,7 @@ void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int
 	}
 	
 	int ml;
-//#warning Experimental graphsearch code being used
-	int *stack = new int[63];
+	int *stack = new int[maxchildnodes];
 	int stacksize = 0;
 	unsigned char p;
 	int pos;
@@ -937,6 +963,7 @@ void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int
 			depth = 0;
 			while (true) {
 				// get the address of the link endpoint and the data actually stored at it
+				// note that this only works for GRAPHENTRYSIZE == 64
 				ppos = pos << 6;
 				p = graphdata[ppos];
 
@@ -978,7 +1005,7 @@ void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int
 					// a stack of children from the most recently matched node,
 					// so that this code will never initiate backtracking.
 					// the stack would then be allowed to be reduced to 63,
-					// since we only have max 64 children on a node, and
+					// since we only have max GRAPHENTRYSIZE children on a node, and
 					// we'd set stacksize to 0 before we do any adding, to
 					// effectively clear it beforehand.
 					pos = stack[--stacksize];
@@ -1001,16 +1028,16 @@ void ListContainer::graphAdd(String s, int inx, int item)
 	int i, px, it;
 	int numlinks;
 	//iterate over the input node's immediate children
-	for (i = 0; i < graphdata[inx * 64 + 2]; i++) {
+	for (i = 0; i < graphdata[inx * GRAPHENTRYSIZE + 2]; i++) {
 		//grab the character from this child
-		c = (unsigned char) graphdata[(graphdata[inx * 64 + 4 + i]) * 64];
+		c = (unsigned char) graphdata[(graphdata[inx * GRAPHENTRYSIZE + 4 + i]) * GRAPHENTRYSIZE];
 		if (p == c) {
 			//it matches the first char of our string!
 			//keep searching, starting from here, to see if the entire phrase is already in the graph
 			t = s;
 			t.lop();
 			if (t.length() > 0) {
-				graphAdd(t, graphdata[inx * 64 + 4 + i], item);
+				graphAdd(t, graphdata[inx * GRAPHENTRYSIZE + 4 + i], item);
 				return;
 			}
 			found = true;
@@ -1019,10 +1046,10 @@ void ListContainer::graphAdd(String s, int inx, int item)
 			// as part of an existing phrase
 			
 			//check the end of word flag on the child
-			px = graphdata[(graphdata[inx * 64 + 4 + i]) * 64 + 1];
+			px = graphdata[(graphdata[inx * GRAPHENTRYSIZE + 4 + i]) * GRAPHENTRYSIZE + 1];
 			if (px == 1) {
 				// the exact phrase is already there
-				px = graphdata[(graphdata[inx * 64 + 4 + i]) * 64 + 3];
+				px = graphdata[(graphdata[inx * GRAPHENTRYSIZE + 4 + i]) * GRAPHENTRYSIZE + 3];
 				it = itemtype[px];
 
 				if ((it > 9 && itemtype[item] < 10) || itemtype[item] == -1) {
@@ -1045,25 +1072,57 @@ void ListContainer::graphAdd(String s, int inx, int item)
 	if (!found) {
 		i = graphitems;
 		graphitems++;
-		numlinks = graphdata[inx * 64 + 2];
-		graphdata[inx * 64 + 2] = numlinks + 1;
-		graphdata[inx * 64 + 4 + numlinks] = i;
-		graphdata[i * 64] = p;
-		graphdata[i * 64 + 3] = item;
+		numlinks = graphdata[inx * GRAPHENTRYSIZE + 2];
+		if (/*(inx == 0) ? ((numlinks + 1) > MAXROOTLINKS) : (*/(numlinks +1) > MAXLINKS/*)*/) {
+			syslog(LOG_ERR, "More than %d links from this node!", /*(inx == 0) ? MAXROOTLINKS :*/ MAXLINKS);
+			if (!is_daemonised)
+				std::cout << "More than " << (/*(inx == 0) ? MAXROOTLINKS :*/ MAXLINKS) << " links from this node!" << std::endl;
+			exit(1);
+		}
+		if ((numlinks + 1) > maxchildnodes) {
+			maxchildnodes = numlinks + 1;
+#ifdef DGDEBUG
+			prolificroot = (inx == 0);
+#endif
+		}
+#ifdef DGDEBUG
+		else if ((numlinks + 1) > secondmaxchildnodes)
+			secondmaxchildnodes = numlinks + 1;
+#endif
+		graphdata[inx * GRAPHENTRYSIZE + 2] = numlinks + 1;
+		graphdata[inx * GRAPHENTRYSIZE + 4 + numlinks] = i;
+		graphdata[i * GRAPHENTRYSIZE] = p;
+		graphdata[i * GRAPHENTRYSIZE + 3] = item;
 		s.lop();
 		// iterate over remaining characters and add child nodes
 		while (s.length() > 0) {
-			numlinks = graphdata[i * 64 + 2];
-			graphdata[i * 64 + 2] = numlinks + 1;
-			graphdata[i * 64 + 4 + numlinks] = i + 1;
+			numlinks = graphdata[i * GRAPHENTRYSIZE + 2];
+			if (/*(inx == 0) ? ((numlinks + 1) > MAXROOTLINKS) : (*/(numlinks +1) > MAXLINKS/*)*/) {
+				syslog(LOG_ERR, "More than %d links from this node!", /*(inx == 0) ? MAXROOTLINKS :*/ MAXLINKS);
+				if (!is_daemonised)
+					std::cout << "More than " << (/*(inx == 0) ? MAXROOTLINKS :*/ MAXLINKS) << " links from this node!" << std::endl;
+				exit(1);
+			}
+			if ((numlinks + 1) > maxchildnodes) {
+				maxchildnodes = numlinks + 1;
+#ifdef DGDEBUG
+				prolificroot = (inx == 0);
+#endif
+			}
+#ifdef DGDEBUG
+			else if ((numlinks + 1) > secondmaxchildnodes)
+				secondmaxchildnodes = numlinks + 1;
+#endif
+			graphdata[i * GRAPHENTRYSIZE + 2] = numlinks + 1;
+			graphdata[i * GRAPHENTRYSIZE + 4 + numlinks] = i + 1;
 			i++;
 			graphitems++;
 			p = s.charAt(0);
-			graphdata[i * 64] = p;
-			graphdata[i * 64 + 3] = item;
+			graphdata[i * GRAPHENTRYSIZE] = p;
+			graphdata[i * GRAPHENTRYSIZE + 3] = item;
 			s.lop();
 		}
-		graphdata[i * 64 + 1] = 1;
+		graphdata[i * GRAPHENTRYSIZE + 1] = 1;
 	}
 }
 
