@@ -663,7 +663,10 @@ void HTTPHeader::checkheader(bool allowpersistent)
 	bool first = true;
 	for (std::deque<String>::iterator i = header.begin(); i != header.end(); i++) {	// check each line in the headers
 		// HTTP 1.1 is persistent by default
-		if (first && (i->after("HTTP/") == "1.1")) {
+		if (first && (i->after("HTTP/").startsWith("1.1"))) {
+#ifdef DGDEBUG
+			std::cout << "CheckHeader: HTTP/1.1, so assuming persistency" << std::endl;
+#endif
 			waspersistent = true;
 			ispersistent = true;
 			first = false;
@@ -696,14 +699,29 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		else if ((pproxyauthorization == NULL) && i->startsWithLower("proxy-authorization:")) {
 			pproxyauthorization = &(*i);
 		}
-		else if ((pproxyconnection == NULL) && (i->startsWithLower("proxy-connection: keep-alive") || i->startsWithLower("connection: keep-alive"))) {
-			waspersistent = true;
-			if (!allowpersistent) {
-				ispersistent = false;
-				(*i) = i->before(":") + ": Close\r";
-			} else {
-				ispersistent = true;
+		else if ((pproxyconnection == NULL) && (i->startsWithLower("proxy-connection:") || i->startsWithLower("connection:"))) {
+#ifdef DGDEBUG
+			std::cout << "CheckHeader: Found Proxy-Connection" << std::endl;
+#endif
+			if (i->contains("live")) {
+#ifdef DGDEBUG
+				std::cout << "CheckHeader: P-C says keep-alive" << std::endl;
+#endif
+				waspersistent = true;
+				if (!allowpersistent) {
+#ifdef DGDEBUG
+					std::cout << "CheckHeader: ... but we aren't allowed to" << std::endl;
+#endif
+					ispersistent = false;
+					(*i) = i->before(":") + ": Close\r";
+				} else {
+					ispersistent = true;
+				}
 			}
+#ifdef DGDEBUG
+			else
+				std::cout << "CheckHeader: P-C says close" << std::endl;
+#endif
 			pproxyconnection = &(*i);
 		}
 		else if (outgoing && (pxforwardedfor == NULL) && i->startsWithLower("x-forwarded-for:")) {
@@ -717,11 +735,25 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		std::cout << (*i) << std::endl;
 #endif
 	}
+#ifdef DGDEBUG
+	std::cout << "CheckHeader flags: AP=" << allowpersistent << " IP=" << ispersistent << " PPC=" << !(pproxyconnection == NULL) << std::endl;
+#endif
 	// if a request was HTTP 1.1 and there was no proxy-connection header, we may need to add one
 	if ((!allowpersistent) && ispersistent) {
+		// we should only be in this state if pproxyconnection == NULL (otherwise ispersistent will have been falsified earlier)
+#ifdef DGDEBUG
+		std::cout << "CheckHeader: Adding our own Proxy-Connection: Close" << std::endl;
+#endif
 		header.push_back("Proxy-Connection: Close\r");
 		pproxyconnection = &(header.back());
 		ispersistent = false;
+	} else if (allowpersistent && ispersistent && (pproxyconnection == NULL)) {
+#ifdef DGDEBUG
+		std::cout << "CheckHeader: Adding our own Proxy-Connection: Keep-Alive" << std::endl;
+#endif
+		// we should only be in this state if HTTP 1.1, persistency allowed, but persistency not explicitly asked for
+		header.push_back("Proxy-Connection: Keep-Alive\r");
+		pproxyconnection = &(header.back());
 	}
 }
 
@@ -1285,9 +1317,6 @@ bool HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 		break;
 	}
 
-	/*if (postdata.buffer_length > 0) {
-		postdata.out(sock);
-	}*/
 	if (header.front().toCharArray()[0] == 'P') {
 		if (postdatalen > 0) {
 #ifdef DGDEBUG
@@ -1342,7 +1371,6 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 		// getline will throw an exception if there is an error which will
 		// only be caught by HandleConnection()
 
-
 		line = buff;  // convert the line to a String
 
 		header.push_back(line);  // stick the line in the deque that holds the header
@@ -1353,11 +1381,4 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 		throw exception();
 
 	checkheader(allowpersistent);  // sort out a few bits in the header
-
-	/*int length = 0;
-	String requestMethod = header.front().before(" ");
-	if (!requestMethod.contains("/") && (length = contentLength()) > 0) {
-		// if it's a request (not reply) with content, grab the data and store it
-		postdata.read(sock, length);  // get the DataBuffer to read the data
-	}*/
 }
