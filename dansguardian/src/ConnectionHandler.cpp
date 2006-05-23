@@ -327,7 +327,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 	HTTPHeader header;  // to hold the incoming client request header
 
-	header.setTimeout(120);  // set a timeout as we don't want blocking 4 eva
+	header.setTimeout(14);  // set a timeout as we don't want blocking 4 eva
 	// this also sets how long a pconn will wait for other requests
 	// squid apparently defaults to 1 minute (persistent_request_timeout),
 	// so wait slightly less than this to avoid duff pconns.
@@ -2124,16 +2124,10 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 		}
 		system("date");
 #endif
-		if (!checkme->isItNaughty && !checkme->isException && !isbypass && !docheader->authRequired()) {
-			if (dblen <= o.max_content_filter_size) {
-				checkme->checkme(docbody, url, domain);  // content filtering
-			}
-#ifdef DGDEBUG
-			else {
-				std::cout << "content length large so skipping content filtering" << std::endl;
-			}
-			system("date");
-#endif
+		if (!checkme->isItNaughty && !checkme->isException && !isbypass && (dblen <= o.max_content_filter_size)
+			&& !docheader->authRequired() && docheader->isContentType("text"))
+		{
+			checkme->checkme(docbody, url, domain);  // content filterin
 		}
 #ifdef DGDEBUG
 		else {
@@ -2148,6 +2142,8 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 				std::cout << "Is flagged as a bypass";
 			else if (docheader->authRequired())
 				std::cout << "Is a set of auth required headers";
+			else if (!docheader->isContentType("text"))
+				std::cout << "Not text";
 			std::cout << std::endl;
 		}
 #endif
@@ -2160,7 +2156,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 		return;
 	}
 
-	if (dblen <= o.max_content_filter_size && docheader->isContentType("text") && !checkme->isItNaughty) {
+	if ((dblen <= o.max_content_filter_size) && !checkme->isItNaughty && docheader->isContentType("text")) {
 		contentmodified = docbody->contentRegExp(filtergroup);
 		// content modifying uses global variable
 	}
