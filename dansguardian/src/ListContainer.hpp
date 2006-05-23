@@ -105,7 +105,18 @@ private:
 	bool sourcestartswith;
 	int sourcefilters;
 	char *data;
+
+	// Format of the data is each entry has 64 int values with format of:
+	// [letter][last letter flag][num links][from phrase][link0][link1]...
+
 	int *graphdata;
+
+#ifdef DGDEBUG
+	bool prolificroot;
+	int secondmaxchildnodes;
+#endif
+
+	int maxchildnodes;
 	int graphitems;
 	std::vector<unsigned int > slowgraph;
 	unsigned int data_length;
