@@ -779,12 +779,12 @@ bool OptionContainer::readFilterGroupConf()
 	prefix = prefix.before(".conf");
 	prefix += "f";
 	String file;
-	ifstream groupnamesfile;
-	std::string groupname;
+	ConfigVar groupnamesfile;
+	String groupname;
 	bool need_html = false;
 	if (use_group_names_list) {
-		groupnamesfile.open(group_names_list_location.c_str(), ios::in);
-		if (!groupnamesfile.good()) {
+		int result = groupnamesfile.readVar(group_names_list_location.c_str(), "=");
+		if (result != 0) {
 			if (!is_daemonised)
 				std::cerr << "Error opening group names file: " << group_names_list_location << std::endl;
 			syslog(LOG_ERR, "Error opening group names file: %s", group_names_list_location.c_str());
@@ -795,20 +795,20 @@ bool OptionContainer::readFilterGroupConf()
 		file = prefix + String(i);
 		file += ".conf";
 		if (use_group_names_list) {
-			if (groupnamesfile.eof()) {
+			std::string optname = "GROUP";
+			optname += (char)(i + 64);
+			groupname = groupnamesfile[optname.c_str()];
+			if (groupname.length() == 0) {
 				if (!is_daemonised)
 					std::cerr << "Group names file too short: " << group_names_list_location << std::endl;
 				syslog(LOG_ERR, "Group names file too short: %s", group_names_list_location.c_str());
 				return false;
 			}
-			getline(groupnamesfile, groupname);
-			groupname = groupname.substr(groupname.find('\'',0)+1);
-			groupname.resize(groupname.rfind('\'',groupname.length()-1));
 #ifdef DGDEBUG
 			std::cout << "Group name: " << groupname << std::endl;
 #endif
 		}
-		if (!readAnotherFilterGroupConf(file.toCharArray(), groupname.c_str(), need_html)) {
+		if (!readAnotherFilterGroupConf(file.toCharArray(), groupname.toCharArray(), need_html)) {
 			if (!is_daemonised) {
 				std::cerr << "Error opening filter group config: " << file << std::endl;
 			}
@@ -816,8 +816,6 @@ bool OptionContainer::readFilterGroupConf()
 			return false;
 		}
 	}
-	if (use_group_names_list)
-		groupnamesfile.close();
 	if (!need_html && (reporting_level != 3)) {
 #ifdef DGDEBUG
 		std::cout << "Global reporting level not 3 & no filter groups using the template; so resetting it." << std::endl;
