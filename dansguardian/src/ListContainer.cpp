@@ -418,7 +418,8 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 				}
 			}
 		}
-		temp.toLower();  // tidy up
+		if (filters != 32)
+			temp.toLower();  // tidy up - but don't make regex lists lowercase!
 		addToItemList(temp.toCharArray(), temp.length());  // add to unsorted
 		// list
 	}
