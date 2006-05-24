@@ -1,10 +1,9 @@
 #
-# Phraselists to block Chinese pornographic and explicit sites.
 # Originally Created by Fernand Jonker 
 # Sponsored by Eric Duveau
 #
-# 
-#
+
+#listcategory: "Pornography (Chinese)"
 
 <乳房的><30> #breast
 <性感女神><30> #sexy goddess

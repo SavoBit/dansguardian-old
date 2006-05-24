@@ -63,3 +63,5 @@
 <bypass>,<website blocking><75>
 <bypass>,<website filter><75>
 <bypass>,<web filter><75>
+<bypass>,<content filter><75>
+<bypass>,<internet filter><75>
