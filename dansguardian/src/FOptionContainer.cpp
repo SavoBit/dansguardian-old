@@ -766,7 +766,7 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 bool FOptionContainer::readRegExURLFile(const char *filename, const char *listname, unsigned int& listref,
 	std::deque<RegExp> &list_comp, std::deque<String> &list_source, std::deque<unsigned int> &list_ref)
 {
-	int result = o.lm.newItemList(filename, true, 0, true);
+	int result = o.lm.newItemList(filename, true, 32, true);
 	if (result < 0) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening " << listname << std::endl;
@@ -815,7 +815,7 @@ bool FOptionContainer::compileRegExURLFile(unsigned int list, std::deque<RegExp>
 bool FOptionContainer::readRegExListFile(const char *filename, const char *listname, unsigned int& listid,
 	std::deque<String> &list_rep, std::deque<RegExp> &list_comp)
 {
-	int result = o.lm.newItemList(filename, true, 0, true);
+	int result = o.lm.newItemList(filename, true, 32, true);
 	if (result < 0) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening " << listname << std::endl;
