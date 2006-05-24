@@ -122,9 +122,18 @@ bool RegExp::comp(const char *exp)
 	offsets.clear();
 	lengths.clear();
 	imatched = false;
+#ifdef DGDEBUG
+	std::cout << "Compiling " << exp << std::endl;
+#endif
 #ifdef __PCRE
+#ifdef DGDEBUG
+	std::cout << "...with PCRE " << std::endl;
+#endif
 	if (regcomp(&reg, exp, REG_ICASE | REG_EXTENDED | REG_DOTALL) != 0) {	// compile regex
 #else
+#ifdef DGDEBUG
+	std::cout << "...without PCRE " << std::endl;
+#endif
 	if (regcomp(&reg, exp, REG_ICASE | REG_EXTENDED) != 0) {
 #endif
 		regfree(&reg);
