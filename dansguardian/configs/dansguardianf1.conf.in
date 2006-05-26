@@ -249,8 +249,8 @@ deepurlanalysis = off
 @EMAILSUPPORT@contentsubject = 'dansguardian violation'
 
 # notifyAV
-# This will send a notification, if usesmtp/notifyav is on, any time an infection
-# is is found. 
+# This will send a notification, if usesmtp/notifyav is on, any time an
+# infection is found.
 # Important: If this option is off, viruses will still be recorded like a
 # content infraction.
 @EMAILSUPPORT@notifyav = off
