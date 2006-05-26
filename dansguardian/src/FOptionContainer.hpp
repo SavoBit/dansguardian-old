@@ -40,6 +40,8 @@
 
 // DECLARATIONS
 
+std::deque<String> *ipToHostname(const char *ip);
+
 class FOptionContainer
 {
 
@@ -243,8 +245,6 @@ public:
 	int inExceptionRegExpURLList(String url);
 	char *inExtensionList(unsigned int list, String url);
 	bool isIPHostname(String url);
-   
-	std::deque<String> &ipToHostname(const char *ip);
 	
 	// get HTML template for this group
 	HTMLTemplate *getHTMLTemplate();

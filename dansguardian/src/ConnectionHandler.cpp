@@ -1515,9 +1515,10 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 #ifdef DGDEBUG
 			std::cout<<"logclienthostnames enabled but reverseclientiplookups disabled; lookup forced."<<std::endl;
 #endif
-			std::deque<String> names = o.fg[0]->ipToHostname(from.c_str());
-			if (names.size() > 0)
-				clienthost = new std::string(names.front().toCharArray());
+			std::deque<String> *names = ipToHostname(from.c_str());
+			if (names->size() > 0)
+				clienthost = new std::string(names->front().toCharArray());
+			delete names;
 		}
 
 		// Formatting code moved into log_listener in FatController.cpp

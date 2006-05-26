@@ -629,9 +629,9 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::
 		return true;
 	}
 	else if (reverse_client_ip_lookups == 1) {
-		std::deque<String > hostnames = (*fg[0]).ipToHostname((*ip).c_str());
+		std::deque<String > *hostnames = ipToHostname((*ip).c_str());
 		bool result;
-		for (std::deque<String>::iterator i = hostnames.begin(); i != hostnames.end(); i++) {
+		for (std::deque<String>::iterator i = hostnames->begin(); i != hostnames->end(); i++) {
 			result = list.inList(i->toCharArray());
 			if (result) {
 				// return the matched host name for logging purposes
@@ -648,8 +648,9 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::
 				return true;
 			}
 		}
-		if ((log_client_hostnames == 1) && (host == NULL) && (hostnames.size() > 0))
-			host = new std::string(hostnames.front().toCharArray());
+		if ((log_client_hostnames == 1) && (host == NULL) && (hostnames->size() > 0))
+			host = new std::string(hostnames->front().toCharArray());
+		delete hostnames;
 	}
 	return false;
 }

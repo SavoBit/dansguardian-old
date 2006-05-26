@@ -44,6 +44,24 @@ extern OptionContainer o;
 
 // IMPLEMENTATION
 
+// reverse DNS lookup on IP. be aware that this can return multiple results, unlike a standard lookup.
+std::deque<String> * ipToHostname(const char *ip)
+{
+	std::deque<String> *result = new std::deque<String>;
+	struct in_addr address, **addrptr;
+	if (inet_aton(ip, &address)) {	// convert to in_addr
+		struct hostent *answer;
+		answer = gethostbyaddr((char *) &address, sizeof(address), AF_INET);
+		if (answer) {	// sucess in reverse dns
+			result->push_back(String(answer->h_name));
+			for (addrptr = (struct in_addr **) answer->h_addr_list; *addrptr; addrptr++) {
+				result->push_back(String(inet_ntoa(**addrptr)));
+			}
+		}
+	}
+	return result;
+}
+
 FOptionContainer::~FOptionContainer()
 {
 	if (banned_phrase_flag) o.lm.deRefList(banned_phrase_list);
@@ -876,11 +894,10 @@ char *FOptionContainer::inSiteList(String &url, unsigned int list)
 	char *i;
 	bool isipurl = isIPHostname(url);
 	if (reverse_lookups == 1 && isipurl) {	// change that ip into hostname
-		std::deque<String > url2s = ipToHostname(url.toCharArray());
+		std::deque<String > *url2s = ipToHostname(url.toCharArray());
 		String url2;
-		unsigned int j;
-		for (j = 0; j < url2s.size(); j++) {
-			url2 = url2s[j];
+		for (std::deque<String>::iterator j = url2s->begin(); j != url2s->end(); j++) {
+			url2 = *j;
 			while (url2.contains(".")) {
 				i = (*o.lm.l[list]).findInList(url2.toCharArray());
 				if (i != NULL) {
@@ -889,6 +906,7 @@ char *FOptionContainer::inSiteList(String &url, unsigned int list)
 				url2 = url2.after(".");  // check for being in hld
 			}
 		}
+		delete url2s;
 	}
 	while (url.contains(".")) {
 		i = (*o.lm.l[list]).findInList(url.toCharArray());
@@ -957,11 +975,10 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 	if (reverse_lookups == 1 && url.after("/").length() > 0) {
 		String hostname = url.before("/");
 		if (isIPHostname(hostname)) {
-			std::deque<String > url2s = ipToHostname(hostname.toCharArray());
+			std::deque<String > *url2s = ipToHostname(hostname.toCharArray());
 			String url2;
-			unsigned int j;
-			for (j = 0; j < url2s.size(); j++) {
-				url2 = url2s[j];
+			for (std::deque<String>::iterator j = url2s->begin(); j != url2s->end(); j++) {
+				url2 = *j;
 				url2 += "/";
 				url2 += url.after("/");
 				while (url2.before("/").contains(".")) {
@@ -983,6 +1000,7 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 					url2 = url2.after(".");  // check for being in hld
 				}
 			}
+			delete url2s;
 		}
 	}
 	while (url.before("/").contains(".")) {
@@ -1122,24 +1140,6 @@ int FOptionContainer::inExceptionRegExpURLList(String url)
 	std::cout<<"inExceptionRegExpURLList"<<std::endl;
 #endif
 	return inRegExpURLList(url, exception_regexpurl_list_comp, exception_regexpurl_list_ref, exception_regexpurl_list);
-}
-
-// reverse DNS lookup on IP. be aware that this can return multiple results, unlike a standard lookup.
-std::deque<String> &FOptionContainer::ipToHostname(const char *ip)
-{
-	std::deque<String> *result = new std::deque<String>;
-	struct in_addr address, **addrptr;
-	if (inet_aton(ip, &address)) {	// convert to in_addr
-		struct hostent *answer;
-		answer = gethostbyaddr((char *) &address, sizeof(address), AF_INET);
-		if (answer) {	// sucess in reverse dns
-			result->push_back(String(answer->h_name));
-			for (addrptr = (struct in_addr **) answer->h_addr_list; *addrptr; addrptr++) {
-				result->push_back(String(inet_ntoa(**addrptr)));
-			}
-		}
-	}
-	return *result;
 }
 
 bool FOptionContainer::isIPHostname(String url)
