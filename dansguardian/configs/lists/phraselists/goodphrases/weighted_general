@@ -394,6 +394,12 @@
 < marriage><-30>
 < lawyer><-30>
 < vacation><-5>
-
-
+<destination><-10>
+<guests>,<children><-30>
+<check-in><-10>
+<travel agent><-30>
+<booking><-5>
+<travel><-5>
+<flight><-10>
+<reservation><-5>
 
