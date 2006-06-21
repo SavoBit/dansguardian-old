@@ -57,7 +57,7 @@ void FDTunnel::reset()
 
 // tunnel data from fdfrom to fdto (unfiltered)
 // return false if throughput larger than target throughput
-bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targetthroughput)
+bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targetthroughput, bool ignore)
 {
 	if (targetthroughput == 0) {
 #ifdef DGDEBUG
@@ -152,6 +152,10 @@ bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targett
 			}
 		}
 		if (FD_ISSET(fdto, &inset)) {	// fdto is ready to be read from
+			if (ignore && !twoway) {
+				done = false;
+				continue;
+			}
 			if (!twoway) {
 				// since HTTP works on a simple request/response basis, with no explicit
 				// communications from the client until the response has been completed
