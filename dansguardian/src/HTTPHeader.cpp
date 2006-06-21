@@ -1328,7 +1328,10 @@ bool HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 		std::cout << "Opening tunnel for remainder of POST data" << std::endl;
 #endif
 		FDTunnel fdt;
-		return !fdt.tunnel(*peersock, *sock, false, ispostupload ? o.max_upload_size : -1);
+		int remaining = contentLength() - postdatalen;
+		if (remaining < 0)
+			throw runtime_error("No POST data left to send!?");
+		return !fdt.tunnel(*peersock, *sock, false, remaining, true);
 	}
 	return false;
 }
