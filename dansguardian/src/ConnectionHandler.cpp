@@ -523,14 +523,16 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						writestring += clientuser;
 						writestring += "\n\n";
 						peerconn.writeString(writestring.toCharArray());
-						return;
+						break;
+						//return;
 					}
 					else if (rc < 0) {
 						if (!is_daemonised)
 							std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
 						syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
 						proxysock.close();
-						return;
+						break;
+						//return;
 					}
 #ifdef DGDEBUG
 					std::cout << "Auth plugin found username " << clientuser << " (" << oldclientuser << "), now determining group" << std::endl;
@@ -571,7 +573,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
 						syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
 						proxysock.close();
-						return;
+						//return;
+						break;
 					}
 				}
 				if ((!authed) || (filtergroup < 0) || (filtergroup >= o.numfg)) {
@@ -634,7 +637,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				catch(exception & e) {
 				}
 				proxysock.close();  // close connection to proxy
-				return;
+				break;
+				//return;
 			}
 
 			if (o.use_xforwardedfor == 1) {
@@ -736,7 +740,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				catch(exception & e) {
 				}
 				proxysock.close();  // close connection to proxy
-				return;  // connection dealt with so exit
+				break;
+				//return;  // connection dealt with so exit
 			}
 
 			// being a banned user/IP overrides the fact that a site may be in the exception lists
@@ -813,7 +818,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					fdt.reset();  // make a tunnel object
 					// tunnel from client to proxy and back
 					// two-way if SSL
-					fdt.tunnel(proxysock, peerconn, isconnect, docheader.contentLength());  // not expected to exception
+					fdt.tunnel(proxysock, peerconn, isconnect, docheader.contentLength(), true);  // not expected to exception
 					docsize = fdt.throughput;
 					if (!isourwebserver) {	// don't log requests to the web server
 						String rtype = header.requestType();
@@ -827,7 +832,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				if (persist)
 					continue;
 				proxysock.close();  // close connection to proxy
-				return;  // connection dealt with so exit
+				//return;  // connection dealt with so exit
+				break;
 			}
 
 			checkme.filtergroup = filtergroup;
@@ -902,7 +908,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							fdt.reset();  // make a tunnel object
 							// tunnel from client to proxy and back
 							// two-way if SSL
-							fdt.tunnel(proxysock, peerconn, isconnect, docheader.contentLength());  // not expected to exception
+							fdt.tunnel(proxysock, peerconn, isconnect, docheader.contentLength(), true);  // not expected to exception
 							docsize = fdt.throughput;
 							if (!isourwebserver) {	// don't log requests to the web server
 								String rtype = header.requestType();
@@ -918,7 +924,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						if (persist)
 							continue;
 						proxysock.close();  // close connection to proxy
-						return;  // connection dealt with so exit
+						//return;  // connection dealt with so exit
+						break;
 					}
 				}
 			}
@@ -991,10 +998,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				if (persist)
 					continue;
 				proxysock.close();  // close connection to proxy
-				return;  // connection dealt with so exit
+				//return;  // connection dealt with so exit
+				break;
 			}
 
-			if (!isexception && !isbypass && (o.max_upload_size > -1) && header.isPostUpload(peerconn))
+			if ((authed || (o.authplugins.size() == 0)) && !isexception && !isbypass && (o.max_upload_size > -1) && header.isPostUpload(peerconn))
 			{
 				if ((o.max_upload_size == 0) || (header.contentLength() > o.max_upload_size)) {
 #ifdef DGDEBUG
@@ -1010,6 +1018,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 				}
 			}
+#ifdef DGDEBUG
+			else if (!authed && (o.authplugins.size() > 0))
+				std::cout << "Skipping POST upload blocking because user is unauthed." << std::endl;
+#endif
 
 			if (!checkme.isItNaughty) {
 				// the request is ok, so we can	now pass it to the proxy, and check the returned header
@@ -1020,24 +1032,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// send header to proxy
 				if (!wasrequested) {
 					proxysock.readyForOutput(10);
-					ispostblock = header.out(&peerconn, &proxysock, __DGHEADER_SENDALL, true) && !isexception && !isbypass;
-					if (ispostblock) {
-#ifdef DGDEBUG
-						std::cout << "Detected POST upload violation by monitoring size of streamed content - discarding rest of POST data..." << std::endl;
-#endif
-						header.discard(&peerconn);
-						checkme.whatIsNaughty = o.language_list.getTranslation(701);
-						// Web upload limit exceeded.
-						checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
-						checkme.whatIsNaughtyCategories = "Web upload.";
-						checkme.isItNaughty = true;
-					} else {
-						// get header from proxy
-						proxysock.checkForInput(120);
-						docheader.in(&proxysock, persist);
-						persist = docheader.isPersistent();
-						wasrequested = true;  // so we know where we are later
-					}
+					header.out(&peerconn, &proxysock, __DGHEADER_SENDALL, true);
+					// get header from proxy
+					proxysock.checkForInput(120);
+					docheader.in(&proxysock, persist);
+					persist = docheader.isPersistent();
+					wasrequested = true;  // so we know where we are later
 				}
 				
 				if (!checkme.isItNaughty) {
@@ -1118,8 +1118,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 
 					// no need to check bypass mode, exception mode, auth required headers, or banned ip/user (the latter get caught by requestChecks later)
-					// checkme: surely redirections don't have a MIME type either? why do *any* checking on them - we just force them to be un-naughty later!
-					if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.authRequired() /*&& !docheader.isRedirection()*/)
+					if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.authRequired())
 					{
 						bool download_exception = false;
 						
@@ -1176,7 +1175,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						}
 
 						// Perform extension matching - if not already matched the exception MIME list
-						if (!download_exception /*&& !checkme.isItNaughty && !docheader.isRedirection()*/) {
+						if (!download_exception) {
 							// Can't ban file extensions of URLs that just redirect
 							String tempurl = urld;
 							String tempdispos = docheader.disposition();
@@ -1263,7 +1262,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					// check body from proxy
 					// can't do content filtering on HEAD or redirections (no content)
 					// actually, redirections CAN have content
-					if (!checkme.isItNaughty /*&& !docheader.isRedirection()*/ && (cl != 0) && !ishead) {
+					if (!checkme.isItNaughty && (cl != 0) && !ishead) {
 						if ((docheader.isContentType("text") && !isexception) || runav) {
 							// don't search the cache if scan_clean_cache disabled & runav true (won't have been cached)
 							// also don't search cache for auth required headers (same reason)
@@ -1427,7 +1426,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 					std::cout << "tunnel activated" << std::endl;
 #endif
-					fdt.tunnel(proxysock, peerconn, false, docheader.contentLength() - docsize);
+					fdt.tunnel(proxysock, peerconn, false, docheader.contentLength() - docsize, true);
 					docsize += fdt.throughput;
 					String rtype = header.requestType();
 					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
@@ -1440,7 +1439,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 				std::cout << "tunnel activated" << std::endl;
 #endif
-				fdt.tunnel(proxysock, peerconn, false, docheader.contentLength());
+				fdt.tunnel(proxysock, peerconn, false, docheader.contentLength(), true);
 				docsize = fdt.throughput;
 				String rtype = header.requestType();
 				if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
@@ -1460,12 +1459,19 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 	proxysock.close();  // close conection to squid
 
-	try {
-		peerconn.readyForOutput(10);
+	/*try {
+#ifdef DGDEBUG
+		std::cerr << "Attempting graceful connection close" << std::endl;
+#endif
+		int fd = peerconn.getFD();
+		shutdown(fd, SHUT_WR);
+		char buff[4096];
+		while (peerconn.readFromSocket(buff, 4096, 0, 10) > 0) {};
+		close(fd);
 	}
 	catch(exception & e) {
 		return;
-	}
+	}*/
 	return;
 }
 
