@@ -109,7 +109,7 @@ private:
 	// Format of the data is each entry has 64 int values with format of:
 	// [letter][last letter flag][num links][from phrase][link0][link1]...
 
-	int *graphdata;
+	int *realgraphdata;
 
 #ifdef DGDEBUG
 	bool prolificroot;
