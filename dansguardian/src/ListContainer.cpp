@@ -1102,9 +1102,9 @@ void ListContainer::graphAdd(String s, int inx, int item)
 		graphitems++;
 		numlinks = graphdata[inx * GRAPHENTRYSIZE + 2];
 		if ((inx == 0) ? ((numlinks + 1) > MAXROOTLINKS) : ((numlinks +1) > MAXLINKS)) {
-			syslog(LOG_ERR, "More than %d links from this node! 1", (inx == 0) ? MAXROOTLINKS : MAXLINKS);
+			syslog(LOG_ERR, "Cannot load phraselists from this many languages/encodings simultaneously. (more than %d links from this node! [1])", (inx == 0) ? MAXROOTLINKS : MAXLINKS);
 			if (!is_daemonised)
-				std::cout << "More than " << ((inx == 0) ? MAXROOTLINKS : MAXLINKS) << " links from this node! 1" << std::endl;
+				std::cout << "Cannot load phraselists from this many languages/encodings simultaneously. (more than " << ((inx == 0) ? MAXROOTLINKS : MAXLINKS) << " links from this node! [1])" << std::endl;
 			exit(1);
 		}
 		if ((numlinks + 1) > maxchildnodes) {
@@ -1126,9 +1126,9 @@ void ListContainer::graphAdd(String s, int inx, int item)
 		while (s.length() > 0) {
 			numlinks = graphdata2[i * GRAPHENTRYSIZE + 2];
 			if ((inx == 0) ? ((numlinks + 1) > MAXROOTLINKS) : ((numlinks +1) > MAXLINKS)) {
-				syslog(LOG_ERR, "More than %d links from this node! 2", (inx == 0) ? MAXROOTLINKS : MAXLINKS);
+				syslog(LOG_ERR, "Cannot load phraselists from this many languages/encodings simultaneously. (more than %d links from this node! [2])", (inx == 0) ? MAXROOTLINKS : MAXLINKS);
 				if (!is_daemonised)
-					std::cout << "More than " << ((inx == 0) ? MAXROOTLINKS : MAXLINKS) << " links from this node! 2" << std::endl;
+					std::cout << "Cannot load phraselists from this many languages/encodings simultaneously. (more than " << ((inx == 0) ? MAXROOTLINKS : MAXLINKS) << " links from this node! [2])" << std::endl;
 				exit(1);
 			}
 			if ((numlinks + 1) > maxchildnodes) {
