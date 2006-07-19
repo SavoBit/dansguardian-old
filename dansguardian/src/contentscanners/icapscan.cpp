@@ -116,7 +116,10 @@ int icapinstance::init(void* args)
 	if (icapport == 0) {
 		icapport = 1344;
 	}
-	icaphost = icaphost.before("/").before(":");
+	icaphost = icaphost.before("/");
+	if (icaphost.contains(":")) {
+		icaphost = icaphost.before(":");
+	}
 	struct hostent *host;
 	if ((host = gethostbyname(icaphost.toCharArray())) == 0) {
 		if (!is_daemonised)
