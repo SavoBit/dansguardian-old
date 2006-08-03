@@ -1459,7 +1459,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 	proxysock.close();  // close conection to squid
 
-	/*try {
+	try {
 #ifdef DGDEBUG
 		std::cerr << "Attempting graceful connection close" << std::endl;
 #endif
@@ -1471,7 +1471,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	}
 	catch(exception & e) {
 		return;
-	}*/
+	}
 	return;
 }
 
@@ -1665,6 +1665,7 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 			std::cout << "starting deep analysis" << std::endl;
 #endif
 			String deepurl = temp.after("p://");
+			deepurl = header->decode(deepurl,true);
 			while (deepurl.contains(":")) {
 				deepurl = deepurl.after(":");
 				while (deepurl.startsWith(":") || deepurl.startsWith("/")) {
