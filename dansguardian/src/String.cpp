@@ -585,10 +585,10 @@ void String::removeWhiteSpace()
 {
 	if (sl < 1)
 		return;  // nothing to remove
-	while ((unsigned char) data[sl - 1] < 33 && sl > 0) {
+	while ((sl > 0) && ((unsigned char) data[sl - 1] < 33)) {
 		chop();
 	}
-	while ((unsigned char) data[0] < 33 && sl > 0) {
+	while ((sl > 0) && ((unsigned char) data[0] < 33)) {
 		lop();
 	}
 }
