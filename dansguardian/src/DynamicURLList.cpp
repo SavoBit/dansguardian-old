@@ -165,6 +165,7 @@ bool DynamicURLList::setListSize(unsigned int s, unsigned int t)
 	delete[]index;
 	delete[]urlreftime;
 	delete[]urls;
+	delete[]groups;
 
 	index = new unsigned int[size];
 	urlreftime = new unsigned long int[size];
