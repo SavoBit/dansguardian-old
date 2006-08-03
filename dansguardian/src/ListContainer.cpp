@@ -872,6 +872,12 @@ void ListContainer::graphCopyNodePhrases(unsigned int pos)
 
 int ListContainer::bmsearch(char *file, int fl, std::string s)
 {
+	int pl = s.length();
+	if (fl < pl)
+		return 0;  // reality checking
+	if (pl > 126)
+		return 0;  // reality checking
+
 	// must match all
 	int j, l;  // counters
 	int p;  // to hold precalcuated value for speed
@@ -881,17 +887,11 @@ int ListContainer::bmsearch(char *file, int fl, std::string s)
 
 	int count = 0;
 
-	int pl = s.length();
 	char *phrase = new char[pl + 1];
 	for (j = 0; j < pl; j++) {
 		phrase[j] = s[j];
 	}
 	phrase[pl] = 0;
-
-	if (fl < pl)
-		return 0;  // reality checking
-	if (pl > 126)
-		return 0;  // reality checking
 
 	// For speed we append the phrase to the end of the memory block so it
 	// is always found, thus eliminating some checking.  This is possible as
