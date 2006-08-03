@@ -62,8 +62,7 @@ public:
 	// - this allows us to re-open the proxy connection on pconns if squid's end has
 	// timed out but the client's end hasn't. not much use with NTLM, since squid
 	// will throw a 407 and restart negotiation, but works well with basic & others.
-	// return true if any given POST body is above the specified upload limit.
-	bool out(Socket *peersock, Socket *sock, int sendflag, bool reconnect = false) throw(exception);
+	void out(Socket *peersock, Socket *sock, int sendflag, bool reconnect = false) throw(exception);
 
 	// discard remainder of POST data
 	void discard(Socket *sock);
