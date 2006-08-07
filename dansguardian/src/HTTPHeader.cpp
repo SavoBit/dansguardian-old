@@ -1360,7 +1360,8 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 	String line;  // temp store to hold the line after processing
 	line = "----";  // so we get past the first while
 	bool firsttime = true;
-	while (line.length() > 3) {	// loop until the stream is
+	bool discard = false;
+	while (line.length() > 3 || discard) {	// loop until the stream is
 		// failed or we get to the end of the header (a line by itself)
 
 		// get a line of header from the stream
@@ -1374,7 +1375,16 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 
 		line = buff;  // convert the line to a String
 
-		header.push_back(line);  // stick the line in the deque that holds the header
+		// ignore crap left in buffer from old pconns (in particular, the IE "extra CRLF after POST" bug) 
+		discard = false;
+		if (not (firsttime && line.length() < 3))
+			header.push_back(line);  // stick the line in the deque that holds the header
+		else {
+			discard = true;
+#ifdef DGDEBUG
+			std::cout << "Discarding unwanted bytes at head of request (pconn closed or IE multipart POST bug)" << std::endl;
+#endif
+		}
 		firsttime = false;
 	}
 	header.pop_back();  // remove the final blank line of a header
