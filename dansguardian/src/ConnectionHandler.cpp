@@ -500,6 +500,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 				std::cout << "Not got persistent credentials for this connection - querying auth plugins" << std::endl;
 #endif
+				bool dobreak = false;
 				for (std::deque<Plugin*>::iterator i = o.authplugins_begin; i != o.authplugins_end; i++) {
 #ifdef DGDEBUG
 					std::cout << "Querying next auth plugin..." << std::endl;
@@ -523,16 +524,16 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						writestring += clientuser;
 						writestring += "\n\n";
 						peerconn.writeString(writestring.toCharArray());
+						dobreak = true;
 						break;
-						//return;
 					}
 					else if (rc < 0) {
 						if (!is_daemonised)
 							std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
 						syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
 						proxysock.close();
+						dobreak = true;
 						break;
-						//return;
 					}
 #ifdef DGDEBUG
 					std::cout << "Auth plugin found username " << clientuser << " (" << oldclientuser << "), now determining group" << std::endl;
@@ -573,10 +574,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
 						syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
 						proxysock.close();
-						//return;
+						dobreak = true;
 						break;
 					}
 				}
+				if (dobreak)
+					break;
 				if ((!authed) || (filtergroup < 0) || (filtergroup >= o.numfg)) {
 #ifdef DGDEBUG
 					if (!authed)
@@ -638,7 +641,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				}
 				proxysock.close();  // close connection to proxy
 				break;
-				//return;
 			}
 
 			if (o.use_xforwardedfor == 1) {
@@ -741,7 +743,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				}
 				proxysock.close();  // close connection to proxy
 				break;
-				//return;  // connection dealt with so exit
 			}
 
 			// being a banned user/IP overrides the fact that a site may be in the exception lists
@@ -832,7 +833,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				if (persist)
 					continue;
 				proxysock.close();  // close connection to proxy
-				//return;  // connection dealt with so exit
 				break;
 			}
 
@@ -924,7 +924,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						if (persist)
 							continue;
 						proxysock.close();  // close connection to proxy
-						//return;  // connection dealt with so exit
 						break;
 					}
 				}
@@ -998,7 +997,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				if (persist)
 					continue;
 				proxysock.close();  // close connection to proxy
-				//return;  // connection dealt with so exit
 				break;
 			}
 
