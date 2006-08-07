@@ -115,6 +115,8 @@ bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targett
 		inset = fdSet;  // as select() can modify the sets we need to take
 		t = timeout;  // a copy each time round and use that
 
+		if (ignore && !twoway) FD_CLR(fdto, &inset);
+
 		if (selectEINTR(maxfd + 1, &inset, NULL, NULL, &t) < 1) {
 			break;  // an error occured or it timed out so end while()
 		}
@@ -124,7 +126,7 @@ bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targett
 				// we have a target throughput - only read in the exact amount of data we've been told to
 				// plus 2 bytes to "solve" an IE post bug with multipart/form-data forms:
 				// adds an extra CRLF on certain requests, that it doesn't count in reported content-length
-				rc = sockfrom.readFromSocket(buff, (((int)sizeof(buff) < ((targetthroughput - throughput)+2)) ? sizeof(buff) : (targetthroughput - throughput) + 2), 0, 0, false);
+				rc = sockfrom.readFromSocket(buff, (((int)sizeof(buff) < ((targetthroughput - throughput)/*+2*/)) ? sizeof(buff) : (targetthroughput - throughput)/* + 2*/), 0, 0, false);
 			else
 				rc = sockfrom.readFromSocket(buff, sizeof(buff), 0, 0, false);
 
@@ -158,10 +160,6 @@ bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targett
 			}
 		}
 		if (FD_ISSET(fdto, &inset)) {	// fdto is ready to be read from
-			if (ignore && !twoway) {
-				done = false;
-				continue;
-			}
 			if (!twoway) {
 				// since HTTP works on a simple request/response basis, with no explicit
 				// communications from the client until the response has been completed
