@@ -1463,9 +1463,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 		int fd = peerconn.getFD();
 		shutdown(fd, SHUT_WR);
-		char buff[4096];
-		while (peerconn.readFromSocket(buff, 4096, 0, 10) > 0) {};
-		close(fd);
+		char buff[2];
+		peerconn.readFromSocket(buff, 2, 0, 5);
 	}
 	catch(exception & e) {
 		return;
