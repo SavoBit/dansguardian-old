@@ -116,39 +116,6 @@ void DataBuffer::swapbacktocompressed()
 	}	
 }
 
-// standard socket reader func
-void DataBuffer::read(Socket * sock, int l) throw(exception)
-{
-	delete[]data;  // delete the current data store (should be emtpy anyway)
-	data = new char[l + 2];  // create a new store large enough
-	int rc;
-
-	rc = (*sock).readFromSocketn(data, l, 0, timeout);  // read in the [POST] data
-
-	if (rc < 0) {
-		throw exception();  // danger, danger Will Robinson
-	}
-	// The above should be all that's needed - but wait there's more!
-	// Normal data appended to the header by POST is actually 2 bytes longer
-	// than the Content-Length header says.  It contains a carrage return and
-	// a new line character.  Simple - just add a fudgefactor of 2.
-	// No.  Because when uploading a file via a form the POST data is
-	// *exactly* as stated and trying to read even 1 more byte will cause the
-	// read to hang.  Also Netscape 4.7x it does it differently.
-	// So we need to check the status of the connection to see if there really
-	// are more bytes to read.
-
-	if ((*sock).checkForInput()) {
-		rc = (*sock).readFromSocket(data + l, 2, 0, timeout);
-		// if an error occured (rc < 1) we ignore it and try and continue
-		if (rc > 0) {
-			l += 2;  // adjust the length
-		}
-	}
-
-	buffer_length = l;  // update data size counter
-}
-
 // a much more efficient reader that does not assume the contents of
 // the buffer gets filled thus reducing memcpy()ing and new()ing
 int DataBuffer::bufferReadFromSocket(Socket * sock, char *buffer, int size, int sockettimeout)

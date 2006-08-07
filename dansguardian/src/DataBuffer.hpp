@@ -46,8 +46,6 @@ public:
 	DataBuffer();
 	~DataBuffer();
 
-	void read(Socket * sock, int length) throw(exception);
-
 	int length() { return buffer_length; };
 
 	void copyToMemory(char *location) { memcpy(location, data, buffer_length); };
