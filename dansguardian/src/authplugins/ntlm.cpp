@@ -191,7 +191,6 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 	}
 	h.makePersistent();
 	h.out(&peercon, &proxycon, __DGHEADER_SENDALL);
-	fdt.tunnel(peercon, proxycon);
 #ifdef DGDEBUG
 	std::cout << "NTLM - receiving step 2" << std::endl;
 #endif
@@ -202,7 +201,8 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 		std::cout << "NTLM - sending step 2" << std::endl;
 #endif
 		h.out(NULL, &peercon, __DGHEADER_SENDALL);
-		fdt.tunnel(proxycon, peercon);
+		if (h.contentLength() != -1)
+			fdt.tunnel(proxycon, peercon, false, h.contentLength(), true);
 #ifdef DGDEBUG
 		std::cout << "NTLM - receiving step 3" << std::endl;
 #endif
