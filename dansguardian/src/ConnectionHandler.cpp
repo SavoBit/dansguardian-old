@@ -250,7 +250,7 @@ bool ConnectionHandler::gotIPs(std::string ipstr) {
 }
 
 // send a file to the client - used during bypass of blocked downloads
-unsigned int ConnectionHandler::sendFile(Socket * peerconn, String & filename, String & filemime, String & filedis)
+unsigned int ConnectionHandler::sendFile(Socket * peerconn, String & filename, String & filemime, String & filedis, String &url)
 {
 	int fd = open(filename.toCharArray(), O_RDONLY);
 	if (fd < 0) {		// file access error
@@ -267,9 +267,12 @@ unsigned int ConnectionHandler::sendFile(Socket * peerconn, String & filename, S
 	unsigned int filesize = lseek(fd, 0, SEEK_END);
 	lseek(fd, 0, SEEK_SET);
 	String message = "HTTP/1.0 200 OK\nContent-Type: " + filemime + "\nContent-Length: " + String(filesize);
-	if (filedis.length() > 0) {
-		message += "\nContent-disposition: attachement; filename=" + filedis;
+	if (filedis.length() == 0) {
+		filedis = url.before("?");
+		while (filedis.contains("/"))
+			filedis = filedis.after("/");
 	}
+	message += "\nContent-disposition: attachment; filename=" + filedis;
 	message += "\n\n";
 	try {
 		peerconn->writeString(message.toCharArray());
@@ -726,7 +729,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				tempfilemime = tempfilemime.before("&D=");
 				tempfilename = o.download_dir + "/tf" + tempfilename.before("&M=");
 				try {
-					docsize = sendFile(&peerconn, tempfilename, tempfilemime, tempfiledis);
+					docsize = sendFile(&peerconn, tempfilename, tempfilemime, tempfiledis, url);
 					header.chopScanBypass(url);
 					url = header.url();
 					//urld = header.decode(url);  // unneeded really

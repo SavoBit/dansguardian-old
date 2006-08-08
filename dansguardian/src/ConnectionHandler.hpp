@@ -89,7 +89,7 @@ private:
 		bool *scanerror, bool &contentmodified);
 
 	// send a file to the client - used during bypass of blocked downloads
-	unsigned int sendFile(Socket *peerconn, String & filename, String & filemime, String & filedis);
+	unsigned int sendFile(Socket *peerconn, String & filename, String & filemime, String & filedis, String &url);
 };
 
 #endif
