@@ -607,10 +607,13 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					oldfg = filtergroup;
 				}
 			}
+			else {
+				// persistent_authed == true
 #ifdef DGDEBUG
-			else
 				std::cout << "Already got credentials for this connection - not querying auth plugins" << std::endl;
 #endif
+				authed = true;
+			}
 
 			gmode = o.fg[filtergroup]->group_mode;
 
