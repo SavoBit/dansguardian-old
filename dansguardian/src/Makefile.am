@@ -52,12 +52,24 @@ else
 KAVDSCAN_SOURCE =
 endif
 
+if ENABLE_COMMANDLINE
+COMMANDLINE_SOURCE = contentscanners/commandlinescan.cpp
+else
+COMMANDLINE_SOURCE =
+endif
+
 DEFAULTDM_SOURCE = downloadmanagers/default.cpp
 
 if ENABLE_FANCYDM
 FANCYDM_SOURCE = downloadmanagers/fancy.cpp
 else
 FANCYDM_SOURCE =
+endif
+
+if ENABLE_TRICKLEDM
+TRICKLEDM_SOURCE = downloadmanagers/trickle.cpp
+else
+TRICKLEDM_SOURCE =
 endif
 
 PROXYAUTH_SOURCE = authplugins/proxy.cpp
@@ -105,10 +117,8 @@ dansguardian_SOURCES = String.cpp String.hpp \
 		       Plugin.hpp \
 		       $(CLAMAV_SOURCE) $(ICAPSCAN_SOURCE) \
 		       $(KAVDSCAN_SOURCE) $(CLAMDSCAN_SOURCE) \
+		       $(COMMANDLINE_SOURCE) \
 		       $(DEFAULTDM_SOURCE) $(FANCYDM_SOURCE) \
-		       $(KAVAV_SOURCES) $(PROXYAUTH_SOURCE) \
+		       $(TRICKLEDM_SOURCE) $(PROXYAUTH_SOURCE) \
 		       $(IDENTAUTH_SOURCE) $(IPAUTH_SOURCE) \
 		       $(NTLMAUTH_SOURCE)
-#if STATIC_ZLIB
-#dansguardian_LDADD = @ZLIBSOURCE@
-#endif
