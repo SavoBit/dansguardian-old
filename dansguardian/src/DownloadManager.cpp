@@ -48,6 +48,10 @@ extern dmcreate_t defaultdmcreate;
 extern dmcreate_t fancydmcreate;
 #endif
 
+#ifdef __TRICKLEDM
+extern dmcreate_t trickledmcreate;
+#endif
+
 
 // IMPLEMENTATION
 
@@ -225,12 +229,22 @@ DMPlugin* dm_plugin_load(const char *pluginConfigPath)
 #endif
 		return defaultdmcreate(cv);
 	}
+	
 #ifdef __FANCYDM
 	if (plugname == "fancy") {
 #ifdef DGDEBUG
 		std::cout << "Enabling fancy DM plugin" << std::endl;
 #endif
 		return fancydmcreate(cv);
+	}
+#endif
+
+#ifdef __TRICKLEDM
+	if (plugname == "trickle") {
+#ifdef DGDEBUG
+		std::cout << "Enabling trickle DM plugin" << std::endl;
+#endif
+		return trickledmcreate(cv);
 	}
 #endif
 
