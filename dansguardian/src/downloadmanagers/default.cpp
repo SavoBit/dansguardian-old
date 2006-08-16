@@ -113,6 +113,7 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 	char *temp = NULL;
 
 	bool swappedtodisk = false;
+	bool doneinitialdelay = false;
 
 	struct timeval themdays;
 	struct timeval nowadays;
@@ -133,8 +134,9 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 		// send x-header keep-alive here
 		if (o.trickle_delay > 0) {
 			gettimeofday(&nowadays, NULL);
-			if (nowadays.tv_sec - themdays.tv_sec > o.trickle_delay) {
+			if (doneinitialdelay ? nowadays.tv_sec - themdays.tv_sec > o.trickle_delay : nowadays.tv_sec - themdays.tv_sec > o.initial_trickle_delay) {
 				themdays.tv_sec = nowadays.tv_sec;
+				doneinitialdelay = true;
 				if ((*headersent) < 1) {
 #ifdef DGDEBUG
 					std::cout << "sending first line of header first" << std::endl;
