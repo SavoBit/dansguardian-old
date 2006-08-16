@@ -60,6 +60,9 @@ extern cscreate_t kavavcreate;
 extern cscreate_t kavdcreate;
 #endif
 
+#ifdef __COMMANDLINE
+extern cscreate_t commandlinecreate;
+#endif
 
 // IMPLEMENTATION
 
@@ -372,6 +375,15 @@ CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 		std::cout << "Enabling ICAPscan CS plugin" << std::endl;
 #endif
 		return icapcreate(cv);
+	}
+#endif
+
+#ifdef __COMMANDLINE
+	if (plugname == "commandlinescan") {
+#ifdef DGDEBUG
+		std::cout << "Enabling command-line CS plugin" << std::endl;
+#endif
+		return commandlinecreate(cv);
 	}
 #endif
 
