@@ -1,5 +1,5 @@
 MAINTAINERCLEANFILES = Makefile.in \
-		       default.conf fancy.conf
+		       default.conf fancy.conf trickle.conf
 
 DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/downloadmanagers
 
@@ -11,7 +11,11 @@ if ENABLE_FANCYDM
 FLISTS += fancy.conf
 endif
 
-EXTRA_DIST = default.conf.in fancy.conf.in
+if ENABLE_TRICKLEDM
+FLISTS += trickle.conf
+endif
+
+EXTRA_DIST = default.conf.in fancy.conf.in trickle.conf.in
 
 install-data-local: 
 	$(mkinstalldirs) $(DESTDIR)$(DGDATADIR) && \

@@ -381,6 +381,7 @@ trickledelay = 10
 # and other matching mechanisms.
 #
 @FANCYSUPPORT@downloadmanager = '@DGCONFDIR@/downloadmanagers/fancy.conf'
+#@TRICKLESUPPORT@downloadmanager = '@DGCONFDIR@/downloadmanagers/trickle.conf'
 downloadmanager = '@DGCONFDIR@/downloadmanagers/default.conf'
 
 
@@ -400,6 +401,7 @@ downloadmanager = '@DGCONFDIR@/downloadmanagers/default.conf'
 #@KAVAVSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/kavav.conf'
 #@KAVDSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/kavdscan.conf'
 #@ICAPSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/icapscan.conf'
+#@COMMANDLINESUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/commandlinescan.conf'
 
 
 

@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES = Makefile.in \
 		       clamav.conf clamdscan.conf icapscan.conf \
-		       kavav.conf kavdscan.conf
+		       kavav.conf kavdscan.conf commandlinescan.conf
 
 DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/contentscanners
 
@@ -29,8 +29,12 @@ endif
 #FLISTS += kavav.conf
 #endif
 
+if ENABLE_COMMANDLINE
+FLISTS += commandlinescan.conf
+endif
+
 EXTRA_DIST = clamav.conf.in clamdscan.conf.in icapscan.conf.in \
-             kavav.conf.in kavdscan.conf.in
+             kavav.conf.in kavdscan.conf.in commandlinescan.conf.in
 
 install-data-local: 
 	$(mkinstalldirs) $(DESTDIR)$(DGDATADIR) && \
