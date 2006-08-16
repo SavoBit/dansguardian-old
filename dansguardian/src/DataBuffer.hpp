@@ -76,6 +76,9 @@ private:
 #ifdef __FANCYDM
 	friend class fancydm;
 #endif
+#ifdef __TRICKLEDM
+	friend class trickledm;
+#endif
 
 	int timeout;
 	unsigned int bytesalreadysent;
