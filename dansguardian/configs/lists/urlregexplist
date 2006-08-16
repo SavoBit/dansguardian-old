@@ -29,7 +29,6 @@
 # Lycos.com - family filter only available in advanced mode.
 # Remove 'adv=...' and 'adf=...' and add 'adv=1&adf=on'
 #"(^http://[^/]*search[^/]*\.lycos\.com/[-/%.0-9a-z]*\?)(.*)(&?)(adv=[^&]*)"->"\1\2\3"
-#"(^http://[^/]*search[^/]*\.lycos\.com/[-/%.0-9a-z]*\?)(.*)(&?)(adf=[^&]*)"->"\1\2\3"
 #"(^http://[^/]*search[^/]*\.lycos\.com/[-/%.0-9a-z]*\?)(.*)(&?)(xadult\.)(.*)(xadult\.)"->"\1\2\3\5"
 #"(^http://[^/]*search[^/]*\.lycos\.com/[-/%.0-9a-z]*\?)"->"\1adv=1&adf=on&"
 
