@@ -51,6 +51,10 @@
 	#define __FANCYDM
 #endif
 
+#ifdef ENABLE_TRICKLEDM
+	#define __TRICKLEDM
+#endif
+
 #ifdef HAVE_PCRE
 	#define __PCRE
 #endif
@@ -81,6 +85,10 @@
 
 #ifdef ENABLE_NTLM
 	#define __NTLM
+#endif
+
+#ifdef ENABLE_COMMANDLINE
+	#define __COMMANDLINE
 #endif
 
 #ifdef ENABLE_EMAIL
