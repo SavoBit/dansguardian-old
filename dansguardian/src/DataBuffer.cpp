@@ -255,7 +255,7 @@ void DataBuffer::out(Socket * sock) throw(exception)
 	if (tempfilefd > -1) {
 		// must have been too big for ram so stream from disk in blocks
 #ifdef DGDEBUG
-		std::cout << "sending body from temp file" << std::endl;
+		std::cout << "Sending " << tempfilesize - bytesalreadysent << " bytes from temp file (" << bytesalreadysent << " already sent)" << std::endl;
 #endif
 		unsigned int sent = bytesalreadysent;
 		int rc;
