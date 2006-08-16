@@ -3,7 +3,7 @@
 # 2004,2005 - Daniel Barron
 
 AC_PREREQ(2.57)
-AC_INIT(dansguardian, 2.9.7.5)
+AC_INIT(dansguardian, 2.9.8.0)
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([dgconfig.h])
 
@@ -83,37 +83,6 @@ AC_CHECK_HEADERS([zlib.h])
 if ! test "x$staticzlib" = "xtrue"; then
 	AC_CHECK_LIB(z, gzdopen, [AC_MSG_RESULT(yes)], [AC_MSG_ERROR([no zlib!])])
 fi
-
-dnl # check whether accept() wants an int* or a socklen_t* as third argument
-dnl AC_MSG_CHECKING([type of 3rd argument to accept()])
-dnl AC_TRY_COMPILE([
-dnl #ifdef HAVE_SYS_TYPES_H
-dnl #include <sys/types.h>
-dnl #endif
-dnl #ifdef HAVE_SYS_SOCKET_H
-dnl #include <sys/socket.h>
-dnl #endif
-dnl int accept (int, struct sockaddr *, int *);
-dnl ], [],[
-dnl 	AC_MSG_RESULT([int*])
-dnl 	AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[int], [type for 3rd argument to accept()])
-dnl ],[
-dnl 	AC_TRY_COMPILE([
-dnl #ifdef HAVE_SYS_TYPES_H
-dnl #include <sys/types.h>
-dnl #endif
-dnl #ifdef HAVE_SYS_SOCKET_H
-dnl #include <sys/socket.h>
-dnl #endif
-dnl int accept (int, struct sockaddr *, socklen_t *);
-dnl 	],[],[
-dnl 		AC_MSG_RESULT([socklen_t*])
-dnl 		AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[socklen_t], [type for 3rd argument to accept()])
-dnl     ], [
-dnl 		AC_MSG_RESULT([size_t*])
-dnl 		AC_DEFINE_UNQUOTED([ACCEPT_TYPE],[size_t], [type for 3rd argument to accept()])
-dnl     ])
-dnl ])
 
 AC_CACHE_SAVE
 
@@ -471,6 +440,31 @@ dnl detecting kaspersky antivirus client
 KAVAVSUPPORT="!! Unimplemented !! "
 AC_SUBST(KAVAVSUPPORT)
 
+# asking user if they want command-line content scanner support
+AC_MSG_CHECKING(for command-line content scanner support)
+AC_ARG_ENABLE(
+commandline,
+[AC_HELP_STRING([--enable-commandline@<:@=no@:>@], [Enable support for command-line content scanners])],
+[ if test "x$enableval" = "xno"; then
+	AC_MSG_RESULT(no)
+	commandline=false
+	COMMANDLINESUPPORT="!! Not compiled !! "
+else
+	AC_MSG_RESULT(yes)
+	commandline=true
+	cslists=true
+	csconfigs=true
+	COMMANDLINESUPPORT=""
+	AC_DEFINE([ENABLE_COMMANDLINE],[],[Define to enable command-line content scanner])
+fi],
+[
+	AC_MSG_RESULT(no)
+	commandline=false
+	COMMANDLINESUPPORT="!! Not compiled !! "
+])
+AM_CONDITIONAL(ENABLE_COMMANDLINE, test "x$commandline" = "xtrue")
+AC_SUBST(COMMANDLINESUPPORT)
+
 # install CS configs and lists if necessary
 AM_CONDITIONAL(NEED_CSLISTS, test "x$cslists" = "xtrue")
 AM_CONDITIONAL(NEED_CSCONFIGS, test "x$csconfigs" = "xtrue")
@@ -501,6 +495,31 @@ fi],
 )
 AM_CONDITIONAL(ENABLE_FANCYDM, test "x$fancydm" = "xtrue")
 AC_SUBST(FANCYSUPPORT)
+
+# asking user if they want trickle downloadmanager support
+AC_MSG_CHECKING(for trickle download manager support)
+AC_ARG_ENABLE(
+trickledm,
+[AC_HELP_STRING([--enable-trickledm@<:@=no@:>@], [Enable support for the trickle download manager])],
+[ if test "x$enableval" = "xno"; then
+	trickledm=false
+	TRICKLESUPPORT="#!! Not compiled !! "
+	AC_MSG_RESULT(no)
+else
+	AC_MSG_RESULT(yes)
+	trickledm=true
+	dmlists=true
+	TRICKLESUPPORT=""
+	AC_DEFINE([ENABLE_TRICKLEDM],[],[Define to enable trickle download manager])
+fi],
+[
+	trickledm=false
+	TRICKLESUPPORT="#!! Not compiled !! "
+	AC_MSG_RESULT(no)
+]
+)
+AM_CONDITIONAL(ENABLE_TRICKLEDM, test "x$trickledm" = "xtrue")
+AC_SUBST(TRICKLESUPPORT)
 
 # install DM lists if necessary
 AM_CONDITIONAL(NEED_DMLISTS, test "x$dmlists" = "xtrue")
@@ -634,12 +653,14 @@ AC_CONFIG_FILES([Makefile
 	        configs/downloadmanagers/Makefile
 	        configs/downloadmanagers/default.conf
 	        configs/downloadmanagers/fancy.conf
+	        configs/downloadmanagers/trickle.conf
 	        configs/contentscanners/Makefile
 	        configs/contentscanners/clamav.conf
 	        configs/contentscanners/clamdscan.conf
 	        configs/contentscanners/icapscan.conf
 	        configs/contentscanners/kavav.conf
 	        configs/contentscanners/kavdscan.conf
+	        configs/contentscanners/commandlinescan.conf
 		configs/authplugins/Makefile
 		configs/authplugins/ip.conf
 		configs/lists/authplugins/Makefile
