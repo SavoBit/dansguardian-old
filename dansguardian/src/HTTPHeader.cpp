@@ -663,13 +663,15 @@ void HTTPHeader::checkheader(bool allowpersistent)
 	bool first = true;
 	for (std::deque<String>::iterator i = header.begin(); i != header.end(); i++) {	// check each line in the headers
 		// HTTP 1.1 is persistent by default
-		if (first && (i->after("HTTP/").startsWith("1.1"))) {
+		if (first && (i->after(" HTTP/").startsWith("1.1"))) {
 #ifdef DGDEBUG
 			std::cout << "CheckHeader: HTTP/1.1, so assuming persistency" << std::endl;
 #endif
 			waspersistent = true;
 			ispersistent = true;
 			first = false;
+			// force HTTP/1.0 - we don't support chunked transfer encoding, possibly amongst other things
+			(*i) = i->before(" HTTP/") + " HTTP/1.0\r";
 		}
 		// index headers - try to perform the checks in the order the average browser sends the headers.
 		// also only do the necessary checks for the header type (sent/received).
