@@ -166,12 +166,17 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 	}
 	lcat = "";
 	catindex = -1;
+	bool caseinsensitive = true;
 	while (!listfile.eof()) {	// keep going until end of file
 		getline(listfile, linebuffer);  // grab a line
-		if (linebuffer.length() != 0) {	// sanity checkin
+		if (linebuffer.length() != 0) {	// sanity checking
 			line = linebuffer.c_str();
 			line.removeWhiteSpace();
-			line.toLower();  // tidy up
+			// convert to lowercase - unless this is, for example,
+			// a phraselist in an odd character encoding which has
+			// been marked as not to be converted
+			if (caseinsensitive)
+				line.toLower();
 			if (line.startsWith("<")) {
 				readPhraseListHelper(line, isexception, catindex);
 			}
@@ -199,6 +204,14 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 				std::cout << "Category list index: " << catindex << std::endl;
 #endif
 				continue;
+			}
+			// phrase lists can also be marked as not to be case-converted,
+			// to aid support for exotic character encodings
+			else if (line.startsWith("#noconvert")) {
+#ifdef DGDEBUG
+				std::cout << "List flagged as not to be case-converted" << std::endl;
+#endif
+				caseinsensitive = false;
 			}
 		}
 	}
@@ -266,8 +279,7 @@ void ListContainer::readPhraseListHelper2(String phrase, int type, int weighting
 		if (!is_daemonised) {
 			std::cerr << "Phrase length too long, truncating: " << phrase << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Phrase length too long, truncating:");
-		syslog(LOG_ERR, "%s", phrase.toCharArray());
+		syslog(LOG_ERR, "Phrase length too long, truncating: %s", phrase.toCharArray());
 		phrase = phrase.subString(0, 127);
 	}
 
@@ -280,8 +292,7 @@ void ListContainer::readPhraseListHelper2(String phrase, int type, int weighting
 			if (!is_daemonised) {
 				std::cerr << "Duplicate phrase, dropping: " << phrase << std::endl;
 			}
-			syslog(LOG_ERR, "%s", "Duplicate phrase, dropping:");
-			syslog(LOG_ERR, "%s", phrase.toCharArray());
+			syslog(LOG_ERR, "Duplicate phrase, dropping: %s", phrase.toCharArray());
 		}
 		return;
 	}
