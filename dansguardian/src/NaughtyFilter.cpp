@@ -84,258 +84,332 @@ void NaughtyFilter::reset()
 // check the given document body for banned, weighted, and exception phrases (and PICS, and regexes, &c.)
 void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 {
-	// checkme: what if the body has been stored in a temp file? the file might want both virus scanning *and*
-	// content filtering, which might conceivably mean (if maxcontentfiltersize is larger than
-	// maxcontentramcachescansize) that the file has been swapped to disk during downloading.
-	int bodylen = (*body).buffer_length;
+	// original data
+	int rawbodylen = (*body).buffer_length;
 	char *rawbody = (*body).data;
+	
+	// check PICS now - not dependent on case, hex decoding, etc.
+	// as only sites which play by the rules will self-rate
+	if ((*o.fg[filtergroup]).enable_PICS == 1) {
 #ifdef DGDEBUG
-	std::cout << "body len:" << bodylen << std::endl;
+		std::cout << "PICS is enabled" << std::endl;
 #endif
+		checkPICS(rawbody, rawbodylen);
+		if (isItNaughty)
+			return;  // Well there is no point in continuing is there?
+	}
+	
+	// hex-decoded data (not case converted)
+	int hexdecodedlen = rawbodylen;
+	char *hexdecoded = rawbody;
 
-	char *bodylc = new char[bodylen + 128];
+	unsigned char c;
+
+	// Hex decode content if desired
+	// Do this now, as it's not especially case-sensitive,
+	// and the case alteration should modify case post-decoding
+	if (o.hex_decode_content == 1) {  // Mod suggested by AFN Tue 8th April 2003
+#ifdef DGDEBUG
+		std::cout << "Hex decoding is enabled" << std::endl;
+#endif
+		hexdecoded = new char[rawbodylen + 128 + 1];
+		unsigned char c1;
+		unsigned char c2;
+		unsigned char c3;
+		char hexval[5] = "0x";  // Initializes a "hexadecimal string"
+		hexval[4] = '\0';
+		char *ptr;  // pointer required by strtol
+
+		// make a copy of the escaped document char by char
+		int i = 0;
+		int j = 0;
+		while (i < rawbodylen - 3) {  // we lose 3 bytes but what the hell..
+			c1 = rawbody[i];
+			c2 = rawbody[i + 1];
+			c3 = rawbody[i + 2];
+			if (c1 == '%' && (((c2 >= '0') && (c2 <= '9')) || ((c2 >= 'a') && (c2 <= 'f')) || ((c2 >= 'A') && (c2 <= 'F')))
+				&& (((c3 >= '0') && (c3 <= '9')) || ((c3 >= 'a') && (c3 <= 'f')) || ((c3 >= 'A') && (c3 <= 'F'))))
+			{
+				hexval[2] = c2;
+				hexval[3] = c3;
+				c = (unsigned char) strtol(hexval, &ptr, 0);
+				i += 3;
+				c = c1;
+				i++;
+			}
+			hexdecoded[j] = c;
+			j++;
+		}
+		// copy any remaining bytes
+		while (i < rawbodylen) {
+			hexdecoded[j++] = rawbody[i++];
+		} 
+		hexdecoded[j] = '\0';
+		hexdecodedlen = j;
+	}
+
+	// scan twice, with & without case conversion (if desired) - aids support for exotic char encodings
+	// TODO: move META/title sentinel location outside this loop, as they are not case sensitive operations
+	bool preserve_case = o.preserve_case;
+	if (o.preserve_case == 2) {
+		// scanning twice *is* desired
+		// first time round the loop, don't preserve case (non-exotic encodings)
+#ifdef DGDEBUG
+		std::cout << "Filtering with/without case preservation is enabled" << std::endl;
+#endif
+		preserve_case = 0;
+	}
+	
+	// Store for the lowercase (maybe) data
 	// The extra 128 is used for various speed tricks to
 	// squeeze as much speed as possible.
-	char *bodynohtml;
-	bodynohtml = NULL;  // to avoid compiler warnings
+	char* bodylc = new char[hexdecodedlen + 128];
+	
+	// Store for the tag-stripped data
+	char* bodynohtml = NULL;
+	if (o.phrase_filter_mode == 1 || o.phrase_filter_mode == 2)
+		bodynohtml = new char[hexdecodedlen + 128 + 1];
+	
+	for (int loop = 0; loop < (o.preserve_case == 2 ? 2 : 1); loop++) {
+#ifdef DGDEBUG
+		std::cout << "Preserve case: " << preserve_case << std::endl;
+#endif
 
-	try {			// the last thing we need is an exception causing a memory leak
 
-		int i, j, bodynohtmllen;
-		unsigned char c;
-		// make a copy of the document lowercase char by char
-		if (o.preserve_case == 1) {
-			for (i = 0; i < bodylen; i++) {
-				c = rawbody[i];
-				if (c == 13 || c == 9 || c == 10) {
-					c = 32;  // convert all whitespace to a space
-				}
-				bodylc[i] = c;
-			}
-		} else {
-			for (i = 0; i < bodylen; i++) {
-				c = rawbody[i];
-				if (c >= 'A' && c <= 'Z') {
-					c = 'a' + c - 'A';
-				}
-				else if (c >= 192 && c <= 221) {	// for accented chars
-					c += 32;  // 224 + c - 192
-				} else {
+		try {  // the last thing we need is an exception causing a memory leak
+
+			int i, j;
+#ifdef DGDEBUG
+			if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2 || o.phrase_filter_mode == 3)
+				std::cout << "Raw content needed" << std::endl;
+#endif
+			// use the one that's been hex decoded, but not stripped
+			// make a copy of the document lowercase char by char
+			if (preserve_case == 1) {
+				for (i = 0; i < hexdecodedlen; i++) {
+					c = hexdecoded[i];
 					if (c == 13 || c == 9 || c == 10) {
 						c = 32;  // convert all whitespace to a space
 					}
+					bodylc[i] = c;
 				}
-				bodylc[i] = c;
-			}
-		}
-
-		if (o.hex_decode_content == 1) {	// Mod suggested by
-			// AFN Tue 8th April 2003
-			char *hexdecoded = new char[bodylen + 128 + 1];
-			unsigned char c1;
-			unsigned char c2;
-			unsigned char c3;
-			char hexval[5] = "0x";  // Initializes a "hexadecimal string"
-			hexval[4] = '\0';
-			char *ptr;  // pointer required by strtol
-
-			// make a copy of the escaped document char by char
-			i = 0;
-			j = 0;
-			while (i < bodylen - 3) {	// we lose 3 bytes but what the hell..
-				c1 = bodylc[i];
-				c2 = bodylc[i + 1];
-				c3 = bodylc[i + 2];
-				if (c1 == '%' && (((c2 >= '0') && (c2 <= '9')) || ((c2 >= 'a') && (c2 <= 'f')))
-					&& (((c3 >= '0') && (c3 <= '9')) || ((c3 >= 'a') && (c3 <= 'f'))))
-				{
-					hexval[2] = c2;
-					hexval[3] = c3;
-					c = (unsigned char) strtol(hexval, &ptr, 0);
-					i += 3;
-				} else {
-					c = c1;
-					i++;
-				}
-				hexdecoded[j] = c;
-				j++;
-			}
-			// copy any remaining bytes
-			while (i < bodylen) {
-				hexdecoded[j++] = bodylc[i++];
-			} 
-			hexdecoded[j] = '\0';
-			delete[]bodylc;
-			bodylc = hexdecoded;
-			bodylen = j;
-		}
-		
-		// filter meta tags & title only
-		// based on idea from Nicolas Peyrussie
-		if(o.phrase_filter_mode == 3) {
-
+			} else {
 #ifdef DGDEBUG
-			std::cout << "Filtering META/title" << std::endl;
+				std::cout << "Not preserving case of raw content" << std::endl;
 #endif
-			bool addit = false;  // flag if we should copy this char to filtered version
-			bool needcheck = false;  // flag if we actually find anything worth filtering
-			int bodymetalen;
-			
-			// find </head> or <body> as end of search range
-			char* endhead = strstr(bodylc, "</head");
-#ifdef DGDEBUG
-			if (endhead != NULL) {
-				std::cout<<"Found '</head', limiting search range"<<std::endl;
-			}
-#endif
-			if (endhead == NULL) {
-				endhead = strstr(bodylc, "<body");
-#ifdef DGDEBUG
-				if (endhead != NULL) {
-					std::cout<<"Found '<body', limiting search range"<<std::endl;
-				}
-#endif
-			}
-			if (endhead == NULL)
-				endhead = bodylc+bodylen;
-
-			char* bodymeta = new char[(endhead - bodylc) + 128 + 1];
-			
-			// initialisation for removal of duplicate non-alphanumeric characters
-			j = 1;
-			bodymeta[0] = 32;
-
-			for (i = 0; i < (endhead - bodylc) - 7; i++) {
-				c = bodylc[i];
-
-				// are we at the start of a tag?
-				if ((!addit) && (c == '<')) {
-					if (strncmp(bodylc+i+1, "meta", 4) == 0) {
-#ifdef DGDEBUG
-						std::cout << "Found META" << std::endl;
-#endif
-						// start adding data to the check buffer
-						addit = true;
-						needcheck = true;
-						// skip 'meta '
-						i += 6;
-						c = bodylc[i];
+				for (i = 0; i < hexdecodedlen; i++) {
+					c = hexdecoded[i];
+					if (c >= 'A' && c <= 'Z') {
+						c = 'a' + c - 'A';
 					}
-					// are we at the start of a title tag?
-					else if (strncmp(bodylc+i+1, "title", 5) == 0) {
+					else if (c >= 192 && c <= 221) {  // for accented chars
+						c += 32;  // 224 + c - 192
+					} else {
+						if (c == 13 || c == 9 || c == 10) {
+							c = 32;  // convert all whitespace to a space
+						}
+					}
+					bodylc[i] = c;
+				}
+			}
+
+			// filter meta tags & title only
+			// based on idea from Nicolas Peyrussie
+			if(o.phrase_filter_mode == 3) {
 #ifdef DGDEBUG
-						std::cout << "Found title" << std::endl;
+				std::cout << "Filtering META/title" << std::endl;
 #endif
-						// start adding data to the check buffer
-						addit = true;
-						needcheck = true;
-						// skip 'title>'
-						i += 7;
-						c = bodylc[i];
+				bool addit = false;  // flag if we should copy this char to filtered version
+				bool needcheck = false;  // flag if we actually find anything worth filtering
+				int bodymetalen;
+			
+				// find </head> or <body> as end of search range
+				char* endhead = strstr(bodylc, "</head");
+#ifdef DGDEBUG
+				if (endhead != NULL)
+					std::cout<<"Found '</head', limiting search range"<<std::endl;
+#endif
+				if (endhead == NULL) {
+					endhead = strstr(bodylc, "<body");
+#ifdef DGDEBUG
+					if (endhead != NULL)
+						std::cout<<"Found '<body', limiting search range"<<std::endl;
+#endif
+				}
+
+				// if case preserved, also look for uppercase versions
+				if ((preserve_case == 1) and (endhead == NULL)) {
+					endhead = strstr(bodylc, "</HEAD");
+#ifdef DGDEBUG
+					if (endhead != NULL)
+						std::cout<<"Found '</HEAD', limiting search range"<<std::endl;
+#endif
+					if (endhead == NULL) {
+						endhead = strstr(bodylc, "<BODY");
+#ifdef DGDEBUG
+						if (endhead != NULL)
+							std::cout<<"Found '<BODY', limiting search range"<<std::endl;
+#endif
 					}
 				}
-				// meta tags end at a >
-				// title tags end at the next < (opening of </title>)
-				if (addit && ((c == '>') || (c == '<'))) {
-					// stop ading data
-					addit = false;
-					// add a space before the next word in the check buffer
-					bodymeta[j++] = 32;
-				}
+
+				if (endhead == NULL)
+					endhead = bodylc+hexdecodedlen;
+
+				char* bodymeta = new char[(endhead - bodylc) + 128 + 1];
+
+				// initialisation for removal of duplicate non-alphanumeric characters
+				j = 1;
+				bodymeta[0] = 32;
+
+				for (i = 0; i < (endhead - bodylc) - 7; i++) {
+					c = bodylc[i];
+					// are we at the start of a tag?
+					if ((!addit) && (c == '<')) {
+						if ((strncmp(bodylc+i+1, "meta", 4) == 0) or ((preserve_case == 1) and (strncmp(bodylc+i+1, "META", 4) == 0))) {
+#ifdef DGDEBUG
+							std::cout << "Found META" << std::endl;
+#endif
+							// start adding data to the check buffer
+							addit = true;
+							needcheck = true;
+							// skip 'meta '
+							i += 6;
+							c = bodylc[i];
+						}
+						// are we at the start of a title tag?
+						else if ((strncmp(bodylc+i+1, "title", 5) == 0) or ((preserve_case == 1) and (strncmp(bodylc+i+1, "TITLE", 5) == 0))) {
+#ifdef DGDEBUG
+							std::cout << "Found TITLE" << std::endl;
+#endif
+							// start adding data to the check buffer
+							addit = true;
+							needcheck = true;
+							// skip 'title>'
+							i += 7;
+							c = bodylc[i];
+						}
+					}
+					// meta tags end at a >
+					// title tags end at the next < (opening of </title>)
+					if (addit && ((c == '>') || (c == '<'))) {
+						// stop ading data
+						addit = false;
+						// add a space before the next word in the check buffer
+						bodymeta[j++] = 32;
+					}
 				
-				if (addit) {
-					// if we're in "record" mode (i.e. inside a title/metatag), strip certain characters out
-					// of the data (to sanitise metatags & aid filtering of titles)
-					if ( c== ',' || c == '=' || c == '"' || c  == '\''
-						|| c == '(' || c == ')' || c == '.')
-					{
-						// replace with a space
-						c = 32;
-					}
-					// don't bother duplicating spaces
-					if ((c != 32) || (c == 32 && (bodymeta[j-1] != 32))) {
-						bodymeta[j++] = c;  // copy it to the filtered copy
+					if (addit) {
+						// if we're in "record" mode (i.e. inside a title/metatag), strip certain characters out
+						// of the data (to sanitise metatags & aid filtering of titles)
+						if ( c== ',' || c == '=' || c == '"' || c  == '\''
+							|| c == '(' || c == ')' || c == '.')
+						{
+							// replace with a space
+							c = 32;
+						}
+						// don't bother duplicating spaces
+						if ((c != 32) || (c == 32 && (bodymeta[j-1] != 32))) {
+							bodymeta[j++] = c;  // copy it to the filtered copy
+						}
 					}
 				}
-			}
-			if (needcheck) {
-				bodymeta[j++] = '\0';
+				if (needcheck) {
+					bodymeta[j++] = '\0';
 #ifdef DGDEBUG
-				std::cout << bodymeta << std::endl;
+					std::cout << bodymeta << std::endl;
 #endif
-				bodymetalen = j;
-				checkphrase(bodymeta, bodymetalen);
-			}
+					bodymetalen = j;
+					checkphrase(bodymeta, bodymetalen);
+				}
 #ifdef DGDEBUG
-			else
-				std::cout<<"Nothing to filter"<<std::endl;
+				else
+					std::cout<<"Nothing to filter"<<std::endl;
 #endif
 
-			delete[] bodymeta;
-			// surely the intention is to search *only* meta/title, so always exit
-			delete[] bodylc;
-			return;
-		}
+				delete[] bodymeta;
+				// surely the intention is to search *only* meta/title, so always exit
+				delete[] bodylc;
+				delete[] bodynohtml;
+				if (hexdecoded != rawbody)
+					delete[]hexdecoded;
+				return;
+			}
 
-		if ((*o.fg[filtergroup]).enable_PICS == 1) {
-			checkPICS(bodylc, bodylen);
-			if (isItNaughty) {
+			if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2) {
+#ifdef DGDEBUG
+				std::cout << "Checking raw content" << std::endl;
+#endif
+				// check unstripped content
+				checkphrase(bodylc, hexdecodedlen, &url, &domain);
+				if (isItNaughty || isException) {
+					delete[]bodylc;
+					delete[] bodynohtml;
+					if (hexdecoded != rawbody)
+						delete[]hexdecoded;
+					return;  // Well there is no point in continuing is there?
+				}
+			}
+
+			if (o.phrase_filter_mode == 0) {
 				delete[]bodylc;
-				return;  // Well there is no point in continuing is there?
+				delete[] bodynohtml;
+				if (hexdecoded != rawbody)
+					delete[]hexdecoded;
+				return;  // only doing raw mode filtering
 			}
-		}
 
-		if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2) {
-			checkphrase(bodylc, bodylen, &url, &domain);  // check raw
-			if (isItNaughty || isException) {
-				delete[]bodylc;
-				return;  // Well there is no point in continuing is there?
-			}
-		}
-
-		if (o.phrase_filter_mode == 0) {
-			delete[]bodylc;
-			return;  // only doing raw mode filtering
-		}
-
-		bodynohtml = new char[bodylen + 128 + 1];
-		// we need this extra byte *
-		bool inhtml = false;  // to flag if our pointer is within a html <>
-		bool addit;  // flag if we should copy this char to filtered version
-		j = 1;
-		bodynohtml[0] = 32;  // * for this
-		for (i = 0; i < bodylen; i++) {
-			addit = true;
-			c = bodylc[i];
-			if (c == '<') {
-				inhtml = true;  // flag we are inside a html <>
-			}
-			if (c == '>') {	// flag we have just left a html <>
-				inhtml = false;
-				c = 32;
-			}
-			if (inhtml) {
-				addit = false;
-			}
-			if (c == 32) {
-				if (bodynohtml[j - 1] == 32) {	// * and this
+			// if we fell through to here, use the one that's been hex decoded AND stripped
+			// Strip HTML
+#ifdef DGDEBUG
+			std::cout << "\"Smart\" filtering is enabled" << std::endl;
+#endif
+			// we need this extra byte *
+			bool inhtml = false;  // to flag if our pointer is within a html <>
+			bool addit;  // flag if we should copy this char to filtered version
+			j = 1;
+			bodynohtml[0] = 32;  // * for this
+			for (int i = 0; i < hexdecodedlen; i++) {
+				addit = true;
+				c = bodylc[i];
+				if (c == '<') {
+					inhtml = true;  // flag we are inside a html <>
+				}
+				if (c == '>') {	// flag we have just left a html <>
+					inhtml = false;
+					c = 32;
+				}
+				if (inhtml) {
 					addit = false;
 				}
+				if (c == 32) {
+					if (bodynohtml[j - 1] == 32) {	// * and this
+						addit = false;
+					}
+				}
+				if (addit) {	// if it passed the filters
+					bodynohtml[j++] = c;  // copy it to the filtered copy
+				}
 			}
-			if (addit) {	// if it passed the filters
-				bodynohtml[j++] = c;  // copy it to the filtered copy
-			}
-		}
-		bodynohtmllen = j;
-		checkphrase(bodynohtml, bodynohtmllen);
-	}
-	catch(exception & e) {
 #ifdef DGDEBUG
-		std::cerr<<"NaughtyFilter caught an exception: "<<e.what()<<std::endl;
+			std::cout << "Checking smart content" << std::endl;
 #endif
+			checkphrase(bodynohtml, j);
+		}
+		catch(exception & e) {
+#ifdef DGDEBUG
+			std::cerr<<"NaughtyFilter caught an exception: "<<e.what()<<std::endl;
+#endif
+		}
+
+		// second time round the case loop (if there is a second time),
+		// do preserve case (exotic encodings)
+		preserve_case = 1;
 	}
-	delete[]bodynohtml;
 	delete[]bodylc;
+	delete[]bodynohtml;
+	if (hexdecoded != rawbody)
+		delete[]hexdecoded;
 }
 
 // check the phrase lists
