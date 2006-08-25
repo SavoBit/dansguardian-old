@@ -191,8 +191,6 @@ scancleancache = on
 # 3 = meta/title
 phrasefiltermode = 2
 
-
-
 # Lower casing options
 # When a document is scanned the uppercase letters are converted to lower case
 # in order to compare them with the phrases.  However this can break Big5 and
@@ -200,7 +198,16 @@ phrasefiltermode = 2
 # characters are supported.
 # 0 = force lower case (default)
 # 1 = do not change case
+# 2 = scan first in lower case, then in original case
 preservecase = 0
+
+# Note:
+# If phrasefiltermode and preserve case are both 2, this equates to 4 phrase
+# filtering passes. If you have a large enough userbase for this to be a
+# worry, and need to filter pages in exotic character encodings, it may be
+# better to run two instances on separate servers: one with preservecase 1
+# (and possibly forcequicksearch 1) and non ASCII/UTF-8 phrase lists, and one
+# with preservecase 0 and ASCII/UTF-8 lists.
 
 
 
