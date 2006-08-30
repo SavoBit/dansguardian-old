@@ -1379,7 +1379,7 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 
 		// ignore crap left in buffer from old pconns (in particular, the IE "extra CRLF after POST" bug) 
 		discard = false;
-		if (not (firsttime && line.length() < 3))
+		if (not (firsttime && line.length() <= 3))
 			header.push_back(line);  // stick the line in the deque that holds the header
 		else {
 			discard = true;
