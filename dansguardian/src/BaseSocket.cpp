@@ -38,6 +38,20 @@
 extern bool reloadconfig;
 
 
+// DEFINITIONS
+
+#define dgtimercmp(a, b, cmp) \
+	(((a)->tv_sec == (b)->tv_sec) ? ((a)->tv_usec cmp (b)->tv_usec) : ((a)->tv_sec cmp (b)->tv_sec))
+
+#define dgtimersub(a, b, result) \
+	(result)->tv_sec = (a)->tv_sec - (b)->tv_sec; \
+	(result)->tv_usec = (a)->tv_usec - (b)->tv_usec; \
+	if ((result)->tv_usec < 0) { \
+		(result)->tv_sec--; \
+		(result)->tv_usec += 1000000; \
+	}
+
+
 // IMPLEMENTATION
 
 // a wrapper for select so that it auto-restarts after an EINTR.
@@ -46,8 +60,40 @@ int selectEINTR(int numfds, fd_set * readfds, fd_set * writefds, fd_set * except
 {
 	int rc;
 	errno = 0;
-	while (true) {		// using the while as a restart point with continue
-		rc = select(numfds, readfds, writefds, exceptfds, timeout);
+	// Fix for OSes that do not explicitly modify select()'s timeout value
+	// from Soner Tari <list@kulustur.org> (namely OpenBSD)
+	// Modified to use custom code in preference to timersub/timercmp etc.
+	// to avoid that particular portability nightmare.
+	timeval entrytime;
+	timeval exittime;
+	timeval elapsedtime;
+	timeval timeoutcopy;
+	while (true) {  // using the while as a restart point with continue
+		if (timeout != NULL) {
+			gettimeofday(&entrytime, NULL);
+			timeoutcopy = *timeout;
+			rc = select(numfds, readfds, writefds, exceptfds, &timeoutcopy);
+			// explicitly modify the timeout if the OS hasn't done this for us
+			if (timeoutcopy.tv_sec == timeout->tv_sec && timeoutcopy.tv_usec == timeout->tv_usec) {
+				gettimeofday(&exittime, NULL);
+				// calculate time spent sleeping this iteration
+				dgtimersub(&exittime, &entrytime, &elapsedtime);
+				// did we wait longer than/as long as was left?
+				if (!dgtimercmp(timeout, &elapsedtime, <)) {
+					// no - reduce the amount that is left
+					dgtimersub(timeout, &elapsedtime, timeout);
+				} else {
+					// yes - we've timed out, so exit
+					timeout->tv_sec = timeout->tv_usec = 0;
+					break;
+				}
+			} else {
+				// if the OS has modified the timeout for us,
+				// propogate the change back to the caller
+				*timeout = timeoutcopy;
+			}
+		} else
+			rc = select(numfds, readfds, writefds, exceptfds, NULL);
 		if (rc < 0) {
 			if (errno == EINTR && (honour_reloadconfig? !reloadconfig : true)) {
 				continue;  // was interupted by a signal so restart
