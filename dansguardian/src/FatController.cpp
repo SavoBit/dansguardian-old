@@ -483,7 +483,7 @@ int handle_connections(UDSocket &pipe)
 		}
 		toldparentready = false;
 
-		if (peersock->getFD() < 1 || peersockip.length() < 7) {
+		if (peersock->getFD() < 0 || peersockip.length() < 7) {
 			continue;
 		}
 
@@ -540,13 +540,15 @@ bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
 		// so effectively providing a lock
 	}
 	catch(exception & e) {
+		if (o.logconerror == 1)
+			syslog(LOG_ERR, "Error telling parent we accepted: %s", e.what());
 		peersock->close();
+		return false;
 	}
 
-	if (peersock->getFD() < 1) {
-		if (o.logconerror == 1) {
-			syslog(LOG_INFO, "%s", "Error accepting. (Ignorable)");
-		}
+	if (peersock->getFD() < 0) {
+		if (o.logconerror == 1)
+			syslog(LOG_INFO, "Error accepting. (Ignorable)");
 		return false;
 	}
 	return true;
