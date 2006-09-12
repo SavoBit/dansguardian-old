@@ -483,7 +483,10 @@ int handle_connections(UDSocket &pipe)
 		}
 		toldparentready = false;
 
+		// now check the connection is actually good
 		if (peersock->getFD() < 0 || peersockip.length() < 7) {
+			if (o.logconerror == 1)
+				syslog(LOG_INFO, "Error accepting. (Ignorable)");
 			continue;
 		}
 
@@ -546,11 +549,6 @@ bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
 		return false;
 	}
 
-	if (peersock->getFD() < 0) {
-		if (o.logconerror == 1)
-			syslog(LOG_INFO, "Error accepting. (Ignorable)");
-		return false;
-	}
 	return true;
 }
 
