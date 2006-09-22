@@ -496,8 +496,8 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 // format an integer in seconds as hours:minutes:seconds
 std::string fancydm::timestring(const int seconds)
 {
-	int hours = (int)floor((float)seconds/3600);
-	int minutes = (int)floor(((float)seconds/60)-(hours*3600));
+	int hours = (int)floor((double)seconds/3600);
+	int minutes = (int)floor(((double)seconds/60)-(hours*3600));
 	int remainingseconds = seconds-(minutes*60)-(hours*3600);
 	char result[9];
 	snprintf(result, 9, "%02i:%02i:%02i", hours, minutes, remainingseconds);
@@ -506,13 +506,13 @@ std::string fancydm::timestring(const int seconds)
 // format a number of bytes as a number of Gb/Mb/Kb
 String fancydm::bytestring(const int bytes)
 {
-	int b = (int)floor((float)bytes/(1024*1024*1024));
+	int b = (int)floor((double)bytes/(1024*1024*1024));
 	if (b > 0)
 		return String(b)+" Gb";
-	b = (int)floor((float)bytes/(1024*1024));
+	b = (int)floor((double)bytes/(1024*1024));
 	if (b > 0)
 		return String(b)+" Mb";
-	b = (int)floor((float)bytes/1024);
+	b = (int)floor((double)bytes/1024);
 	if (b > 0)
 		return String(b)+" Kb";
 	return String(b)+" bytes";
