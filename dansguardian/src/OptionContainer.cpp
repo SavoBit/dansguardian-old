@@ -488,6 +488,10 @@ bool OptionContainer::read(const char *filename, int type)
 			return false;
 		}
 
+		// this needs to be known before loading CS plugins,
+		// because ClamAV plugin makes use of it during init()
+		download_dir = findoptionS("filecachedir");
+
 		if (contentscanning) {
 			if (!loadCSPlugins()) {
 				if (!is_daemonised) {
@@ -512,8 +516,6 @@ bool OptionContainer::read(const char *filename, int type)
 			filter_groups = 1;
 		} else
 			no_auth_enabled = false;
-
-		download_dir = findoptionS("filecachedir");
 
 		filter_groups_list_location = findoptionS("filtergroupslist");
 		std::string banned_ip_list_location = findoptionS("bannediplist");
