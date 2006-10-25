@@ -134,6 +134,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 				hexval[3] = c3;
 				c = (unsigned char) strtol(hexval, &ptr, 0);
 				i += 3;
+			} else {
 				c = c1;
 				i++;
 			}
