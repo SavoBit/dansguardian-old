@@ -41,7 +41,7 @@
 // auth info required for this method not found (continue querying other plugins)
 #define DGAUTH_NOMATCH 2
 
-// auth info found, but no such user in filtergroupslist (stop queyring plugins - use this code with caution!)
+// auth info found, but no such user in filtergroupslist (stop querying plugins - use this code with caution!)
 #define DGAUTH_NOUSER 3
 
 // redirect the user to a login page
