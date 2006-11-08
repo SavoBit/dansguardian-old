@@ -504,110 +504,121 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				std::cout << "Not got persistent credentials for this connection - querying auth plugins" << std::endl;
 #endif
 				bool dobreak = false;
-				for (std::deque<Plugin*>::iterator i = o.authplugins_begin; i != o.authplugins_end; i++) {
+				if (o.authplugins.size() != 0) {
+					// We have some auth plugins loaded
+					for (std::deque<Plugin*>::iterator i = o.authplugins_begin; i != o.authplugins_end; i++) {
 #ifdef DGDEBUG
-					std::cout << "Querying next auth plugin..." << std::endl;
+						std::cout << "Querying next auth plugin..." << std::endl;
 #endif
-					// try to get the username & parse the return value
-					auth_plugin = (AuthPlugin*)(*i);
-					rc = auth_plugin->identify(peerconn, proxysock, header, /*filtergroup,*/ clientuser);
-					if (rc == DGAUTH_NOMATCH) {
+						// try to get the username & parse the return value
+						auth_plugin = (AuthPlugin*)(*i);
+						rc = auth_plugin->identify(peerconn, proxysock, header, /*filtergroup,*/ clientuser);
+						if (rc == DGAUTH_NOMATCH) {
 #ifdef DGDEBUG
-						std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
+							std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
 #endif
-						continue;
-					}
-					else if (rc == DGAUTH_REDIRECT) {
+							continue;
+						}
+						else if (rc == DGAUTH_REDIRECT) {
 #ifdef DGDEBUG
-						std::cout<<"Auth plugin told us to redirect client to \"" << clientuser << "\"; not querying remaining plugins"<<std::endl;
+							std::cout<<"Auth plugin told us to redirect client to \"" << clientuser << "\"; not querying remaining plugins"<<std::endl;
 #endif
-						// ident plugin told us to redirect to a login page
-						proxysock.close();
-						String writestring = "HTTP/1.0 302 Redirect\nLocation: ";
-						writestring += clientuser;
-						writestring += "\n\n";
-						peerconn.writeString(writestring.toCharArray());
-						dobreak = true;
+							// ident plugin told us to redirect to a login page
+							proxysock.close();
+							String writestring = "HTTP/1.0 302 Redirect\nLocation: ";
+							writestring += clientuser;
+							writestring += "\n\n";
+							peerconn.writeString(writestring.toCharArray());
+							dobreak = true;
+							break;
+						}
+						else if (rc < 0) {
+							if (!is_daemonised)
+								std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
+							syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
+							proxysock.close();
+							dobreak = true;
+							break;
+						}
+#ifdef DGDEBUG
+						std::cout << "Auth plugin found username " << clientuser << " (" << oldclientuser << "), now determining group" << std::endl;
+#endif
+						if (clientuser == oldclientuser) {
+#ifdef DGDEBUG
+							std::cout << "Same user as last time, re-using old group no." << std::endl;
+#endif
+							authed = true;
+							filtergroup = oldfg;
+							break;
+						}
+						// try to get the filter group & parse the return value
+						rc = auth_plugin->determineGroup(clientuser, filtergroup);
+						if (rc == DGAUTH_OK) {
+#ifdef DGDEBUG
+							std::cout<<"Auth plugin found username & group; not querying remaining plugins"<<std::endl;
+#endif
+							authed = true;
+							break;
+						}
+						else if (rc == DGAUTH_NOMATCH) {
+#ifdef DGDEBUG
+							std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
+#endif
+							continue;
+						}
+						else if (rc == DGAUTH_NOUSER) {
+#ifdef DGDEBUG
+							std::cout<<"Auth plugin found username \"" << clientuser << "\" but no associated group; not querying remaining plugins"<<std::endl;
+#endif
+							filtergroup = 0;  //default group - one day configurable?
+							authed = true;
+							break;
+						}
+						else if (rc < 0) {
+							if (!is_daemonised)
+								std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
+							syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
+							proxysock.close();
+							dobreak = true;
+							break;
+						}
+					} // end of querying all plugins
+					if (dobreak)
 						break;
-					}
-					else if (rc < 0) {
-						if (!is_daemonised)
-							std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
-						syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
-						proxysock.close();
-						dobreak = true;
-						break;
-					}
+					if ((!authed) || (filtergroup < 0) || (filtergroup >= o.numfg)) {
 #ifdef DGDEBUG
-					std::cout << "Auth plugin found username " << clientuser << " (" << oldclientuser << "), now determining group" << std::endl;
+						if (!authed)
+							std::cout << "No identity found; using defaults" << std::endl;
+						else
+							std::cout << "Plugin returned out-of-range filter group number; using defaults" << std::endl;
 #endif
-					if (clientuser == oldclientuser) {
-#ifdef DGDEBUG
-						std::cout << "Same user as last time, re-using old group no." << std::endl;
-#endif
-						authed = true;
-						filtergroup = oldfg;
-						break;
-					}
-					// try to get the filter group & parse the return value
-					rc = auth_plugin->determineGroup(clientuser, filtergroup);
-					if (rc == DGAUTH_OK) {
-#ifdef DGDEBUG
-						std::cout<<"Auth plugin found username & group; not querying remaining plugins"<<std::endl;
-#endif
-						authed = true;
-						break;
-					}
-					else if (rc == DGAUTH_NOMATCH) {
-#ifdef DGDEBUG
-						std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
-#endif
-						continue;
-					}
-					else if (rc == DGAUTH_NOUSER) {
-#ifdef DGDEBUG
-						std::cout<<"Auth plugin found username \"" << clientuser << "\" but no associated group; not querying remaining plugins"<<std::endl;
-#endif
+						authed = false;
+						clientuser = "-";
 						filtergroup = 0;  //default group - one day configurable?
-						authed = true;
-						break;
-					}
-					else if (rc < 0) {
-						if (!is_daemonised)
-							std::cerr<<"Auth plugin returned error code: "<<rc<<std::endl;
-						syslog(LOG_ERR,"Auth plugin returned error code: %d", rc);
-						proxysock.close();
-						dobreak = true;
-						break;
-					}
-				}
-				if (dobreak)
-					break;
-				if ((!authed) || (filtergroup < 0) || (filtergroup >= o.numfg)) {
+					} else {
 #ifdef DGDEBUG
-					if (!authed)
-						std::cout << "No identity found; using defaults" << std::endl;
-					else
-						std::cout << "Plugin returned out-of-range filter group number; using defaults" << std::endl;
+						std::cout << "Identity found; caching username & group" << std::endl;
 #endif
-					authed = false;
-					clientuser = "-";
-					filtergroup = 0;  //default group - one day configurable?
+						if (auth_plugin->is_connection_based) {
+#ifdef DGDEBUG
+							std::cout<<"Auth plugin is for a connection-based auth method - keeping credentials for entire connection"<<std::endl;
+#endif
+							persistent_authed = true;
+						}
+						oldclientuser = clientuser;
+						oldfg = filtergroup;
+					}
 				} else {
+					// We don't have any auth plugins loaded
 #ifdef DGDEBUG
-					std::cout << "Identity found; caching username & group" << std::endl;
+					std::cout << "No auth plugins loaded; using defaults & feigning persistency" << std::endl;
 #endif
-					if (auth_plugin->is_connection_based) {
-#ifdef DGDEBUG
-						std::cout<<"Auth plugin is for a connection-based auth method - keeping credentials for entire connection"<<std::endl;
-#endif
-						persistent_authed = true;
-					}
-					oldclientuser = clientuser;
-					oldfg = filtergroup;
+					authed = true;
+					clientuser = "-";
+					filtergroup = 0;
+					persistent_authed = true;
 				}
-			}
-			else {
+			} else {
 				// persistent_authed == true
 #ifdef DGDEBUG
 				std::cout << "Already got credentials for this connection - not querying auth plugins" << std::endl;
@@ -1006,7 +1017,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				break;
 			}
 
-			if ((authed || (o.authplugins.size() == 0)) && !isexception && !isbypass && (o.max_upload_size > -1) && header.isPostUpload(peerconn))
+			if (authed && !isexception && !isbypass && (o.max_upload_size > -1) && header.isPostUpload(peerconn))
 			{
 				if ((o.max_upload_size == 0) || (header.contentLength() > o.max_upload_size)) {
 #ifdef DGDEBUG
@@ -1023,9 +1034,19 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				}
 			}
 #ifdef DGDEBUG
-			else if (!authed && (o.authplugins.size() > 0))
+			else if (!authed)
 				std::cout << "Skipping POST upload blocking because user is unauthed." << std::endl;
 #endif
+
+			// check header sent to proxy - this is done before the send, so that pre-emptive banning
+			// can be used for authenticated users. this gets around the problem of Squid fetching content
+			// from sites when they're just going to get banned: not too big an issue in most cases, but
+			// not good if blocking sites it would be illegal to retrieve, and allows web bugs/tracking
+			// links not to be requested.
+			if (authed && !isbypass && !isexception && !checkme.isItNaughty) {
+				requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup,
+					&ispostblock, isbanneduser, isbannedip);
+			}
 
 			if (!checkme.isItNaughty) {
 				// the request is ok, so we can	now pass it to the proxy, and check the returned header
@@ -1044,253 +1065,251 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					wasrequested = true;  // so we know where we are later
 				}
 				
-				if (!checkme.isItNaughty) {
 #ifdef DGDEBUG
-					std::cout << "got header from proxy" << std::endl;
-					if (!persist)
-						std::cout << "header says close, so not persisting" << std::endl;
+				std::cout << "got header from proxy" << std::endl;
+				if (!persist)
+					std::cout << "header says close, so not persisting" << std::endl;
 #endif
 
-					// if we're not careful, we can end up accidentally setting the bypass cookie twice.
-					// because of the code flow, this second cookie ends up with timestamp 0, and is always disallowed.
-					if (isbypass && !isvirusbypass && !iscookiebypass) {
+				// if we're not careful, we can end up accidentally setting the bypass cookie twice.
+				// because of the code flow, this second cookie ends up with timestamp 0, and is always disallowed.
+				if (isbypass && !isvirusbypass && !iscookiebypass) {
 #ifdef DGDEBUG
-						std::cout<<"Setting GBYPASS cookie; bypasstimestamp = "<<bypasstimestamp<<std::endl;
+					std::cout<<"Setting GBYPASS cookie; bypasstimestamp = "<<bypasstimestamp<<std::endl;
 #endif
-						docheader.setCookie("GBYPASS", hashedCookie(&urldomain, filtergroup, &clientip, bypasstimestamp).toCharArray());
-					}
-					
-					// don't run scanTest on redirections or head requests
-					// actually, you *can* get redirections with content: check the RFCs!
-					if (runav && ishead) { // (docheader.isRedirection() || ishead)) {
+					docheader.setCookie("GBYPASS", hashedCookie(&urldomain, filtergroup, &clientip, bypasstimestamp).toCharArray());
+				}
+				
+				// don't run scanTest on redirections or head requests
+				// actually, you *can* get redirections with content: check the RFCs!
+				if (runav && ishead) { // (docheader.isRedirection() || ishead)) {
 #ifdef DGDEBUG
-						std::cout << "Request is HEAD; disabling runav" << std::endl;
+					std::cout << "Request is HEAD; disabling runav" << std::endl;
 #endif
+					runav = false;
+				}
+
+				// don't even bother scan testing if the content-length header indicates the file is larger than the maximum size we'll scan
+				// - based on patch supplied by cahya (littlecahya@yahoo.de)
+				// be careful: contentLength is signed, and max_content_filecache_scan_size is unsigned
+				int cl = docheader.contentLength();
+				if (runav) {
+					if (cl == 0)
 						runav = false;
-					}
-
-					// don't even bother scan testing if the content-length header indicates the file is larger than the maximum size we'll scan
-					// - based on patch supplied by cahya (littlecahya@yahoo.de)
-					// be careful: contentLength is signed, and max_content_filecache_scan_size is unsigned
-					int cl = docheader.contentLength();
-					if (runav) {
-						if (cl == 0)
-							runav = false;
-						else if ((cl > 0) && (cl > o.max_content_filecache_scan_size))
-							runav = false;
-					}
-
-					// now that we have the proxy's header too, we can make a better informed decision on whether or not to scan.
-					// this used to be done before we'd grabbed the proxy's header, rendering exceptionvirusmimetypelist useless,
-					// and exceptionvirusextensionlist less effective, because we didn't have a Content-Disposition header.
-					// checkme: split scanTest into two parts? we can check the site & URL lists long before we get here, then
-					// do the rest of the checks later.
-					if (runav) {
+					else if ((cl > 0) && (cl > o.max_content_filecache_scan_size))
 						runav = false;
+				}
+
+				// now that we have the proxy's header too, we can make a better informed decision on whether or not to scan.
+				// this used to be done before we'd grabbed the proxy's header, rendering exceptionvirusmimetypelist useless,
+				// and exceptionvirusextensionlist less effective, because we didn't have a Content-Disposition header.
+				// checkme: split scanTest into two parts? we can check the site & URL lists long before we get here, then
+				// do the rest of the checks later.
+				if (runav) {
+					runav = false;
 #ifdef DGDEBUG
-						std::cerr << "cs plugins:" << o.csplugins.size() << std::endl;
+					std::cerr << "cs plugins:" << o.csplugins.size() << std::endl;
 #endif
-						//send header to plugin here needed
-						//also send user and group
-						int csrc = 0;
+					//send header to plugin here needed
+					//also send user and group
+					int csrc = 0;
 #ifdef DGDEBUG
-						int j = 0;
+					int j = 0;
 #endif
-						for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
+					for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
 #ifdef DGDEBUG
-							std::cerr << "running scanTest " << j << std::endl;
+						std::cerr << "running scanTest " << j << std::endl;
 #endif
-							csrc = ((CSPlugin*)(*i))->scanTest(&header, &docheader, clientuser.c_str(), filtergroup, clientip.c_str());
+						csrc = ((CSPlugin*)(*i))->scanTest(&header, &docheader, clientuser.c_str(), filtergroup, clientip.c_str());
 #ifdef DGDEBUG
-							std::cerr << "scanTest " << j << " returned: " << csrc << std::endl;
+						std::cerr << "scanTest " << j << " returned: " << csrc << std::endl;
 #endif
-							if (csrc > 0) {
-								sendtoscanner.push_back(true);
-								runav = true;
-							} else {
-								if (csrc < 0)
-									syslog(LOG_ERR, "scanTest returned error: %d", csrc);
-								sendtoscanner.push_back(false);
-							}
-#ifdef DGDEBUG
-							j++;
-#endif
+						if (csrc > 0) {
+							sendtoscanner.push_back(true);
+							runav = true;
+						} else {
+							if (csrc < 0)
+								syslog(LOG_ERR, "scanTest returned error: %d", csrc);
+							sendtoscanner.push_back(false);
 						}
-					}
 #ifdef DGDEBUG
-					std::cerr << "runav = " << runav << std::endl;
+						j++;
+#endif
+					}
+				}
+#ifdef DGDEBUG
+				std::cerr << "runav = " << runav << std::endl;
 #endif
 
-					// no need to check bypass mode, exception mode, auth required headers, or banned ip/user (the latter get caught by requestChecks later)
-					if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.authRequired())
-					{
-						bool download_exception = false;
-						
-						// If in blanket download block mode, check the exception file site list. Actually, this is useful outside blanket block mode too...
-						if (/*o.fg[filtergroup]->block_downloads &&*/ (o.fg[filtergroup]->inExceptionFileSiteList(urld))) {
+				// no need to check bypass mode, exception mode, auth required headers, redirections, or banned ip/user (the latter get caught by requestChecks later)
+				if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.isRedirection() && !docheader.authRequired())
+				{
+					bool download_exception = false;
+					
+					// If in blanket download block mode, check the exception file site list. Actually, this is useful outside blanket block mode too...
+					if (/*o.fg[filtergroup]->block_downloads &&*/ (o.fg[filtergroup]->inExceptionFileSiteList(urld))) {
+						download_exception = true;
+					}
+
+					// Perform MIME type matching
+					if (!download_exception) {
+						mimetype = docheader.getContentType().toCharArray();
+
+						unsigned int list;
+						// check banned list if in non-blanket mode
+						// check exception list if in blanket mode
+						if (o.fg[filtergroup]->block_downloads)
+							list = (*o.fg[filtergroup]).exception_mimetype_list;
+						else
+							list = (*o.fg[filtergroup]).banned_mimetype_list;
+
+						i = (*o.lm.l[list]).findInList((char *) mimetype.c_str());
+
+						// Did we match? Then ban as necessary.
+						// If downloads are blanket blocked, block unless matched.
+						// If downloads are not blanket blocked, block if matched.
+						if ((i != NULL) && !(o.fg[filtergroup]->block_downloads)) {
+							// matched the banned list
+							checkme.whatIsNaughty = o.language_list.getTranslation(800);
+							// Banned MIME Type:
+							checkme.whatIsNaughty += i;
+							checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+							checkme.isItNaughty = true;
+							checkme.whatIsNaughtyCategories = "Banned MIME Type.";
+						}
+						else if ((i == NULL) && o.fg[filtergroup]->block_downloads) {
+							// did not match the exception list
+							checkme.whatIsNaughty = o.language_list.getTranslation(750);
+							// Blanket file download is active
+							checkme.whatIsNaughty += mimetype;
+							checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+							checkme.isItNaughty = true;
+							checkme.whatIsNaughtyCategories = "Blanket download block.";
+						}
+						else if ((i != NULL) && o.fg[filtergroup]->block_downloads) {
+							// matched the exception list
 							download_exception = true;
 						}
-
-						// Perform MIME type matching
-						if (!download_exception) {
-							mimetype = docheader.getContentType().toCharArray();
-
-							unsigned int list;
-							// check banned list if in non-blanket mode
-							// check exception list if in blanket mode
-							if (o.fg[filtergroup]->block_downloads)
-								list = (*o.fg[filtergroup]).exception_mimetype_list;
-							else
-								list = (*o.fg[filtergroup]).banned_mimetype_list;
-
-							i = (*o.lm.l[list]).findInList((char *) mimetype.c_str());
-
-							// Did we match? Then ban as necessary.
-							// If downloads are blanket blocked, block unless matched.
-							// If downloads are not blanket blocked, block if matched.
-							if ((i != NULL) && !(o.fg[filtergroup]->block_downloads)) {
-								// matched the banned list
-								checkme.whatIsNaughty = o.language_list.getTranslation(800);
-								// Banned MIME Type:
-								checkme.whatIsNaughty += i;
-								checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
-								checkme.isItNaughty = true;
-								checkme.whatIsNaughtyCategories = "Banned MIME Type.";
-							}
-							else if ((i == NULL) && o.fg[filtergroup]->block_downloads) {
-								// did not match the exception list
-								checkme.whatIsNaughty = o.language_list.getTranslation(750);
-								// Blanket file download is active
-								checkme.whatIsNaughty += mimetype;
-								checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
-								checkme.isItNaughty = true;
-								checkme.whatIsNaughtyCategories = "Blanket download block.";
-							}
-							else if ((i != NULL) && o.fg[filtergroup]->block_downloads) {
-								// matched the exception list
-								download_exception = true;
-							}
-							
+						
 #ifdef DGDEBUG
-							std::cout << mimetype.length() << std::endl;
-							std::cout << ":" << mimetype;
-							std::cout << ":" << std::endl;
+						std::cout << mimetype.length() << std::endl;
+						std::cout << ":" << mimetype;
+						std::cout << ":" << std::endl;
 #endif
-						}
+					}
 
-						// Perform extension matching - if not already matched the exception MIME list
-						if (!download_exception) {
-							// Can't ban file extensions of URLs that just redirect
-							String tempurl = urld;
-							String tempdispos = docheader.disposition();
-							bool matched_extension = false;
-							unsigned int list;
-							// check banned list if in non-blanket mode
-							// check exception list if in blanket mode
-							if (o.fg[filtergroup]->block_downloads)
-								list = o.fg[filtergroup]->exception_extension_list;
-							else
-								list = o.fg[filtergroup]->banned_extension_list;
+					// Perform extension matching - if not already matched the exception MIME list
+					if (!download_exception) {
+						// Can't ban file extensions of URLs that just redirect
+						String tempurl = urld;
+						String tempdispos = docheader.disposition();
+						bool matched_extension = false;
+						unsigned int list;
+						// check banned list if in non-blanket mode
+						// check exception list if in blanket mode
+						if (o.fg[filtergroup]->block_downloads)
+							list = o.fg[filtergroup]->exception_extension_list;
+						else
+							list = o.fg[filtergroup]->banned_extension_list;
 
-							if (tempdispos.length() > 1) {
-								// dispos filename must take presidense
+						if (tempdispos.length() > 1) {
+							// dispos filename must take presidense
 #ifdef DGDEBUG
-								std::cout << "Disposition filename:" << tempdispos << ":" << std::endl;
+							std::cout << "Disposition filename:" << tempdispos << ":" << std::endl;
 #endif
-								// The function expects a url so we have to
-								// generate a pseudo one.
-								tempdispos = "http://foo.bar/" + tempdispos;
-								if ((i = (*o.fg[filtergroup]).inExtensionList(list, tempdispos)) != NULL) {
+							// The function expects a url so we have to
+							// generate a pseudo one.
+							tempdispos = "http://foo.bar/" + tempdispos;
+							if ((i = (*o.fg[filtergroup]).inExtensionList(list, tempdispos)) != NULL) {
+								matched_extension = true;
+							}
+						} else {
+							if (!tempurl.contains("?")) {
+								if ((i = (*o.fg[filtergroup]).inExtensionList(list, tempurl)) != NULL) {
 									matched_extension = true;
 								}
-							} else {
-								if (!tempurl.contains("?")) {
+							}
+							else if (String(mimetype.c_str()).contains("application/")) {
+								while (tempurl.endsWith("?")) {
+									tempurl.chop();
+								}
+								while (tempurl.contains("/")) {	// no slash no url
 									if ((i = (*o.fg[filtergroup]).inExtensionList(list, tempurl)) != NULL) {
 										matched_extension = true;
+										break;
 									}
-								}
-								else if (String(mimetype.c_str()).contains("application/")) {
-									while (tempurl.endsWith("?")) {
+									while (tempurl.contains("/") && !tempurl.endsWith("?")) {
 										tempurl.chop();
 									}
-									while (tempurl.contains("/")) {	// no slash no url
-										if ((i = (*o.fg[filtergroup]).inExtensionList(list, tempurl)) != NULL) {
-											matched_extension = true;
-											break;
-										}
-										while (tempurl.contains("/") && !tempurl.endsWith("?")) {
-											tempurl.chop();
-										}
-										tempurl.chop();  // get rid of the ?
-									}
+									tempurl.chop();  // get rid of the ?
 								}
 							}
-							
-							// Did we match? Then ban as necessary.
-							// If downloads are blanket blocked, block unless matched.
-							// If downloads are not blanket blocked, block if matched.
-							if (!matched_extension && o.fg[filtergroup]->block_downloads) {
-								// did not match the exception list
-								checkme.whatIsNaughty = o.language_list.getTranslation(751);
-								// Blanket file download is active
-								checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
-								checkme.isItNaughty = true;
-								checkme.whatIsNaughtyCategories = "Blanket download block.";
-							}
-							else if (matched_extension && !(o.fg[filtergroup]->block_downloads)) {
-								// matched the banned list
-								checkme.whatIsNaughty = o.language_list.getTranslation(900);
-								// Banned extension:
-								checkme.whatIsNaughty += i;
-								checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
-								checkme.isItNaughty = true;
-								checkme.whatIsNaughtyCategories = "Banned extension.";
-							}
-							else if (matched_extension && (o.fg[filtergroup]->block_downloads)) {
-								// intention is to match either/or of the MIME & extension lists
-								// so if it gets this far, un-naughty it (may have been naughtied by the MIME type list)
-								checkme.isItNaughty = false;
-							}
+						}
+						
+						// Did we match? Then ban as necessary.
+						// If downloads are blanket blocked, block unless matched.
+						// If downloads are not blanket blocked, block if matched.
+						if (!matched_extension && o.fg[filtergroup]->block_downloads) {
+							// did not match the exception list
+							checkme.whatIsNaughty = o.language_list.getTranslation(751);
+							// Blanket file download is active
+							checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+							checkme.isItNaughty = true;
+							checkme.whatIsNaughtyCategories = "Blanket download block.";
+						}
+						else if (matched_extension && !(o.fg[filtergroup]->block_downloads)) {
+							// matched the banned list
+							checkme.whatIsNaughty = o.language_list.getTranslation(900);
+							// Banned extension:
+							checkme.whatIsNaughty += i;
+							checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+							checkme.isItNaughty = true;
+							checkme.whatIsNaughtyCategories = "Banned extension.";
+						}
+						else if (matched_extension && (o.fg[filtergroup]->block_downloads)) {
+							// intention is to match either/or of the MIME & extension lists
+							// so if it gets this far, un-naughty it (may have been naughtied by the MIME type list)
+							checkme.isItNaughty = false;
 						}
 					}
+				}
 
-					// check header sent to proxy - this could be done before the send, but we
-					// want to wait until after the MIME type & extension checks, because they may
-					// act as a quicker rejection. also so as not to pre-emptively ban currently
-					// un-authed users.
-					if (!isbypass && !isexception && !checkme.isItNaughty && !docheader.authRequired()) {
-						requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup,
-							&ispostblock, isbanneduser, isbannedip);
-					}
+				// check header sent to proxy - this could be done before the send, but we
+				// want to wait until after the MIME type & extension checks, because they may
+				// act as a quicker rejection. also so as not to pre-emptively ban currently
+				// un-authed users.
+				if (!authed && !isbypass && !isexception && !checkme.isItNaughty && !docheader.authRequired()) {
+					requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup,
+						&ispostblock, isbanneduser, isbannedip);
+				}
 
-					// check body from proxy
-					// can't do content filtering on HEAD or redirections (no content)
-					// actually, redirections CAN have content
-					if (!checkme.isItNaughty && (cl != 0) && !ishead) {
-						if ((docheader.isContentType("text") && !isexception) || runav) {
-							// don't search the cache if scan_clean_cache disabled & runav true (won't have been cached)
-							// also don't search cache for auth required headers (same reason)
+				// check body from proxy
+				// can't do content filtering on HEAD or redirections (no content)
+				// actually, redirections CAN have content
+				if (!checkme.isItNaughty && (cl != 0) && !ishead) {
+					if ((docheader.isContentType("text") && !isexception) || runav) {
+						// don't search the cache if scan_clean_cache disabled & runav true (won't have been cached)
+						// also don't search cache for auth required headers (same reason)
 
-							// checkme: does not searching the cache if scan_clean_cache is disabled break the fancy DM's bypass stuff?
-							// probably, since it uses a "magic" status code in the cache; easier than coding yet another hash type.
+						// checkme: does not searching the cache if scan_clean_cache is disabled break the fancy DM's bypass stuff?
+						// probably, since it uses a "magic" status code in the cache; easier than coding yet another hash type.
 
-							if (o.url_cache_number > 0 && !(!o.scan_clean_cache && runav) && !docheader.authRequired()) {
-								if (wasClean(urld, filtergroup)) {
-									wasclean = true;
-									cachehit = true;
-									runav = false;
+						if (o.url_cache_number > 0 && !(!o.scan_clean_cache && runav) && !docheader.authRequired()) {
+							if (wasClean(urld, filtergroup)) {
+								wasclean = true;
+								cachehit = true;
+								runav = false;
 #ifdef DGDEBUG
-									std::cout << "url was clean skipping content and AV checking" << std::endl;
+								std::cout << "url was clean skipping content and AV checking" << std::endl;
 #endif
-								}
 							}
-							// despite the debug note above, we do still go through contentFilter for cached non-exception HTML,
-							// as content replacement rules need to be applied.
-							waschecked = true;
-							contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
-								&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
-								&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified);
 						}
+						// despite the debug note above, we do still go through contentFilter for cached non-exception HTML,
+						// as content replacement rules need to be applied.
+						waschecked = true;
+						contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
+							&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
+							&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified);
 					}
 				}
 			}
