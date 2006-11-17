@@ -419,14 +419,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 		// the persistent connection.
 		std::string clientuser;
 		std::string oldclientuser;
-		int filtergroup, oldfg, gmode;
+		int filtergroup, oldfg = 0, gmode;
 		bool authed = false;
 		bool isbanneduser = false;
 		bool persistent_authed = false;
 		
 		FDTunnel fdt;
 		NaughtyFilter checkme;
-		AuthPlugin* auth_plugin;
+		AuthPlugin* auth_plugin = NULL;
 
 		// maintain a persistent connection
 		while ((firsttime || persist) && !reloadconfig) {
