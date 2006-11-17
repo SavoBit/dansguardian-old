@@ -42,6 +42,10 @@
 #include <sys/time.h>
 #include <sys/poll.h>
 
+#ifdef __SEGV_BACKTRACE
+#include <execinfo.h>
+#endif
+
 #ifdef __GCCVER3
 #include <istream>
 #include <map>
@@ -95,6 +99,9 @@ extern "C"
 	void sig_hup(int signo);  // This is so we know if we should re-read our config.
 	void sig_usr1(int signo);  // This is so we know if we should re-read our config but not kill current connections
 	void sig_childterm(int signo);
+#ifdef __SEGV_BACKTRACE
+	void sig_segv(int signo/*, siginfo_t* info, void* p*/); // Generate a backtrace on segfault
+#endif
 }
 
 // logging & URL cache processes
@@ -181,6 +188,37 @@ extern "C"
 #endif
 		_exit(0);
 	}
+#ifdef __SEGV_BACKTRACE
+	void sig_segv(int signo/*, siginfo_t* info, void* p*/)
+	{
+#ifdef DGDEBUG
+		std::cout << "SEGV received." << std::endl;
+#endif
+/*		char* str = "UNKNOWN";
+		switch (info->si_code)
+		{
+#ifdef SEGV_MAPERR
+		case SEGV_MAPERR: str = "SEGV_MAPERR"; break;
+#endif
+#ifdef SEGV_ACCERR
+		case SEGV_ACCERR: str = "SEGV_ACCERR"; break;
+#endif
+		}
+		syslog(LOG_ERR, "Segfault: %s", str);*/
+		// Generate backtrace
+		void *addresses[10];
+		char **strings;
+		int c = backtrace(addresses, 10);
+		strings = backtrace_symbols(addresses,c);
+		printf("backtrace returned: %d\n", c);
+		for (int i = 0; i < c; i++) {
+			syslog(LOG_ERR, "%d: %X ", i, (int)addresses[i]);
+			syslog(LOG_ERR, strings[i]);
+		}
+		// Kill off the current process
+		raise(SIGTERM);
+	}
+#endif
 }
 
 // this is used by dansguardian.cpp, to, yep, test connection to the proxy
@@ -1945,7 +1983,7 @@ int fc_controlit()
 		// sigterm we need to kill our
 		// children which this will do,
 		// then we need to exit
-		syslog(LOG_ERR, "%s", "Error registering SIGTERM handler");
+		syslog(LOG_ERR, "Error registering SIGTERM handler");
 		return (1);
 	}
 
@@ -1955,7 +1993,7 @@ int fc_controlit()
 		// sighup we need to kill our
 		// children which this will do,
 		// then we need to read config
-		syslog(LOG_ERR, "%s", "Error registering SIGHUP handler");
+		syslog(LOG_ERR, "Error registering SIGHUP handler");
 		return (1);
 	}
 
@@ -1965,9 +2003,19 @@ int fc_controlit()
 		// sigusr1 we need to hup our
 		// children to make them exit
 		// then we need to read fg config
-		syslog(LOG_ERR, "%s", "Error registering SIGUSR handler");
+		syslog(LOG_ERR, "Error registering SIGUSR handler");
 		return (1);
 	}
+
+#ifdef __SEGV_BACKTRACE
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = &sig_segv;
+	if (sigaction(SIGSEGV, &sa, NULL)) {
+		syslog(LOG_ERR, "Error registering SIGSEGV handler");
+		return 1;
+	}
+#endif
+
 #ifdef DGDEBUG
 	std::cout << "Parent process sig handlers done" << std::endl;
 #endif

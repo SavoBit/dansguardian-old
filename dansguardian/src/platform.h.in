@@ -95,4 +95,8 @@
 	#define __EMAIL
 #endif
 
+#ifdef ENABLE_SEGV_BACKTRACE
+	#define __SEGV_BACKTRACE
+#endif
+
 #endif //ifndef __H_PLATFORM
