@@ -92,6 +92,8 @@ int main(int argc, char *argv[])
 	srand(time(NULL));
 	int rc;
 
+	openlog("dansguardian", LOG_PID | LOG_CONS, LOG_USER);
+
 #ifdef DGDEBUG
 	std::cout << "Running in debug mode..." << std::endl;
 #endif

@@ -2085,6 +2085,8 @@ int fc_controlit()
 	int tofind;
 	reloadconfig = false;
 
+	syslog(LOG_INFO, "Started sucessfully.");
+
 	while (failurecount < 30 && !ttg && !reloadconfig) {
 
 		// loop, essentially, for ever until 30
