@@ -288,6 +288,35 @@ else
 fi
 AM_CONDITIONAL(HAVE_PCRE, test "x$pcre" = "xtrue")
 
+# ask user if they want a backtrace logged after segfault
+AC_MSG_CHECKING(for backtrace on segfault support)
+AC_ARG_ENABLE(
+segv_backtrace,
+[AC_HELP_STRING([--enable-segv-backtrace@<:@=no@:>@], [Enable logging a backtrace when a segmentation fault occurs])],
+[ if test "x$enableval" = "xno"; then
+	AC_MSG_RESULT(no)
+else
+	# check for native header & func (no library)
+	AC_CHECK_FUNCS(backtrace, [AC_MSG_RESULT(native)], [
+		AC_MSG_RESULT(no)
+		# native not found, so look for linked
+		LIBS="-lexecinfo ${LIBS}"
+		AC_CHECK_LIB(execinfo, backtrace, [
+			AC_MSG_RESULT(linked)
+		], [
+			AC_MSG_RESULT(no)
+			AC_MSG_ERROR([no native or standard library backtrace function found! (needed by "--enable-segv-backtrace")])
+		])
+	])
+	AC_DEFINE([ENABLE_SEGV_BACKTRACE],[],[Define to enable backtrace on segmentation fault])
+	# add -rdynamic to compiler flags to force output of symbol tables
+	CXXFLAGS="-rdynamic ${CXXFLAGS}"
+fi
+],
+[ # disable by default
+	AC_MSG_RESULT(no)
+])
+
 # by default, we do not need the content scanner list or config directories, nor the download manager list directory
 cslists=false
 csconfigs=false
