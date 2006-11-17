@@ -258,7 +258,7 @@ int commandlineinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * doche
 		dup2(scannerstderr[1], 2);
 		// execute scanner
 		arguments[numarguments] = (char*)filename;
-		int result = execv(arguments[0], arguments);
+		execv(arguments[0], arguments);
 		// if we get here, an error occurred!
 		syslog(LOG_ERR, "Cannot exec command-line scanner (command \"%s %s\"): %s", progname.toCharArray(), filename, strerror(errno));
 		_exit(255);
