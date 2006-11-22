@@ -1581,11 +1581,18 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		data += ( clienthost ? (*clienthost) + cr : cr);
 
 #ifdef DGDEBUG   
-		//std::cout << "Log data: " << data.toCharArray() << endl;
 		std::cout << "...built" << std::endl;
 #endif
-		ipcsock.writeString(data.toCharArray());
-		ipcsock.close();
+		try {
+			ipcsock.setTimeout(10);
+			ipcsock.writeString(data.toCharArray());
+			ipcsock.close();
+		} catch (exception &e) {
+			syslog(LOG_INFO, "Could not write to logging process: %s", e.what());
+#ifdef DGDEBUG
+			std::cout << "Could not write to logging process: " << e.what() << std::endl;
+#endif
+		}
 	}
 }
 
