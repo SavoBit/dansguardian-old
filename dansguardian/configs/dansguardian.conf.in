@@ -48,6 +48,12 @@ logfileformat = 1
 #anonymizelogs = on
 
 
+# Syslog logging
+#
+# Use syslog for access logging instead of logging to the file
+# at the defined or built-in "loglocation"
+#syslog = on
+
 # Log file location
 # 
 # Defines the log directory and filename.
