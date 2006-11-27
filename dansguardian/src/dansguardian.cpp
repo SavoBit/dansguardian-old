@@ -226,22 +226,22 @@ int main(int argc, char *argv[])
 		// (yes it negates but no choice)
 #endif
 		if (rc == -1) {
-			syslog(LOG_ERR, "%s", "Unable to seteuid()");
+			syslog(LOG_ERR, "Unable to seteuid()");
 			std::cerr << "Unable to seteuid()" << std::endl;
 			return 1;  // seteuid failed for some reason so exit with error
 		}
 	} else {
-		syslog(LOG_ERR, "%s", "Unable to getpwnam() - does the proxy user exist?");
+		syslog(LOG_ERR, "Unable to getpwnam() - does the proxy user exist?");
 		cerr << "Unable to getpwnam() - does the proxy user exist?" << std::endl;
 		cerr << "Proxy user looking for is '" << o.daemon_user_name << "'" << std::endl;
 		return 1;  // was unable to lockup the user id from passwd
 		// for some reason, so exit with error
 	}
 
-	if (o.no_logger == 0) {
+	if ((o.no_logger == 0) && (o.log_syslog == 0)) {
 		ofstream logfiletest(o.log_location.c_str(), ios::app);
 		if (logfiletest.fail()) {
-			syslog(LOG_ERR, "%s", "Error opening/creating log file. (check ownership and access rights).");
+			syslog(LOG_ERR, "Error opening/creating log file. (check ownership and access rights).");
 			std::cout << "Error opening/creating log file. (check ownership and access rights)." << std::endl;
 			std::cout << "I am running as " << o.daemon_user_name << " and I am trying to open " << o.log_location << std::endl;
 			return 1;  // opening the log file for writing failed
