@@ -148,7 +148,9 @@ bool OptionContainer::read(const char *filename, int type)
 				pid_filename += "dansguardian.pid";
 			}
 
-			if ((log_location = findoptionS("loglocation")) == "") {
+			if (findoptionS("logsyslog") == "on") {
+				log_syslog = 1;
+			} else 	if ((log_location = findoptionS("loglocation")) == "") {
 				log_location = __LOGLOCATION;
 				log_location += "access.log";
 			}
@@ -390,6 +392,11 @@ bool OptionContainer::read(const char *filename, int type)
 			log_ad_blocks = 1;
 		} else {
 			log_ad_blocks = 0;
+		}
+		if (findoptionS("logtimestamp") == "on") {
+			log_timestamp = 1;
+		} else {
+			log_timestamp = 0;
 		}
 
 		if (findoptionS("showweightedfound") == "on") {

@@ -104,9 +104,11 @@ public:
 
 	int no_daemon;
 	int no_logger;
+	int log_syslog;
 	unsigned int max_logitem_length;
 	int anonymise_logs;
 	int log_ad_blocks;
+	int log_timestamp;
 	int soft_restart;
 
 #ifdef __EMAIL
