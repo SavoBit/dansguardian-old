@@ -105,7 +105,7 @@ extern "C"
 }
 
 // logging & URL cache processes
-int log_listener(std::string log_location, int logconerror);
+int log_listener(std::string log_location, int logconerror, int logsyslog);
 int url_list_listener(int logconerror);
 // send flush message over URL cache IPC socket
 void flush_urlcache();
@@ -843,7 +843,7 @@ void tellchild_accept(int num, int whichsock)
 // *
 
 
-int log_listener(std::string log_location, int logconerror)
+int log_listener(std::string log_location, int logconerror, int logsyslog)
 {
 #ifdef DGDEBUG
 	std::cout << "log listener started" << std::endl;
@@ -872,18 +872,22 @@ int log_listener(std::string log_location, int logconerror)
 	std::string cr = "\n";
    
 	std::string where, what, how, cat, clienthost, from, who, mimetype;
-	int port, size, isnaughty, isexception, istext, code;
-	int cachehit, wasinfected, wasscanned, naughtiness, filtergroup;
-	long tv_sec, tv_usec;
-	int contentmodified, urlmodified;   
-	
-	ofstream logfile(log_location.c_str(), ios::app);
-	if (logfile.fail()) {
-		syslog(LOG_ERR, "%s", "Error opening/creating log file.");
+	int port = 80, size = 0, isnaughty = 0, isexception = 0, istext = 1, code = 200;
+	int cachehit = 0, wasinfected = 0, wasscanned = 0, naughtiness = 0, filtergroup = 0;
+	long tv_sec = 0, tv_usec = 0;
+	int contentmodified = 0, urlmodified = 0;
+
+	ofstream* logfile = NULL;
+	if (logsyslog == 0) {
+		logfile = new ofstream(log_location.c_str(), ios::app);
+		if (logfile->fail()) {
+			syslog(LOG_ERR, "Error opening/creating log file.");
 #ifdef DGDEBUG
-		std::cout << "Error opening/creating log file: " << log_location << std::endl;
+			std::cout << "Error opening/creating log file: " << log_location << std::endl;
 #endif
-		return 1;  // return with error
+			delete logfile;
+			return 1;  // return with error
+		}
 	}
 
 	ipcsockfd = loggersock.getFD();
@@ -1083,11 +1087,26 @@ int log_listener(std::string log_location, int logconerror)
 				what = "*URLMOD* " + what;
 			}
 
-			// start making the log entry proper
-			std::string builtline, year, month, day, hour, min, sec, when, ssize, sweight, vbody;
+			std::string builtline, year, month, day, hour, min, sec, when, ssize, sweight, vbody, utime;
+			struct timeval theend;
 
-			// "when" not used in format 3
+			// create a string representation of UNIX timestamp if desired
+			if ((o.log_timestamp == 1) || (o.log_file_format == 3)) {
+				gettimeofday(&theend, NULL);
+				String temp((int) (theend.tv_usec / 1000));
+				while (temp.length() < 3) {
+					temp = "0" + temp;
+				}
+				if (temp.length() > 3) {
+					temp = "999";
+				}
+				utime = temp.toCharArray();
+				utime = "." + utime;
+				utime = String((int) theend.tv_sec).toCharArray() + utime;
+			}
+
 			if (o.log_file_format != 3) {
+				// "when" not used in format 3, and not if logging timestamps instead
 				String temp;
 				time_t tnow;  // to hold the result from time()
 				struct tm *tmnow;  // to hold the result from localtime()
@@ -1111,6 +1130,10 @@ int log_listener(std::string log_location, int logconerror)
 				// truncate long log items
 				/*if ((o.max_logitem_length > 0) && (when.length() > o.max_logitem_length))
 					when.resize(o.max_logitem_length);*/
+				// append timestamp if desired
+				if (o.log_timestamp == 1)
+					when += " " + utime;
+					
 			}
 
 			sweight = String(naughtiness).toCharArray();
@@ -1154,29 +1177,17 @@ int log_listener(std::string log_location, int logconerror)
 				break;
 			case 3:
 				{
-					// as utime and duration are only logged in format 3, their creation is best done here, not in all cases.
-					std::string duration, utime, hier, hitmiss;
-					struct timeval theend;
-					gettimeofday(&theend, NULL);
+					// as certain bits of info are logged in format 3, their creation is best done here, not in all cases.
+					std::string duration, hier, hitmiss;
 					long durationsecs, durationusecs;
 					durationsecs = (theend.tv_sec - tv_sec);
 					durationusecs = theend.tv_usec - tv_usec;
 					durationusecs = (durationusecs / 1000) + durationsecs * 1000;
-					String temp = String((int) durationusecs);
+					String temp((int) durationusecs);
 					while (temp.length() < 6) {
 						temp = " " + temp;
 					}
 					duration = temp.toCharArray();
-					temp = String((int) (theend.tv_usec / 1000));
-					while (temp.length() < 3) {
-						temp = "0" + temp;
-					}
-					if (temp.length() > 3) {
-						temp = "999";
-					}
-					utime = temp.toCharArray();
-					utime = "." + utime;
-					utime = String((int) theend.tv_sec).toCharArray() + utime;
 
 					if (code == 403) {
 						hitmiss = "TCP_DENIED/403";
@@ -1213,13 +1224,15 @@ int log_listener(std::string log_location, int logconerror)
 					+ stringcode + "\",\"" + mimetype + "\",\"" + clienthost + "\",\"" + o.fg[filtergroup]->name + "\"";
 				break;
 			default:
-
 				builtline = when +" "+ who + " " + from + " " + where + " " + what + " "
 					+ how + " " + ssize + " " + sweight + " " + cat +  " " + stringgroup + " "
 					+ stringcode + " " + mimetype + " " + clienthost + " " + o.fg[filtergroup]->name;
 			}
-		   
-			logfile << builtline << std::endl;  // append the line
+
+			if (logsyslog == 0)
+				*logfile << builtline << std::endl;  // append the line
+			else
+				syslog(LOG_INFO, "%s", builtline.c_str());
 #ifdef DGDEBUG
 			std::cout << itemcount << " " << builtline << std::endl;
 #endif
@@ -1385,7 +1398,10 @@ int log_listener(std::string log_location, int logconerror)
 	// should never get here
 	syslog(LOG_ERR, "%s", "Something wicked has ipc happened");
 
-	logfile.close();  // close the file
+	if (logfile) {
+		logfile->close();  // close the file
+		delete logfile;
+	}
 	loggersock.close();
 	return 1;  // It is only possible to reach here with an error
 }
@@ -1915,7 +1931,7 @@ int fc_controlit()
 			serversockets.deleteAll();  // we don't need our copy of this so close it
 			delete[] serversockfds;
 			urllistsock.close();  // we don't need our copy of this so close it
-			log_listener(o.log_location, o.logconerror);
+			log_listener(o.log_location, o.logconerror, o.log_syslog);
 #ifdef DGDEBUG
 			std::cout << "Log listener exiting" << std::endl;
 #endif
