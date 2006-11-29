@@ -35,7 +35,11 @@
 #include <fstream>
 #include <fcntl.h>
 #include <locale.h>
+
+#ifdef __BENCHMARK
 #include <sys/times.h>
+#include "NaughtyFilter.hpp"
+#endif
 
 
 // GLOBALS
@@ -166,6 +170,7 @@ int main(int argc, char *argv[])
 					std::cout << "  --bs benchmark searching filter group 1's bannedsitelist" << std::endl;
 					std::cout << "  --bu benchmark searching filter group 1's bannedurllist" << std::endl;
 					std::cout << "  --bp benchmark searching filter group 1's phrase lists" << std::endl;
+					std::cout << "  --bn benchmark filter group 1's NaughtyFilter in its entirety" << std::endl;
 #endif
 					return 0;
 #ifdef __BENCHMARK
@@ -250,6 +255,22 @@ int main(int argc, char *argv[])
 					results += o.lm.l[o.fg[0]->banned_phrase_list]->getItemAtInt(*i);
 					results += '\n';
 				}
+			}
+			break;
+		case 'n': {
+				// NaughtyFilter
+				std::string file;
+				NaughtyFilter n;
+				while (!lines.empty()) {
+					strline = lines.back();
+					lines.pop_back();
+					file += strline->toCharArray();
+					delete strline;
+				}
+				DataBuffer d(file.c_str(), file.length());
+				String f;
+				n.checkme(&d, f, f);
+				std::cout << n.isItNaughty << std::endl << n.whatIsNaughty << std::endl << n.whatIsNaughtyLog << std::endl << n.whatIsNaughtyCategories << std::endl;
 			}
 			break;
 		default:
