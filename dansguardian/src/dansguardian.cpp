@@ -35,6 +35,7 @@
 #include <fstream>
 #include <fcntl.h>
 #include <locale.h>
+#include <sys/times.h>
 
 
 // GLOBALS
@@ -98,14 +99,16 @@ int main(int argc, char *argv[])
 	std::cout << "Running in debug mode..." << std::endl;
 #endif
 
+#ifdef __BENCHMARK
+	char benchmark = '\0';
+#endif
+
 	for (int i = 1; i < argc; i++) {
 		if (argv[i][0] == '-') {
 			for (unsigned int j = 1; j < strlen(argv[i]); j++) {
 				char option = argv[i][j];
 				bool dobreak = false;
 				switch (option) {
-				case 'P':
-					return 0;
 				case 'q':
 					read_config(configfile.c_str(), 0);
 					return sysv_kill(o.pid_filename);
@@ -138,15 +141,17 @@ int main(int argc, char *argv[])
 					nodaemon = true;
 					break;
 				case 'c':
-					if (++i < argc) {
-						configfile = argv[i];
+					if ((i+1) < argc) {
+						configfile = argv[i+1];
 						dobreak = true;  // broken-ness of this option reported by Jason Gauthier 2006-03-09
+					} else {
+						std::cerr << "No config file specified!" << std::endl;
+						return 1;
 					}
 					break;
 				case 'h':
 					std::cout << "Usage: " << argv[0] << " [{-c ConfigFileName|-v|-P|-h|-N|-q|-s|-r|-g}]" << std::endl;
 					std::cout << "  -v gives the version number and build options." << std::endl;
-					std::cout << "  -P displays the name and version of any 3rd party extensions compiled in." << std::endl;
 					std::cout << "  -h gives this message." << std::endl;
 					std::cout << "  -c allows you to specify a different configuration file location." << std::endl;
 					std::cout << "  -N Do not go into the background." << std::endl;
@@ -154,12 +159,27 @@ int main(int argc, char *argv[])
 					std::cout << "  -Q kill any running copy AND start a new one with current options." << std::endl;
 					std::cout << "  -s shows the parent process PID and exits." << std::endl;
 					std::cout << "  -r closes all connections and reloads config files by issuing a HUP," << std::endl;
-					std::cout << "     but this does not reset the maxchildren option." << std::endl;
-					std::cout << "  -g gently restarts by not closing all current connections and only reloads" << std::endl
-						<< "     filter group config files by issuing a USR1." << std::endl;
+					std::cout << "     but this does not reset the maxchildren option (amongst others)." << std::endl;
+					std::cout << "  -g gently restarts by not closing all current connections; only reloads" << std::endl
+						<< "     filter group config files. (Issues a USR1)" << std::endl;
+#ifdef __BENCHMARK
+					std::cout << "  --bs benchmark searching filter group 1's bannedsitelist" << std::endl;
+					std::cout << "  --bu benchmark searching filter group 1's bannedurllist" << std::endl;
+					std::cout << "  --bp benchmark searching filter group 1's phrase lists" << std::endl;
+#endif
 					return 0;
+#ifdef __BENCHMARK
+				case '-':
+					if (strlen(argv[i]) != 4) {
+						std::cerr << "Invalid benchmark option" << std::endl;
+						return 1;
+					}
+					benchmark = argv[i][3];
+					dobreak = true;
+					break;
+#endif
 				}
-				if (dobreak) break;
+				if (dobreak) break; // skip to the next argument
 			}
 		}
 	}
@@ -172,6 +192,75 @@ int main(int argc, char *argv[])
 	}
 	
 	read_config(configfile.c_str(), 2);
+
+#ifdef __BENCHMARK
+	// run benchmarks instead of starting the daemon
+	if (benchmark) {
+		std::string results;
+		char* found;
+		struct tms then, now;
+		std::string line;
+		std::deque<String*> lines;
+		while (!std::cin.eof()) {
+			std::getline(std::cin, line);
+			String* strline = new String(line);
+			lines.push_back(strline);
+		}
+		String* strline = NULL;
+		times(&then);
+		switch (benchmark) {
+		case 's':
+			// bannedsitelist
+			while (!lines.empty()) {
+				strline = lines.back();
+				lines.pop_back();
+				if ((found = o.fg[0]->inBannedSiteList(*strline))) {
+					results += found;
+					results += '\n';
+				}
+				delete strline;
+			}
+			break;
+		case 'u':
+			// bannedurllist
+			while (!lines.empty()) {
+				strline = lines.back();
+				lines.pop_back();
+				if ((found = o.fg[0]->inBannedURLList(*strline))) {
+					results += found;
+					results += '\n';
+				}
+				delete strline;
+			}
+			break;
+		case 'p': {
+				// phraselists
+				std::deque<unsigned int> found;
+				std::string file;
+				while (!lines.empty()) {
+					strline = lines.back();
+					lines.pop_back();
+					file += strline->toCharArray();
+					delete strline;
+				}
+				char cfile[file.length() + 129];
+				memcpy(cfile, file.c_str(), sizeof(char)*file.length());
+				o.lm.l[o.fg[0]->banned_phrase_list]->graphSearch(found, cfile, file.length());
+				for (std::deque<unsigned int>::iterator i = found.begin(); i != found.end(); i++) {
+					results += o.lm.l[o.fg[0]->banned_phrase_list]->getItemAtInt(*i);
+					results += '\n';
+				}
+			}
+			break;
+		default:
+			std::cerr << "Invalid benchmark option" << std::endl;
+			return 1;
+		}
+		times(&now);
+		std::cout << results << std::endl << "time: " << now.tms_utime - then.tms_utime << std::endl;
+		return 0;
+	}
+#endif
 
 	if (sysv_amirunning(o.pid_filename)) {
 		syslog(LOG_ERR, "%s", "I seem to be running already!");
