@@ -99,6 +99,9 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 			return;  // Well there is no point in continuing is there?
 	}
 	
+	if (o.weighted_phrase_mode == 0)
+		return;
+	
 	// hex-decoded data (not case converted)
 	int hexdecodedlen = rawbodylen;
 	char *hexdecoded = rawbody;
@@ -176,232 +179,223 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 		std::cout << "Preserve case: " << preserve_case << std::endl;
 #endif
 
-
-		try {  // the last thing we need is an exception causing a memory leak
-
-			int i, j;
+		int i, j;
 #ifdef DGDEBUG
-			if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2 || o.phrase_filter_mode == 3)
-				std::cout << "Raw content needed" << std::endl;
+		if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2 || o.phrase_filter_mode == 3)
+			std::cout << "Raw content needed" << std::endl;
 #endif
-			// use the one that's been hex decoded, but not stripped
-			// make a copy of the document lowercase char by char
-			if (preserve_case == 1) {
-				for (i = 0; i < hexdecodedlen; i++) {
-					c = hexdecoded[i];
+		// use the one that's been hex decoded, but not stripped
+		// make a copy of the document lowercase char by char
+		if (preserve_case == 1) {
+			for (i = 0; i < hexdecodedlen; i++) {
+				c = hexdecoded[i];
+				if (c == 13 || c == 9 || c == 10) {
+					c = 32;  // convert all whitespace to a space
+				}
+				bodylc[i] = c;
+			}
+		} else {
+#ifdef DGDEBUG
+			std::cout << "Not preserving case of raw content" << std::endl;
+#endif
+			for (i = 0; i < hexdecodedlen; i++) {
+				c = hexdecoded[i];
+				if (c >= 'A' && c <= 'Z') {
+					c = 'a' + c - 'A';
+				}
+				else if (c >= 192 && c <= 221) {  // for accented chars
+					c += 32;  // 224 + c - 192
+				} else {
 					if (c == 13 || c == 9 || c == 10) {
 						c = 32;  // convert all whitespace to a space
 					}
-					bodylc[i] = c;
 				}
-			} else {
-#ifdef DGDEBUG
-				std::cout << "Not preserving case of raw content" << std::endl;
-#endif
-				for (i = 0; i < hexdecodedlen; i++) {
-					c = hexdecoded[i];
-					if (c >= 'A' && c <= 'Z') {
-						c = 'a' + c - 'A';
-					}
-					else if (c >= 192 && c <= 221) {  // for accented chars
-						c += 32;  // 224 + c - 192
-					} else {
-						if (c == 13 || c == 9 || c == 10) {
-							c = 32;  // convert all whitespace to a space
-						}
-					}
-					bodylc[i] = c;
-				}
+				bodylc[i] = c;
 			}
+		}
 
-			// filter meta tags & title only
-			// based on idea from Nicolas Peyrussie
-			if(o.phrase_filter_mode == 3) {
+		// filter meta tags & title only
+		// based on idea from Nicolas Peyrussie
+		if(o.phrase_filter_mode == 3) {
 #ifdef DGDEBUG
-				std::cout << "Filtering META/title" << std::endl;
+			std::cout << "Filtering META/title" << std::endl;
 #endif
-				bool addit = false;  // flag if we should copy this char to filtered version
-				bool needcheck = false;  // flag if we actually find anything worth filtering
-				int bodymetalen;
-			
-				// find </head> or <body> as end of search range
-				char* endhead = strstr(bodylc, "</head");
+			bool addit = false;  // flag if we should copy this char to filtered version
+			bool needcheck = false;  // flag if we actually find anything worth filtering
+			int bodymetalen;
+		
+			// find </head> or <body> as end of search range
+			char* endhead = strstr(bodylc, "</head");
+#ifdef DGDEBUG
+			if (endhead != NULL)
+				std::cout<<"Found '</head', limiting search range"<<std::endl;
+#endif
+			if (endhead == NULL) {
+				endhead = strstr(bodylc, "<body");
 #ifdef DGDEBUG
 				if (endhead != NULL)
-					std::cout<<"Found '</head', limiting search range"<<std::endl;
+					std::cout<<"Found '<body', limiting search range"<<std::endl;
+#endif
+			}
+
+			// if case preserved, also look for uppercase versions
+			if ((preserve_case == 1) and (endhead == NULL)) {
+				endhead = strstr(bodylc, "</HEAD");
+#ifdef DGDEBUG
+				if (endhead != NULL)
+					std::cout<<"Found '</HEAD', limiting search range"<<std::endl;
 #endif
 				if (endhead == NULL) {
-					endhead = strstr(bodylc, "<body");
+					endhead = strstr(bodylc, "<BODY");
 #ifdef DGDEBUG
 					if (endhead != NULL)
-						std::cout<<"Found '<body', limiting search range"<<std::endl;
+						std::cout<<"Found '<BODY', limiting search range"<<std::endl;
 #endif
-				}
-
-				// if case preserved, also look for uppercase versions
-				if ((preserve_case == 1) and (endhead == NULL)) {
-					endhead = strstr(bodylc, "</HEAD");
-#ifdef DGDEBUG
-					if (endhead != NULL)
-						std::cout<<"Found '</HEAD', limiting search range"<<std::endl;
-#endif
-					if (endhead == NULL) {
-						endhead = strstr(bodylc, "<BODY");
-#ifdef DGDEBUG
-						if (endhead != NULL)
-							std::cout<<"Found '<BODY', limiting search range"<<std::endl;
-#endif
-					}
-				}
-
-				if (endhead == NULL)
-					endhead = bodylc+hexdecodedlen;
-
-				char* bodymeta = new char[(endhead - bodylc) + 128 + 1];
-
-				// initialisation for removal of duplicate non-alphanumeric characters
-				j = 1;
-				bodymeta[0] = 32;
-
-				for (i = 0; i < (endhead - bodylc) - 7; i++) {
-					c = bodylc[i];
-					// are we at the start of a tag?
-					if ((!addit) && (c == '<')) {
-						if ((strncmp(bodylc+i+1, "meta", 4) == 0) or ((preserve_case == 1) and (strncmp(bodylc+i+1, "META", 4) == 0))) {
-#ifdef DGDEBUG
-							std::cout << "Found META" << std::endl;
-#endif
-							// start adding data to the check buffer
-							addit = true;
-							needcheck = true;
-							// skip 'meta '
-							i += 6;
-							c = bodylc[i];
-						}
-						// are we at the start of a title tag?
-						else if ((strncmp(bodylc+i+1, "title", 5) == 0) or ((preserve_case == 1) and (strncmp(bodylc+i+1, "TITLE", 5) == 0))) {
-#ifdef DGDEBUG
-							std::cout << "Found TITLE" << std::endl;
-#endif
-							// start adding data to the check buffer
-							addit = true;
-							needcheck = true;
-							// skip 'title>'
-							i += 7;
-							c = bodylc[i];
-						}
-					}
-					// meta tags end at a >
-					// title tags end at the next < (opening of </title>)
-					if (addit && ((c == '>') || (c == '<'))) {
-						// stop ading data
-						addit = false;
-						// add a space before the next word in the check buffer
-						bodymeta[j++] = 32;
-					}
-				
-					if (addit) {
-						// if we're in "record" mode (i.e. inside a title/metatag), strip certain characters out
-						// of the data (to sanitise metatags & aid filtering of titles)
-						if ( c== ',' || c == '=' || c == '"' || c  == '\''
-							|| c == '(' || c == ')' || c == '.')
-						{
-							// replace with a space
-							c = 32;
-						}
-						// don't bother duplicating spaces
-						if ((c != 32) || (c == 32 && (bodymeta[j-1] != 32))) {
-							bodymeta[j++] = c;  // copy it to the filtered copy
-						}
-					}
-				}
-				if (needcheck) {
-					bodymeta[j++] = '\0';
-#ifdef DGDEBUG
-					std::cout << bodymeta << std::endl;
-#endif
-					bodymetalen = j;
-					checkphrase(bodymeta, bodymetalen);
-				}
-#ifdef DGDEBUG
-				else
-					std::cout<<"Nothing to filter"<<std::endl;
-#endif
-
-				delete[] bodymeta;
-				// surely the intention is to search *only* meta/title, so always exit
-				delete[] bodylc;
-				delete[] bodynohtml;
-				if (hexdecoded != rawbody)
-					delete[]hexdecoded;
-				return;
-			}
-
-			if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2) {
-#ifdef DGDEBUG
-				std::cout << "Checking raw content" << std::endl;
-#endif
-				// check unstripped content
-				checkphrase(bodylc, hexdecodedlen, &url, &domain);
-				if (isItNaughty || isException) {
-					delete[]bodylc;
-					delete[] bodynohtml;
-					if (hexdecoded != rawbody)
-						delete[]hexdecoded;
-					return;  // Well there is no point in continuing is there?
 				}
 			}
 
-			if (o.phrase_filter_mode == 0) {
+			if (endhead == NULL)
+				endhead = bodylc+hexdecodedlen;
+
+			char* bodymeta = new char[(endhead - bodylc) + 128 + 1];
+
+			// initialisation for removal of duplicate non-alphanumeric characters
+			j = 1;
+			bodymeta[0] = 32;
+
+			for (i = 0; i < (endhead - bodylc) - 7; i++) {
+				c = bodylc[i];
+				// are we at the start of a tag?
+				if ((!addit) && (c == '<')) {
+					if ((strncmp(bodylc+i+1, "meta", 4) == 0) or ((preserve_case == 1) and (strncmp(bodylc+i+1, "META", 4) == 0))) {
+#ifdef DGDEBUG
+						std::cout << "Found META" << std::endl;
+#endif
+						// start adding data to the check buffer
+						addit = true;
+						needcheck = true;
+						// skip 'meta '
+						i += 6;
+						c = bodylc[i];
+					}
+					// are we at the start of a title tag?
+					else if ((strncmp(bodylc+i+1, "title", 5) == 0) or ((preserve_case == 1) and (strncmp(bodylc+i+1, "TITLE", 5) == 0))) {
+#ifdef DGDEBUG
+						std::cout << "Found TITLE" << std::endl;
+#endif
+						// start adding data to the check buffer
+						addit = true;
+						needcheck = true;
+						// skip 'title>'
+						i += 7;
+						c = bodylc[i];
+					}
+				}
+				// meta tags end at a >
+				// title tags end at the next < (opening of </title>)
+				if (addit && ((c == '>') || (c == '<'))) {
+					// stop ading data
+					addit = false;
+					// add a space before the next word in the check buffer
+					bodymeta[j++] = 32;
+				}
+			
+				if (addit) {
+					// if we're in "record" mode (i.e. inside a title/metatag), strip certain characters out
+					// of the data (to sanitise metatags & aid filtering of titles)
+					if ( c== ',' || c == '=' || c == '"' || c  == '\''
+						|| c == '(' || c == ')' || c == '.')
+					{
+						// replace with a space
+						c = 32;
+					}
+					// don't bother duplicating spaces
+					if ((c != 32) || (c == 32 && (bodymeta[j-1] != 32))) {
+						bodymeta[j++] = c;  // copy it to the filtered copy
+					}
+				}
+			}
+			if (needcheck) {
+				bodymeta[j++] = '\0';
+#ifdef DGDEBUG
+				std::cout << bodymeta << std::endl;
+#endif
+				bodymetalen = j;
+				checkphrase(bodymeta, bodymetalen);
+			}
+#ifdef DGDEBUG
+			else
+				std::cout<<"Nothing to filter"<<std::endl;
+#endif
+
+			delete[] bodymeta;
+			// surely the intention is to search *only* meta/title, so always exit
+			delete[] bodylc;
+			delete[] bodynohtml;
+			if (hexdecoded != rawbody)
+				delete[]hexdecoded;
+			return;
+		}
+
+		if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2) {
+#ifdef DGDEBUG
+			std::cout << "Checking raw content" << std::endl;
+#endif
+			// check unstripped content
+			checkphrase(bodylc, hexdecodedlen, &url, &domain);
+			if (isItNaughty || isException) {
 				delete[]bodylc;
 				delete[] bodynohtml;
 				if (hexdecoded != rawbody)
 					delete[]hexdecoded;
-				return;  // only doing raw mode filtering
+				return;  // Well there is no point in continuing is there?
 			}
+		}
 
-			// if we fell through to here, use the one that's been hex decoded AND stripped
-			// Strip HTML
+		if (o.phrase_filter_mode == 0) {
+			delete[]bodylc;
+			delete[] bodynohtml;
+			if (hexdecoded != rawbody)
+				delete[]hexdecoded;
+			return;  // only doing raw mode filtering
+		}
+
+		// if we fell through to here, use the one that's been hex decoded AND stripped
+		// Strip HTML
 #ifdef DGDEBUG
-			std::cout << "\"Smart\" filtering is enabled" << std::endl;
+		std::cout << "\"Smart\" filtering is enabled" << std::endl;
 #endif
-			// we need this extra byte *
-			bool inhtml = false;  // to flag if our pointer is within a html <>
-			bool addit;  // flag if we should copy this char to filtered version
-			j = 1;
-			bodynohtml[0] = 32;  // * for this
-			for (int i = 0; i < hexdecodedlen; i++) {
-				addit = true;
-				c = bodylc[i];
-				if (c == '<') {
-					inhtml = true;  // flag we are inside a html <>
-				}
-				if (c == '>') {	// flag we have just left a html <>
-					inhtml = false;
-					c = 32;
-				}
-				if (inhtml) {
+		// we need this extra byte *
+		bool inhtml = false;  // to flag if our pointer is within a html <>
+		bool addit;  // flag if we should copy this char to filtered version
+		j = 1;
+		bodynohtml[0] = 32;  // * for this
+		for (int i = 0; i < hexdecodedlen; i++) {
+			addit = true;
+			c = bodylc[i];
+			if (c == '<') {
+				inhtml = true;  // flag we are inside a html <>
+			}
+			if (c == '>') {	// flag we have just left a html <>
+				inhtml = false;
+				c = 32;
+			}
+			if (inhtml) {
+				addit = false;
+			}
+			if (c == 32) {
+				if (bodynohtml[j - 1] == 32) {	// * and this
 					addit = false;
 				}
-				if (c == 32) {
-					if (bodynohtml[j - 1] == 32) {	// * and this
-						addit = false;
-					}
-				}
-				if (addit) {	// if it passed the filters
-					bodynohtml[j++] = c;  // copy it to the filtered copy
-				}
 			}
-#ifdef DGDEBUG
-			std::cout << "Checking smart content" << std::endl;
-#endif
-			checkphrase(bodynohtml, j);
+			if (addit) {	// if it passed the filters
+				bodynohtml[j++] = c;  // copy it to the filtered copy
+			}
 		}
-		catch(exception & e) {
 #ifdef DGDEBUG
-			std::cerr<<"NaughtyFilter caught an exception: "<<e.what()<<std::endl;
+		std::cout << "Checking smart content" << std::endl;
 #endif
-		}
+		checkphrase(bodynohtml, j);
 
 		// second time round the case loop (if there is a second time),
 		// do preserve case (exotic encodings)
@@ -449,7 +443,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 #ifdef __PCRE
 	// if weighted phrases are enabled, and we have been passed a URL and domain, and embedded URL checking is enabled...
 	// then check for embedded URLs!
-	if (o.weighted_phrase_mode != 0 && url != NULL && o.fg[filtergroup]->embedded_url_weight > 0) {
+	if (url != NULL && o.fg[filtergroup]->embedded_url_weight > 0) {
 		listent *ourcat = NULL;
 		std::deque<String> found;
 		std::deque<String>::iterator foundtop = found.begin();
@@ -615,6 +609,13 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 	std::deque<unsigned int>::iterator foundcurrent;
 	std::deque<unsigned int>::iterator alreadyfound;
 
+	// de-duplicate list of phrases if in weighted phrase mode 2
+	if (o.weighted_phrase_mode == 2) {
+		std::sort(foundtop, foundend);
+		foundend = std::unique(foundtop, foundend);
+		found.erase(foundend, found.end());
+	}
+
 	// look for combinations first
 	//if banned must wait for exception later
 	std::string combifound = "";
@@ -728,56 +729,41 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 			}
 		}
 		else if (type == 1) {
-			wasbefore = false;
-			if (o.weighted_phrase_mode == 2) {
-				// check for duplicates & ignore them
-				alreadyfound = foundtop;
-				while (alreadyfound != foundcurrent) {
-					if (*alreadyfound == *foundcurrent) {
-						wasbefore = true;
-						break;
-					}
-					alreadyfound++;
-				}
-			}
-			if ((o.weighted_phrase_mode == 1) || ((o.weighted_phrase_mode == 2) && !wasbefore)) {
-				//normal mode - count all instances; i.e., multiple instances of word on one page all get counted.
-				weight = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getWeightAt(*foundcurrent);
-				weighting += weight;
-				if (weight > 0) {
-					currcat = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(*foundcurrent, &cat);
-					if (cat >= 0) {
-						//don't output duplicate categories
-						catcurrent = cattop;
-						catfound = false;
-						while (catcurrent != listcategories.end()) {
-							if (catcurrent->cat == cat) {
-								catfound = true;
-								catcurrent->weight += weight;
-								break;
-							}
-							catcurrent++;
+			weight = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getWeightAt(*foundcurrent);
+			weighting += weight;
+			if (weight > 0) {
+				currcat = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(*foundcurrent, &cat);
+				if (cat >= 0) {
+					//don't output duplicate categories
+					catcurrent = cattop;
+					catfound = false;
+					while (catcurrent != listcategories.end()) {
+						if (catcurrent->cat == cat) {
+							catfound = true;
+							catcurrent->weight += weight;
+							break;
 						}
-						if (!catfound)
-							listcategories.push_back(listent(cat,weight,currcat));
+						catcurrent++;
 					}
+					if (!catfound)
+						listcategories.push_back(listent(cat,weight,currcat));
 				}
-
-				if (o.show_weighted_found == 1) {
-					if (weightedphrase.length() > 0) {
-						weightedphrase += "+";
-					}
-					if (weight < 0) {
-						weightedphrase += "-";
-					}
-
-					weightedphrase += (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent);
-				}
-#ifdef DGDEBUG
-				std::cout << "found weighted phrase ("<< o.weighted_phrase_mode << "):"
-					<< (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent) << std::endl;
-#endif
 			}
+
+			if (o.show_weighted_found == 1) {
+				if (weightedphrase.length() > 0) {
+					weightedphrase += "+";
+				}
+				if (weight < 0) {
+					weightedphrase += "-";
+				}
+
+				weightedphrase += (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent);
+			}
+#ifdef DGDEBUG
+			std::cout << "found weighted phrase ("<< o.weighted_phrase_mode << "):"
+				<< (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent) << std::endl;
+#endif
 		}
 		else if (type == -1) {
 			isException = true;
@@ -790,6 +776,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 		}
 		foundcurrent++;
 	}
+
 #ifdef DGDEBUG
 	std::cout << "WEIGHTING: " << weighting << std::endl;
 #endif
