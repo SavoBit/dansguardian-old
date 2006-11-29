@@ -30,7 +30,6 @@ class DMPlugin;
 class DataBuffer
 {
 public:
-	char *buffer[1024];
 	char *data;
 	unsigned int buffer_length;
 	char *compresseddata;
@@ -44,6 +43,7 @@ public:
 	DMPlugin *dm_plugin;
 
 	DataBuffer();
+	DataBuffer(const void* indata, unsigned int length);
 	~DataBuffer();
 
 	int length() { return buffer_length; };
