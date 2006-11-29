@@ -170,7 +170,7 @@ bool CSPlugin::readStandardLists()
 		syslog(LOG_ERR, "%s", "Error opening exceptionvirusmimetypelist");
 		return false;
 	}
-	exceptionvirusmimetypelist.endsWithSort();
+	exceptionvirusmimetypelist.doSort(false);
 	if (!exceptionvirusextensionlist.readItemList(cv["exceptionvirusextensionlist"].toCharArray(), false, 0)) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening exceptionvirusextensionlist" << std::endl;
@@ -178,7 +178,7 @@ bool CSPlugin::readStandardLists()
 		syslog(LOG_ERR, "%s", "Error opening exceptionvirusextensionlist");
 		return false;
 	}
-	exceptionvirusextensionlist.endsWithSort();
+	exceptionvirusextensionlist.doSort(false);
 	if (!exceptionvirussitelist.readItemList(cv["exceptionvirussitelist"].toCharArray(), false, 0)) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening exceptionvirussitelist" << std::endl;
@@ -186,7 +186,7 @@ bool CSPlugin::readStandardLists()
 		syslog(LOG_ERR, "%s", "Error opening exceptionvirussitelist");
 		return false;
 	}
-	exceptionvirussitelist.endsWithSort();
+	exceptionvirussitelist.doSort(false);
 	if (!exceptionvirusurllist.readItemList(cv["exceptionvirusurllist"].toCharArray(), true, 0)) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening exceptionvirusurllist" << std::endl;
@@ -194,7 +194,7 @@ bool CSPlugin::readStandardLists()
 		syslog(LOG_ERR, "%s", "Error opening exceptionvirusurllist");
 		return false;
 	}
-	exceptionvirusurllist.startsWithSort();
+	exceptionvirusurllist.doSort(true);
 	return true;
 }
 

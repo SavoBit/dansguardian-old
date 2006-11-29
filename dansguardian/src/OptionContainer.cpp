@@ -621,9 +621,9 @@ bool OptionContainer::doReadItemList(const char* filename, ListContainer* lc, co
 		return false;
 	}
 	if (swsort)
-		lc->startsWithSort();
+		lc->doSort(true);
 	else
-		lc->endsWithSort();
+		lc->doSort(false);
 	return true;
 }
 

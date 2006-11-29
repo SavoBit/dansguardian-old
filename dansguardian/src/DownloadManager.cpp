@@ -176,7 +176,7 @@ bool DMPlugin::readStandardLists()
 			syslog(LOG_ERR, "Error opening managedmimetypelist");
 			return false;
 		}
-		mimetypelist.endsWithSort();
+		mimetypelist.doSort(false);
 		mimelistenabled = true;
 	} else {
 		mimelistenabled = false;
@@ -191,7 +191,7 @@ bool DMPlugin::readStandardLists()
 			syslog(LOG_ERR, "Error opening managedextensionlist");
 			return false;
 		}
-		extensionlist.endsWithSort();
+		extensionlist.doSort(false);
 		extensionlistenabled = true;
 	} else {
 		extensionlistenabled = false;

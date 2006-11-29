@@ -162,9 +162,9 @@ bool FOptionContainer::readFile(const char *filename, unsigned int* whichlist, b
 	(*whichlist) = (unsigned) res;
 	if (!(*o.lm.l[(*whichlist)]).used) {
 		if (sortsw)
-			(*o.lm.l[(*whichlist)]).startsWithSort();
+			(*o.lm.l[(*whichlist)]).doSort(true);
 		else
-			(*o.lm.l[(*whichlist)]).endsWithSort();
+			(*o.lm.l[(*whichlist)]).doSort(false);
 		if (cache && (createlistcachefiles == 1)) {
 			if (!(*o.lm.l[(*whichlist)]).createCacheFile()) {
 				return false;
@@ -843,7 +843,7 @@ bool FOptionContainer::readRegExListFile(const char *filename, const char *listn
 	}
 	listid = (unsigned) result;
 	if (!(*o.lm.l[listid]).used) {
-		//(*o.lm.l[listid]).startsWithSort();
+		//(*o.lm.l[listid]).doSort(true);
 		(*o.lm.l[listid]).used = true;
 	}
 	RegExp r;
