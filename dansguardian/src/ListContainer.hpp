@@ -83,9 +83,7 @@ public:
 	int getWeightAt(unsigned int index);
 	int getTypeAt(unsigned int index);
 
-
-	void endsWithSort();
-	void startsWithSort();
+	void doSort(const bool startsWith);
 
 	bool createCacheFile();
 	void makeGraph(int fqs);
@@ -150,18 +148,14 @@ private:
 	int graphFindBranches(unsigned int pos);
 	void graphCopyNodePhrases(unsigned int pos);
 	int bmsearch(char *file, int fl, std::string s);
-	void quicksortSW(int l, int r);
-	void quicksortEW(int l, int r);
+	void quicksort(int (ListContainer::*comparitor)(const char* a, const char* b), int l, int r);
 	bool readProcessedItemList(const char *filename, bool startswith, int filters);
 	void addToItemList(char *s, int len);
 	int greaterThanEWF(const char *a, const char *b);  // full match
 	int greaterThanEW(const char *a, const char *b);  // partial ends with
 	int greaterThanSWF(const char *a, const char *b);  // full match
 	int greaterThanSW(const char *a, const char *b);  // partial starts with
-	int searchREWF(int a, int s, const char *p);
-	int searchREW(int a, int s, const char *p);
-	int searchRSW(int a, int s, const char *p);
-	int searchRSWF(int a, int s, const char *p);
+	int search(int (ListContainer::*comparitor)(const char* a, const char* b), int a, int s, const char *p);
 	bool isCacheFileNewer(const char *string);
 	int getFileLength(const char *filename);
 	int getFileDate(const char *filename);

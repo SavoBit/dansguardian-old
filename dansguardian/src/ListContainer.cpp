@@ -474,7 +474,7 @@ bool ListContainer::inListEndsWith(char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
-			if (searchREW(0, items - 1, string) >= 0) {
+			if (search(&ListContainer::greaterThanEW,0, items - 1, string) >= 0) {
 				lastcategory = category;
 				return true;
 			}
@@ -496,7 +496,7 @@ bool ListContainer::inListStartsWith(char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
-			if (searchRSW(0, items - 1, string) >= 0) {
+			if (search(&ListContainer::greaterThanSW,0, items - 1, string) >= 0) {
 				lastcategory = category;
 				return true;
 			}
@@ -520,9 +520,9 @@ char *ListContainer::findInList(char *string)
 		if (items > 0) {
 			int r;
 			if (isSW) {
-				r = searchRSWF(0, items - 1, string);
+				r = search(&ListContainer::greaterThanSWF,0, items - 1, string);
 			} else {
-				r = searchREWF(0, items - 1, string);
+				r = search(&ListContainer::greaterThanEWF,0, items - 1, string);
 			}
 			if (r >= 0) {
 				lastcategory = category;
@@ -546,7 +546,7 @@ char *ListContainer::findStartsWith(char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
-			int r = searchRSW(0, items - 1, string);
+			int r = search(&ListContainer::greaterThanSW,0, items - 1, string);
 			if (r >= 0) {
 				lastcategory = category;
 				return (data + list[r]);
@@ -568,7 +568,7 @@ char *ListContainer::findStartsWithPartial(char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
-			int r = searchRSW(0, items - 1, string);
+			int r = search(&ListContainer::greaterThanSW,0, items - 1, string);
 			if (r >= 0) {
 				lastcategory = category;
 				return (data + list[r]);
@@ -595,7 +595,7 @@ char *ListContainer::findEndsWith(char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
-			int r = searchREW(0, items - 1, string);
+			int r = search(&ListContainer::greaterThanEW,0, items - 1, string);
 			if (r >= 0) {
 				lastcategory = category;
 				return (data + list[r]);
@@ -636,28 +636,17 @@ int ListContainer::getTypeAt(unsigned int index)
 	return itemtype[index];
 }
 
-void ListContainer::endsWithSort()
+void ListContainer::doSort(const bool startsWith)
 {				// sort by ending of line
-	for (unsigned int i = 0; i < morelists.size(); i++) {
-		(*o.lm.l[morelists[i]]).endsWithSort();
-	}
+	for (unsigned int i = 0; i < morelists.size(); i++)
+		(*o.lm.l[morelists[i]]).doSort(startsWith);
 	if (items < 2 || issorted)
 		return;
-	quicksortEW(0, items - 1);
-	isSW = false;
-	issorted = true;
-	return;
-}
-
-void ListContainer::startsWithSort()
-{				// sort by start of line
-	for (unsigned int i = 0; i < morelists.size(); i++) {
-		(*o.lm.l[morelists[i]]).startsWithSort();
-	}
-	if (items < 2 || issorted)
-		return;
-	quicksortSW(0, items - 1);
-	isSW = true;
+	if (startsWith)
+		quicksort(&ListContainer::greaterThanSWF, 0, items - 1);
+	else
+		quicksort(&ListContainer::greaterThanEWF, 0, items - 1);
+	isSW = startsWith;
 	issorted = true;
 	return;
 }
@@ -1166,7 +1155,7 @@ void ListContainer::graphAdd(String s, int inx, int item)
 }
 
 // quicksort with 3 way partitioning sorted by the end of the line
-void ListContainer::quicksortEW(int l, int r)
+void ListContainer::quicksort(int (ListContainer::*comparitor)(const char* a, const char* b), int l, int r)
 {
 	if (r <= l)
 		return;
@@ -1175,8 +1164,8 @@ void ListContainer::quicksortEW(int l, int r)
 	char *v = data + list[r];
 	int i = l - 1, j = r, p = i, q = r;
 	for (;;) {
-		while (greaterThanEWF(data + list[++i], v) > 0);
-		while (greaterThanEWF(v, data + list[--j]) > 0) {
+		while ((this->*comparitor)(data + list[++i], v) > 0);
+		while ((this->*comparitor)(v, data + list[--j]) > 0) {
 			if (j == l)
 				break;
 		}
@@ -1185,13 +1174,13 @@ void ListContainer::quicksortEW(int l, int r)
 		e = list[i];
 		list[i] = list[j];
 		list[j] = e;
-		if (greaterThanEWF(v, data + list[i]) == 0) {
+		if ((this->*comparitor)(v, data + list[i]) == 0) {
 			p++;
 			e = list[p];
 			list[p] = list[i];
 			list[i] = e;
 		}
-		if (greaterThanEWF(v, data + list[j]) == 0) {
+		if ((this->*comparitor)(v, data + list[j]) == 0) {
 			q--;
 			e = list[q];
 			list[q] = list[j];
@@ -1213,60 +1202,8 @@ void ListContainer::quicksortEW(int l, int r)
 		list[k] = list[i];
 		list[i] = e;
 	}
-	quicksortEW(l, j);
-	quicksortEW(i, r);
-}
-
-// quicksort with 3 way partitioning sorted by the start of the line
-void ListContainer::quicksortSW(int l, int r)
-{
-	if (r <= l)
-		return;
-	unsigned int e;
-	int k;
-	char *v = data + list[r];
-	int i = l - 1, j = r, p = i, q = r;
-	for (;;) {
-		while (greaterThanSWF(data + list[++i], v) > 0);
-		while (greaterThanSWF(v, data + list[--j]) > 0) {
-			if (j == l)
-				break;
-		}
-		if (i >= j)
-			break;
-		e = list[i];
-		list[i] = list[j];
-		list[j] = e;
-		if (greaterThanSWF(v, data + list[i]) == 0) {
-			p++;
-			e = list[p];
-			list[p] = list[i];
-			list[i] = e;
-		}
-		if (greaterThanSWF(v, data + list[j]) == 0) {
-			q--;
-			e = list[q];
-			list[q] = list[j];
-			list[j] = e;
-		}
-	}
-	e = list[i];
-	list[i] = list[r];
-	list[r] = e;
-	j = i - 1;
-	i++;
-	for (k = l; k <= p; k++, j--) {
-		e = list[k];
-		list[k] = list[j];
-		list[j] = e;
-	}
-	for (k = r - 1; k >= q; k--, i++) {
-		e = list[k];
-		list[k] = list[i];
-		list[i] = e;
-	}
-	quicksortSW(l, j);
-	quicksortSW(i, r);
+	quicksort(comparitor, l, j);
+	quicksort(comparitor, i, r);
 }
 
 bool ListContainer::readProcessedItemList(const char *filename, bool startswith, int filters)
@@ -1362,94 +1299,36 @@ void ListContainer::addToItemList(char *s, int len)
 	items++;
 }
 
-int ListContainer::searchRSWF(int a, int s, const char *p)
+int ListContainer::search(int (ListContainer::*comparitor)(const char* a, const char* b), int a, int s, const char *p)
 {
 	if (a > s)
 		return (-1 - a);
 	int m = (a + s) / 2;
-	int r = greaterThanSWF(p, data + list[m]);
+	int r = (this->*comparitor)(p, data + list[m]);
 	if (r == 0)
 		return m;
 	if (r == -1)
-		return searchRSWF(m + 1, s, p);
+		return search(comparitor, m + 1, s, p);
 	if (a == s)
 		return (-1 - a);
-	return searchRSWF(a, m - 1, p);
-}
-
-int ListContainer::searchRSW(int a, int s, const char *p)
-{
-	if (a > s)
-		return (-1 - a);
-	int m = (a + s) / 2;
-	int r = greaterThanSW(p, data + list[m]);
-	if (r == 0)
-		return m;
-	if (r == -1)
-		return searchRSW(m + 1, s, p);
-	if (a == s)
-		return (-1 - a);
-	return searchRSW(a, m - 1, p);
-}
-
-int ListContainer::searchREWF(int a, int s, const char *p)
-{
-	if (a > s)
-		return (-1 - a);
-	int m = (a + s) / 2;
-	int r = greaterThanEWF(p, data + list[m]);
-	if (r == 0)
-		return m;
-	if (r == -1)
-		return searchREWF(m + 1, s, p);
-	if (a == s)
-		return (-1 - a);
-	return searchREWF(a, m - 1, p);
-}
-
-int ListContainer::searchREW(int a, int s, const char *p)
-{
-	if (a > s)
-		return (-1 - a);
-	int m = (a + s) / 2;
-	int r = greaterThanEW(p, data + list[m]);
-	if (r == 0)
-		return m;
-	if (r == -1)
-		return searchREW(m + 1, s, p);
-	if (a == s)
-		return (-1 - a);
-	return searchREW(a, m - 1, p);
+	return search(comparitor, a, m - 1, p);
 }
 
 int ListContainer::greaterThanEWF(const char *a, const char *b)
 {
 	int alen = strlen(a);
 	int blen = strlen(b);
-	int maxlen = alen < blen ? alen : blen;
-	char *apos = (char *) a + alen - 1;
-	char *bpos = (char *) b + blen - 1;
-	unsigned char achar;
-	unsigned char bchar;
-	while (maxlen > 0) {
-		achar = apos[0];
-		bchar = bpos[0];
-		if (achar > bchar) {
+	int apos = alen - 1;
+	int bpos = blen - 1;
+	for (int maxlen = (alen < blen ? alen : blen); maxlen > 0; apos--, bpos--, maxlen--)
+		if (a[apos] > b[bpos])
 			return 1;
-		}
-		if (achar < bchar) {
+		else if (a[apos] < b[bpos])
 			return -1;
-		}
-		maxlen--;
-		apos--;
-		bpos--;
-	}
-	if (alen > blen) {
+	if (alen > blen)
 		return 1;
-	}
-	if (alen < blen) {
+	else if (alen < blen)
 		return -1;
-	}
 	return 0;  // both equal
 }
 
@@ -1458,30 +1337,15 @@ int ListContainer::greaterThanSWF(const char *a, const char *b)
 	int alen = strlen(a);
 	int blen = strlen(b);
 	int maxlen = alen < blen ? alen : blen;
-	char *apos = (char *) a;
-	char *bpos = (char *) b;
-	int i = 0;
-	unsigned char achar;
-	unsigned char bchar;
-	while (i < maxlen) {
-		achar = apos[0];
-		bchar = bpos[0];
-		if (achar > bchar) {
+	for (int i = 0; i < maxlen; i++)
+		if (a[i] > b[i])
 			return 1;
-		}
-		if (achar < bchar) {
+		else if (a[i] < b[i])
 			return -1;
-		}
-		i++;
-		apos++;
-		bpos++;
-	}
-	if (alen > blen) {
+	if (alen > blen)
 		return 1;
-	}
-	if (alen < blen) {
+	else if (alen < blen)
 		return -1;
-	}
 	return 0;  // both equal
 }
 
@@ -1489,24 +1353,12 @@ int ListContainer::greaterThanSW(const char *a, const char *b)
 {
 	int alen = strlen(a);
 	int blen = strlen(b);
-
 	int maxlen = alen < blen ? alen : blen;
-	int i = 0;  // this used to be set to 1 - I don't know why
-	unsigned char achar;
-	unsigned char bchar;
-	// compare from the front of the URL forwards; then if we find a mismatch,
-	// look for shorter or alphabetically different URLs
-	while (i < maxlen) {
-		achar = a[i];
-		bchar = b[i];
-		if (achar > bchar) {
+	for (int i = 0; i < maxlen; i++)
+		if (a[i] > b[i])
 			return 1;
-		}
-		if (achar < bchar) {
+		else if (a[i] < b[i])
 			return -1;
-		}
-		i++;
-	}
 	
 	// if the URLs didn't match and the one the user is browsing to is longer
 	// than what we just compared against, we need to compare against longer URLs,
@@ -1518,7 +1370,7 @@ int ListContainer::greaterThanSW(const char *a, const char *b)
 
 	// if the banned URL is longer than the URL we're checking, the two
 	// can't possibly match.
-	if (blen > alen)
+	else if (blen > alen)
 		return -1;
 
 	return 0;  // both equal
@@ -1528,24 +1380,13 @@ int ListContainer::greaterThanEW(const char *a, const char *b)
 {
 	int alen = strlen(a);
 	int blen = strlen(b);
-	int maxlen = alen < blen ? alen : blen;
-	char *apos = (char *) a + alen - 1;
-	char *bpos = (char *) b + blen - 1;
-	unsigned char achar;
-	unsigned char bchar;
-	while (maxlen > 0) {
-		achar = apos[0];
-		bchar = bpos[0];
-		if (achar > bchar) {
+	int apos = alen - 1;
+	int bpos = blen - 1;
+	for (int maxlen = (alen < blen ? alen : blen); maxlen > 0; apos--, bpos--, maxlen--)
+		if (a[apos] > b[bpos])
 			return 1;
-		}
-		if (achar < bchar) {
+		else if (a[apos] < b[bpos])
 			return -1;
-		}
-		maxlen--;
-		apos--;
-		bpos--;
-	}
 	if (blen > alen)
 		return -1;
 	return 0;  // both equal
