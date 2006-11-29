@@ -77,7 +77,6 @@ public:
 	{
 		return items;
 	}
-	std::string getItemAt(char *index);
 	std::string getItemAtInt(int index);
 
 	int getWeightAt(unsigned int index);
@@ -160,7 +159,6 @@ private:
 	int getFileLength(const char *filename);
 	int getFileDate(const char *filename);
 	void increaseMemoryBy(int bytes);
-	std::string toLower(std::string s);
 	//categorised & time-limited lists support
 	bool readTimeTag(String * tag);
 	int getCategoryIndex(String * lcat);

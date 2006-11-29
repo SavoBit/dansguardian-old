@@ -613,16 +613,9 @@ char *ListContainer::findEndsWith(char *string)
 	return NULL;
 }
 
-std::string ListContainer::getItemAt(char *index)
-{
-	std::string s = index;
-	return s;
-}
-
 std::string ListContainer::getItemAtInt(int index)
 {
-	char *o = data + list[index];
-	std::string s = o;
+	std::string s(data + list[index]);
 	return s;
 }
 
@@ -742,8 +735,7 @@ void ListContainer::makeGraph(int fqs)
 	graphSizeSort(0, items - 1, &sizelist);
 
 	for (i = 0; i < items; i++) {
-		s = getItemAt(data + list[sizelist[i]]);
-		graphAdd(s.c_str(), 0, sizelist[i]);
+		graphAdd(data + list[sizelist[i]], 0, sizelist[i]);
 	}
 
 #ifdef DGDEBUG
@@ -1426,17 +1418,6 @@ void ListContainer::increaseMemoryBy(int bytes)
 		data = new char[bytes];
 		data_memory = bytes;
 	}
-}
-
-std::string ListContainer::toLower(std::string s)
-{
-	int l = s.length();
-	for (int i = 0; i < l; i++) {
-		if ((s[i] >= 'A') && (s[i] <= 'Z')) {
-			s[i] = 'a' + s[i] - 'A';
-		}
-	}
-	return s;
 }
 
 int ListContainer::getFileLength(const char *filename)
