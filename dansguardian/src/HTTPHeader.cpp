@@ -533,9 +533,11 @@ bool HTTPHeader::malformedURL(String url)
 #endif
 		return true;
 	}
-	if (host.contains("..") || host.endsWith(".")) {
+	// A single ending dot on an FQDN is actually valid.
+	// See RFC 2396.
+	if (host.contains("..") /*|| host.endsWith(".")*/) {
 #ifdef DGDEBUG
-		std::cout << "double dots or ending dots" << std::endl;
+		std::cout << "double dots in domain name" << std::endl;
 #endif
 		return true;
 	}
