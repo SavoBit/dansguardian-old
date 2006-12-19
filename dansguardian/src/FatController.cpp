@@ -213,7 +213,7 @@ extern "C"
 		printf("backtrace returned: %d\n", c);
 		for (int i = 0; i < c; i++) {
 			syslog(LOG_ERR, "%d: %X ", i, (int)addresses[i]);
-			syslog(LOG_ERR, strings[i]);
+			syslog(LOG_ERR, "%s", strings[i]);
 		}
 		// Kill off the current process
 		raise(SIGTERM);

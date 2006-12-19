@@ -90,7 +90,7 @@ bool wasClean(String &url, const int fg)
 		std::cerr << e.what() << std::endl;
 #endif
 		syslog(LOG_ERR, "Exception writing to url cache");
-		syslog(LOG_ERR, e.what());
+		syslog(LOG_ERR, "%s", e.what());
 	}
 	char reply;
 	try {
@@ -102,7 +102,7 @@ bool wasClean(String &url, const int fg)
 		std::cerr << e.what() << std::endl;
 #endif
 		syslog(LOG_ERR, "Exception reading from url cache");
-		syslog(LOG_ERR, e.what());
+		syslog(LOG_ERR, "%s", e.what());
 	}
 	ipcsock.close();
 	return reply == 'Y';
@@ -138,7 +138,7 @@ void addToClean(String &url, const int fg)
 		std::cerr << e.what() << std::endl;
 #endif
 		syslog(LOG_ERR, "Exception adding to url cache");
-		syslog(LOG_ERR, e.what());
+		syslog(LOG_ERR, "%s", e.what());
 	}
 	ipcsock.close();
 }
@@ -243,7 +243,7 @@ bool ConnectionHandler::gotIPs(std::string ipstr) {
 		std::cerr << e.what() << std::endl;
 #endif
 		syslog(LOG_ERR, "Exception with IP cache");
-		syslog(LOG_ERR, e.what());
+		syslog(LOG_ERR, "%s", e.what());
 	}
 	ipcsock.close();
 	return reply == 'Y';
