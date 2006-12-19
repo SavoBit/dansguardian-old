@@ -123,7 +123,7 @@ void ListContainer::reset()
 // for item lists - during a config reload, can we simply retain the already loaded list?
 bool ListContainer::previousUseItem(const char *filename, bool startswith, int filters)
 {
-	String f = filename;
+	String f(filename);
 	if (f == sourcefile && startswith == sourcestartswith && filters == sourcefilters) {
 		return true;
 	}
@@ -656,7 +656,7 @@ bool ListContainer::createCacheFile()
 	if (items < 1000) {	// There is little to gain when there are so few
 		return true;
 	}
-	String f = sourcefile;
+	String f(sourcefile);
 	f += ".processed";
 #ifdef DGDEBUG
 	std::cout << "creating processed file:" << f << std::endl;
@@ -1396,7 +1396,7 @@ bool ListContainer::isCacheFileNewer(const char *filename)
 		return false;
 	}
 	int bannedlistdate = getFileDate(filename);
-	std::string linebuffer = filename;
+	std::string linebuffer(filename);
 	linebuffer += ".processed";
 	int cachedate = getFileDate(linebuffer.c_str());
 	if (cachedate < bannedlistdate) {
@@ -1474,7 +1474,7 @@ bool ListContainer::readTimeTag(String * tag)
 	std::cout << "Found a time tag" << std::endl;
 #endif
 	unsigned int tsthour, tstmin, tendhour, tendmin;
-	String temp = (*tag).after("#time: ");
+	String temp((*tag).after("#time: "));
 	tsthour = temp.before(" ").toInteger();
 	temp = temp.after(" ");
 	tstmin = temp.before(" ").toInteger();
@@ -1482,7 +1482,7 @@ bool ListContainer::readTimeTag(String * tag)
 	tendhour = temp.before(" ").toInteger();
 	temp = temp.after(" ");
 	tendmin = temp.before(" ").toInteger();
-	String tdays = temp.after(" ");
+	String tdays(temp.after(" "));
 	tdays.removeWhiteSpace();
 	if (tsthour > 23) {
 		if (!is_daemonised) {

@@ -158,7 +158,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 {
 	FDTunnel fdt;
 
-	String at = h.getAuthType();
+	String at(h.getAuthType());
 	if (at != "NTLM") {
 		// if no auth currently underway, then...
 		if (at.length() == 0) {
@@ -212,7 +212,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 		std::cout << "NTLM - decoding type 3 message" << std::endl;
 #endif
 
-		std::string message = h.getAuthData();
+		std::string message(h.getAuthData());
 
 		ntlm_authenticate auth;
 		ntlm_auth *a = &(auth.a);

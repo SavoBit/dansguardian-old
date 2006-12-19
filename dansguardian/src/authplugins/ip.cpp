@@ -130,7 +130,7 @@ int ipinstance::quit() {
 
 // plugin init - read in ip melange list
 int ipinstance::init(void* args) {
-	String fname = cv["ipgroups"];
+	String fname(cv["ipgroups"]);
 	if (fname.length() > 0) {
 		return readIPMelangeList(fname.toCharArray());
 	} else {
@@ -317,8 +317,8 @@ int ipinstance::readIPMelangeList(const char *filename) {
 		else if (matchSubnet.match(key.toCharArray())) {
 			struct in_addr address;
 			struct in_addr addressmask;
-			String subnet = key.before("/");
-			String mask = key.after("/");
+			String subnet(key.before("/"));
+			String mask(key.after("/"));
 			if (inet_aton(subnet.toCharArray(), &address) && inet_aton(mask.toCharArray(), &addressmask)) {
 				subnetstruct s;
 				int addr = (unsigned long int)ntohl(address.s_addr);
@@ -332,8 +332,8 @@ int ipinstance::readIPMelangeList(const char *filename) {
 		else if (matchRange.match(key.toCharArray())) {
 			struct in_addr addressstart;
 			struct in_addr addressend;
-			String start = key.before("-");
-			String end = key.after("-");
+			String start(key.before("-"));
+			String end(key.after("-"));
 			if (inet_aton(start.toCharArray(), &addressstart) && inet_aton(end.toCharArray(), &addressend)) {
 				rangestruct r;
 				r.startaddr = (unsigned long int)ntohl(addressstart.s_addr);

@@ -64,8 +64,7 @@ public:
 
 // constructor - set up defaults
 NaughtyFilter::NaughtyFilter()
-:	isItNaughty(false), isException(false), usedisplaycats(false), filtergroup(0), whatIsNaughty(""),
-	whatIsNaughtyLog(""), whatIsNaughtyCategories(""), naughtiness(0)
+:	isItNaughty(false), isException(false), usedisplaycats(false), filtergroup(0), naughtiness(0)
 {
 }
 
@@ -412,8 +411,8 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 {
 	int weighting = 0;
 	int cat;
-	std::string weightedphrase = "";
-	bool isfound, wasbefore, catfound;
+	std::string weightedphrase;
+	bool isfound, catfound;
 	
 	// checkme: translate this?
 	String currcat("Embedded URLs");
@@ -591,8 +590,8 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 	}
 #endif
 
-	std::string bannedphrase = "";
-	std::string exceptionphrase = "";
+	std::string bannedphrase;
+	std::string exceptionphrase;
 	String bannedcategory;
 	int type, index, weight;
 	bool allcmatched = true, bannedcombi = false;
@@ -618,8 +617,8 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 
 	// look for combinations first
 	//if banned must wait for exception later
-	std::string combifound = "";
-	std::string combisofar = "";
+	std::string combifound;
+	std::string combisofar;
 
 	std::vector<int>::iterator combicurrent = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.begin();
 
@@ -900,7 +899,7 @@ void NaughtyFilter::checkPICSrating(std::string label)
 	if (!(*o.fg[filtergroup]).pics2.matched()) {
 		return;
 	}			// exit if not found
-	String lab = label.c_str();  // convert to a String for easy manip
+	String lab(label.c_str());  // convert to a String for easy manip
 	String r;
 	String service;
 	for (int i = 0; i < (*o.fg[filtergroup]).pics2.numberOfMatches(); i++) {

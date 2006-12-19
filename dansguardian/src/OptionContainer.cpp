@@ -525,10 +525,10 @@ bool OptionContainer::read(const char *filename, int type)
 			no_auth_enabled = false;
 
 		filter_groups_list_location = findoptionS("filtergroupslist");
-		std::string banned_ip_list_location = findoptionS("bannediplist");
-		std::string exceptions_ip_list_location = findoptionS("exceptioniplist");
+		std::string banned_ip_list_location(findoptionS("bannediplist"));
+		std::string exceptions_ip_list_location(findoptionS("exceptioniplist"));
 		group_names_list_location = findoptionS("groupnamesfile");
-		std::string language_list_location = languagepath + "messages";
+		std::string language_list_location(languagepath + "messages");
 		if (reporting_level == 1 || reporting_level == 2) {
 			access_denied_address = findoptionS("accessdeniedaddress");
 			access_denied_domain = access_denied_address.c_str();
@@ -689,7 +689,7 @@ std::string OptionContainer::findoptionS(const char *option)
 	// findoptionS returns a found option stored in the deque
 	String temp;
 	String temp2;
-	String o = option;
+	String o(option);
 	for (int i = 0; i < (signed) conffile.size(); i++) {
 		temp = conffile[i].c_str();
 		temp2 = temp.before("=");
@@ -722,7 +722,7 @@ std::deque<String > OptionContainer::findoptionM(const char *option)
 	// findoptionS returns all the matching options
 	String temp;
 	String temp2;
-	String o = option;
+	String o(option);
 	std::deque<String > results;
 	for (int i = 0; i < (signed) conffile.size(); i++) {
 		temp = conffile[i].c_str();
@@ -785,7 +785,7 @@ bool OptionContainer::realitycheck(String s, int minl, int maxl, char *emessage)
 
 bool OptionContainer::readFilterGroupConf()
 {
-	String prefix = conffilename;
+	String prefix(conffilename);
 	prefix = prefix.before(".conf");
 	prefix += "f";
 	String file;
@@ -805,7 +805,7 @@ bool OptionContainer::readFilterGroupConf()
 		file = prefix + String(i);
 		file += ".conf";
 		if (use_group_names_list) {
-			std::string optname = "GROUP";
+			std::string optname("GROUP");
 			optname += (char)(i + 64);
 			groupname = groupnamesfile[optname.c_str()];
 			if (groupname.length() == 0) {

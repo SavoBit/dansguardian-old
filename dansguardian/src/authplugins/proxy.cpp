@@ -51,7 +51,7 @@ AuthPlugin *proxycreate(ConfigVar & definition)
 int proxyinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string)
 {
 	// don't match for non-basic auth types
-	String t = h.getAuthType();
+	String t(h.getAuthType());
 	t.toLower();
 	if (t != "basic")
 		return DGAUTH_NOMATCH;

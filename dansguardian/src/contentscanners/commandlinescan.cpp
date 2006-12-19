@@ -138,7 +138,7 @@ int commandlineinstance::init(void* args)
 #endif
 
 	// read in virus name regular expression
-	String ucvirusregexp = cv["virusregexp"];
+	String ucvirusregexp(cv["virusregexp"]);
 	if (ucvirusregexp.length()) {
 		usevirusregexp = true;
 		if (!virusregexp.comp(ucvirusregexp.toCharArray())) {
@@ -147,14 +147,14 @@ int commandlineinstance::init(void* args)
 			syslog(LOG_ERR, "Command-line scanner: Could not compile regular expression for extracting virus names");
 			return DGCS_ERROR;
 		}
-		String ssubmatch = cv["submatch"];
+		String ssubmatch(cv["submatch"]);
 		if (ssubmatch.length())
 			submatch = ssubmatch.toInteger();
 	}
 
 	// read in the lists of good and bad program return codes
-	String sinfectedcodes = cv["infectedcodes"];
-	String scleancodes = cv["cleancodes"];
+	String sinfectedcodes(cv["infectedcodes"]);
+	String scleancodes(cv["cleancodes"]);
 	std::list<int> tempinfectedcodes;
 	std::list<int> tempcleancodes;
 	result = strtok(sinfectedcodes.toCharArray(),",");
@@ -207,7 +207,7 @@ int commandlineinstance::init(void* args)
 		cleancodes[count++] = *i;
 
 	// read in default result type
-	String sdefaultresult = cv["defaultresult"];
+	String sdefaultresult(cv["defaultresult"]);
 	if (sdefaultresult.length()) {
 		if (sdefaultresult == "clean") {
 			defaultresult = 1;

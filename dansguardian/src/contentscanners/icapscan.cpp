@@ -139,7 +139,7 @@ int icapinstance::init(void* args)
 		if (icapsock.connect(icapip.toCharArray(), icapport) < 0) {
 			throw std::runtime_error("Could not connect to server");
 		}
-		String line = "OPTIONS " + icapurl + " ICAP/1.0\r\nHost: " + icaphost + "\r\n\r\n";
+		String line("OPTIONS " + icapurl + " ICAP/1.0\r\nHost: " + icaphost + "\r\n\r\n");
 		icapsock.writeString(line.toCharArray());
 		// parse the response
 		char buff[8192];
@@ -437,7 +437,7 @@ bool icapinstance::doHeaders(Socket & icapsock, HTTPHeader *reqheader, HTTPHeade
 	// use a dummy unless it proves absolutely necessary to do otherwise,
 	// as using real data could lead to e.g. yet another source of password
 	// leakage over the network.
-	String encapsulatedheader = "GET " + reqheader->url() + " HTTP/1.0\r\n\r\n";
+	String encapsulatedheader("GET " + reqheader->url() + " HTTP/1.0\r\n\r\n");
 	// body chunk size in hex - either full body, or just preview
 	if (usepreviews && (objectsize > previewsize)) {
 		snprintf(objectsizehex, sizeof(objectsizehex), "%x\r\n", previewsize);
@@ -451,10 +451,9 @@ bool icapinstance::doHeaders(Socket & icapsock, HTTPHeader *reqheader, HTTPHeade
 		httpresponseheader += (*i) + "\r\n";
 	}
 	httpresponseheader += "\r\n";*/
-	String httpresponseheader = "HTTP/1.0 200 OK\r\n\r\n";
+	String httpresponseheader("HTTP/1.0 200 OK\r\n\r\n");
 	// ICAP header itself
-	String icapheader =
-		"RESPMOD " + icapurl + " ICAP/1.0\r\nHost: " + icaphost + "\r\nAllow: 204\r\nEncapsulated: req-hdr=0, res-hdr=" + String(encapsulatedheader.length()) + ", res-body=" + String(httpresponseheader.length() + encapsulatedheader.length());
+	String icapheader("RESPMOD " + icapurl + " ICAP/1.0\r\nHost: " + icaphost + "\r\nAllow: 204\r\nEncapsulated: req-hdr=0, res-hdr=" + String(encapsulatedheader.length()) + ", res-body=" + String(httpresponseheader.length() + encapsulatedheader.length()));
 	if (usepreviews && (objectsize > previewsize)) {
 		icapheader += "\r\nPreview: " + String(previewsize);
 	}
@@ -496,7 +495,7 @@ int icapinstance::doScan(Socket & icapsock, HTTPHeader * docheader, const char* 
 		// reply is of the format:
 		// ICAP/1.0 204 No Content Necessary (etc)
 
-		String returncode = line.after(" ").before(" ");
+		String returncode(line.after(" ").before(" "));
 
 		if (returncode == "204") {
 #ifdef DGDEBUG

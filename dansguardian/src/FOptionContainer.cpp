@@ -315,7 +315,7 @@ bool FOptionContainer::read(const char *filename)
 #endif
 	   
 		// override default reporting level
-		String temp_reporting_level = findoptionS("reportinglevel");
+		String temp_reporting_level(findoptionS("reportinglevel"));
 		if (temp_reporting_level != "") {
 			reporting_level = temp_reporting_level.toInteger();
 			if ((reporting_level < -1) || (reporting_level > 3)) {
@@ -348,7 +348,7 @@ bool FOptionContainer::read(const char *filename)
 
 		// override default banned page
 		else if (reporting_level == 3) {
-			String html_template = findoptionS("htmltemplate");
+			String html_template(findoptionS("htmltemplate"));
 			if (html_template != "") {
 				html_template = o.languagepath + html_template;
 				banned_page = new HTMLTemplate;
@@ -447,24 +447,24 @@ bool FOptionContainer::read(const char *filename)
 			if (!realitycheck(String(naughtyness_limit), 1, 4, "naughtynesslimit")) {
 				return false;
 			}
-			std::string exception_phrase_list_location = findoptionS("exceptionphraselist");
-			std::string weighted_phrase_list_location = findoptionS("weightedphraselist");
-			std::string banned_phrase_list_location = findoptionS("bannedphraselist");
-			std::string banned_extension_list_location = findoptionS("bannedextensionlist");
-			std::string banned_mimetype_list_location = findoptionS("bannedmimetypelist");
-			std::string banned_site_list_location = findoptionS("bannedsitelist");
-			std::string banned_url_list_location = findoptionS("bannedurllist");
-			std::string grey_site_list_location = findoptionS("greysitelist");
-			std::string grey_url_list_location = findoptionS("greyurllist");
-			std::string banned_regexpurl_list_location = findoptionS("bannedregexpurllist");
-			std::string exception_regexpurl_list_location = findoptionS("exceptionregexpurllist");
-			std::string content_regexp_list_location = findoptionS("contentregexplist");
-			std::string url_regexp_list_location = findoptionS("urlregexplist");
-			std::string exceptions_site_list_location = findoptionS("exceptionsitelist");
-			std::string exceptions_url_list_location = findoptionS("exceptionurllist");
-			std::string exception_extension_list_location = findoptionS("exceptionextensionlist");
-			std::string exception_mimetype_list_location = findoptionS("exceptionmimetypelist");
-			std::string exception_file_site_list_location = findoptionS("exceptionfilesitelist");
+			std::string exception_phrase_list_location(findoptionS("exceptionphraselist"));
+			std::string weighted_phrase_list_location(findoptionS("weightedphraselist"));
+			std::string banned_phrase_list_location(findoptionS("bannedphraselist"));
+			std::string banned_extension_list_location(findoptionS("bannedextensionlist"));
+			std::string banned_mimetype_list_location(findoptionS("bannedmimetypelist"));
+			std::string banned_site_list_location(findoptionS("bannedsitelist"));
+			std::string banned_url_list_location(findoptionS("bannedurllist"));
+			std::string grey_site_list_location(findoptionS("greysitelist"));
+			std::string grey_url_list_location(findoptionS("greyurllist"));
+			std::string banned_regexpurl_list_location(findoptionS("bannedregexpurllist"));
+			std::string exception_regexpurl_list_location(findoptionS("exceptionregexpurllist"));
+			std::string content_regexp_list_location(findoptionS("contentregexplist"));
+			std::string url_regexp_list_location(findoptionS("urlregexplist"));
+			std::string exceptions_site_list_location(findoptionS("exceptionsitelist"));
+			std::string exceptions_url_list_location(findoptionS("exceptionurllist"));
+			std::string exception_extension_list_location(findoptionS("exceptionextensionlist"));
+			std::string exception_mimetype_list_location(findoptionS("exceptionmimetypelist"));
+			std::string exception_file_site_list_location(findoptionS("exceptionfilesitelist"));
 
 			if (enable_PICS == 1) {
 				pics_rsac_nudity = findoptionI("RSACnudity");
@@ -959,7 +959,7 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 	url.toLower();
 	url.removePTP();  // chop off the ht(f)tp(s)://
 	if (url.contains("/")) {
-		String tpath = "/";
+		String tpath("/");
 		tpath += url.after("/");
 		url = url.before("/");
 		tpath.hexDecode();
@@ -973,7 +973,7 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 	std::cout << "inURLList (processed): " << url << std::endl;
 #endif
 	if (reverse_lookups == 1 && url.after("/").length() > 0) {
-		String hostname = url.before("/");
+		String hostname(url.before("/"));
 		if (isIPHostname(hostname)) {
 			std::deque<String > *url2s = ipToHostname(hostname.toCharArray());
 			String url2;
@@ -1087,7 +1087,7 @@ int FOptionContainer::inRegExpURLList(String &url, std::deque<RegExp> &list_comp
 		// the string. changes here have therefore been reverted. 2005-12-07
 		url.removePTP();
 		if (url.contains("/")) {
-			String tpath = "/";
+			String tpath("/");
 			tpath += url.after("/");
 			url = url.before("/");
 			tpath.hexDecode();
@@ -1163,7 +1163,7 @@ std::string FOptionContainer::findoptionS(const char *option)
 	// findoptionS returns a found option stored in the deque
 	String temp;
 	String temp2;
-	String o = option;
+	String o(option);
 	for (int i = 0; i < (signed) conffile.size(); i++) {
 		temp = conffile[i].c_str();
 		temp2 = temp.before("=");

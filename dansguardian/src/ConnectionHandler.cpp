@@ -74,7 +74,7 @@ bool wasClean(String &url, const int fg)
 		ipcsock.close();
 		return false;
 	}
-	std::string myurl = " ";
+	std::string myurl(" ");
 	myurl += url.after("://").toCharArray();
 	myurl[0] = fg+1;
 	myurl += "\n";
@@ -125,7 +125,7 @@ void addToClean(String &url, const int fg)
 #endif
 		return;
 	}
-	std::string myurl = "g ";
+	std::string myurl("g ");
 	myurl += url.after("://").toCharArray();
 	myurl[1] = fg+1;
 	myurl += "\n";
@@ -186,12 +186,12 @@ String ConnectionHandler::hashedURL(String *url, int filtergroup, std::string *c
 	// filter/virus bypass hashes last for a certain time only
 	String timecode(time(NULL) + (infectionbypass ? (*o.fg[filtergroup]).infection_bypass_mode : (*o.fg[filtergroup]).bypass_mode));
 	// use the standard key in normal bypass mode, and the infection key in infection bypass mode
-	String magic = infectionbypass ? (*o.fg[filtergroup]).imagic.c_str() : (*o.fg[filtergroup]).magic.c_str();
+	String magic(infectionbypass ? (*o.fg[filtergroup]).imagic.c_str() : (*o.fg[filtergroup]).magic.c_str());
 	magic += (*clientip).c_str();
 	magic += timecode;
-	String res = infectionbypass ? "GIBYPASS=" : "GBYPASS=";
+	String res(infectionbypass ? "GIBYPASS=" : "GBYPASS=");
 	if (!(*url).after("://").contains("/")) {
-		String newurl = (*url);
+		String newurl((*url));
 		newurl += "/";
 		res += newurl.md5(magic.toCharArray());
 	} else {
@@ -205,10 +205,10 @@ String ConnectionHandler::hashedURL(String *url, int filtergroup, std::string *c
 String ConnectionHandler::hashedCookie(String * url, int filtergroup, std::string * clientip, int bypasstimestamp)
 {
 	String timecode(bypasstimestamp);
-	String magic = (*o.fg[filtergroup]).cookie_magic.c_str();
+	String magic((*o.fg[filtergroup]).cookie_magic.c_str());
 	magic += (*clientip).c_str();
 	magic += timecode;
-	String res = (*url).md5(magic.toCharArray());
+	String res((*url).md5(magic.toCharArray()));
 	res += timecode;
 
 #ifdef DGDEBUG
@@ -258,15 +258,15 @@ unsigned int ConnectionHandler::sendFile(Socket * peerconn, String & filename, S
 #ifdef DGDEBUG
 		std::cout << "Error reading file to send:" << filename << std::endl;
 #endif
-		String fnf = o.language_list.getTranslation(1230);
-		String message = "HTTP/1.0 404 " + fnf + "\nContent-Type: text/html\n\n<HTML><HEAD><TITLE>" + fnf + "</TITLE></HEAD><BODY><H1>" + fnf + "</H1></BODY></HTML>\n";
+		String fnf(o.language_list.getTranslation(1230));
+		String message("HTTP/1.0 404 " + fnf + "\nContent-Type: text/html\n\n<HTML><HEAD><TITLE>" + fnf + "</TITLE></HEAD><BODY><H1>" + fnf + "</H1></BODY></HTML>\n");
 		peerconn->writeString(message.toCharArray());
 		return 0;
 	}
 
 	unsigned int filesize = lseek(fd, 0, SEEK_END);
 	lseek(fd, 0, SEEK_SET);
-	String message = "HTTP/1.0 200 OK\nContent-Type: " + filemime + "\nContent-Length: " + String(filesize);
+	String message("HTTP/1.0 200 OK\nContent-Type: " + filemime + "\nContent-Length: " + String(filesize));
 	if (filedis.length() == 0) {
 		filedis = url.before("?");
 		while (filedis.contains("/"))
@@ -370,7 +370,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	int headersent = 0;  // 0=none,1=first line,2=all
 	std::deque<bool > sendtoscanner;
 
-	std::string mimetype = "-";
+	std::string mimetype("-");
 
 	String url;
 	String urld;
@@ -525,7 +525,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 							// ident plugin told us to redirect to a login page
 							proxysock.close();
-							String writestring = "HTTP/1.0 302 Redirect\nLocation: ";
+							String writestring("HTTP/1.0 302 Redirect\nLocation: ");
 							writestring += clientuser;
 							writestring += "\n\n";
 							peerconn.writeString(writestring.toCharArray());
@@ -661,7 +661,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			}
 
 			if (o.use_xforwardedfor == 1) {
-				std::string xforwardip = header.getXForwardedForIP();
+				std::string xforwardip(header.getXForwardedForIP());
 				if (xforwardip.length() > 6) {
 					clientip = xforwardip;
 				}
@@ -733,13 +733,13 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			if (isscanbypass) {
 				//we need to decode the URL and send the temp file with the
 				//correct header to the client then delete the temp file
-				String tempfilename = url.after("GSBYPASS=").after("&N=");
-				String tempfilemime = tempfilename.after("&M=");
-				String tempfiledis = header.decode(tempfilemime.after("&D="), true);
+				String tempfilename(url.after("GSBYPASS=").after("&N="));
+				String tempfilemime(tempfilename.after("&M="));
+				String tempfiledis(header.decode(tempfilemime.after("&D="), true));
 #ifdef DGDEBUG
 				std::cout << "Original filename: " << tempfiledis << std::endl;
 #endif
-				String rtype = header.requestType();
+				String rtype(header.requestType());
 				tempfilemime = tempfilemime.before("&D=");
 				tempfilename = o.download_dir + "/tf" + tempfilename.before("&M=");
 				try {
@@ -805,7 +805,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 			// don't run scanTest if content scanning is disabled, or on exceptions if contentscanexceptions is off,
 			// or on SSL (CONNECT) requests, or on HEAD requests, or if in AV bypass mode
-			String reqtype = header.requestType();
+			String reqtype(header.requestType());
 			isconnect = reqtype[0] == 'C';
 			ishead = reqtype[0] == 'H';
 			runav = ((*o.fg[filtergroup]).disable_content_scan != 1) && !(isexception && !o.content_scan_exceptions)
@@ -839,7 +839,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					fdt.tunnel(proxysock, peerconn, isconnect, docheader.contentLength(), true);  // not expected to exception
 					docsize = fdt.throughput;
 					if (!isourwebserver) {	// don't log requests to the web server
-						String rtype = header.requestType();
+						String rtype(header.requestType());
 						doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, false, isexception,
 							false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
 							mimetype, wasinfected, wasscanned, 0, filtergroup);
@@ -928,7 +928,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							fdt.tunnel(proxysock, peerconn, isconnect, docheader.contentLength(), true);  // not expected to exception
 							docsize = fdt.throughput;
 							if (!isourwebserver) {	// don't log requests to the web server
-								String rtype = header.requestType();
+								String rtype(header.requestType());
 								doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, false, isexception,
 									false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
 									mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup,
@@ -1004,7 +1004,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					// tunnel from client to proxy and back - *true* two-way tunnel
 					fdt.tunnel(proxysock, peerconn, true);  // not expected to exception
 					docsize = fdt.throughput;
-					String rtype = header.requestType();
+					String rtype(header.requestType());
 					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, false,
 						isexception, false, &thestart,
 						cachehit, (wasrequested ? docheader.returnCode() : 200), mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup, false, urlmodified);
@@ -1201,8 +1201,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					// Perform extension matching - if not already matched the exception MIME list
 					if (!download_exception) {
 						// Can't ban file extensions of URLs that just redirect
-						String tempurl = urld;
-						String tempdispos = docheader.disposition();
+						String tempurl(urld);
+						String tempdispos(docheader.disposition());
 						bool matched_extension = false;
 						unsigned int list;
 						// check banned list if in non-blanket mode
@@ -1341,7 +1341,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			// make sure we keep track of whether or not logging has been performed, as we may be in stealth mode and don't want to double log.
 			bool logged = false;
 			if (checkme.isItNaughty) {
-				String rtype = header.requestType();
+				String rtype(header.requestType());
 #ifdef DGDEBUG
 				std::cout<<"Category: "<<checkme.whatIsNaughtyCategories<<std::endl;
 #endif
@@ -1382,7 +1382,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 			if (waschecked) {
 				if (!docheader.authRequired() && !pausedtoobig) {
-					String rtype = header.requestType();
+					String rtype(header.requestType());
 					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
 						rtype, docsize, NULL, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
@@ -1404,17 +1404,17 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					// GSBYPASS=hash(ip+url+tempfilename+mime+disposition+secret)
 					// &N=tempfilename&M=mimetype&D=dispos
 
-					String ip = clientip;
-					String tempfilename = docbody.tempfilepath.after("/tf");
-					String tempfilemime = docheader.getContentType();
-					String tempfiledis = miniURLEncode(docheader.disposition().toCharArray()).c_str();
-					String secret = (*o.fg[filtergroup]).magic.c_str();
-					String magic = ip + url + tempfilename + tempfilemime + tempfiledis + secret;
-					String hashed = magic.md5();
+					String ip(clientip);
+					String tempfilename(docbody.tempfilepath.after("/tf"));
+					String tempfilemime(docheader.getContentType());
+					String tempfiledis(miniURLEncode(docheader.disposition().toCharArray()).c_str());
+					String secret((*o.fg[filtergroup]).magic.c_str());
+					String magic(ip + url + tempfilename + tempfilemime + tempfiledis + secret);
+					String hashed(magic.md5());
 #ifdef DGDEBUG
 					std::cout << "sending magic link to client: " << ip << " " << url << " " << tempfilename << " " << tempfilemime << " " << tempfiledis << " " << secret << " " << hashed << std::endl;
 #endif
-					String sendurl = url;
+					String sendurl(url);
 					if (!sendurl.after("://").contains("/")) {
 						sendurl += "/";
 					}
@@ -1451,7 +1451,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 					fdt.tunnel(proxysock, peerconn, false, docheader.contentLength() - docsize, true);
 					docsize += fdt.throughput;
-					String rtype = header.requestType();
+					String rtype(header.requestType());
 					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
 						rtype, docsize, NULL, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
@@ -1464,7 +1464,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 				fdt.tunnel(proxysock, peerconn, false, docheader.contentLength(), true);
 				docsize = fdt.throughput;
-				String rtype = header.requestType();
+				String rtype(header.requestType());
 				if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
 					rtype, docsize, NULL, false, isexception,
 					docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
@@ -1693,7 +1693,7 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 #ifdef DGDEBUG
 			std::cout << "starting deep analysis" << std::endl;
 #endif
-			String deepurl = temp.after("p://");
+			String deepurl(temp.after("p://"));
 			deepurl = header->decode(deepurl,true);
 			while (deepurl.contains(":")) {
 				deepurl = deepurl.after(":");
@@ -1792,7 +1792,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				// instead.  Nothing can be done about it - blame
 				// mickysoft.
 
-				String writestring = "HTTP/1.0 403 ";
+				String writestring("HTTP/1.0 403 ");
 				writestring += o.language_list.getTranslation(500);  // banned site
 				writestring += "\nContent-Type: text/html\n\n<HTML><HEAD><TITLE>DansGuardian - ";
 				writestring += o.language_list.getTranslation(500);  // banned site
@@ -1819,7 +1819,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 					// This method is prone to over image replacement
 					// but will work most of the time.
 
-					String lurl = (*url);
+					String lurl((*url));
 					lurl.toLower();
 					if (lurl.endsWith(".gif") || lurl.endsWith(".jpg") || lurl.endsWith(".jpeg") || lurl.endsWith(".jpe")
 						|| lurl.endsWith(".png") || lurl.endsWith(".bmp") || (*docheader).isContentType("image/"))
@@ -1841,7 +1841,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 					// for IFRAMEs, which will end up containing this link instead of the ad (standard non-IFRAMEd
 					// ad images still get image-replaced.)
 					if (strstr(checkme->whatIsNaughtyCategories.c_str(), "ADs") != NULL) {
-						String writestring = "HTTP/1.0 200 ";
+						String writestring("HTTP/1.0 200 ");
 						writestring += o.language_list.getTranslation(1101); // advert blocked
 						writestring += "\nContent-Type: text/html\n\n<HTML><HEAD><TITLE>Guardian - ";
 						writestring += o.language_list.getTranslation(1101); // advert blocked
@@ -1920,7 +1920,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 			if ((*checkme).whatIsNaughtyLog.length() > 2048) {
 				(*checkme).whatIsNaughtyLog = String((*checkme).whatIsNaughtyLog.c_str()).subString(0, 2048).toCharArray();
 			}
-			String writestring = "HTTP/1.0 302 Redirect\n";
+			String writestring("HTTP/1.0 302 Redirect\n");
 			writestring += "Location: ";
 			writestring += o.fg[filtergroup]->access_denied_address;
 
@@ -1992,7 +1992,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		// the user is using the barebones banned page
 		else if (reporting_level == 0) {
 			(*proxysock).close();  // finshed with proxy
-			String writestring = "HTTP/1.0 200 OK\n";
+			String writestring("HTTP/1.0 200 OK\n");
 			writestring += "Content-type: text/html\n\n";
 			writestring += "<HTML><HEAD><TITLE>DansGuardian - ";
 			writestring += o.language_list.getTranslation(1);  // access denied
@@ -2129,7 +2129,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 					}
 					else if (csrc > 0) {
 						checkme->whatIsNaughty = o.language_list.getTranslation(1100);
-						String virname = ((CSPlugin*)(*i))->getLastVirusName();
+						String virname(((CSPlugin*)(*i))->getLastVirusName());
 
 						if (virname.length() > 0) {
 							checkme->whatIsNaughty += " ";

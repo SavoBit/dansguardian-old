@@ -82,7 +82,7 @@ SocketArray serversockets;  // the sockets we will listen on for connections
 UDSocket loggersock;  // the unix domain socket to be used for ipc with the forked children
 UDSocket urllistsock;
 UDSocket iplistsock;
-Socket *peersock = NULL;  // the socket which will contain the connection
+Socket *peersock(NULL);  // the socket which will contain the connection
 
 String peersockip;  // which will contain the connection ip
 int peersockport;  // port connection originates
@@ -297,7 +297,7 @@ void flush_urlcache()
 #endif
 		return;
 	}
-	String request = "f\n";
+	String request("f\n");
 	try {
 		fipcsock.writeString(request.toCharArray());  // throws on err
 	}
@@ -479,7 +479,7 @@ void tidyup_forchild()
 // send Ready signal to parent process over the socketpair (used in handle_connections)
 int send_readystatus(UDSocket &pipe)
 {				// blocks until timeout
-	String message = "2\n";
+	String message("2\n");
 	try {
 		if (!pipe.writeToSocket(message.toCharArray(), message.length(), 0, 15, true, true)) {
 			return -1;
@@ -869,7 +869,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 #endif
 	
 	//String where, what, how;
-	std::string cr = "\n";
+	std::string cr("\n");
    
 	std::string where, what, how, cat, clienthost, from, who, mimetype;
 	int port = 80, size = 0, isnaughty = 0, isexception = 0, istext = 1, code = 200;
@@ -1040,7 +1040,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 
 			if (port != 0 && port != 80) {
 				// put port numbers of non-standard HTTP requests into the logged URL
-				String newwhere = where.c_str();
+				String newwhere(where.c_str());
 				if (newwhere.after("://").contains("/")) {
 					String proto, host, path;
 					proto = newwhere.before("://");
@@ -1166,7 +1166,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 				clienthost[0]=0;
 			}
 
-			std::string stringcode = String(code).toCharArray();
+			std::string stringcode(String(code).toCharArray());
 			std::string stringgroup(String(filtergroup+1).toCharArray());
 
 			switch (o.log_file_format) {

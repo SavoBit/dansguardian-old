@@ -110,7 +110,7 @@ int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 		syslog(LOG_ERR, "Could not change file ownership to give kavd read access: %s", strerror(errno));
 		return DGCS_SCANERROR;
 	};
-	String command = "SCAN bPQRSTUW ";
+	String command("SCAN bPQRSTUW ");
 	if (pathprefix.length()) {
 		String fname(filename);
 		command += fname.after(pathprefix.toCharArray());
@@ -163,7 +163,7 @@ int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 		syslog(LOG_ERR, "%s", "Error reading kavdscan socket");
 		return DGCS_SCANERROR;
 	}
-	String reply = buff;
+	String reply(buff);
 #ifdef DGDEBUG
 	std::cout << "Got from kavdscan:" << reply << std::endl;
 #endif

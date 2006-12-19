@@ -70,7 +70,7 @@ int DMPlugin::init(void* args)
 	bool lastplugin = *((bool*)args);
 	if (!lastplugin) {
 		// compile regex for matching supported user agents
-		String r = cv["useragentregexp"];
+		String r(cv["useragentregexp"]);
 		if (r.length() > 0) {
 #ifdef DGDEBUG
 			std::cout<<"useragent regexp: "<<r<<std::endl;
@@ -97,7 +97,7 @@ int DMPlugin::init(void* args)
 void DMPlugin::sendLink(Socket &peersock, String &linkurl, String &prettyurl)
 {
 	// 1220 "<p>Scan complete.</p><p>Click here to download: "
-	String message = o.language_list.getTranslation(1220);
+	String message(o.language_list.getTranslation(1220));
 	message += "<a href=\"" + linkurl + "\">" + prettyurl + "</a></p></body></html>\n";
 	peersock.writeString(message.toCharArray());
 }
@@ -112,7 +112,7 @@ bool DMPlugin::willHandle(HTTPHeader *requestheader, HTTPHeader *docheader)
 	// then check standard lists (mimetypes & extensions)
 
 	// mimetypes
-	String mimetype = "";
+	String mimetype("");
 	if (mimelistenabled) {
 		mimetype = docheader->getContentType();
 #ifdef DGDEBUG
@@ -124,14 +124,14 @@ bool DMPlugin::willHandle(HTTPHeader *requestheader, HTTPHeader *docheader)
 	
 	if (extensionlistenabled) {
 		// determine the extension
-		String path = requestheader->decode(requestheader->url());
+		String path(requestheader->decode(requestheader->url()));
 		path.removeWhiteSpace();
 		path.toLower();
 		path.removePTP();
 		path = path.after("/");
 		path.hexDecode();
 		path.realPath();
-		String disposition = docheader->disposition();
+		String disposition(docheader->disposition());
 		String extension;
 		if (disposition.length() > 2) {
 			extension = disposition;
@@ -167,7 +167,7 @@ bool DMPlugin::readStandardLists()
 	mimetypelist.reset();  // incase this is a reload
 	extensionlist.reset();
 
-	String filename = cv["managedmimetypelist"];
+	String filename(cv["managedmimetypelist"]);
 	if (filename.length() > 0) {
 		if (!mimetypelist.readItemList(filename.toCharArray(), false, 0)) {
 			if (!is_daemonised) {
@@ -213,7 +213,7 @@ DMPlugin* dm_plugin_load(const char *pluginConfigPath)
 		return NULL;
 	}
 
-	String plugname = cv["plugname"];
+	String plugname(cv["plugname"]);
 
 	if (plugname.length() < 1) {
 		if (!is_daemonised) {

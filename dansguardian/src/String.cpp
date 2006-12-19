@@ -109,7 +109,7 @@ String::String(const int num)
 {
 	std::ostringstream buf;
 	buf << num << std::ends;
-	std::string s = buf.str();
+	std::string s(buf.str());
 	char *bs = (char *) s.c_str();
 	int l = strlen(bs);
 	data = new char[l + 1];
@@ -134,7 +134,7 @@ String::String(const long num)
 {
 	std::ostringstream buf;
 	buf << num << std::ends;
-	std::string s = buf.str();
+	std::string s(buf.str());
 	char *bs = (char *) s.c_str();
 	int l = strlen(bs);
 	data = new char[l + 1];
@@ -159,7 +159,7 @@ String::String(const unsigned int num)
 {
 	std::ostringstream buf;
 	buf << num << std::ends;
-	std::string s = buf.str();
+	std::string s(buf.str());
 	char *bs = (char *) s.c_str();
 	int l = strlen(bs);
 	data = new char[l + 1];
@@ -327,7 +327,7 @@ void String::toUpper()
 String String::subString(int start, int l)
 {
 	if ((start + l) > sl) {
-		return (String(""));
+		return "";
 	}
 	return (String(data + start, l));
 }
@@ -469,12 +469,12 @@ String String::after(const char *bs)
 {
 	int l = strlen(bs);
 	if (l >= sl) {
-		return (String(""));
+		return "";
 	}
 	char *result = NULL;
 	result = strstr(data, bs);
 	if (result == NULL) {
-		return (String(""));
+		return "";
 	}
 	return (String(result + l));
 }
@@ -484,12 +484,12 @@ String String::before(const char *bs)
 {
 	int l = strlen(bs);
 	if (l >= sl) {
-		return (String(""));
+		return "";
 	}
 	char *result = NULL;
 	result = strstr(data, bs);
 	if (result == NULL) {
-		return (String(""));
+		return "";
 	}
 	return (String(data, (int) (result - data)));
 }

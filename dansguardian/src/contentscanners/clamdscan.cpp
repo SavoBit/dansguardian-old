@@ -114,7 +114,7 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 		syslog(LOG_ERR, "Could not change file ownership to give ClamD read access: %s", strerror(errno));
 		return DGCS_SCANERROR;
 	};
-	String command = "SCAN ";
+	String command("SCAN ");
 	if (pathprefix.length()) {
 		String fname(filename);
 		command += fname.after(pathprefix.toCharArray());
@@ -159,7 +159,7 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 		syslog(LOG_ERR, "Exception whilst reading ClamD socket: %s", e.what());
 		return DGCS_SCANERROR;
 	}
-	String reply = buff;
+	String reply(buff);
 	delete[]buff;
 	reply.removeWhiteSpace();
 #ifdef DGDEBUG

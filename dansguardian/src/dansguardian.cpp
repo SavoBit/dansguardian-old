@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	is_daemonised = false;
 	bool nodaemon = false;
 	bool needreset = false;
-	std::string configfile = __CONFFILE;
+	std::string configfile(__CONFFILE);
 	srand(time(NULL));
 	int rc;
 

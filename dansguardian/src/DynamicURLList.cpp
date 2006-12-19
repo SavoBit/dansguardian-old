@@ -198,7 +198,7 @@ bool DynamicURLList::inURLList(const char *url, const int fg)
 	// truncate URL if necessary, as we have a length limit on our buffers
 	int pos;
 	if (strlen(url) > 999) {
-		String r = String(url, 999);
+		String r(String(url, 999));
 		pos = posInList(r.toCharArray());
 	} else {
 		pos = posInList(url);

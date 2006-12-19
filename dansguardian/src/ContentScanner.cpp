@@ -88,7 +88,7 @@ int CSPlugin::init(void* args)
 int CSPlugin::makeTempFile(String * filename)
 {
 	int tempfilefd;
-	String tempfilepath = o.download_dir.c_str();
+	String tempfilepath(o.download_dir.c_str());
 	tempfilepath += "/tfXXXXXX";
 	char *tempfilepatharray = new char[tempfilepath.length() + 1];
 	strcpy(tempfilepatharray, tempfilepath.toCharArray());
@@ -204,7 +204,7 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 	char *i;
 
 	//exceptionvirusmimetypelist
-	String mimetype = docheader->getContentType();
+	String mimetype(docheader->getContentType());
 #ifdef DGDEBUG
 	std::cout<<"mimetype: "<<mimetype<<std::endl;
 #endif
@@ -213,12 +213,12 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 		return DGCS_NOSCAN;  // match
 	}
 
-	String disposition = docheader->disposition();
+	String disposition(docheader->disposition());
 #ifdef DGDEBUG
 	std::cout<<"disposition: "<<disposition<<std::endl;
 #endif
-	String url = requestheader->url();
-	String urld = requestheader->decode(url);
+	String url(requestheader->url());
+	String urld(requestheader->decode(url));
 	urld.removeWhiteSpace();
 	urld.toLower();
 	urld.removePTP();
@@ -324,7 +324,7 @@ CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 		return NULL;
 	}
 
-	String plugname = cv["plugname"];
+	String plugname(cv["plugname"]);
 	if (plugname.length() < 1) {
 		if (!is_daemonised) {
 			std::cerr << "Unable read plugin config plugname variable: " << pluginConfigPath << std::endl;

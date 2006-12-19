@@ -102,7 +102,7 @@ int fancydm::init(void* args)
 	std::cout << "Upper download limit: " << upperlimit << std::endl;
 #endif
 
-	String fname = cv["template"];
+	String fname(cv["template"]);
 	if (fname.length() > 0) {
 		// read the template file, and return OK on success, error on failure.
 		fname = o.languagepath + fname;
@@ -119,9 +119,9 @@ int fancydm::init(void* args)
 // call template's downloadlink JavaScript function
 void fancydm::sendLink(Socket &peersock, String &linkurl, String &prettyurl)
 {
-	String mess = "<script language='javascript'>\n<!--\ndownloadlink(\""+linkurl+"\",\""+prettyurl
+	String mess("<script language='javascript'>\n<!--\ndownloadlink(\""+linkurl+"\",\""+prettyurl
 		+ "\"," + (toobig_notdownloaded ? "2" : (toobig_unscanned ? "1" : "0"))
-		+ ");\n//-->\n</script>\n";
+		+ ");\n//-->\n</script>\n");
 	peersock.writeString(mess.toCharArray());
 	// send text-only version for non-JS-enabled browsers
 	// 1220 "Scan complete.</p><p>Click here to download: "
@@ -206,7 +206,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 #endif
 
 	// determine downloaded filename
-	String filename = requestheader->disposition();
+	String filename(requestheader->disposition());
 	if (filename.length() == 0) {
 		filename = requestheader->url();
 		filename = requestheader->decode(filename);
@@ -327,7 +327,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 						peersock->writeString(message.toCharArray());
 						peersock->writeString("<!-- force flush -->\r\n");
 						// add URL to clean cache (for all groups)
-						String url = requestheader->url();
+						String url(requestheader->url());
 						addToClean(url, o.filter_groups + 1);
 #ifdef DGDEBUG
 						std::cout << "fancydm: file too big to be scanned, entering second stage of download" << std::endl;

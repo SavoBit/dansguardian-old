@@ -115,7 +115,7 @@ AuthPlugin* auth_plugin_load(const char *pluginConfigPath)
 		return NULL;
 	}
 
-	String plugname = cv["plugname"];
+	String plugname(cv["plugname"]);
 	if (plugname.length() < 1) {
 		if (!is_daemonised) {
 			std::cerr << "Unable read plugin config plugname variable: " << pluginConfigPath << std::endl;
