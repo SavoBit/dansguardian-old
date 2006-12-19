@@ -104,7 +104,7 @@ int HTTPHeader::returnCode()
 int HTTPHeader::contentLength()
 {
 	// code 304 - not modified - no content
-	String temp = header.front().after(" ");
+	String temp(header.front().after(" "));
 	if (temp.startsWith("304"))
 		return 0;
 	if (pcontentlength != NULL) {
@@ -127,7 +127,7 @@ String HTTPHeader::getAuthType()
 // check the request's return code to see if it's an auth required message
 bool HTTPHeader::authRequired()
 {
-	String temp = header.front().after(" ");
+	String temp(header.front().after(" "));
 	if (temp.startsWith("407")) {
 		return true;
 	}
@@ -138,7 +138,7 @@ bool HTTPHeader::authRequired()
 String HTTPHeader::disposition()
 {
 	if (pcontentdisposition != NULL) {
-		String filename = pcontentdisposition->after("filename").after("=");
+		String filename(pcontentdisposition->after("filename").after("="));
 		if (filename.contains(";"))
 			filename = filename.before(";");
 		filename.removeWhiteSpace();  // incase of trailing space
@@ -171,7 +171,7 @@ String HTTPHeader::getContentType()
 	if (pcontenttype != NULL) {
 		int j;
 		unsigned char c;
-		String mimetype = pcontenttype->after(" ");
+		String mimetype(pcontenttype->after(" "));
 		j = 0;
 		while (j < (signed) mimetype.length()) {
 			c = mimetype[j];
@@ -203,7 +203,7 @@ bool HTTPHeader::isContentType(String t)
 std::string HTTPHeader::getXForwardedForIP()
 {
 	if (pxforwardedfor != NULL) {
-		String line = pxforwardedfor->after(": ");
+		String line(pxforwardedfor->after(": "));
 		line.chop();
 		return std::string(line.toCharArray());
 	}
@@ -218,7 +218,7 @@ bool HTTPHeader::isRedirection()
 	if (header.size() < 1) {
 		return false;
 	}			// sometimes get called b 4 read
-	String answer = header.front().after(" ").before(" ");
+	String answer(header.front().after(" ").before(" "));
 	if (answer[0] == '3' && answer.length() == 3) {
 		return true;
 	}
@@ -230,7 +230,7 @@ bool HTTPHeader::isRedirection()
 std::string HTTPHeader::getAuthData()
 {
 	if (pproxyauthorization != NULL) {
-		String line = pproxyauthorization->after(" ").after(" ");
+		String line(pproxyauthorization->after(" ").after(" "));
 		return decodeb64(line);  // it's base64 MIME encoded
 	}
 	return "";
@@ -257,7 +257,7 @@ bool HTTPHeader::isCompressed()
 String HTTPHeader::contentEncoding()
 {
 	if (pcontentencoding != NULL) {
-		String ce = pcontentencoding->after(": ");
+		String ce(pcontentencoding->after(": "));
 		ce.toLower();
 		return ce;
 	}
@@ -273,7 +273,7 @@ String HTTPHeader::contentEncoding()
 // squid adds this so if more support it it may be useful one day
 void HTTPHeader::addXForwardedFor(std::string clientip)
 {
-	std::string line = "X-Forwarded-For: " + clientip + "\r";
+	std::string line("X-Forwarded-For: " + clientip + "\r");
 	header.push_back(String(line.c_str()));
 }
 
@@ -317,7 +317,7 @@ String HTTPHeader::modifyEncodings(String e)
 	// we do not support compress
 
 	e.toLower();
-	String o = "Accept-Encoding: identity";
+	String o("Accept-Encoding: identity");
 #if ZLIB_VERNUM < 0x1210
 #warning 'Accept-Encoding: gzip' is disabled
 #else
@@ -348,7 +348,7 @@ void HTTPHeader::removeEncoding(int newlen)
 		std::cout << "Old: " << header[i] <<std::endl;
 #endif
 		// only strip supported compression types
-		String temp = header[i].after(":");
+		String temp(header[i].after(":"));
 		temp.removeWhiteSpace();
 		String newheader;
 		// iterate over comma-separated list of encodings
@@ -432,7 +432,7 @@ bool HTTPHeader::urlRegExp(int filtergroup) {
 	RegExp *re;
 	String replacement;
 	String repstr;
-	String oldUrl = url();
+	String oldUrl(url());
 	String newUrl;
 	bool urlmodified = false;
 	unsigned int i;
@@ -523,7 +523,7 @@ bool HTTPHeader::urlRegExp(int filtergroup) {
 // is a URL malformed?
 bool HTTPHeader::malformedURL(String url)
 {
-	String host = url.after("://");
+	String host(url.after("://"));
 	if (host.contains("/")) {
 		host = host.before("/");
 	}
@@ -540,6 +540,21 @@ bool HTTPHeader::malformedURL(String url)
 		std::cout << "double dots in domain name" << std::endl;
 #endif
 		return true;
+	}
+	// Just change the URL to contain no dots, for the sake of
+	// not having to tweak the domain and URL matching code -
+	// otherwise, all we've done is introduced a very simple way
+	// to get around the filter...
+	// Could conceivably cause problems in situations where the
+	// ending dot is absolutely necessary, but these must be
+	// incredibly rare in the wild, surely?
+	if (host.endsWith(".")) {
+#ifdef DGDEBUG
+		std::cout << "ending dot in domain name - stripping..." << std::endl;
+#endif
+		host.chop();
+		String newurl(url.before("/") + "//" + host + url.after("/").after("/"));
+		setURL(newurl);
 	}
 	int i, len;
 	unsigned char c;
@@ -581,7 +596,7 @@ bool HTTPHeader::isPostUpload(Socket &peersock)
 			}
 		}
 		RegExp mysearch;
-		std::string dis = "content-type: ";  // signifies file upload
+		std::string dis("content-type: ");  // signifies file upload
 		char *p = new char[32];
 		try {
 			for (i = 0; i < (signed) dis.length(); i++) {
@@ -777,7 +792,7 @@ String HTTPHeader::url()
 		return cachedurl;
 	port = 0;
 	String hostname;
-	String answer = header.front().after(" ");
+	String answer(header.front().after(" "));
 	answer.removeMultiChar(' ');
 	if (answer.after(" ").startsWith("HTTP/")) {
 		answer = answer.before(" HTTP/");
@@ -815,9 +830,9 @@ String HTTPHeader::url()
 			if (!answer.after("://").contains("/")) {
 				answer += "/";  // needed later on so correct host is extracted
 			}
-			String protocol = answer.before("://");
+			String protocol(answer.before("://"));
 			hostname = answer.after("://");
-			String url = hostname.after("/");
+			String url(hostname.after("/"));
 			url.removeWhiteSpace();  // remove rubbish like ^M and blanks
 			if (url.length() > 0) {
 				url = "/" + url;
@@ -860,10 +875,10 @@ void HTTPHeader::chopBypass(String url, bool infectionbypass)
 {
 	if (url.contains(infectionbypass ? "GIBYPASS=" : "GBYPASS=")) {
 		if (url.contains(infectionbypass ? "?GIBYPASS=" : "?GBYPASS=")) {
-			String bypass = url.after(infectionbypass ? "?GIBYPASS=" : "?GBYPASS=");
+			String bypass(url.after(infectionbypass ? "?GIBYPASS=" : "?GBYPASS="));
 			header.front() = header.front().before(infectionbypass ? "?GIBYPASS=" : "?GBYPASS=") + header.front().after(bypass.toCharArray());
 		} else {
-			String bypass = url.after(infectionbypass ? "&GIBYPASS=" : "&GBYPASS=");
+			String bypass(url.after(infectionbypass ? "&GIBYPASS=" : "&GBYPASS="));
 			header.front() = header.front().before(infectionbypass ? "&GIBYPASS=" : "&GBYPASS=") + header.front().after(bypass.toCharArray());
 		}
 	}
@@ -875,10 +890,10 @@ void HTTPHeader::chopScanBypass(String url)
 {
 	if (url.contains("GSBYPASS=")) {
 		if (url.contains("?GSBYPASS=")) {
-			String bypass = url.after("?GSBYPASS=");
+			String bypass(url.after("?GSBYPASS="));
 			header.front() = header.front().before("?GSBYPASS=") + header.front().after(bypass.toCharArray());
 		} else {
-			String bypass = url.after("&GSBYPASS=");
+			String bypass(url.after("&GSBYPASS="));
 			header.front() = header.front().before("&GSBYPASS=") + header.front().after(bypass.toCharArray());
 		}
 	}
@@ -913,7 +928,7 @@ String HTTPHeader::getCookie(const char *cookie)
 // add cookie with given name & value to outgoing headers
 void HTTPHeader::setCookie(const char *cookie, const char *value)
 {
-	String line = "Set-Cookie: ";
+	String line("Set-Cookie: ");
 	line += cookie;
 	line += "=";
 	line += value;
@@ -928,13 +943,13 @@ void HTTPHeader::setCookie(const char *cookie, const char *value)
 // is this a temporary filter bypass cookie?
 bool HTTPHeader::isBypassCookie(String * url, const char *magic, const char *clientip)
 {
-	String cookie = getCookie("GBYPASS");
-	String cookiehash = cookie.subString(0, 32);
-	String cookietime = cookie.after(cookiehash.toCharArray());
-	String mymagic = magic;
+	String cookie(getCookie("GBYPASS"));
+	String cookiehash(cookie.subString(0, 32));
+	String cookietime(cookie.after(cookiehash.toCharArray()));
+	String mymagic(magic);
 	mymagic += clientip;
 	mymagic += cookietime;
-	String hashed = (*url).md5(mymagic.toCharArray());
+	String hashed((*url).md5(mymagic.toCharArray()));
 	if (hashed != cookiehash) {
 #ifdef DGDEBUG
 		std::cout << "Cookie GBYPASS not match" << std::endl;
@@ -973,20 +988,20 @@ int HTTPHeader::isBypassURL(String * url, const char *magic, const char *clienti
 	std::cout << "URL " << (filterbypass ? "GBYPASS" : "GIBYPASS") << " found checking..." << std::endl;
 #endif
 
-	String url_left = (*url).before(filterbypass ? "GBYPASS=" : "GIBYPASS=");
+	String url_left((*url).before(filterbypass ? "GBYPASS=" : "GIBYPASS="));
 	url_left.chop();  // remove the ? or &
-	String url_right = (*url).after(filterbypass ? "GBYPASS=" : "GIBYPASS=");
+	String url_right((*url).after(filterbypass ? "GBYPASS=" : "GIBYPASS="));
 
-	String url_hash = url_right.subString(0, 32);
-	String url_time = url_right.after(url_hash.toCharArray());
+	String url_hash(url_right.subString(0, 32));
+	String url_time(url_right.after(url_hash.toCharArray()));
 #ifdef DGDEBUG
 	std::cout << "URL: " << url_left << ", HASH: " << url_hash << ", TIME: " << url_time << std::endl;
 #endif
 
-	String mymagic = magic;
+	String mymagic(magic);
 	mymagic += clientip;
 	mymagic += url_time;
-	String hashed = url_left.md5(mymagic.toCharArray());
+	String hashed(url_left.md5(mymagic.toCharArray()));
 
 	if (hashed != url_hash) {
 #ifdef DGDEBUG
@@ -1031,11 +1046,11 @@ bool HTTPHeader::isScanBypassURL(String * url, const char *magic, const char *cl
 	std::cout << "URL GSBYPASS found checking..." << std::endl;
 #endif
 
-	String url_left = (*url).before("GSBYPASS=");
+	String url_left((*url).before("GSBYPASS="));
 	url_left.chop();  // remove the ? or &
-	String url_right = (*url).after("GSBYPASS=");
+	String url_right((*url).after("GSBYPASS="));
 
-	String url_hash = url_right.subString(0, 32);
+	String url_hash(url_right.subString(0, 32));
 #ifdef DGDEBUG
 	std::cout << "URL: " << url_left << ", HASH: " << url_hash << std::endl;
 #endif
@@ -1044,14 +1059,14 @@ bool HTTPHeader::isScanBypassURL(String * url, const char *magic, const char *cl
 	// GSBYPASS=hash(ip+url+tempfilename+mime+disposition+secret)
 	// &N=tempfilename&M=mimetype&D=dispos
 
-	String tempfilename = url_right.after("&N=");
-	String tempfilemime = tempfilename.after("&M=");
-	String tempfiledis = tempfilemime.after("&D=");
+	String tempfilename(url_right.after("&N="));
+	String tempfilemime(tempfilename.after("&M="));
+	String tempfiledis(tempfilemime.after("&D="));
 	tempfilemime = tempfilemime.before("&D=");
 	tempfilename = tempfilename.before("&M=");
 
-	String tohash = clientip + url_left + tempfilename + tempfilemime + tempfiledis + magic;
-	String hashed = tohash.md5();
+	String tohash(clientip + url_left + tempfilename + tempfilemime + tempfiledis + magic);
+	String hashed(tohash.md5());
 
 #ifdef DGDEBUG
 	std::cout << "checking hash: " << clientip << " " << url_left << " " << tempfilename << " " << " " << tempfilemime << " " << tempfiledis << " " << magic << " " << hashed << std::endl;
@@ -1171,7 +1186,7 @@ std::string HTTPHeader::decodeb64(String line)
 {				// decode a block of b64 MIME
 	long four = 0;
 	int d;
-	std::string result = "";
+	std::string result;
 	int len = line.length() - 4;
 	for (int i = 0; i < len; i += 4) {
 		four = 0;
