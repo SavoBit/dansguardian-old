@@ -1335,7 +1335,7 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 		break;
 	}
 
-	if (header.front().toCharArray()[0] == 'P') {
+	if ((!requestType().startsWith("HTTP")) && (pcontentlength != NULL)) {
 		if (postdatalen > 0) {
 #ifdef DGDEBUG
 			std::cout << "Sending initial POST data chunk" << std::endl;
