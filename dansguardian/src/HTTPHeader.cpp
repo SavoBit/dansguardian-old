@@ -541,21 +541,6 @@ bool HTTPHeader::malformedURL(String url)
 #endif
 		return true;
 	}
-	// Just change the URL to contain no dots, for the sake of
-	// not having to tweak the domain and URL matching code -
-	// otherwise, all we've done is introduced a very simple way
-	// to get around the filter...
-	// Could conceivably cause problems in situations where the
-	// ending dot is absolutely necessary, but these must be
-	// incredibly rare in the wild, surely?
-	if (host.endsWith(".")) {
-#ifdef DGDEBUG
-		std::cout << "ending dot in domain name - stripping..." << std::endl;
-#endif
-		host.chop();
-		String newurl(url.before("/") + "//" + host + url.after("/").after("/"));
-		setURL(newurl);
-	}
 	int i, len;
 	unsigned char c;
 	len = host.length();
@@ -773,6 +758,26 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		// we should only be in this state if HTTP 1.1, persistency allowed, but persistency not explicitly asked for
 		header.push_back("Proxy-Connection: Keep-Alive\r");
 		pproxyconnection = &(header.back());
+	}
+	// Change the URL to contain no dots, for the sake of
+	// not having to tweak the domain and URL matching code -
+	// otherwise, all we've done is introduced a very simple way
+	// to get around the filter...
+	// Could conceivably cause problems in situations where the
+	// ending dot is absolutely necessary, but these must be
+	// incredibly rare in the wild, surely?
+	String ourl(url());
+	String host(ourl.after("://"));
+	if (host.contains("/")) {
+		host = host.before("/");
+	}
+	if (host.endsWith(".")) {
+#ifdef DGDEBUG
+		std::cout << "ending dot in domain name - stripping..." << std::endl;
+#endif
+		host.chop();
+		String newurl(ourl.before("/") + "//" + host + ourl.after("/").after("/"));
+		setURL(newurl);
 	}
 }
 
