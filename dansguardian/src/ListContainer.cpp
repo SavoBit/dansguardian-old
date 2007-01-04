@@ -668,7 +668,7 @@ bool ListContainer::createCacheFile()
 			std::cerr << "Do you have write access to this area:" << std::endl;
 			std::cerr << f << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error cache file.");
+		syslog(LOG_ERR, "%s", "Error creating cache file.");
 		syslog(LOG_ERR, "%s", "Do you have write access to this area:");
 		syslog(LOG_ERR, "%s", f.toCharArray());
 		return false;
