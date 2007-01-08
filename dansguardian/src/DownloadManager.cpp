@@ -113,16 +113,20 @@ bool DMPlugin::willHandle(HTTPHeader *requestheader, HTTPHeader *docheader)
 
 	// mimetypes
 	String mimetype("");
+	bool matchedmime = false;
 	if (mimelistenabled) {
 		mimetype = docheader->getContentType();
 #ifdef DGDEBUG
 		std::cout<<"mimetype: "<<mimetype<<std::endl;
 #endif
-		if (mimetypelist.findInList(mimetype.toCharArray()) == NULL)
-			return false;
+		if (mimetypelist.findInList(mimetype.toCharArray()) == NULL) {
+			if (!extensionlistenabled)
+				return false;
+		} else
+			matchedmime = true;
 	}
 	
-	if (extensionlistenabled) {
+	if (extensionlistenabled && !matchedmime) {
 		// determine the extension
 		String path(requestheader->decode(requestheader->url()));
 		path.removeWhiteSpace();
@@ -135,6 +139,10 @@ bool DMPlugin::willHandle(HTTPHeader *requestheader, HTTPHeader *docheader)
 		String extension;
 		if (disposition.length() > 2) {
 			extension = disposition;
+			while (extension.contains(".")) {
+				extension = extension.after(".");
+			}
+			extension = "." + extension;
 		} else {
 			if (!path.contains("?")) {
 				extension = path;
@@ -155,7 +163,7 @@ bool DMPlugin::willHandle(HTTPHeader *requestheader, HTTPHeader *docheader)
 	#endif
 		// check the extension list
 		if (!extension.contains(".") || (extensionlist.findEndsWith(extension.toCharArray()) == NULL))
-				return false;
+				return matchedmime;
 	}
 
 	return true;
