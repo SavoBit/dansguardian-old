@@ -241,6 +241,10 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 	//exceptionvirusextensionlist
 	if (disposition.length() > 2) {
 		extension = disposition;
+		while (extension.contains(".")) {
+			extension = extension.after(".");
+		}
+		extension = "." + extension;
 	} else {
 		if (!path.contains("?")) {
 			extension = path;
