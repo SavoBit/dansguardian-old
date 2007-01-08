@@ -18,7 +18,7 @@ plugname = 'trickle'
 
 # Lists of mime types and extensions to manage
 # When not defined, matches everything.
-# These can be enabled separately, but when both enabled,
-# a request must match both lists.
+# These can be enabled separately; when both enabled,
+# a request may match etiher list.
 #managedmimetypelist = ''
 #managedextensionlist = ''
