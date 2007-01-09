@@ -1068,8 +1068,6 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 			else if (isexception) {
 				if (o.log_exception_hits == 1) {
 					what = "*EXCEPTION* " + what;
-				} else {
-					what = "";
 				}
 			}
 		   
