@@ -1307,9 +1307,25 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						// despite the debug note above, we do still go through contentFilter for cached non-exception HTML,
 						// as content replacement rules need to be applied.
 						waschecked = true;
-						contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
-							&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
-							&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified);
+						if (runav) {
+#ifdef DGDEBUG
+							std::cout << "Filtering with expectation of a possible csmessage" << std::endl;
+#endif
+							String csmessage;
+							contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
+								&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
+								&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified, &csmessage);
+							if (csmessage.length() > 0) {
+#ifdef DGDEBUG
+								std::cout << "csmessage found: " << csmessage << std::endl;
+#endif
+								exceptionreason = csmessage.toCharArray();
+							}
+						} else {
+							contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
+								&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
+								&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified, NULL);
+						}
 					}
 				}
 			}
@@ -2035,7 +2051,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 	Socket *proxysock, Socket *peerconn, int *headersent, bool *pausedtoobig, int *docsize, NaughtyFilter *checkme,
 	bool runav, bool wasclean, bool cachehit, int filtergroup, std::deque<bool> *sendtoscanner,
 	std::string *clientuser, std::string *clientip, bool *wasinfected, bool *wasscanned, bool isbypass,
-	String &url, String &domain, bool *scanerror, bool &contentmodified)
+	String &url, String &domain, bool *scanerror, bool &contentmodified, String *csmessage)
 {
 	proxysock->checkForInput(120);
 	bool compressed = docheader->isCompressed();
@@ -2088,7 +2104,6 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 
 		// fixed to obey maxcontentramcachescansize
 		if (runav && (isfile ? dblen <= o.max_content_filecache_scan_size : dblen <= o.max_content_ramcache_scan_size)) {
-			(*wasscanned) = true;
 			int csrc = 0;
 			std::deque<bool>::iterator j = sendtoscanner->begin();
 #ifdef DGDEBUG
@@ -2096,12 +2111,13 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 #endif
 			for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
 				if (*j) {
+					(*wasscanned) = true;
 					if (isfile) {
 #ifdef DGDEBUG
 						std::cout << "Running scanFile" << std::endl;
 #endif
 						csrc = ((CSPlugin*)(*i))->scanFile(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->tempfilepath.toCharArray());
-						if (csrc != DGCS_OK) {
+						if ((csrc != DGCS_CLEAN) && (csrc != DGCS_WARNING)) {
 							unlink(docbody->tempfilepath.toCharArray());
 							// delete infected (or unscanned due to error) file straight away
 						}
@@ -2112,7 +2128,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 						csrc = ((CSPlugin*)(*i))->scanMemory(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->data, docbody->buffer_length);
 					}
 #ifdef DGDEBUG
-					std::cerr << "AV scan " << k << " returned:" << csrc << std::endl;
+					std::cerr << "AV scan " << k << " returned: " << csrc << std::endl;
 #endif
 					if (csrc < 0) {
 						syslog(LOG_ERR, "scanFile/Memory returned error: %d", csrc);
@@ -2127,7 +2143,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 						(*scanerror) = true;
 						break;
 					}
-					else if (csrc > 0) {
+					else if (csrc == DGCS_INFECTED) {
 						checkme->whatIsNaughty = o.language_list.getTranslation(1100);
 						String virname(((CSPlugin*)(*i))->getLastVirusName());
 
@@ -2142,6 +2158,18 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 						(*wasinfected) = true;
 						(*scanerror) = false;
 						break;
+					}
+					else if (csrc == DGCS_WARNING) {
+						// Scanner returned a warning. File wasn't infected, but wasn't scanned properly, either.
+						(*wasscanned) = false;
+						(*scanerror) = false;
+#ifdef DGDEBUG
+						std::cout << ((CSPlugin*)(*i))->getLastMessage() << std::endl;
+#endif
+						(*csmessage) = ((CSPlugin*)(*i))->getLastMessage();
+					}
+					else if (csrc != DGCS_CLEAN) {
+						syslog(LOG_ERR, "Unknown return code from content scanner: %d", csrc);
 					}
 				}
 				j++;

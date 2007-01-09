@@ -86,7 +86,7 @@ private:
 		Socket *peerconn, int *headersent, bool *pausedtoobig, int *docsize, NaughtyFilter *checkme, bool runav,
 		bool wasclean, bool cachehit, int filtergroup, std::deque<bool > *sendtoscanner, std::string *clientuser,
 		std::string *clientip, bool *wasinfected, bool *wasscanned, bool isbypass, String &url, String &domain,
-		bool *scanerror, bool &contentmodified);
+		bool *scanerror, bool &contentmodified, String *csmessage);
 
 	// send a file to the client - used during bypass of blocked downloads
 	unsigned int sendFile(Socket *peerconn, String & filename, String & filemime, String & filedis, String &url);
