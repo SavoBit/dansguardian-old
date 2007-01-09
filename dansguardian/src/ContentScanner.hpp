@@ -39,7 +39,7 @@
 // DEFINES
 #define DGCS_OK 0
 #define DGCS_ERROR -1
-#define DGCS_WARNING 1
+#define DGCS_WARNING 3
 
 #define DGCS_NOSCAN 0
 #define DGCS_NEEDSCAN 1
@@ -49,8 +49,8 @@
 #define DGCS_CLEAN 0
 #define DGCS_SCANERROR -1
 #define DGCS_INFECTED 1
-#define DGCS_CURED 2  // not used
-#define DGCS_MAX 3 // use values above this for custom return codes
+//#define DGCS_CURED 2  // not used
+#define DGCS_MAX 4 // use values above this for custom return codes
 
 
 // DECLARATIONS
