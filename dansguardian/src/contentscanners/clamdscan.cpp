@@ -43,7 +43,7 @@ extern bool is_daemonised;
 class clamdinstance:public CSPlugin
 {
 public:
-	clamdinstance(ConfigVar & definition):CSPlugin(definition) {};
+	clamdinstance(ConfigVar & definition):CSPlugin(definition), archivewarn(false) {};
 
 	// we are not replacing scanTest or scanMemory
 	// but for scanFile and the default scanMemory to work, we need a working scanFile implementation
@@ -57,6 +57,8 @@ private:
 	String udspath;
 	// File path prefix for chrooted ClamD
 	String pathprefix;
+	// Whether or not to just issue a warning on archive limit/encryption warnings
+	bool archivewarn;
 };
 
 
@@ -92,6 +94,8 @@ int clamdinstance::init(void* args)
 
 	// read in path prefix
 	pathprefix = cv["pathprefix"];
+
+	archivewarn = cv["archivewarn"] == "on";
 
 	return DGCS_OK;
 }
@@ -178,6 +182,13 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 #ifdef DGDEBUG
 		std::cerr << "clamdscan INFECTED! with: " << lastvirusname << std::endl;
 #endif
+		if (archivewarn && (lastvirusname.contains(".Exceeded") || lastvirusname.contains(".Encrypted"))) {
+#ifdef DGDEBUG
+			std::cerr << "clamdscan: detected an ArchiveBlockMax \"virus\"; logging warning only" << std::endl;
+#endif
+			lastmessage = "Archive not fully scanned: "+lastvirusname;
+			return DGCS_WARNING;
+		}
 		return DGCS_INFECTED;
 	}
 	// must be clean
