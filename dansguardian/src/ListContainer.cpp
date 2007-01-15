@@ -177,9 +177,8 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 			// been marked as not to be converted
 			if (caseinsensitive)
 				line.toLower();
-			if (line.startsWith("<")) {
+			if (line.startsWith("<"))
 				readPhraseListHelper(line, isexception, catindex);
-			}
 			// handle included list files
 			else if (line.startsWith(".")) {
 				temp = line.after(".include<").before(">");
@@ -965,7 +964,7 @@ void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int
 		// iterate over all children of the root node
 		for (j = 4; j < ml; j++) {
 			// grab the endpoint of this link
-			pos = graphdata[j];
+			pos = realgraphdata[j];
 
 			// now comes the main graph search!
 			// this is basically a depth-first tree search
@@ -974,11 +973,10 @@ void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int
 				// get the address of the link endpoint and the data actually stored at it
 				// note that this only works for GRAPHENTRYSIZE == 64
 				ppos = pos << 6;
-				if (ppos == 0) {
+				if (ppos == 0)
 					graphdata = realgraphdata;
-				} else {
+				else
 					graphdata = realgraphdata + ROOTOFFSET;
-				}
 				p = graphdata[ppos];
 
 				// does the character at this string depth match the relevant character in the node we're currently looking at?
@@ -1109,7 +1107,7 @@ void ListContainer::graphAdd(String s, int inx, int item)
 		else if ((numlinks + 1) > secondmaxchildnodes)
 			secondmaxchildnodes = numlinks + 1;
 #endif
-		graphdata[inx * GRAPHENTRYSIZE + 2] = numlinks + 1;
+		graphdata[inx * GRAPHENTRYSIZE + 2]++;
 		graphdata[inx * GRAPHENTRYSIZE + 4 + numlinks] = i;
 		graphdata2[i * GRAPHENTRYSIZE] = p;
 		graphdata2[i * GRAPHENTRYSIZE + 3] = item;
@@ -1133,7 +1131,7 @@ void ListContainer::graphAdd(String s, int inx, int item)
 			else if ((numlinks + 1) > secondmaxchildnodes)
 				secondmaxchildnodes = numlinks + 1;
 #endif
-			graphdata2[i * GRAPHENTRYSIZE + 2] = numlinks + 1;
+			graphdata2[i * GRAPHENTRYSIZE + 2]++;
 			graphdata2[i * GRAPHENTRYSIZE + 4 + numlinks] = i + 1;
 			i++;
 			graphitems++;
