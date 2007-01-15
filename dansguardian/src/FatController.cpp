@@ -872,7 +872,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 	std::string cr("\n");
    
 	std::string where, what, how, cat, clienthost, from, who, mimetype;
-	int port = 80, size = 0, isnaughty = 0, isexception = 0, istext = 1, code = 200;
+	int port = 80, size = 0, isnaughty = 0, isexception = 0, code = 200;
 	int cachehit = 0, wasinfected = 0, wasscanned = 0, naughtiness = 0, filtergroup = 0;
 	long tv_sec = 0, tv_usec = 0;
 	int contentmodified = 0, urlmodified = 0;
@@ -963,60 +963,57 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 							naughtiness = atoi(logline);
 							break;
 						case 4:
-							istext = atoi(logline);
-							break;
-						case 5:
 							where = logline;
 							break;
-						case 6:
+						case 5:
 							what = logline;
 							break;
-						case 7:
+						case 6:
 							how = logline;
 							break;
-						case 8:
+						case 7:
 							who = logline;
 							break;
-						case 9:
+						case 8:
 							from = logline;
 							break;
-						case 10:
+						case 9:
 							port = atoi(logline);
 							break;
-						case 11:
+						case 10:
 							wasscanned = atoi(logline);
 							break;
-						case 12:
+						case 11:
 							wasinfected = atoi(logline);
 							break;
-						case 13:
+						case 12:
 							contentmodified = atoi(logline);
 							break;
-						case 14:
+						case 13:
 							urlmodified = atoi(logline);
 							break;
-						case 15:
+						case 14:
 							size = atoi(logline);
 							break;
-						case 16:
+						case 15:
 							filtergroup = atoi(logline);
 							break;
-						case 17:
+						case 16:
 							code = atoi(logline);
 							break;
-						case 18:
+						case 17:
 							cachehit = atoi(logline);
 							break;
-						case 19:
+						case 18:
 							mimetype = logline;
 							break;
-						case 20:
+						case 19:
 							tv_sec = atol(logline);
 							break;
-						case 21:
+						case 20:
 							tv_usec = atol(logline);
 							break;
-						case 22:
+						case 21:
 							clienthost = logline;
 							break;
 						}

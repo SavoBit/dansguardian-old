@@ -1576,7 +1576,6 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		data += ( cat ? (*cat) + cr : cr);
 		data += String(isnaughty)+cr;
 		data += String(naughtiness)+cr;
-		data += String(istext)+cr;
 		data += where+cr;
 		data += what+cr;
 		data += how+cr;
