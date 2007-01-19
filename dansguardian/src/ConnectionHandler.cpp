@@ -70,7 +70,7 @@ bool wasClean(String &url, const int fg)
 		return false;
 	}
 	if (ipcsock.connect((char *) o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
-		syslog(LOG_ERR, "Error connecting via ipc to url cache");
+		syslog(LOG_ERR, "Error connecting via ipc to url cache: %s", strerror(errno));
 		ipcsock.close();
 		return false;
 	}
@@ -119,9 +119,9 @@ void addToClean(String &url, const int fg)
 		return;
 	}
 	if (ipcsock.connect((char *) o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
-		syslog(LOG_ERR, "Error connecting via ipc to url cache");
+		syslog(LOG_ERR, "Error connecting via ipc to url cache: %s", strerror(errno));
 #ifdef DGDEBUG
-		std::cout << "Error connecting via ipc to url cache" << std::endl;
+		std::cout << "Error connecting via ipc to url cache: " << strerror(errno) << std::endl;
 #endif
 		return;
 	}
@@ -228,7 +228,7 @@ bool ConnectionHandler::gotIPs(std::string ipstr) {
 	}
 	// TODO: put in proper file name check
 	if (ipcsock.connect((char*) o.ipipc_filename.c_str()) < 0) {  // connect to dedicated ip list proc
-		syslog(LOG_ERR, "Error connecting via ipc to IP cache");
+		syslog(LOG_ERR, "Error connecting via ipc to IP cache: %s", strerror(errno));
 		return false;
 	}
 	char reply;
@@ -1545,8 +1545,8 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		}
 		if (ipcsock.connect((char *) o.ipc_filename.c_str()) < 0) {
 			if (!is_daemonised)
-				std::cout << "Error connecting via IPC socket to log" << std::endl;
-			syslog(LOG_ERR, "Error connecting via IPC socket to log");
+				std::cout << "Error connecting via IPC socket to log: " << strerror(errno) << std::endl;
+			syslog(LOG_ERR, "Error connecting via IPC socket to log: %s", strerror(errno));
 			ipcsock.close();
 			return;
 		}
