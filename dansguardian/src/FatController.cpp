@@ -2159,6 +2159,8 @@ int fc_controlit()
 			if (errno == EINTR) {
 				continue;  // was interupted by a signal so restart
 			}
+			if (o.logconerror)
+				syslog(LOG_ERR, "Error polling child process sockets: %s", strerror(errno));
 			failurecount++;  // log the error/failure
 			continue;  // then continue with the looping
 		}
