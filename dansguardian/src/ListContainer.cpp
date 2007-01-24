@@ -145,8 +145,7 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 		if (!is_daemonised) {
 			std::cerr << "Error reading file (does it exist?): " << filename << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error reading file (does it exist?): ");
-		syslog(LOG_ERR, "%s", filename);
+		syslog(LOG_ERR, "Error reading file (does it exist?): %s", filename);
 		return false;
 	}
 	if (len < 2) {
@@ -160,8 +159,7 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 		if (!is_daemonised) {
 			std::cerr << "Error opening file (does it exist?): " << filename << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error opening file (does it exist?): ");
-		syslog(LOG_ERR, "%s", filename);
+		syslog(LOG_ERR, "Error opening file (does it exist?): %s", filename);
 		return false;
 	}
 	lcat = "";
@@ -359,8 +357,7 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 		if (!is_daemonised) {
 			std::cerr << "Error reading file: " << filename << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error reading file:");
-		syslog(LOG_ERR, "%s", filename);
+		syslog(LOG_ERR, "Error reading file: %s", filename);
 		return false;
 	}
 	if (len < 2) {
@@ -372,10 +369,9 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 	ifstream listfile(filename, ios::in);
 	if (!listfile.good()) {
 		if (!is_daemonised) {
-			std::cerr << "Error opening :" << filename << std::endl;
+			std::cerr << "Error opening: " << filename << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error opening :");
-		syslog(LOG_ERR, "%s", filename);
+		syslog(LOG_ERR, "Error opening file: %s", filename);
 		return false;
 	}
 	String temp, inc, hostname, url;
@@ -449,10 +445,9 @@ bool ListContainer::readAnotherItemList(const char *filename, bool startswith, i
 	int result = o.lm.newItemList(filename, startswith, filters, false);
 	if (result < 0) {
 		if (!is_daemonised) {
-			std::cerr << "Error opening file:" << filename << std::endl;
+			std::cerr << "Error opening file: " << filename << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error opening file:");
-		syslog(LOG_ERR, "%s", filename);
+		syslog(LOG_ERR, "Error opening file: %s", filename);
 		return false;
 	}
 	morelists.push_back((unsigned) result);
@@ -663,13 +658,9 @@ bool ListContainer::createCacheFile()
 	ofstream listfile(f.toCharArray(), ios::out);
 	if (listfile.fail()) {
 		if (!is_daemonised) {
-			std::cerr << "Error creating cache file." << std::endl;
-			std::cerr << "Do you have write access to this area:" << std::endl;
-			std::cerr << f << std::endl;
+			std::cerr << "Error creating cache file. Do you have write access to this area: \"" << f << "\"?" << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error creating cache file.");
-		syslog(LOG_ERR, "%s", "Do you have write access to this area:");
-		syslog(LOG_ERR, "%s", f.toCharArray());
+		syslog(LOG_ERR, "Error creating cache file. Do you have write access to this area: \"%s\"?", f.toCharArray());
 		return false;
 	}
 
@@ -1207,8 +1198,7 @@ bool ListContainer::readProcessedItemList(const char *filename, bool startswith,
 		if (!is_daemonised) {
 			std::cerr << "Error reading file: " << filename << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error reading file:");
-		syslog(LOG_ERR, "%s", filename);
+		syslog(LOG_ERR, "Error reading file: %s", filename);
 		return false;
 	}
 	if (len < 5) {
@@ -1225,8 +1215,7 @@ bool ListContainer::readProcessedItemList(const char *filename, bool startswith,
 		if (!is_daemonised) {
 			std::cerr << "Error opening: " << filename << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error opening:");
-		syslog(LOG_ERR, "%s", filename);
+		syslog(LOG_ERR, "Error opening: %s", filename);
 		return false;
 	}
 	std::string linebuffer;
@@ -1389,8 +1378,7 @@ bool ListContainer::isCacheFileNewer(const char *filename)
 		if (!is_daemonised) {
 			std::cerr << "Error reading file: " << filename << std::endl;
 		}
-		syslog(LOG_ERR, "%s", "Error reading file:");
-		syslog(LOG_ERR, "%s", filename);
+		syslog(LOG_ERR, "Error reading file: %s", filename);
 		return false;
 	}
 	int bannedlistdate = getFileDate(filename);
