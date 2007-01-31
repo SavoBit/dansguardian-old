@@ -11,6 +11,18 @@
 # pidfile: @DGPIDDIR@/dansguardian.pid
 # config: @DGCONFDIR@/dansguardian.conf
 
+### BEGIN INIT INFO
+# Provides:     dansguardian
+# Required-Start:       squid
+# Should-Start:
+# Required-Stop:        squid
+# Should-Stop:
+# Default-Start:        3 5
+# Default-Stop: 0 1 2 6
+# Short-Description:    Dansguardian web content filter
+# Description:  Dansguardian web content filter
+### END INIT INFO
+
 # File includes changes by Thomas Jarosch
 function wait_for_pid()
 {
