@@ -247,39 +247,45 @@ bool OptionContainer::read(const char *filename, int type)
 		}		// check its a reasonable value
 		max_content_filter_size = max_content_filter_size * 1024;
 
-		bool contentscanning = findoptionM("contentscanner").size() > 0;
-
-		if (contentscanning) {
-			max_content_ramcache_scan_size = findoptionI("maxcontentramcachescansize");
-			if (!realitycheck(String(max_content_ramcache_scan_size), 1, 7, "maxcontentramcachescansize")) {
-				return false;
-			}
-			max_content_ramcache_scan_size = max_content_ramcache_scan_size * 1024;
-			max_content_filecache_scan_size = findoptionI("maxcontentfilecachescansize");
-			if (!realitycheck(String(max_content_filecache_scan_size), 1, 8, "maxcontentfilecachescansize")) {
-				return false;
-			}
-			max_content_filecache_scan_size = max_content_filecache_scan_size * 1024;
-			if (max_content_ramcache_scan_size == 0) {
-				max_content_ramcache_scan_size = max_content_filecache_scan_size;
-			}
+		max_content_ramcache_scan_size = findoptionI("maxcontentramcachescansize");
+		if (!realitycheck(String(max_content_ramcache_scan_size), 1, 7, "maxcontentramcachescansize")) {
+			return false;
+		}
+		max_content_ramcache_scan_size = max_content_ramcache_scan_size * 1024;
+		max_content_filecache_scan_size = findoptionI("maxcontentfilecachescansize");
+		if (!realitycheck(String(max_content_filecache_scan_size), 1, 8, "maxcontentfilecachescansize")) {
+			return false;
+		}
+		max_content_filecache_scan_size = max_content_filecache_scan_size * 1024;
+		if (max_content_ramcache_scan_size == 0) {
+			max_content_ramcache_scan_size = max_content_filecache_scan_size;
+		}
+		if (max_content_filter_size == 0) {
+			max_content_filter_size = max_content_ramcache_scan_size;
 			if (max_content_filter_size == 0) {
-				max_content_filter_size = max_content_ramcache_scan_size;
-			}
-			if (max_content_filter_size > max_content_ramcache_scan_size) {
-				if (!is_daemonised) {
-					std::cerr << "maxcontentfiltersize can not be greater than maxcontentramcachescansize" << std::endl;
-				}
-				syslog(LOG_ERR, "%s", "maxcontentfiltersize can not be greater than maxcontentramcachescansize");
+				if (!is_daemonised)
+					std::cerr << "maxcontent* settings cannot be zero (to disable phrase filtering, set weightedphrasemode to 0)" << std::endl;
+				syslog(LOG_ERR, "%s", "maxcontent* settings cannot be zero (to disable phrase filtering, set weightedphrasemode to 0)");
 				return false;
 			}
-			if (max_content_ramcache_scan_size > max_content_filecache_scan_size) {
-				if (!is_daemonised) {
-					std::cerr << "maxcontentramcachescansize can not be greater than max_content_filecache_scan_size" << std::endl;
-				}
-				syslog(LOG_ERR, "%s", "maxcontentramcachescansize can not be greater than max_content_filecache_scan_size");
-				return false;
+		}
+		if (max_content_filter_size > max_content_ramcache_scan_size) {
+			if (!is_daemonised) {
+				std::cerr << "maxcontentfiltersize can not be greater than maxcontentramcachescansize" << std::endl;
 			}
+			syslog(LOG_ERR, "%s", "maxcontentfiltersize can not be greater than maxcontentramcachescansize");
+			return false;
+		}
+		if (max_content_ramcache_scan_size > max_content_filecache_scan_size) {
+			if (!is_daemonised) {
+				std::cerr << "maxcontentramcachescansize can not be greater than maxcontentfilecachescansize" << std::endl;
+			}
+			syslog(LOG_ERR, "%s", "maxcontentramcachescansize can not be greater than maxcontentfilecachescansize");
+			return false;
+		}
+
+		bool contentscanning = findoptionM("contentscanner").size() > 0;
+		if (contentscanning) {
 
 			trickle_delay = findoptionI("trickledelay");
 			if (!realitycheck(String(trickle_delay), 1, 6, "trickledelay")) {
