@@ -200,60 +200,57 @@ bool OptionContainer::read(const char *filename, int type)
 		// deque.  They are only seperate files for clarity.
 
 		max_logitem_length = findoptionI("maxlogitemlength");
-		if (!realitycheck(String(max_logitem_length), 1, 4, "maxlogitemlength")) {
+		if (!realitycheck(max_logitem_length, 0, 0, "maxlogitemlength")) {
 			return false;
 		}
 		max_children = findoptionI("maxchildren");
-		if (!realitycheck(String(max_children), 1, 3, "maxchildren")) {
+		if (!realitycheck(max_children, 4, 0, "maxchildren")) {
 			return false;
 		}		// check its a reasonable value
 		min_children = findoptionI("minchildren");
-		if (!realitycheck(String(min_children), 1, 2, "children")) {
+		if (!realitycheck(min_children, 1, max_children-1, "minchildren")) {
 			return false;
 		}		// check its a reasonable value
 		maxspare_children = findoptionI("maxsparechildren");
-		if (!realitycheck(String(maxspare_children), 1, 2, "children")) {
+		if (!realitycheck(maxspare_children, min_children, max_children-1, "maxsparechildren")) {
 			return false;
 		}		// check its a reasonable value
-		if (maxspare_children < min_children) {
-			maxspare_children = min_children;
-		}
 		prefork_children = findoptionI("preforkchildren");
-		if (!realitycheck(String(prefork_children), 1, 2, "children")) {
+		if (!realitycheck(prefork_children, 1, maxspare_children, "preforkchildren")) {
 			return false;
 		}		// check its a reasonable value
 		minspare_children = findoptionI("minsparechildren");
-		if (!realitycheck(String(minspare_children), 1, 2, "children")) {
+		if (!realitycheck(minspare_children, 0, maxspare_children-1, "minsparechildren")) {
 			return false;
 		}		// check its a reasonable value
 		maxage_children = findoptionI("maxagechildren");
-		if (!realitycheck(String(maxage_children), 1, 6, "children")) {
+		if (!realitycheck(maxage_children, 1, 0, "maxagechildren")) {
 			return false;
 		}		// check its a reasonable value
 
 		max_ips = findoptionI("maxips");
-		if (!realitycheck(String(max_ips), 1, 5, "maxips")) {
+		if (!realitycheck(max_ips, 0, 0, "maxips")) {
 			return false;
 		}
 
 		max_upload_size = findoptionI("maxuploadsize");
-		if (!realitycheck(String(max_upload_size), 1, 8, "maxuploadsize")) {
+		if (!realitycheck(max_upload_size, -1, 0, "maxuploadsize")) {
 			return false;
 		}		// check its a reasonable value
 		max_upload_size = max_upload_size * 1024;
 		max_content_filter_size = findoptionI("maxcontentfiltersize");
-		if (!realitycheck(String(max_content_filter_size), 1, 6, "maxcontentfiltersize")) {
+		if (!realitycheck(max_content_filter_size, 1, 0, "maxcontentfiltersize")) {
 			return false;
 		}		// check its a reasonable value
 		max_content_filter_size = max_content_filter_size * 1024;
 
 		max_content_ramcache_scan_size = findoptionI("maxcontentramcachescansize");
-		if (!realitycheck(String(max_content_ramcache_scan_size), 1, 7, "maxcontentramcachescansize")) {
+		if (!realitycheck(max_content_ramcache_scan_size, 1, 0, "maxcontentramcachescansize")) {
 			return false;
 		}
 		max_content_ramcache_scan_size = max_content_ramcache_scan_size * 1024;
 		max_content_filecache_scan_size = findoptionI("maxcontentfilecachescansize");
-		if (!realitycheck(String(max_content_filecache_scan_size), 1, 8, "maxcontentfilecachescansize")) {
+		if (!realitycheck(max_content_filecache_scan_size, 1, 0, "maxcontentfilecachescansize")) {
 			return false;
 		}
 		max_content_filecache_scan_size = max_content_filecache_scan_size * 1024;
@@ -288,16 +285,16 @@ bool OptionContainer::read(const char *filename, int type)
 		if (contentscanning) {
 
 			trickle_delay = findoptionI("trickledelay");
-			if (!realitycheck(String(trickle_delay), 1, 6, "trickledelay")) {
+			if (!realitycheck(trickle_delay, 1, 0, "trickledelay")) {
 				return false;
 			}
 			initial_trickle_delay = findoptionI("initialtrickledelay");
-			if (!realitycheck(String(initial_trickle_delay), 1, 6, "initialtrickledelay")) {
+			if (!realitycheck(initial_trickle_delay, 1, 0, "initialtrickledelay")) {
 				return false;
 			}
 
 			content_scanner_timeout = findoptionI("contentscannertimeout");
-			if (!realitycheck(String(content_scanner_timeout), 1, 3, "contentscannertimeout")) {
+			if (!realitycheck(content_scanner_timeout, 1, 0, "contentscannertimeout")) {
 				return false;
 			}
 
@@ -322,51 +319,48 @@ bool OptionContainer::read(const char *filename, int type)
 		}
 
 		url_cache_number = findoptionI("urlcachenumber");
-		if (!realitycheck(String(url_cache_number), 1, 5, "urlcachenumber")) {
+		if (!realitycheck(url_cache_number, 0, 0, "urlcachenumber")) {
 			return false;
 		}		// check its a reasonable value
 
 		url_cache_age = findoptionI("urlcacheage");
-		if (!realitycheck(String(url_cache_age), 1, 5, "urlcacheage")) {
+		if (!realitycheck(url_cache_age, 0, 0, "urlcacheage")) {
 			return false;
 		}		// check its a reasonable value
 
 		phrase_filter_mode = findoptionI("phrasefiltermode");
-		if (!realitycheck(String(phrase_filter_mode), 1, 1, "phrasefiltermode")) {
+		if (!realitycheck(phrase_filter_mode, 0, 3, "phrasefiltermode")) {
 			return false;
 		}
 		preserve_case = findoptionI("preservecase");
-		if (!realitycheck(String(preserve_case), 1, 1, "preservecase")) {
+		if (!realitycheck(preserve_case, 0, 2, "preservecase")) {
 			return false;
 		}
 		hex_decode_content = findoptionI("hexdecodecontent");
-		if (!realitycheck(String(hex_decode_content), 1, 1, "hex_decode_content")) {
+		if (!realitycheck(hex_decode_content, 0, 1, "hex_decode_content")) {
 			return false;
 		}
 		force_quick_search = findoptionI("forcequicksearch");
-		if (!realitycheck(String(force_quick_search), 1, 1, "forcequicksearch")) {
+		if (!realitycheck(force_quick_search, 0, 1, "forcequicksearch")) {
 			return false;
 		}		// check its a reasonable value
 
 		use_custom_banned_image = findoptionI("usecustombannedimage");
-		if (!realitycheck(String(use_custom_banned_image), 1, 1, "usecustombannedimage")) {
+		if (!realitycheck(use_custom_banned_image, 0, 1, "usecustombannedimage")) {
 			return false;
 		}
 		custom_banned_image_file = findoptionS("custombannedimagefile");
 		banned_image.read(custom_banned_image_file.c_str());
 
 		filter_port = findoptionI("filterport");
-		if (!realitycheck(String(filter_port), 2, 6, "filterport")) {
+		if (!realitycheck(filter_port, 1, 65535, "filterport")) {
 			return false;
 		}		// check its a reasonable value
 		proxy_port = findoptionI("proxyport");
-		if (!realitycheck(String(proxy_port), 2, 6, "proxyport")) {
+		if (!realitycheck(proxy_port, 1, 65535, "proxyport")) {
 			return false;
 		}		// etc
 		proxy_ip = findoptionS("proxyip");
-		if (!realitycheck(String(proxy_ip.c_str()), 7, 15, "proxyip")) {
-			return false;
-		}
 
 		// multiple listen IP support
 		filter_ip = findoptionM("filterip");
@@ -379,16 +373,13 @@ bool OptionContainer::read(const char *filename, int type)
 		}
 
 		ll = findoptionI("loglevel");
-		if (!realitycheck(ll, 1, 1, "loglevel")) {
+		if (!realitycheck(ll, 0, 3, "loglevel")) {
 			return false;
 		}		// etc
 		log_file_format = findoptionI("logfileformat");
-		if (!realitycheck(log_file_format, 1, 1, "logfileformat")) {
+		if (!realitycheck(log_file_format, 1, 4, "logfileformat")) {
 			return false;
 		}		// etc
-		if (log_file_format < 1 || log_file_format > 4) {
-			log_file_format = 1;
-		}
 		if (findoptionS("anonymizelogs") == "on") {
 			anonymise_logs = 1;
 		} else {
@@ -411,11 +402,11 @@ bool OptionContainer::read(const char *filename, int type)
 			show_weighted_found = 0;
 		}
 		weighted_phrase_mode = findoptionI("weightedphrasemode");
-		if (!realitycheck(String(weighted_phrase_mode), 1, 1, "weightedphrasemode")) {
+		if (!realitycheck(weighted_phrase_mode, 0, 2, "weightedphrasemode")) {
 			return false;
 		}
 		reporting_level = findoptionI("reportinglevel");
-		if (!realitycheck(String(reporting_level), 1, 2, "reportinglevel")) {
+		if (!realitycheck(reporting_level, -1, 3, "reportinglevel")) {
 			return false;
 		}
 		languagepath = findoptionS("languagedir") + "/" + findoptionS("language") + "/";
@@ -482,7 +473,7 @@ bool OptionContainer::read(const char *filename, int type)
 
 		filter_groups = findoptionI("filtergroups");
 
-		if (!realitycheck(String(filter_groups), 1, 2, "filtergroups")) {
+		if (!realitycheck(filter_groups, 1, 0, "filtergroups")) {
 			return false;
 		}
 		if (filter_groups < 1) {
@@ -756,37 +747,23 @@ std::deque<String > OptionContainer::findoptionM(const char *option)
 	return results;
 }
 
-
-bool OptionContainer::realitycheck(String s, int minl, int maxl, char *emessage)
+bool OptionContainer::realitycheck(int l, int minl, int maxl, char *emessage)
 {
-	// realitycheck checks a String for certain expected criteria
+	// realitycheck checks an amount for certain expected criteria
 	// so we can spot problems in the conf files easier
-	if ((signed) s.length() < minl) {
+	if ((l < minl) || ((maxl > 0) && (l > maxl))) {
 		if (!is_daemonised) {
-			std::cerr << emessage << std::endl;
 			// when called we have not detached from
 			// the console so we can write back an
 			// error
 
-			std::cerr << "Too short or missing." << std::endl;
+			std::cerr << "Config problem; check allowed values for " << emessage << std::endl;
 		}
-		syslog(LOG_ERR, "%s", emessage);
-		syslog(LOG_ERR, "%s", "Too short or missing.");
-
-		return false;
-	}
-	if ((signed) s.length() > maxl && maxl > 0) {
-		if (!is_daemonised) {
-			std::cerr << emessage << std::endl;
-			std::cerr << "Too long or broken." << std::endl;
-		}
-		syslog(LOG_ERR, "%s", emessage);
-		syslog(LOG_ERR, "%s", "Too long or broken.");
+		syslog(LOG_ERR, "Config problem; check allowed values for %s", emessage);
 		return false;
 	}
 	return true;
 }
-
 
 
 bool OptionContainer::readFilterGroupConf()

@@ -444,7 +444,7 @@ bool FOptionContainer::read(const char *filename)
 			}
 
 			naughtyness_limit = findoptionI("naughtynesslimit");
-			if (!realitycheck(String(naughtyness_limit), 1, 4, "naughtynesslimit")) {
+			if (!realitycheck(naughtyness_limit, 1, 0, "naughtynesslimit")) {
 				return false;
 			}
 			std::string exception_phrase_list_location(findoptionS("exceptionphraselist"));
@@ -668,7 +668,7 @@ bool FOptionContainer::read(const char *filename)
 		//
 
 		bypass_mode = findoptionI("bypass");
-		if (!realitycheck(String(bypass_mode), 1, 4, "bypass")) {
+		if (!realitycheck(bypass_mode, -1, 0, "bypass")) {
 			return false;
 		}
 		// we use the "magic" key here both for filter bypass *and* for filter bypass after virus scan (fancy DM).
@@ -692,7 +692,7 @@ bool FOptionContainer::read(const char *filename)
 		}
 
 		infection_bypass_mode = findoptionI("infectionbypass");
-		if (!realitycheck(String(infection_bypass_mode), 1, 4, "infectionbypass")) {
+		if (!realitycheck(infection_bypass_mode, -1, 0, "infectionbypass")) {
 			return false;
 		}
 		if (infection_bypass_mode != 0) {
@@ -1190,31 +1190,20 @@ std::string FOptionContainer::findoptionS(const char *option)
 	return "";
 }
 
-bool FOptionContainer::realitycheck(String s, int minl, int maxl, char *emessage)
+bool FOptionContainer::realitycheck(int l, int minl, int maxl, char *emessage)
 {
 	// realitycheck checks a String for certain expected criteria
 	// so we can spot problems in the conf files easier
-	if ((signed) s.length() < minl) {
+	if ((l < minl) || ((maxl > 0) && (l > maxl))) {
 		if (!is_daemonised) {
-			std::cerr << emessage << std::endl;
 			// when called we have not detached from
 			// the console so we can write back an
 			// error
 
-			std::cerr << "Too short or missing." << std::endl;
+			std::cerr << "Config problem; check allowed values for " << emessage << std::endl;
 		}
-		syslog(LOG_ERR, "%s", emessage);
-		syslog(LOG_ERR, "%s", "Too short or missing.");
+		syslog(LOG_ERR, "Config problem; check allowed values for %s", emessage);
 
-		return false;
-	}
-	if ((signed) s.length() > maxl && maxl > 0) {
-		if (!is_daemonised) {
-			std::cerr << emessage << std::endl;
-			std::cerr << "Too long or broken." << std::endl;
-		}
-		syslog(LOG_ERR, "%s", emessage);
-		syslog(LOG_ERR, "%s", "Too long or broken.");
 		return false;
 	}
 	return true;
