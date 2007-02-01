@@ -27,10 +27,11 @@
 
 #include <algorithm>
 
-#ifdef __GCCVER3
-#include <sstream>
-#else
+#if defined(__GNUC__) && __GNUC__ < 3 && __GNUC_MINOR__ < 96
+#warning "Using strstream instead of sstream"
 #include <strstream>
+#else
+#include <sstream>
 #endif
 
 #include <cstdlib>
@@ -101,23 +102,7 @@ String::String(const char *bs, int start, int len)
 }
 
 // construct string representations of ints/longs
-
-// Bodge to handle GCC3.x - improvements very welcome!!!
-// Sun 1st December 2002 - daniel@ //jadeb.com
-#ifdef __GCCVER3
-String::String(const int num)
-{
-	std::ostringstream buf;
-	buf << num << std::ends;
-	std::string s(buf.str());
-	char *bs = (char *) s.c_str();
-	int l = strlen(bs);
-	data = new char[l + 1];
-	memcpy(data, bs, l);
-	sl = l;
-	data[sl] = '\0';
-}
-#else
+#if defined(__GNUC__) && __GNUC__ < 3 && __GNUC_MINOR__ < 96
 String::String(const int num)
 {
 	std::ostrstream buf;
@@ -125,55 +110,47 @@ String::String(const int num)
 	data = buf.str();  // with side effect: it calls buf.freeze()
 	sl = buf.pcount() - 1;
 }
-#endif
-
-// Bodge to handle GCC3.x - improvements very welcome!!!
-// Sun 1st December 2002 - daniel@ //jadeb.com
-#ifdef __GCCVER3
-String::String(const long num)
-{
-	std::ostringstream buf;
-	buf << num << std::ends;
-	std::string s(buf.str());
-	char *bs = (char *) s.c_str();
-	int l = strlen(bs);
-	data = new char[l + 1];
-	memcpy(data, bs, l);
-	sl = l;
-	data[sl] = '\0';
-}
-#else
 String::String(const long num)
 {
 	std::ostrstream buf;
 	buf << num << std::ends;
-	data = buf.str();  // with side effect: it calls buf.freeze()
+	data = buf.str();
 	sl = buf.pcount() - 1;
 }
-#endif
-
-// Bodge to handle GCC3.x - improvements very welcome!!!
-// Sun 1st December 2002 - daniel@ //jadeb.com
-#ifdef __GCCVER3
-String::String(const unsigned int num)
-{
-	std::ostringstream buf;
-	buf << num << std::ends;
-	std::string s(buf.str());
-	char *bs = (char *) s.c_str();
-	int l = strlen(bs);
-	data = new char[l + 1];
-	memcpy(data, bs, l);
-	sl = l;
-	data[sl] = '\0';
-}
-#else
 String::String(const unsigned int num)
 {
 	std::ostrstream buf;
 	buf << num << std::ends;
-	data = buf.str();  // with side effect: it calls buf.freeze()
+	data = buf.str();
 	sl = buf.pcount() - 1;
+}
+#else
+String::String(const int num)
+{
+	std::stringstream buf;
+	buf << num << std::ends;
+	int l = buf.str().length();
+	data = new char[l];
+	buf >> data;
+	sl = l - 1;
+}
+String::String(const long num)
+{
+	std::stringstream buf;
+	buf << num << std::ends;
+	int l = buf.str().length();
+	data = new char[l];
+	buf >> data;
+	sl = l - 1;
+}
+String::String(const unsigned int num)
+{
+	std::stringstream buf;
+	buf << num << std::ends;
+	int l = buf.str().length();
+	data = new char[l];
+	buf >> data;
+	sl = l - 1;
 }
 #endif
 
@@ -184,7 +161,7 @@ String::String(const unsigned int num)
 // *
 
 // stream output operator
-ostream & operator <<(ostream & out, const String & s)
+std::ostream & operator <<(std::ostream & out, const String & s)
 {
 	out.write(s.data, s.sl);
 	return out;

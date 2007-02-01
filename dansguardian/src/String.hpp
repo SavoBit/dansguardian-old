@@ -31,10 +31,6 @@
 #include <iostream>
 #include <string>
 
-#ifdef __GCCVER3
-using namespace std;
-#endif
-
 
 // DECLARATIONS
 
@@ -59,7 +55,7 @@ public:
 	String(const std::string & s);
 	
 	// stream output operator
-	friend ostream & operator <<(ostream & out, const String & s);
+	friend std::ostream & operator <<(std::ostream & out, const String & s);
 	// concatenation operator(s) ("checkme:" on the second one)
 	friend String operator+(const String & lhs, const String & s);
 	String operator+(const String & s);
