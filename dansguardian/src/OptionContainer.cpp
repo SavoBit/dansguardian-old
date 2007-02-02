@@ -212,11 +212,11 @@ bool OptionContainer::read(const char *filename, int type)
 			return false;
 		}		// check its a reasonable value
 		maxspare_children = findoptionI("maxsparechildren");
-		if (!realitycheck(maxspare_children, min_children, max_children-1, "maxsparechildren")) {
+		if (!realitycheck(maxspare_children, min_children, max_children, "maxsparechildren")) {
 			return false;
 		}		// check its a reasonable value
 		prefork_children = findoptionI("preforkchildren");
-		if (!realitycheck(prefork_children, 1, maxspare_children, "preforkchildren")) {
+		if (!realitycheck(prefork_children, 1, max_children, "preforkchildren")) {
 			return false;
 		}		// check its a reasonable value
 		minspare_children = findoptionI("minsparechildren");
