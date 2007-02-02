@@ -544,8 +544,17 @@ bool HTTPHeader::malformedURL(String url)
 	int i, len;
 	unsigned char c;
 	len = host.length();
+	bool containsletter = false;
 	for (i = 0; i < len; i++) {
 		c = (unsigned char) host[i];
+		// If it contains something other than numbers, dots, or [a-fx] (hex encoded IPs),
+		// IP obfuscation can be ruled out.
+		if (!containsletter &&
+				(((c < '0') || (c > '9'))
+				 && (c != '.') && (c != 'x') && (c != 'X')
+				 && ((c < 'a') || (c > 'f'))
+				 && ((c < 'A') || (c > 'F'))))
+			containsletter = true;
 		if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z')
 			&& !(c >= '0' && c <= '9') && c != '.' && c != '-' && c != '_') {
 #ifdef DGDEBUG
@@ -556,6 +565,33 @@ bool HTTPHeader::malformedURL(String url)
 		}
 
 	}
+	// no IP obfuscation going on
+	if (containsletter)
+		return false;
+#ifdef DGDEBUG
+	else
+		std::cout << "Checking for IP obfuscation in " << host << std::endl;
+#endif
+	// Check no IP obfuscation is going on
+	// This includes IPs encoded as a single decimal number,
+	// fully or partly hex encoded, and octal encoded
+	bool first = true;
+	do {
+		if (!first)
+			host = host.after(".");
+		first = false;
+		String hostpart(host.before("."));
+		// Fairly simple rule - convert string to int, then back again.
+		// If the two match up, then there's no attempt at hex or octal
+		// IP obfuscation going on.
+		int part = hostpart.toInteger();
+		String numpart(part);
+		if (numpart != hostpart)
+			return true;
+		// Also check range, for decimal obfuscation.
+		if ((part < 0) || (part > 255))
+			return true;
+	} while (host.contains("."));
 	return false;
 }
 
