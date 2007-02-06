@@ -1408,19 +1408,11 @@ void ListContainer::increaseMemoryBy(int bytes)
 
 int ListContainer::getFileLength(const char *filename)
 {
-	int len;
-	FILE *file = NULL;
-	file = fopen(filename, "r");
-	if (file) {
-		if (!fseek(file, 0, SEEK_END)) {
-			len = ftell(file);
-		} else {
-			len = -1;
-		}
-		fclose(file);
-		return len;
-	}
-	return -1;
+	struct stat status;
+	int rc = stat(filename, &status);
+	if (rc)
+		return -1;
+	return status.st_size;
 }
 
 int ListContainer::getFileDate(const char *filename)
