@@ -130,7 +130,7 @@ String::String(const int num)
 	std::stringstream buf;
 	buf << num << std::ends;
 	int l = buf.str().length();
-	data = new char[l];
+	data = new char[l+1];
 	buf >> data;
 	sl = l - 1;
 }
@@ -139,7 +139,7 @@ String::String(const long num)
 	std::stringstream buf;
 	buf << num << std::ends;
 	int l = buf.str().length();
-	data = new char[l];
+	data = new char[l+1];
 	buf >> data;
 	sl = l - 1;
 }
@@ -148,7 +148,7 @@ String::String(const unsigned int num)
 	std::stringstream buf;
 	buf << num << std::ends;
 	int l = buf.str().length();
-	data = new char[l];
+	data = new char[l+1];
 	buf >> data;
 	sl = l - 1;
 }
