@@ -881,7 +881,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 // when checkPICS is called we assume checkphrase has made the document lower case.
 void NaughtyFilter::checkPICS(char *file, int l)
 {
-	file[l] = 0;  // to ensure end of c-string marker is there
+	file[l-1] = 0;  // to ensure end of c-string marker is there
 	(*o.fg[filtergroup]).pics1.match(file);
 	if (!(*o.fg[filtergroup]).pics1.matched()) {
 		return;
