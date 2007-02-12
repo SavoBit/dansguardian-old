@@ -129,6 +129,12 @@ String::String(const int num)
 {
 	std::stringstream buf;
 	buf << num << std::ends;
+	// std::string can contain a NULL byte within the counted length
+	// - this happens here. Add a byte to the length when allocating
+	// the buffer it's going to go into (to account for the appended
+	// NULL), but subtract one when updating our idea of what the string
+	// length is, since it counts the NULL byte in the stringstream's
+	// own buffer.
 	int l = buf.str().length();
 	data = new char[l+1];
 	buf >> data;
