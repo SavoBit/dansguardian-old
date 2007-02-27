@@ -405,7 +405,7 @@ void HTTPHeader::setURL(String &url) {
 #ifdef DGDEBUG
 		std::cout << "setURL: header[] line changed from: " << (*phost) << std::endl;
 #endif
-		(*phost) = String("Host: ") + hostname + "\r";
+		(*phost) = String("Host: ") + hostname + ":" + port + "\r";
 #ifdef DGDEBUG
 		std::cout << " to " << (*phost) << std::endl;
 #endif
@@ -419,7 +419,10 @@ void HTTPHeader::setURL(String &url) {
 		std::cout << " to " << (*pport) << std::endl;
 #endif
 	}
-	cachedurl = url.toCharArray();
+	// Don't just cache the URL we're sent - url() performs some other
+	// processing, notably stripping the port part. Caching here will
+	// bypass all that.
+	//cachedurl = url.toCharArray();
 }
 
 // Does a regexp search and replace.
@@ -524,18 +527,15 @@ bool HTTPHeader::urlRegExp(int filtergroup) {
 bool HTTPHeader::malformedURL(String url)
 {
 	String host(url.after("://"));
-	if (host.contains("/")) {
+	if (host.contains("/"))
 		host = host.before("/");
-	}
 	if (host.length() < 2) {
 #ifdef DGDEBUG
 		std::cout << "host len too small" << std::endl;
 #endif
 		return true;
 	}
-	// A single ending dot on an FQDN is actually valid.
-	// See RFC 2396.
-	if (host.contains("..") /*|| host.endsWith(".")*/) {
+	if (host.contains("..") || host.endsWith(".")) {
 #ifdef DGDEBUG
 		std::cout << "double dots in domain name" << std::endl;
 #endif
@@ -576,11 +576,15 @@ bool HTTPHeader::malformedURL(String url)
 	// This includes IPs encoded as a single decimal number,
 	// fully or partly hex encoded, and octal encoded
 	bool first = true;
+	if (host.endsWith("."))
+		host.chop();
 	do {
 		if (!first)
 			host = host.after(".");
 		first = false;
-		String hostpart(host.before("."));
+		String hostpart(host);
+		if (host.contains("."))
+			hostpart = hostpart.before(".");
 		// Fairly simple rule - convert string to int, then back again.
 		// If the two match up, then there's no attempt at hex or octal
 		// IP obfuscation going on.
@@ -795,24 +799,28 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		header.push_back("Proxy-Connection: Keep-Alive\r");
 		pproxyconnection = &(header.back());
 	}
-	// Change the URL to contain no dots, for the sake of
+	// Change the URL to contain no ending dots, for the sake of
 	// not having to tweak the domain and URL matching code -
 	// otherwise, all we've done is introduced a very simple way
 	// to get around the filter...
 	// Could conceivably cause problems in situations where the
 	// ending dot is absolutely necessary, but these must be
 	// incredibly rare in the wild, surely?
-	String ourl(url());
+	String ourl(header[0].after(" ").before(" "));
 	String host(ourl.after("://"));
-	if (host.contains("/")) {
+	if (host.contains("/"))
 		host = host.before("/");
+	String port;
+	if (host.contains(":")) {
+		port = ":" + host.after(":");
+		host = host.before(":");
 	}
 	if (host.endsWith(".")) {
 #ifdef DGDEBUG
 		std::cout << "ending dot in domain name - stripping..." << std::endl;
 #endif
 		host.chop();
-		String newurl(ourl.before("/") + "//" + host + ourl.after("/").after("/"));
+		String newurl(ourl.before("/") + "//" + host + port + "/" + ourl.after("//").after("/"));
 		setURL(newurl);
 	}
 }
