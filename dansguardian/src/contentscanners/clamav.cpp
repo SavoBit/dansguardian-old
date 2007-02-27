@@ -116,7 +116,7 @@ int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheade
 	int filtergroup, const char *ip, const char *object, unsigned int objectsize)
 {
 	lastmessage = lastvirusname = "";
-	const char *vn = "";
+	const char *vn = NULL;
 	int fd;
 	std::string fname;
 
@@ -133,6 +133,7 @@ int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheade
 		strcpy(fnamearray, fname.c_str());
 		fd = mkstemp(fnamearray);
 		fname = fnamearray;
+		delete[] fnamearray;
 #ifdef __CLAMAV_SHM
 	}
 #endif
@@ -158,7 +159,6 @@ int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheade
 		return DGCS_SCANERROR;
 	}
 
-	//int rc = cl_scanbuff(object, objectsize - 1, &vn, root);
 	rc = cl_scandesc(fd, &vn, NULL, root, &limits, CL_SCAN_STDOPT);
 	close(fd);
 
@@ -183,7 +183,7 @@ int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheade
 int clamavinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename)
 {
 	lastmessage = lastvirusname = "";
-	const char *vn = "";
+	const char *vn = NULL;
 	int rc = cl_scanfile(filename, &vn, NULL, root, &limits, CL_SCAN_STDOPT
 		/*CL_ARCHIVE | CL_OLE2 | CL_MAIL | CL_OLE2 | CL_SCAN_PE | CL_SCAN_BLOCKBROKEN | CL_SCAN_HTML */ );
 	return doRC(rc, vn);
