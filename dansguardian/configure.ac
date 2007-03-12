@@ -326,7 +326,7 @@ dmlists=false
 AC_MSG_CHECKING(for libclamav support)
 AC_ARG_ENABLE(
 clamav,
-[AC_HELP_STRING([--enable-clamav@<:@=no@:>@], [Enable support for the libClamAV content scanner])],
+[AC_HELP_STRING([--enable-clamav@<:@=no@:>@], [Enable support for the libClamAV content scanner. Please note that the ClamD-compatible scanner is always built, and is preferable to this plugin for most usage scenarios.])],
 [ if test "x$enableval" = "xno"; then
 	clamav=false
 	AC_MSG_RESULT(no)
