@@ -31,7 +31,7 @@
 class proxyinstance:public AuthPlugin
 {
 public:
-	proxyinstance(ConfigVar &definition):AuthPlugin(definition) {};
+	proxyinstance(ConfigVar &definition):AuthPlugin(definition) { needs_proxy_query = true; };
 	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string);
 };
 

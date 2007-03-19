@@ -80,6 +80,9 @@ public:
 	// is this a connection-based auth type, i.e. assume all subsequent requests on the pconn are from the same user?
 	bool is_connection_based;
 
+	// does this auth type rely on queries from the parent proxy (e.g. NTLM, basic auth)?
+	bool needs_proxy_query; 
+
 protected:
 	ConfigVar cv;
 };

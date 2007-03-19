@@ -44,7 +44,7 @@ extern authcreate_t ntlmcreate;
 
 // IMPLEMENTATION
 
-AuthPlugin::AuthPlugin(ConfigVar &definition):is_connection_based(false)
+AuthPlugin::AuthPlugin(ConfigVar &definition):is_connection_based(false), needs_proxy_query(false)
 {
 	cv = definition;
 }

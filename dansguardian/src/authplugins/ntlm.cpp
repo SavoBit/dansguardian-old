@@ -90,7 +90,7 @@ class ntlminstance:public AuthPlugin
 public:
 	// keep credentials for all requests on a given persistent connection;
 	// NTLM proxy auth is designed to be used in this manner and won't re-send credentials.
-	ntlminstance(ConfigVar &definition):AuthPlugin(definition) { is_connection_based = true; };
+	ntlminstance(ConfigVar &definition):AuthPlugin(definition) { is_connection_based = true; needs_proxy_query = true; };
 
 	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string);
 };
