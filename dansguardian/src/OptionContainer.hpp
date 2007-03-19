@@ -90,7 +90,7 @@ public:
 	bool recheck_replaced_urls;
 	bool use_filter_groups_list;
 	bool use_group_names_list;
-	bool no_auth_enabled;
+	bool auth_needs_proxy_query;
 
 	std::string languagepath;
 	std::string filter_groups_list_location;

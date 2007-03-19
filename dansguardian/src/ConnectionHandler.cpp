@@ -592,7 +592,16 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						else
 							std::cout << "Plugin returned out-of-range filter group number; using defaults" << std::endl;
 #endif
-						authed = false;
+						// If none of the auth plugins currently loaded rely on querying the proxy,
+						// such as 'ident' or 'ip', then pretend we're authed. What this flag
+						// actually controls is whether or not the query should be forwarded to the
+						// proxy (without pre-emptive blocking); we don't want this for 'ident' or
+						// 'ip', because Squid isn't necessarily going to return 'auth required'.
+						authed = !o.auth_needs_proxy_query;
+#ifdef DGDEBUG
+						if (!o.auth_needs_proxy_query)
+							std::cout << "No loaded auth plugins require parent proxy queries; enabling pre-emptive blocking despite lack of authentication" << std::endl;
+#endif
 						clientuser = "-";
 						filtergroup = 0;  //default group - one day configurable?
 					} else {

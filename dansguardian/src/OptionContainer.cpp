@@ -515,11 +515,8 @@ bool OptionContainer::read(const char *filename, int type)
 		}
 
 		// if there's no auth enabled, we only need the first group's settings
-		if (authplugins.size() == 0) {
-			no_auth_enabled = true;
+		if (authplugins.size() == 0)
 			filter_groups = 1;
-		} else
-			no_auth_enabled = false;
 
 		filter_groups_list_location = findoptionS("filtergroupslist");
 		std::string banned_ip_list_location(findoptionS("bannediplist"));
@@ -986,6 +983,9 @@ bool OptionContainer::loadCSPlugins()
 
 bool OptionContainer::loadAuthPlugins()
 {
+	// Assume no auth plugins need an upstream proxy query (NTLM, BASIC) until told otherwise
+	auth_needs_proxy_query = false;
+
 	std::deque<String > dq = findoptionM("authplugin");
 	unsigned int numplugins = dq.size();
 	if (numplugins < 1) {
@@ -1022,6 +1022,13 @@ bool OptionContainer::loadAuthPlugins()
 				std::cerr << "Auth plugin init returned warning value: " << rc << std::endl;
 			}
 			syslog(LOG_ERR, "Auth plugin init returned warning value: %d", rc);
+		}
+
+		if (app->needs_proxy_query) {
+			auth_needs_proxy_query = true;
+#ifdef DGDEBUG
+			std::cout << "Auth plugin relies on querying parent proxy" << std::endl;
+#endif
 		}
 		authplugins.push_back(app);
 	}
