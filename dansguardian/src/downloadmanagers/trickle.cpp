@@ -254,7 +254,7 @@ int trickledm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHe
 				/*if (d->data != temp)
 					delete[] temp;*/
 				temp = new char[d->buffer_length + rc + 1];  // replacement store
-				temp[d->buffer_length + rc + 1] = '\0';
+				temp[d->buffer_length + rc] = '\0';
 				memcpy(temp, d->data, d->buffer_length);  // copy the current data
 				memcpy(temp + d->buffer_length, block, rc);  // copy the new data
 				delete[]d->data;  // delete the current data block
