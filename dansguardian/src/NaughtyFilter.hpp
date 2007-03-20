@@ -69,7 +69,7 @@ private:
 	void checkphrase(char *file, int l, String *url = NULL, String *domain = NULL);
 	
 	// check PICS ratings
-	void checkPICS(char *file, int l);
+	void checkPICS(char *file);
 	void checkPICSrating(std::string label);
 	void checkPICSratingSafeSurf(String r);
 	void checkPICSratingevaluWEB(String r);

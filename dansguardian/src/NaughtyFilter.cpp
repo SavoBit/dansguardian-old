@@ -93,7 +93,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 #ifdef DGDEBUG
 		std::cout << "PICS is enabled" << std::endl;
 #endif
-		checkPICS(rawbody, rawbodylen);
+		checkPICS(rawbody);
 		if (isItNaughty)
 			return;  // Well there is no point in continuing is there?
 	}
@@ -879,12 +879,10 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 
 // check the document's PICS rating
 // when checkPICS is called we assume checkphrase has made the document lower case.
-void NaughtyFilter::checkPICS(char *file, int l)
+// data must also have been NULL terminated.
+void NaughtyFilter::checkPICS(char *file)
 {
-	char localfile[l+1];
-	localfile[l] = '\0'; // to ensure end of c-string marker is there
-	memcpy(localfile, file, l);
-	(*o.fg[filtergroup]).pics1.match(localfile);
+	(*o.fg[filtergroup]).pics1.match(file);
 	if (!(*o.fg[filtergroup]).pics1.matched()) {
 		return;
 	}			// exit if not found
