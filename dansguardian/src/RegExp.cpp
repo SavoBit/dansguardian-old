@@ -157,16 +157,14 @@ bool RegExp::match(const char *text)
 	offsets.clear();
 	lengths.clear();
 	imatched = false;
-	regmatch_t *pmatch;
-	pmatch = new regmatch_t[reg.re_nsub + 1];  // to hold result
-
-	if (!pmatch) {		// if it failed
+	regmatch_t *pmatch = new regmatch_t[reg.re_nsub + 1];  // to hold result
+	if (!pmatch) {  // if it failed
 		delete[]pmatch;
 		imatched = false;
 		return false;
 		// exception?
 	}
-	if (regexec(&reg, pos, reg.re_nsub + 1, pmatch, 0)) {	// run regex
+	if (regexec(&reg, pos, reg.re_nsub + 1, pmatch, 0)) {  // run regex
 		delete[]pmatch;
 		imatched = false;
 //        #ifdef DGDEBUG
