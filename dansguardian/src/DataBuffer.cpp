@@ -56,9 +56,10 @@ extern OptionContainer o;
 
 // IMPLEMENTATION
 
-DataBuffer::DataBuffer():data(new char[0]), buffer_length(0), compresseddata(NULL), compressed_buffer_length(0),
+DataBuffer::DataBuffer():data(new char[1]), buffer_length(0), compresseddata(NULL), compressed_buffer_length(0),
 	tempfilesize(0), dontsendbody(false), tempfilefd(-1), timeout(20), bytesalreadysent(0), preservetemp(false)
 {
+	data[0] = '\0';
 }
 
 DataBuffer::DataBuffer(const void* indata, unsigned int length):data(new char[length]), buffer_length(length), compresseddata(NULL), compressed_buffer_length(0),
@@ -70,10 +71,10 @@ DataBuffer::DataBuffer(const void* indata, unsigned int length):data(new char[le
 void DataBuffer::reset()
 {
 	delete[]data;
-	data = new char[0];
+	data = new char[1];
+	data[0] = '\0';
 	delete[]compresseddata;
 	compresseddata = NULL;
-	
 	buffer_length = 0;
 	compressed_buffer_length = 0;
 	if (tempfilefd > -1) {
@@ -420,21 +421,14 @@ void DataBuffer::zlibinflate(bool header)
 	}
 	compresseddata = data;
 	compressed_buffer_length = buffer_length;
-	data = block;
 	buffer_length = bytesgot;
 #ifdef DGDEBUG
 	std::cout << "decompressed size: " << buffer_length << std::endl;
 #endif
-	
-	// what exactly is this doing here!?
-	// it looks like this is done above anyway, despite what this says.
-	
-	// I could create a new block the exact size and memcpy
-	// it over to save RAM but RAM is cheap and this saves CPU
-//	data = new char[bytesgot];
-//	memcpy(data, block, bytesgot);
-//	delete[] block;
-
+	data = new char[bytesgot+1];
+	data[bytesgot] = '\0';
+	memcpy(data, block, bytesgot);
+	delete[] block;
 }
 
 // Does a regexp search and replace.
@@ -519,7 +513,8 @@ bool DataBuffer::contentRegExp(int filtergroup)
 			}
 
 			// now we know eventual size of content-replaced block, allocate memory for it
-			newblock = new char[buffer_length + sizediff];
+			newblock = new char[buffer_length + sizediff + 1];
+			newblock[buffer_length + sizediff] = '\0';
 			srcoff = 0;
 			dstpos = newblock;
 			matches = m;
