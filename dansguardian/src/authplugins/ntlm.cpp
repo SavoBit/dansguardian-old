@@ -223,10 +223,14 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 		int l,o;
 
 		// copy the NTLM message into the union's buffer, simultaneously filling in the struct
-		int len = message.length();
-		if (len >= (int)sizeof(auth.buf))
-			len = (int)sizeof(auth.buf) - 1;
-		memcpy((void *)auth.buf, (const void *)message.c_str(), len);
+		if ((message.length() > sizeof(ntlm_auth)) || (message.length() < offsetof(ntlm_auth, payload))) {
+			syslog(LOG_ERR, "NTLM - Invalid message of length %d, message was: %s", message.length(), message.c_str());
+#ifdef DGDEBUG
+			std::cerr << "NTLM - Invalid message of length " << message.length() << ", message was: " << message << std::endl;
+#endif
+			return -3;
+		}
+		memcpy((void *)auth.buf, (const void *)message.c_str(), message.length());
 
 		// verify that the message is indeed a type 3
 		if (strcmp("NTLMSSP",a->h.signature) == 0 && WSWAP(a->h.type) == 3) {
@@ -249,6 +253,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 #ifdef DGDEBUG
 						std::cerr << "NTLM - Cannot initialise conversion from UTF-16LE to UTF-8: " << strerror(errno) << std::endl;
 #endif
+						iconv_close(ic);
 						return -2;
 					}
 					int l2 = 256;
