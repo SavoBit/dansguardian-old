@@ -74,7 +74,7 @@ public:
 	void readyForOutput(int timeout, bool honour_reloadconfig = false) throw(exception);
 	
 	// get a line from the socket - can break on config reloads
-	int getLine(char *buff, int size, int timeout, bool honour_reloadconfig = false) throw(exception);
+	int getLine(char *buff, int size, int timeout, bool honour_reloadconfig = false, bool *chopped = NULL) throw(exception);
 	
 	// write buffer to string - throws exception on error
 	void writeString(const char *line) throw(exception);

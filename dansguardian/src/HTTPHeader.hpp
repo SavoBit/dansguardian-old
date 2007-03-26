@@ -152,8 +152,9 @@ private:
 	// cached result of url()
 	std::string cachedurl;
 
-	char postdata[14];
+	char postdata[15];
 	int postdatalen;
+	bool postdatachopped;
 	bool ispostupload;
 
 	bool ispersistent, waspersistent;

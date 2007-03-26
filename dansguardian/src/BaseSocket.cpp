@@ -265,7 +265,7 @@ void BaseSocket::readyForOutput(int timeout, bool honour_reloadconfig) throw(exc
 }
 
 // read a line from the socket, can be told to break on config reloads
-int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadconfig) throw(exception)
+int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadconfig, bool *chopped) throw(exception)
 {
 	// first, return what's left from the previous buffer read, if anything
 	int i = 0;
@@ -278,6 +278,9 @@ int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadcon
 			tocopy = bufflen - buffstart;
 		char* result = (char*)memccpy(buff, buffer + buffstart, '\n', tocopy);
 		if (result != NULL) {
+			// indicate that a newline was chopped off, if desired
+			if (chopped)
+				*chopped = true;
 			*(--result) = '\0';
 			buffstart += (result - buff) + 1;
 			return result - buff;
@@ -308,19 +311,14 @@ int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadcon
 			buff[i] = '\0';  // ...terminate string & return what read
 			return i;
 		}
-		/*for (int j = 0; j < bufflen; j++) {
-			buffstart++;
-			if (buffer[j] == '\n') {
-				buff[i] = '\0';  // ...terminate string & return what read
-				return i;
-			}
-			buff[i++] = buffer[j];
-		}*/
 		int tocopy = bufflen;
 		if ((i + bufflen) > (size-1))
 			tocopy = (size-1) - i;
 		char* result = (char*)memccpy(buff+i, buffer, '\n', tocopy);
 		if (result != NULL) {
+			// indicate that a newline was chopped off, if desired
+			if (chopped)
+				*chopped = true;
 			*(--result) = '\0';
 			buffstart += (result - (buff+i)) + 1;
 			return i + (result - (buff+i));

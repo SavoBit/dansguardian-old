@@ -61,6 +61,7 @@ void HTTPHeader::reset()
 		//postdata.reset();
 		postdata[0] = '\0';
 		postdatalen = 0;
+		postdatachopped = false;
 		ispostupload = false;
 		waspersistent = false;
 		ispersistent = false;
@@ -665,7 +666,7 @@ bool HTTPHeader::isPostUpload(Socket &peersock)
 #ifdef DGDEBUG
 	std::cout << "Reading a line of POST data to determine content type: ";
 #endif
-	postdatalen = peersock.getLine(postdata, 14, 60);
+	postdatalen = peersock.getLine(postdata, 14, 60, &postdatachopped);
 #ifdef DGDEBUG
 	std::cout << postdata << std::endl;
 #endif
@@ -1389,6 +1390,14 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 #ifdef DGDEBUG
 			std::cout << "Sending initial POST data chunk" << std::endl;
 #endif
+			// Re-add the chopped off \n, if necessary
+			if (postdatachopped) {
+#ifdef DGDEBUG
+				std::cout << "Re-adding newline to POST data (postdatalen " << postdatalen << ")" << std::endl;
+#endif
+				postdata[postdatalen-1] = '\n';
+				postdata[postdatalen] = '\0';
+			}
 			sock->writeToSockete(postdata, postdatalen, 0, timeout);
 		}
 #ifdef DGDEBUG
