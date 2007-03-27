@@ -118,7 +118,7 @@ public:
 
 	std::string daemon_user;
 	std::string daemon_group;
-	unsigned int max_upload_size;
+	int max_upload_size;
 	unsigned int max_content_filter_size;
 	unsigned int max_content_ramcache_scan_size;
 	unsigned int max_content_filecache_scan_size;
