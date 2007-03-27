@@ -89,7 +89,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 	
 	// check PICS now - not dependent on case, hex decoding, etc.
 	// as only sites which play by the rules will self-rate
-	if ((*o.fg[filtergroup]).enable_PICS == 1) {
+	if ((*o.fg[filtergroup]).enable_PICS) {
 #ifdef DGDEBUG
 		std::cout << "PICS is enabled" << std::endl;
 #endif
@@ -110,7 +110,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 	// Hex decode content if desired
 	// Do this now, as it's not especially case-sensitive,
 	// and the case alteration should modify case post-decoding
-	if (o.hex_decode_content == 1) {  // Mod suggested by AFN Tue 8th April 2003
+	if (o.hex_decode_content) {  // Mod suggested by AFN Tue 8th April 2003
 #ifdef DGDEBUG
 		std::cout << "Hex decoding is enabled" << std::endl;
 #endif
@@ -160,7 +160,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 #ifdef DGDEBUG
 		std::cout << "Filtering with/without case preservation is enabled" << std::endl;
 #endif
-		preserve_case = 0;
+		preserve_case = false;
 	}
 	
 	// Store for the lowercase (maybe) data
@@ -185,7 +185,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 #endif
 		// use the one that's been hex decoded, but not stripped
 		// make a copy of the document lowercase char by char
-		if (preserve_case == 1) {
+		if (preserve_case) {
 			for (i = 0; i < hexdecodedlen; i++) {
 				c = hexdecoded[i];
 				if (c == 13 || c == 9 || c == 10) {
@@ -238,7 +238,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 			}
 
 			// if case preserved, also look for uppercase versions
-			if ((preserve_case == 1) and (endhead == NULL)) {
+			if (preserve_case and (endhead == NULL)) {
 				endhead = strstr(bodylc, "</HEAD");
 #ifdef DGDEBUG
 				if (endhead != NULL)
@@ -266,7 +266,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 				c = bodylc[i];
 				// are we at the start of a tag?
 				if ((!addit) && (c == '<')) {
-					if ((strncmp(bodylc+i+1, "meta", 4) == 0) or ((preserve_case == 1) and (strncmp(bodylc+i+1, "META", 4) == 0))) {
+					if ((strncmp(bodylc+i+1, "meta", 4) == 0) or (preserve_case and (strncmp(bodylc+i+1, "META", 4) == 0))) {
 #ifdef DGDEBUG
 						std::cout << "Found META" << std::endl;
 #endif
@@ -278,7 +278,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 						c = bodylc[i];
 					}
 					// are we at the start of a title tag?
-					else if ((strncmp(bodylc+i+1, "title", 5) == 0) or ((preserve_case == 1) and (strncmp(bodylc+i+1, "TITLE", 5) == 0))) {
+					else if ((strncmp(bodylc+i+1, "title", 5) == 0) or (preserve_case and (strncmp(bodylc+i+1, "TITLE", 5) == 0))) {
 #ifdef DGDEBUG
 						std::cout << "Found TITLE" << std::endl;
 #endif
@@ -398,7 +398,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 
 		// second time round the case loop (if there is a second time),
 		// do preserve case (exotic encodings)
-		preserve_case = 1;
+		preserve_case = true;
 	}
 	delete[]bodylc;
 	delete[]bodynohtml;
@@ -749,7 +749,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 				}
 			}
 
-			if (o.show_weighted_found == 1) {
+			if (o.show_weighted_found) {
 				if (weightedphrase.length() > 0) {
 					weightedphrase += "+";
 				}
@@ -819,7 +819,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 		whatIsNaughtyLog += String((*o.fg[filtergroup]).naughtyness_limit).toCharArray();
 		whatIsNaughtyLog += " : ";
 		whatIsNaughtyLog += String(weighting).toCharArray();
-		if (o.show_weighted_found == 1) {
+		if (o.show_weighted_found) {
 			whatIsNaughtyLog += " (";
 			whatIsNaughtyLog += weightedphrase;
 			whatIsNaughtyLog += ")";
