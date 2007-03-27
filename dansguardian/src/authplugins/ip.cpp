@@ -81,7 +81,7 @@ public:
 	// not quite true - what about downstream proxy with x-forwarded-for?
 	ipinstance(ConfigVar &definition):AuthPlugin(definition)
 	{
-		if (o.use_xforwardedfor == 0)
+		if (!o.use_xforwardedfor)
 			is_connection_based = true;
 	};
 
@@ -149,7 +149,7 @@ int ipinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, /*int
 	// we don't get usernames out of this plugin, just a filter group
 	// for now, use the IP as the username
 	
-	if (o.use_xforwardedfor == 1) {
+	if (o.use_xforwardedfor) {
 		// grab the X-Forwarded-For IP if available
 		string = h.getXForwardedForIP();
 		// otherwise, grab the IP directly from the client connection

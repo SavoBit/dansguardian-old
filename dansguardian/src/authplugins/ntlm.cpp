@@ -176,9 +176,9 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 #ifdef DGDEBUG
 	std::cout << "NTLM - sending step 1" << std::endl;
 #endif
-	if (o.forwarded_for == 1) {
+	if (o.forwarded_for) {
 		std::string clientip;
-		if (o.use_xforwardedfor == 1) {
+		if (o.use_xforwardedfor) {
 			// grab the X-Forwarded-For IP if available
 			clientip = h.getXForwardedForIP();
 			// otherwise, grab the IP directly from the client connection
