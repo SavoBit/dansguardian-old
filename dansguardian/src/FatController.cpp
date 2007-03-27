@@ -105,8 +105,8 @@ extern "C"
 }
 
 // logging & URL cache processes
-int log_listener(std::string log_location, int logconerror, int logsyslog);
-int url_list_listener(int logconerror);
+int log_listener(std::string log_location, bool logconerror, bool logsyslog);
+int url_list_listener(bool logconerror);
 // send flush message over URL cache IPC socket
 void flush_urlcache();
 
@@ -315,7 +315,7 @@ void flush_urlcache()
 bool daemonise()
 {
 
-	if (o.no_daemon == 1) {
+	if (o.no_daemon) {
 		return true;
 	}
 #ifdef DGDEBUG
@@ -523,7 +523,7 @@ int handle_connections(UDSocket &pipe)
 
 		// now check the connection is actually good
 		if (peersock->getFD() < 0 || peersockip.length() < 7) {
-			if (o.logconerror == 1)
+			if (o.logconerror)
 				syslog(LOG_INFO, "Error accepting. (Ignorable)");
 			continue;
 		}
@@ -581,7 +581,7 @@ bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
 		// so effectively providing a lock
 	}
 	catch(exception & e) {
-		if (o.logconerror == 1)
+		if (o.logconerror)
 			syslog(LOG_ERR, "Error telling parent we accepted: %s", e.what());
 		peersock->close();
 		return false;
@@ -843,7 +843,7 @@ void tellchild_accept(int num, int whichsock)
 // *
 
 
-int log_listener(std::string log_location, int logconerror, int logsyslog)
+int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 {
 #ifdef DGDEBUG
 	std::cout << "log listener started" << std::endl;
@@ -878,7 +878,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 	int contentmodified = 0, urlmodified = 0;
 
 	ofstream* logfile = NULL;
-	if (logsyslog == 0) {
+	if (!logsyslog) {
 		logfile = new ofstream(log_location.c_str(), ios::app);
 		if (logfile->fail()) {
 			syslog(LOG_ERR, "Error opening/creating log file.");
@@ -905,13 +905,13 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 			if (errno == EINTR) {
 				continue;  // was interupted by a signal so restart
 			}
-			if (logconerror == 1) {
+			if (logconerror) {
 				syslog(LOG_ERR, "ipc rc<0. (Ignorable)");
 			}
 			continue;
 		}
 		if (rc < 1) {
-			if (logconerror == 1) {
+			if (logconerror) {
 				syslog(LOG_ERR, "ipc rc<1. (Ignorable)");
 			}
 			continue;
@@ -923,7 +923,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 			ipcpeersock = loggersock.accept();
 			if (ipcpeersock->getFD() < 0) {
 				delete ipcpeersock;
-				if (logconerror == 1) {
+				if (logconerror) {
 					syslog(LOG_ERR, "Error accepting ipc. (Ignorable)");
 				}
 				continue;  // if the fd of the new socket < 0 there was error
@@ -1021,7 +1021,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 				}
 				catch(exception & e) {
 					delete ipcpeersock;
-					if (logconerror == 1)
+					if (logconerror)
 						syslog(LOG_ERR, "Error reading ipc. (Ignorable)");
 					error = true;
 					break;
@@ -1062,10 +1062,8 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 			if (isnaughty) {
 				what = "*DENIED* " + what;
 			}
-			else if (isexception) {
-				if (o.log_exception_hits == 1) {
-					what = "*EXCEPTION* " + what;
-				}
+			else if (isexception && (o.log_exception_hits == 2)) {
+				what = "*EXCEPTION* " + what;
 			}
 		   
 			if (wasscanned) {
@@ -1086,7 +1084,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 			struct timeval theend;
 
 			// create a string representation of UNIX timestamp if desired
-			if ((o.log_timestamp == 1) || (o.log_file_format == 3)) {
+			if (o.log_timestamp || (o.log_file_format == 3)) {
 				gettimeofday(&theend, NULL);
 				String temp((int) (theend.tv_usec / 1000));
 				while (temp.length() < 3) {
@@ -1126,7 +1124,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 				/*if ((o.max_logitem_length > 0) && (when.length() > o.max_logitem_length))
 					when.resize(o.max_logitem_length);*/
 				// append timestamp if desired
-				if (o.log_timestamp == 1)
+				if (o.log_timestamp)
 					when += " " + utime;
 					
 			}
@@ -1154,7 +1152,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 			}
 
 			// blank out IP, hostname and username if desired
-			if (o.anonymise_logs == 1) {
+			if (o.anonymise_logs) {
 				who = "";
 				from = "0.0.0.0";
 				//delete clienthost;
@@ -1224,7 +1222,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 					+ stringcode + " " + mimetype + " " + clienthost + " " + o.fg[filtergroup]->name;
 			}
 
-			if (logsyslog == 0)
+			if (!logsyslog)
 				*logfile << builtline << std::endl;  // append the line
 			else
 				syslog(LOG_INFO, "%s", builtline.c_str());
@@ -1401,7 +1399,7 @@ int log_listener(std::string log_location, int logconerror, int logsyslog)
 	return 1;  // It is only possible to reach here with an error
 }
 
-int url_list_listener(int logconerror)
+int url_list_listener(bool logconerror)
 {
 #ifdef DGDEBUG
 	std::cout << "url listener started" << std::endl;
@@ -1444,7 +1442,7 @@ int url_list_listener(int logconerror)
 			if (errno == EINTR) {
 				continue;  // was interupted by a signal so restart
 			}
-			if (logconerror == 1) {
+			if (logconerror) {
 				syslog(LOG_ERR, "%s", "url ipc rc<0. (Ignorable)");
 			}
 			continue;
@@ -1456,7 +1454,7 @@ int url_list_listener(int logconerror)
 			ipcpeersock = urllistsock.accept();
 			if (ipcpeersock->getFD() < 0) {
 				delete ipcpeersock;
-				if (logconerror == 1) {
+				if (logconerror) {
 #ifdef DGDEBUG
 					std::cout << "Error accepting url ipc. (Ignorable)" << std::endl;
 #endif
@@ -1470,7 +1468,7 @@ int url_list_listener(int logconerror)
 			}
 			catch(exception & e) {
 				delete ipcpeersock;  // close the connection
-				if (logconerror == 1) {
+				if (logconerror) {
 #ifdef DGDEBUG
 					std::cout << "Error reading url ipc. (Ignorable)" << std::endl;
 					std::cerr << e.what() << std::endl;
@@ -1511,7 +1509,7 @@ int url_list_listener(int logconerror)
 			}
 			catch(exception & e) {
 				delete ipcpeersock;  // close the connection
-				if (logconerror == 1) {
+				if (logconerror) {
 					syslog(LOG_ERR, "%s", "Error writing url ipc. (Ignorable)");
 					syslog(LOG_ERR, "%s", e.what());
 				}
@@ -1529,7 +1527,7 @@ int url_list_listener(int logconerror)
 	return 1;  // It is only possible to reach here with an error
 }
 
-int ip_list_listener(std::string stat_location, int logconerror) {
+int ip_list_listener(std::string stat_location, bool logconerror) {
 #ifdef DGDEBUG
 	std::cout << "ip listener started" << std::endl;
 #endif
@@ -1582,7 +1580,7 @@ int ip_list_listener(std::string stat_location, int logconerror) {
 			if (errno == EINTR) {
 				continue;  // was interupted by a signal so restart
 			}
-			if (logconerror == 1) {
+			if (logconerror) {
 				syslog(LOG_ERR, "ip ipc rc<0. (Ignorable)");
 			}
 			continue;
@@ -1623,7 +1621,7 @@ int ip_list_listener(std::string stat_location, int logconerror) {
 			ipcpeersock = iplistsock.accept();
 			if (ipcpeersock->getFD() < 0) {
 				delete ipcpeersock;
-				if (logconerror == 1) {
+				if (logconerror) {
 #ifdef DGDEBUG
 					std::cout << "Error accepting ip ipc. (Ignorable)" << std::endl;
 #endif
@@ -1636,7 +1634,7 @@ int ip_list_listener(std::string stat_location, int logconerror) {
 				rc = ipcpeersock->getLine(inbuff, 16, 3);  // throws on err
 			} catch (exception& e) {
 				delete ipcpeersock;
-				if (logconerror == 1) {
+				if (logconerror) {
 #ifdef DGDEBUG
 					std::cout << "Error reading ip ipc. (Ignorable)" << std::endl;
 #endif
@@ -1658,7 +1656,7 @@ int ip_list_listener(std::string stat_location, int logconerror) {
 				ipcpeersock->writeToSockete(&reply, 1, 0, 6);
 			} catch (exception& e) {
 				delete ipcpeersock;
-				if (logconerror == 1) {
+				if (logconerror) {
 #ifdef DGDEBUG
 					std::cout << "Error writing ip ipc. (Ignorable)" << std::endl;
 #endif
@@ -1712,10 +1710,10 @@ int fc_controlit()
 	}
 
 
-	if (o.no_logger == 0) {
-		loggersock.reset();
-	} else {
+	if (o.no_logger) {
 		loggersock.close();
+	} else {
+		loggersock.reset();
 	}
 	if (o.url_cache_number > 0) {
 		urllistsock.reset();
@@ -1732,7 +1730,7 @@ int fc_controlit()
 	pid_t urllistpid = 0;  // url cache process id
 	pid_t iplistpid = 0; // ip cache process id
 
-	if (o.no_logger == 0) {
+	if (!o.no_logger) {
 		if (loggersock.getFD() < 0) {
 			if (!is_daemonised) {
 				std::cerr << "Error creating ipc socket" << std::endl;
@@ -1818,7 +1816,7 @@ int fc_controlit()
 	unlink(o.urlipc_filename.c_str());
 	unlink(o.ipipc_filename.c_str());
 
-	if (o.no_logger == 0) {
+	if (!o.no_logger) {
 		if (loggersock.bind((char *) o.ipc_filename.c_str())) {	// bind to file
 			if (!is_daemonised) {
 				std::cerr << "Error binding ipc server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm " << o.ipc_filename << "')." << std::endl;
@@ -1918,7 +1916,7 @@ int fc_controlit()
 	// handle incoming TCP connections from the clients and one to handle
 	// incoming UDS ipc from our forked children.  This helps reduce
 	// bottlenecks by not having only one select() loop.
-	if (o.no_logger == 0) {
+	if (!o.no_logger) {
 
 		loggerpid = fork();  // make a child processes copy of self to be logger
 
@@ -1940,7 +1938,7 @@ int fc_controlit()
 		if (urllistpid == 0) {	// ma ma!  i am the child
 			serversockets.deleteAll(); // we don't need our copy of this so close it
 			delete[] serversockfds;
-			if (o.no_logger == 0) {
+			if (!o.no_logger) {
 				loggersock.close();  // we don't need our copy of this so close it
 			}
 			url_list_listener(o.logconerror);
@@ -1957,7 +1955,7 @@ int fc_controlit()
 		if (iplistpid == 0) {	// ma ma!  i am the child
 			serversockets.deleteAll(); // we don't need our copy of this so close it
 			delete[] serversockfds;
-			if (o.no_logger == 0) {
+			if (!o.no_logger) {
 				loggersock.close();  // we don't need our copy of this so close it
 			}
 			ip_list_listener(o.stat_location, o.logconerror);
@@ -1977,7 +1975,7 @@ int fc_controlit()
 	if (o.url_cache_number > 0) {
 		urllistsock.close();  // we don't need our copy of this so close it
 	}
-	if (o.no_logger == 0) {
+	if (!o.no_logger) {
 		loggersock.close();  // we don't need our copy of this so close it
 	}
 	if (o.max_ips > 0) {
@@ -1985,7 +1983,7 @@ int fc_controlit()
 	}
 
 	memset(&sa, 0, sizeof(sa));
-	if (o.soft_restart == 0) {
+	if (!o.soft_restart) {
 		sa.sa_handler = &sig_term;  // register sig_term as our handler
 	} else {
 		sa.sa_handler = &sig_termsafe;
@@ -2343,7 +2341,7 @@ int fc_controlit()
 	}
 
 	if (reloadconfig || ttg) {
-		if (o.no_logger == 0)
+		if (!o.no_logger)
 			::kill(loggerpid, SIGTERM);  // get rid of logger
 		if (o.url_cache_number > 0)
 			::kill(urllistpid, SIGTERM);  // get rid of url cache
@@ -2351,7 +2349,7 @@ int fc_controlit()
 			::kill(iplistpid, SIGTERM); // get rid of iplist
 		return reloadconfig ? 2 : 0;
 	}
-	if (o.logconerror == 1) {
+	if (o.logconerror) {
 		syslog(LOG_ERR, "%s", "Main parent process exiting.");
 	}
 	return 1;  // It is only possible to reach here with an error
