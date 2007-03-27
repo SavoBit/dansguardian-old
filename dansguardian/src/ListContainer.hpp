@@ -85,7 +85,7 @@ public:
 	void doSort(const bool startsWith);
 
 	bool createCacheFile();
-	void makeGraph(int fqs);
+	void makeGraph(bool fqs);
 
 	bool previousUseItem(const char *filename, bool startswith, int filters);
 	bool upToDate();
@@ -125,7 +125,7 @@ private:
 	std::vector<unsigned int > list;
 	std::vector<int > weight;
 	std::vector<int > itemtype;  // 0=banned, 1=weighted, -1=exception
-	int force_quick_search;
+	bool force_quick_search;
 	
 	//time-limited lists - only items (sites, URLs), not phrases
 	unsigned int sthour, stmin, endhour, endmin;

@@ -57,7 +57,7 @@ extern OptionContainer o;
 // Constructor - set default values
 ListContainer::ListContainer():refcount(1), parent(false), filedate(0), used(false), bannedpfiledate(0), exceptionpfiledate(0), weightedpfiledate(0),
 	sourceisexception(false), sourcestartswith(false), sourcefilters(0), data(NULL), realgraphdata(NULL), maxchildnodes(0), graphitems(0),
-	data_length(0), data_memory(0), items(0), isSW(false), issorted(false), graphused(false), force_quick_search(0),
+	data_length(0), data_memory(0), items(0), isSW(false), issorted(false), graphused(false), force_quick_search(false),
 	sthour(0), stmin(0), endhour(0), endmin(0), istimelimited(false)
 {
 }
@@ -693,13 +693,13 @@ bool ListContainer::createCacheFile()
 	return true;
 }
 
-void ListContainer::makeGraph(int fqs)
+void ListContainer::makeGraph(bool fqs)
 {
 	force_quick_search = fqs;
 	if (data_length == 0)
 		return;
 	int i;
-	if (force_quick_search == 1) {
+	if (force_quick_search) {
 		for (i = 0; i < items; i++) {
 			slowgraph.push_back(i);
 		}
@@ -938,7 +938,7 @@ void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int
 		}
 	}
 	
-	if (force_quick_search == 1 || graphitems == 0) {
+	if (force_quick_search || graphitems == 0) {
 		return;
 	}
 	
