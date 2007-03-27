@@ -348,7 +348,7 @@ int main(int argc, char *argv[])
 		// for some reason, so exit with error
 	}
 
-	if ((o.no_logger == 0) && (o.log_syslog == 0)) {
+	if (!o.no_logger && !o.log_syslog) {
 		ofstream logfiletest(o.log_location.c_str(), ios::app);
 		if (logfiletest.fail()) {
 			syslog(LOG_ERR, "Error opening/creating log file. (check ownership and access rights).");
