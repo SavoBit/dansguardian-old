@@ -33,8 +33,11 @@ loglevel = 2
 # Log Exception Hits
 # Log if an exception (user, ip, URL, phrase) is matched and so
 # the page gets let through.  Can be useful for diagnosing
-# why a site gets through the filter.  on | off
-logexceptionhits = on
+# why a site gets through the filter.
+# 0 = never log exceptions
+# 1 = log exceptions, but do not explicitly mark them as such
+# 2 = always log & mark exceptions (default)
+logexceptionhits = 2
 
 # Log File Format
 # 1 = DansGuardian format        2 = CSV-style format
@@ -118,9 +121,8 @@ nonstandarddelimiter = on
 # in the adverts blacklists can be replaced by an image.  This will,
 # for example, hide images from advert sites and remove broken image
 # icons from banned domains.
-# 0 = off
-# 1 = on (default)
-usecustombannedimage = 1
+# on (default) | off
+usecustombannedimage = on
 custombannedimagefile = '@DGDATADIR@/transparent1x1.gif'
 
 
@@ -221,9 +223,9 @@ preservecase = 0
 # When a document is scanned it can optionally convert %XX to chars.
 # If you find documents are getting past the phrase filtering due to encoding
 # then enable.  However this can break Big5 and other 16-bit texts.
-# 0 = disabled (default)
-# 1 = enabled
-hexdecodecontent = 0
+# off = disabled (default)
+# on = enabled
+hexdecodecontent = off
 
 
 
@@ -232,9 +234,8 @@ hexdecodecontent = 0
 # but is used by default as it handles large phrase lists much faster.
 # If you wish to use a large number of 16-bit character phrases then
 # enable this option.
-# 0 = off (default)
-# 1 = on (Big5 compatible)
-forcequicksearch = 0
+# off (default) | on (Big5 compatible)
+forcequicksearch = off
 
 
 
