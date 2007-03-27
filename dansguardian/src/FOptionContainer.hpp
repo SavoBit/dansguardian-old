@@ -48,26 +48,26 @@ class FOptionContainer
 public:
 	int reporting_level;
 	int category_threshold;
-	int infection_bypass_errors_only;
-	int disable_content_scan;
+	bool infection_bypass_errors_only;
+	bool disable_content_scan;
 	int weighted_phrase_mode;
 	int group_mode;
 	int embedded_url_weight;
 	int naughtyness_limit;
-	int createlistcachefiles;
-	int enable_PICS;
-	int deep_url_analysis;
+	bool createlistcachefiles;
+	bool enable_PICS;
+	bool deep_url_analysis;
 
 #ifdef __EMAIL
 	// Email notification patch by J. Gauthier
-	int notifyav;
-	int notifycontent;
-	int use_smtp;
+	bool notifyav;
+	bool notifycontent;
+	bool use_smtp;
 	int violations;
 	int current_violations;
 	int threshold;
 	long threshold_stamp;
-	int byuser;
+	bool byuser;
 #endif
 
 	bool blanketblock;
@@ -80,8 +80,8 @@ public:
 	// use banned MIME type & extension lists.
 	bool block_downloads;
 	
-	int reverse_lookups;
-	int force_quick_search;
+	bool reverse_lookups;
+	bool force_quick_search;
 	int bypass_mode;
 	int infection_bypass_mode;
 	int pics_rsac_violence;

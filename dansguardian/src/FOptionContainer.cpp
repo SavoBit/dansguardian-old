@@ -165,7 +165,7 @@ bool FOptionContainer::readFile(const char *filename, unsigned int* whichlist, b
 			(*o.lm.l[(*whichlist)]).doSort(true);
 		else
 			(*o.lm.l[(*whichlist)]).doSort(false);
-		if (cache && (createlistcachefiles == 1)) {
+		if (cache && createlistcachefiles) {
 			if (!(*o.lm.l[(*whichlist)]).createCacheFile()) {
 				return false;
 			}
@@ -214,53 +214,53 @@ bool FOptionContainer::read(const char *filename)
 #endif
 
 		if (findoptionS("deepurlanalysis") == "on") {
-			deep_url_analysis = 1;
+			deep_url_analysis = true;
 		} else {
-			deep_url_analysis = 0;
+			deep_url_analysis = false;
 		}
 
 		if (findoptionS("disablecontentscan") == "on") {
-			disable_content_scan = 1;
+			disable_content_scan = true;
 		} else {
-			disable_content_scan = 0;
+			disable_content_scan = false;
 		}
 
 #ifdef __EMAIL
 		// Email notification patch by J. Gauthier
 		if (findoptionS("usesmtp") == "on") {
-			use_smtp = 1;
+			use_smtp = true;
 		} else {
-			use_smtp = 0;
+			use_smtp = false;
 		}
 
 		if (findoptionS("thresholdbyuser") == "on") {
-			byuser = 1;
+			byuser = true;
 		} else {
-			byuser = 0;
+			byuser = false;
 		}	   
 
 		if (findoptionS("notifyav") == "on") {
-			if (use_smtp == 0) {
+			if (!use_smtp) {
 				if (!is_daemonised)
 					std::cerr << "notifyav cannot be on while usesmtp is off." << std::endl;
 				syslog(LOG_ERR, "notifyav cannot be on while usesmtp is off.");
 				return false;
 			}
-			notifyav = 1;
+			notifyav = true;
 		} else {
-			notifyav = 0;
+			notifyav = false;
 		}
 
 		if (findoptionS("notifycontent") == "on") {
-			if (use_smtp == 0) {
+			if (use_smtp) {
 				if (!is_daemonised)
 					std::cerr << "notifycontent cannot be on while usesmtp is off." << std::endl;
 				syslog(LOG_ERR, "notifycontent cannot be on while usesmtp is off.");
 				return false;
 			}
-			notifycontent = 1;
+			notifycontent = true;
 		} else {
-			notifycontent = 0;
+			notifycontent = false;
 		}
 
 		violations = findoptionI("violations");
@@ -280,7 +280,7 @@ bool FOptionContainer::read(const char *filename)
 
 		contentadmin = findoptionS("contentadmin");
 		if (contentadmin.length()==0) {
-			if (use_smtp == 1) {		   
+			if (use_smtp) {		   
 				if (!is_daemonised)		   
 					std::cerr << "contentadmin cannot be blank while usesmtp is on." << std::endl;
 				syslog(LOG_ERR, "contentadmin cannot be blank while usesmtp is on.");
@@ -290,7 +290,7 @@ bool FOptionContainer::read(const char *filename)
 
 		mailfrom = findoptionS("mailfrom");
 		if (mailfrom.length()==0) {
-			if (use_smtp == 1) {
+			if (use_smtp) {
 				if (!is_daemonised)		   
 					std::cerr << "mailfrom cannot be blank while usesmtp is on." << std::endl;
 				syslog(LOG_ERR, "mailfrom cannot be blank while usesmtp is on.");
@@ -399,16 +399,16 @@ bool FOptionContainer::read(const char *filename)
 			// deque.  They are only seperate files for clarity.
 
 			if (findoptionS("enablepics") == "on") {
-				enable_PICS = 1;
+				enable_PICS = true;
 			} else {
-				enable_PICS = 0;
+				enable_PICS = false;
 			}
 
 			if (findoptionS("blockdownloads") == "on") {
 				block_downloads = true;
 			}
 
-			if (enable_PICS == 1) {
+			if (enable_PICS) {
 				linebuffer = findoptionS("picsfile");
 				ifstream picsfiles(linebuffer.c_str(), ios::in);  // pics file
 				if (!picsfiles.good()) {
@@ -466,7 +466,7 @@ bool FOptionContainer::read(const char *filename)
 			std::string exception_mimetype_list_location(findoptionS("exceptionmimetypelist"));
 			std::string exception_file_site_list_location(findoptionS("exceptionfilesitelist"));
 
-			if (enable_PICS == 1) {
+			if (enable_PICS) {
 				pics_rsac_nudity = findoptionI("RSACnudity");
 				pics_rsac_language = findoptionI("RSAClanguage");
 				pics_rsac_sex = findoptionI("RSACsex");
@@ -708,12 +708,12 @@ bool FOptionContainer::read(const char *filename)
 			std::cout << "Setting imagic key to '" << imagic << "'" << std::endl;
 #endif
 			if (findoptionS("infectionbypasserrorsonly") == "off") {
-				infection_bypass_errors_only = 0;
+				infection_bypass_errors_only = false;
 			} else {
 #ifdef DGDEBUG
 				std::cout << "Only allowing infection bypass on scan error" << std::endl;
 #endif
-				infection_bypass_errors_only = 1;
+				infection_bypass_errors_only = true;
 			}
 		}
 	}
@@ -893,7 +893,7 @@ char *FOptionContainer::inSiteList(String &url, unsigned int list)
 	}
 	char *i;
 	bool isipurl = isIPHostname(url);
-	if (reverse_lookups == 1 && isipurl) {	// change that ip into hostname
+	if (reverse_lookups && isipurl) {	// change that ip into hostname
 		std::deque<String > *url2s = ipToHostname(url.toCharArray());
 		String url2;
 		for (std::deque<String>::iterator j = url2s->begin(); j != url2s->end(); j++) {
@@ -972,7 +972,7 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 #ifdef DGDEBUG
 	std::cout << "inURLList (processed): " << url << std::endl;
 #endif
-	if (reverse_lookups == 1 && url.after("/").length() > 0) {
+	if (reverse_lookups && url.after("/").length() > 0) {
 		String hostname(url.before("/"));
 		if (isIPHostname(hostname)) {
 			std::deque<String > *url2s = ipToHostname(hostname.toCharArray());
