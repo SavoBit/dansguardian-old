@@ -1,4 +1,5 @@
 //Please refer to http://dansguardian.org/?page=copyright2
+//
 //for the license for this code.
 //Written by Daniel Barron (daniel@jadeb.com).
 //For support go to http://groups.yahoo.com/group/dansguardian
@@ -48,27 +49,26 @@ public:
 	// all our many, many options
 	int filter_groups;
 	int log_exception_hits;
-	int non_standard_delimiter;
+	bool non_standard_delimiter;
 	int log_file_format;
 	int weighted_phrase_mode;
-	int show_weighted_found;
-	int forwarded_for;
-	int createlistcachefiles;
-	int use_custom_banned_image;
+	bool show_weighted_found;
+	bool forwarded_for;
+	bool createlistcachefiles;
+	bool use_custom_banned_image;
 	std::string custom_banned_image_file;
-	int reverse_lookups;
-	int reverse_client_ip_lookups;
-	int log_client_hostnames;
-	int use_xforwardedfor;
-	//int preemptive_banning;
-	int logconerror;
+	bool reverse_lookups;
+	bool reverse_client_ip_lookups;
+	bool log_client_hostnames;
+	bool use_xforwardedfor;
+	bool logconerror;
 	bool logchildprocs;
 	int url_cache_number;
 	int url_cache_age;
 	int phrase_filter_mode;
 	int preserve_case;
-	int hex_decode_content;
-	int force_quick_search;
+	bool hex_decode_content;
+	bool force_quick_search;
 	int filter_port;
 	int proxy_port;
 	std::string proxy_ip;
@@ -102,14 +102,14 @@ public:
 	std::string ipipc_filename;
 	std::string pid_filename;
 
-	int no_daemon;
-	int no_logger;
-	int log_syslog;
+	bool no_daemon;
+	bool no_logger;
+	bool log_syslog;
 	unsigned int max_logitem_length;
-	int anonymise_logs;
-	int log_ad_blocks;
-	int log_timestamp;
-	int soft_restart;
+	bool anonymise_logs;
+	bool log_ad_blocks;
+	bool log_timestamp;
+	bool soft_restart;
 
 #ifdef __EMAIL
 	// Email notification patch by J. Gauthier
@@ -118,13 +118,13 @@ public:
 
 	std::string daemon_user;
 	std::string daemon_group;
-	int max_upload_size;
+	unsigned int max_upload_size;
 	unsigned int max_content_filter_size;
 	unsigned int max_content_ramcache_scan_size;
 	unsigned int max_content_filecache_scan_size;
-	int scan_clean_cache;
-	int content_scan_exceptions;
-	int delete_downloaded_temp_files;
+	bool scan_clean_cache;
+	bool content_scan_exceptions;
+	bool delete_downloaded_temp_files;
 	std::string download_dir;
 	int initial_trickle_delay;
 	int trickle_delay;
