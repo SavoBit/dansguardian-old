@@ -149,10 +149,11 @@ bool OptionContainer::read(const char *filename, int type)
 			}
 
 			if (findoptionS("logsyslog") == "on") {
-				log_syslog = 1;
+				log_syslog = true;
 			} else 	if ((log_location = findoptionS("loglocation")) == "") {
 				log_location = __LOGLOCATION;
 				log_location += "access.log";
+				log_syslog = false;
 			}
 
 			if ((stat_location = findoptionS("statlocation")) == "") {
@@ -174,21 +175,21 @@ bool OptionContainer::read(const char *filename, int type)
 		}
 
 		if (findoptionS("nodaemon") == "on") {
-			no_daemon = 1;
+			no_daemon = true;
 		} else {
-			no_daemon = 0;
+			no_daemon = false;
 		}
 
 		if (findoptionS("nologger") == "on") {
-			no_logger = 1;
+			no_logger = true;
 		} else {
-			no_logger = 0;
+			no_logger = false;
 		}
 
 		if (findoptionS("softrestart") == "on") {
-			soft_restart = 1;
+			soft_restart = true;
 		} else {
-			soft_restart = 0;
+			soft_restart = false;
 		}
 
 #ifdef __EMAIL
@@ -299,23 +300,23 @@ bool OptionContainer::read(const char *filename, int type)
 			}
 
 			if (findoptionS("scancleancache") == "off") {
-				scan_clean_cache = 0;
+				scan_clean_cache = false;
 			} else {
-				scan_clean_cache = 1;
+				scan_clean_cache = true;
 			}
 
 			if (findoptionS("contentscanexceptions") == "on") {
-				content_scan_exceptions = 1;
+				content_scan_exceptions = true;
 			} else {
-				content_scan_exceptions = 0;
+				content_scan_exceptions = false;
 			}
 
 		}
 
 		if (findoptionS("deletedownloadedtempfiles") == "off") {
-			delete_downloaded_temp_files = 0;
+			delete_downloaded_temp_files = false;
 		} else {
-			delete_downloaded_temp_files = 1;
+			delete_downloaded_temp_files = true;
 		}
 
 		url_cache_number = findoptionI("urlcachenumber");
@@ -336,18 +337,21 @@ bool OptionContainer::read(const char *filename, int type)
 		if (!realitycheck(preserve_case, 0, 2, "preservecase")) {
 			return false;
 		}
-		hex_decode_content = findoptionI("hexdecodecontent");
-		if (!realitycheck(hex_decode_content, 0, 1, "hex_decode_content")) {
-			return false;
+		if (findoptionS("hexdecodecontent") == "on") {
+			hex_decode_content = true;
+		} else {
+			hex_decode_content = false;
 		}
-		force_quick_search = findoptionI("forcequicksearch");
-		if (!realitycheck(force_quick_search, 0, 1, "forcequicksearch")) {
-			return false;
-		}		// check its a reasonable value
-
-		use_custom_banned_image = findoptionI("usecustombannedimage");
-		if (!realitycheck(use_custom_banned_image, 0, 1, "usecustombannedimage")) {
-			return false;
+		if (findoptionS("forcequicksearch") == "on") {
+			force_quick_search = true;
+		} else {
+			force_quick_search = false;
+		}
+		
+		if (findoptionS("usecustombannedimage") == "off") {
+			use_custom_banned_image = false;
+		} else {
+			use_custom_banned_image = true;
 		}
 		custom_banned_image_file = findoptionS("custombannedimagefile");
 		banned_image.read(custom_banned_image_file.c_str());
@@ -381,25 +385,25 @@ bool OptionContainer::read(const char *filename, int type)
 			return false;
 		}		// etc
 		if (findoptionS("anonymizelogs") == "on") {
-			anonymise_logs = 1;
+			anonymise_logs = true;
 		} else {
-			anonymise_logs = 0;
+			anonymise_logs = false;
 		}
 		if (findoptionS("logadblocks") == "on") {
-			log_ad_blocks = 1;
+			log_ad_blocks = true;
 		} else {
-			log_ad_blocks = 0;
+			log_ad_blocks = false;
 		}
 		if (findoptionS("logtimestamp") == "on") {
-			log_timestamp = 1;
+			log_timestamp = true;
 		} else {
-			log_timestamp = 0;
+			log_timestamp = false;
 		}
 
 		if (findoptionS("showweightedfound") == "on") {
-			show_weighted_found = 1;
+			show_weighted_found = true;
 		} else {
-			show_weighted_found = 0;
+			show_weighted_found = false;
 		}
 		weighted_phrase_mode = findoptionI("weightedphrasemode");
 		if (!realitycheck(weighted_phrase_mode, 0, 2, "weightedphrasemode")) {
@@ -413,29 +417,28 @@ bool OptionContainer::read(const char *filename, int type)
 		html_template_location = languagepath + "template.html";
 
 		if (findoptionS("forwardedfor") == "on") {
-			forwarded_for = 1;
+			forwarded_for = true;
 		} else {
-			forwarded_for = 0;
+			forwarded_for = false;
 		}
-		if (findoptionS("logexceptionhits") == "on") {
-			log_exception_hits = 1;
-		} else {
-			log_exception_hits = 0;
+		log_exception_hits = findoptionI("logexceptionhits");
+		if (!realitycheck(log_exception_hits, 0, 2, "logexceptionhits")) {
+			return false;
 		}
 		if (findoptionS("nonstandarddelimiter") == "off") {
-			non_standard_delimiter = 0;
+			non_standard_delimiter = false;
 		} else {
-			non_standard_delimiter = 1;
+			non_standard_delimiter = true;
 		}
 		if (findoptionS("createlistcachefiles") == "off") {
-			createlistcachefiles = 0;
+			createlistcachefiles = false;
 		} else {
-			createlistcachefiles = 1;
+			createlistcachefiles = true;
 		}
 		if (findoptionS("logconnectionhandlingerrors") == "on") {
-			logconerror = 1;
+			logconerror = true;
 		} else {
-			logconerror = 0;
+			logconerror = false;
 		}
 		if (findoptionS("logchildprocesshandling") == "on") {
 			logchildprocs = true;
@@ -444,31 +447,31 @@ bool OptionContainer::read(const char *filename, int type)
 		}
 
 		if (findoptionS("reverseaddresslookups") == "on") {
-			reverse_lookups = 1;
+			reverse_lookups = true;
 		} else {
-			reverse_lookups = 0;
+			reverse_lookups = false;
 		}
 		if (findoptionS("reverseclientiplookups") == "on") {
-			reverse_client_ip_lookups = 1;
+			reverse_client_ip_lookups = true;
 		} else {
-			reverse_client_ip_lookups = 0;
+			reverse_client_ip_lookups = false;
 		}
 		if (findoptionS("logclienthostnames") == "on") {
-			log_client_hostnames = 1;
+			log_client_hostnames = true;
 		} else {
-			log_client_hostnames = 0;
+			log_client_hostnames = false;
 		}
 
 		if (findoptionS("recheckreplacedurls") == "on") {
-			recheck_replaced_urls = 1;
+			recheck_replaced_urls = true;
 		} else {
-			recheck_replaced_urls = 0;
+			recheck_replaced_urls = false;
 		}
 
 		if (findoptionS("usexforwardedfor") == "on") {
-			use_xforwardedfor = 1;
+			use_xforwardedfor = true;
 		} else {
-			use_xforwardedfor = 0;
+			use_xforwardedfor = false;
 		}
 
 		filter_groups = findoptionI("filtergroups");
@@ -631,7 +634,7 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::
 		host = NULL;
 		return true;
 	}
-	else if (reverse_client_ip_lookups == 1) {
+	else if (reverse_client_ip_lookups) {
 		std::deque<String > *hostnames = ipToHostname((*ip).c_str());
 		bool result;
 		for (std::deque<String>::iterator i = hostnames->begin(); i != hostnames->end(); i++) {
@@ -641,7 +644,7 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::
 				// hey.. since the lookup is the hard part, not the logging,
 				// why not always return a hostname if it wasn't a straight IP
 				// that triggered the match?
-				//if (log_client_hostnames == 1) {
+				//if (log_client_hostnames) {
 					delete host;
 					host = new std::string(i->toCharArray());
 #ifdef DGDEBUG
@@ -651,7 +654,7 @@ bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::
 				return true;
 			}
 		}
-		if ((log_client_hostnames == 1) && (host == NULL) && (hostnames->size() > 0))
+		if ((log_client_hostnames) && (host == NULL) && (hostnames->size() > 0))
 			host = new std::string(hostnames->front().toCharArray());
 		delete hostnames;
 	}
