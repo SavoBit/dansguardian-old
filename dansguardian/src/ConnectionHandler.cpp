@@ -669,7 +669,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				break;
 			}
 
-			if (o.use_xforwardedfor == 1) {
+			if (o.use_xforwardedfor) {
 				std::string xforwardip(header.getXForwardedForIP());
 				if (xforwardip.length() > 6) {
 					clientip = xforwardip;
@@ -684,7 +684,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			if (isbannedip)
 				matchedip = clienthost == NULL;
 
-			if (o.forwarded_for == 1) {
+			if (o.forwarded_for) {
 				header.addXForwardedFor(clientip);  // add squid-like entry
 			}
 
@@ -761,7 +761,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						rtype, docsize, NULL, false, isexception, false, &thestart,
 						cachehit, 200, mimetype, wasinfected, wasscanned, 0, filtergroup);
 
-					if (o.delete_downloaded_temp_files == 1) {
+					if (o.delete_downloaded_temp_files) {
 						unlink(tempfilename.toCharArray());
 					}
 				}
@@ -892,7 +892,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// from blocking the entire request.
 				// this could be achieved with exception phrases (which are, of course, always checked
 				// after the URL) too, but there are cases for both, and flexibility is good.
-				if ((o.recheck_replaced_urls == 1) && !(isbanneduser || isbannedip)) {
+				if (o.recheck_replaced_urls && !(isbanneduser || isbannedip)) {
 					if ((*o.fg[filtergroup]).inExceptionSiteList(urld)) {	// allowed site
 						if ((*o.fg[0]).isOurWebserver(url)) {
 							isourwebserver = true;
@@ -1530,18 +1530,26 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		bool contentmodified, bool urlmodified)
 {
 
-	// don't log if logging disabled entirely, or if it's an ad block and ad logging is disabled
-	if ((o.ll == 0) || ((cat != NULL) && (o.log_ad_blocks == 0) && (strstr(cat->c_str(),"ADs") != NULL))) {
+	// don't log if logging disabled entirely, or if it's an ad block and ad logging is disabled,
+	// or if it's an exception and exception logging is disabled
+	if (
+		(o.ll == 0) ||
+		((cat != NULL) && !o.log_ad_blocks && (strstr(cat->c_str(),"ADs") != NULL)) ||
+		((o.log_exception_hits == 0) && isexception))
+	{
 #ifdef DGDEBUG
-		if ((o.ll != 0) && (cat != NULL))
-			std::cout << "Not logging AD blocks" << std::endl;
+		if (o.ll != 0) 
+			if (isexception)
+				std::cout << "Not logging exceptions" << std::endl;
+			else
+				std::cout << "Not logging 'ADs' blocks" << std::endl;
 #endif
 		return;
 	}
 
 	String data, cr("\n");
 
-	if ((isexception && o.log_exception_hits == 1)
+	if ((isexception && (o.log_exception_hits == 2))
 		|| isnaughty || o.ll == 3 || (o.ll == 2 && istext))
 	{
 		// connect to dedicated logging proc
@@ -1564,7 +1572,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		// for banned & exception IP/hostname matches, we want to output exactly what was matched against,
 		// be it hostname or IP - therefore only do lookups here when we don't already have a cached hostname,
 		// and we don't have a straight IP match agaisnt the banned or exception IP lists.
-		if ((o.log_client_hostnames == 1) && (clienthost == NULL) && !matchedip && (o.anonymise_logs != 1)) {
+		if (o.log_client_hostnames && (clienthost == NULL) && !matchedip && !o.anonymise_logs) {
 #ifdef DGDEBUG
 			std::cout<<"logclienthostnames enabled but reverseclientiplookups disabled; lookup forced."<<std::endl;
 #endif
@@ -1713,7 +1721,7 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 			}
 		}
 		// look for URLs within URLs - ban, for example, images originating from banned sites during a Google image search.
-		if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).deep_url_analysis == 1) {
+		if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).deep_url_analysis) {
 #ifdef DGDEBUG
 			std::cout << "starting deep analysis" << std::endl;
 #endif
@@ -1834,7 +1842,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 			} else {
 				// we're dealing with a non-SSL'ed request, and have the option of using the custom banned image/page directly
 				bool replaceimage = false;
-				if (o.use_custom_banned_image == 1) {
+				if (o.use_custom_banned_image) {
 
 					// It would be much nicer to do a mime comparison
 					// and see if the type is image/* but the header
@@ -1948,7 +1956,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 			writestring += "Location: ";
 			writestring += o.fg[filtergroup]->access_denied_address;
 
-			if (o.non_standard_delimiter == 1) {
+			if (o.non_standard_delimiter) {
 				writestring += "?DENIEDURL==";
 				writestring += miniURLEncode((*url).toCharArray()).c_str();
 				writestring += "::IP==";
