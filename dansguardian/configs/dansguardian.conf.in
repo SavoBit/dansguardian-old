@@ -40,8 +40,10 @@ loglevel = 2
 logexceptionhits = 2
 
 # Log File Format
-# 1 = DansGuardian format        2 = CSV-style format
-# 3 = Squid Log File Format      4 = Tab delimited
+# 1 = DansGuardian format (space delimited)
+# 2 = CSV-style format
+# 3 = Squid Log File Format
+# 4 = Tab delimited
 logfileformat = 1
 
 # truncate large items in log lines
@@ -342,7 +344,7 @@ filecachedir = '/tmp'
 # download.  This will mean if they click on the link to download from
 # the temp store a second time it will give a 404 error.
 # You should configure something to delete old files in temp to stop it filling up.
-# on|off ( defaults to on )
+# on|off (defaults to on)
 deletedownloadedtempfiles = on
 
 
@@ -570,16 +572,21 @@ ipipcfilename = '/tmp/.dguardianipipc'
 # Disable daemoning
 # If enabled the process will not fork into the background.
 # It is not usually advantageous to do this.
-# on|off ( defaults to off )
+# on|off (defaults to off)
 nodaemon = off
 
 # Disable logging process
-# on|off ( defaults to off )
+# on|off (defaults to off)
 nologger = off
 
 # Enable logging of "ADs" category blocks
-# on|off ( defaults to off )
+# on|off (defaults to off)
 logadblocks = off
+
+# Enable logging of client User-Agent
+# Some browsers will cause a *lot* of extra information on each line!
+# on|off (defaults to off)
+loguseragent = off
 
 # Daemon runas user and group
 # This is the user that DansGuardian runs as.  Normally the user/group nobody.
@@ -593,7 +600,7 @@ logadblocks = off
 # Soft restart
 # When on this disables the forced killing off all processes in the process group.
 # This is not to be confused with the -g run time option - they are not related.
-# on|off ( defaults to off )
+# on|off (defaults to off)
 softrestart = off
 
 # Mail program
