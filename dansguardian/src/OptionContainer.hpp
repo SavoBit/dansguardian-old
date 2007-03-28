@@ -109,6 +109,7 @@ public:
 	bool anonymise_logs;
 	bool log_ad_blocks;
 	bool log_timestamp;
+	bool log_user_agent;
 	bool soft_restart;
 
 #ifdef __EMAIL

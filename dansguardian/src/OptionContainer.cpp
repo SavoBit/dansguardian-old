@@ -399,6 +399,11 @@ bool OptionContainer::read(const char *filename, int type)
 		} else {
 			log_timestamp = false;
 		}
+		if (findoptionS("loguseragent") == "on") {
+			log_user_agent = true;
+		} else {
+			log_user_agent = false;
+		}
 
 		if (findoptionS("showweightedfound") == "on") {
 			show_weighted_found = true;
