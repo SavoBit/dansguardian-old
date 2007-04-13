@@ -80,6 +80,7 @@ FOptionContainer::~FOptionContainer()
 	if (exception_extension_flag) o.lm.deRefList(exception_extension_list);
 	if (exception_mimetype_flag) o.lm.deRefList(exception_mimetype_list);
 	if (exception_file_site_flag) o.lm.deRefList(exception_file_site_list);
+	if (exception_file_url_flag) o.lm.deRefList(exception_file_url_list);
 	delete banned_page;
 }
 
@@ -101,6 +102,7 @@ void FOptionContainer::reset()
 	if (exception_extension_flag) o.lm.deRefList(exception_extension_list);
 	if (exception_mimetype_flag) o.lm.deRefList(exception_mimetype_list);
 	if (exception_file_site_flag) o.lm.deRefList(exception_file_site_list);
+	if (exception_file_url_flag) o.lm.deRefList(exception_file_url_list);
 	banned_phrase_flag = false;
 	exception_site_flag = false;
 	exception_url_flag = false;
@@ -117,11 +119,8 @@ void FOptionContainer::reset()
 	exception_extension_flag = false;
 	exception_mimetype_flag = false;
 	exception_file_site_flag = false;
+	exception_file_url_flag = false;
 	block_downloads = false;
-	blanketblock = false;
-	blanket_ip_block = false;
-	blanketsslblock = false;
-	blanketssl_ip_block = false;
 	banned_phrase_list_index.clear();
 	conffile.clear();
 	content_regexp_list_comp.clear();
@@ -465,6 +464,7 @@ bool FOptionContainer::read(const char *filename)
 			std::string exception_extension_list_location(findoptionS("exceptionextensionlist"));
 			std::string exception_mimetype_list_location(findoptionS("exceptionmimetypelist"));
 			std::string exception_file_site_list_location(findoptionS("exceptionfilesitelist"));
+			std::string exception_file_url_list_location(findoptionS("exceptionfileurllist"));
 
 			if (enable_PICS) {
 				pics_rsac_nudity = findoptionI("RSACnudity");
@@ -586,6 +586,10 @@ bool FOptionContainer::read(const char *filename)
 				return false;
 			}		// download site exceptions
 			exception_file_site_flag = true;
+			if (!readFile(exception_file_url_list_location.c_str(),&exception_file_url_list,true,true,"exceptionfileurllist")) {
+				return false;
+			}		// download site exceptions
+			exception_file_url_flag = true;
 
 			if (!readbplfile(banned_phrase_list_location.c_str(), exception_phrase_list_location.c_str(), weighted_phrase_list_location.c_str())) {
 				return false;
@@ -642,19 +646,6 @@ bool FOptionContainer::read(const char *filename)
 #ifdef DGDEBUG
 			std::cout << "Lists in memory" << std::endl;
 #endif
-
-			if (o.lm.l[banned_site_list]->inList("**")) {
-				blanketblock = true;
-			}
-			if (o.lm.l[banned_site_list]->inList("*ip")) {
-				blanket_ip_block = true;
-			}
-			if (o.lm.l[banned_site_list]->inList("**s")) {
-				blanketsslblock = true;
-			}
-			if (o.lm.l[banned_site_list]->inList("*ips")) {
-				blanketssl_ip_block = true;
-			}
 		}
 
 		if (!precompileregexps()) {
@@ -880,11 +871,41 @@ bool FOptionContainer::readRegExListFile(const char *filename, const char *listn
 	return true;
 }
 
+// Recursively check site & URL lists for blanket matches
+char *FOptionContainer::testBlanketBlock(unsigned int list, bool ip, bool ssl) {
+	if (not o.lm.l[list]->isNow())
+		return NULL;
+	if (o.lm.l[list]->blanketblock) {
+		return (char*)o.language_list.getTranslation(502);
+	} else if (o.lm.l[list]->blanket_ip_block and ip) {
+		return (char*)o.language_list.getTranslation(505);
+	} else if (o.lm.l[list]->blanketsslblock and ssl) {
+		return (char*)o.language_list.getTranslation(506);
+	} else if (o.lm.l[list]->blanketssl_ip_block and ssl and ip) {
+		return (char*)o.language_list.getTranslation(507);
+	}
+	for (std::vector<unsigned int>::iterator i = o.lm.l[list]->morelists.begin(); i != o.lm.l[list]->morelists.end(); i++) {
+		char *r = testBlanketBlock(*i, ip, ssl);
+		if (r) {
+			return r;
+		}
+	}
+	return NULL;
+}
+
 // checkme: there's an awful lot of removing whitespace, PTP, etc. going on here.
 // perhaps connectionhandler could keep a suitably modified version handy to prevent repitition of work?
 
-char *FOptionContainer::inSiteList(String &url, unsigned int list)
+char *FOptionContainer::inSiteList(String &url, unsigned int list, bool doblanket, bool ip, bool ssl)
 {
+	// Perform blanket matching if desired
+	if (doblanket) {
+		char *r = testBlanketBlock(list, ip, ssl);
+		if (r) {
+			return r;
+		}
+	}
+
 	url.removeWhiteSpace();  // just in case of weird browser crap
 	url.toLower();
 	url.removePTP();  // chop off the ht(f)tp(s)://
@@ -927,28 +948,39 @@ char *FOptionContainer::inSiteList(String &url, unsigned int list)
 
 // checkme: remove things like this & make inSiteList/inIPList public?
 
-char *FOptionContainer::inBannedSiteList(String url)
+char *FOptionContainer::inBannedSiteList(String url, bool doblanket, bool ip, bool ssl)
 {
-	return inSiteList(url, banned_site_list);
+	return inSiteList(url, banned_site_list, doblanket, ip, ssl);
 }
 
-bool FOptionContainer::inGreySiteList(String url)
+bool FOptionContainer::inGreySiteList(String url, bool doblanket, bool ip, bool ssl)
 {
-	return inSiteList(url, grey_site_list) != NULL;
+	return inSiteList(url, grey_site_list, doblanket, ip, ssl) != NULL;
 }
 
-bool FOptionContainer::inExceptionSiteList(String url)
+bool FOptionContainer::inExceptionSiteList(String url, bool doblanket, bool ip, bool ssl)
 {
-	return inSiteList(url, exception_site_list) != NULL;
+	return inSiteList(url, exception_site_list, doblanket, ip, ssl) != NULL;
 }
 
 bool FOptionContainer::inExceptionFileSiteList(String url)
 {
-	return inSiteList(url, exception_file_site_list) != NULL;
+	if (inSiteList(url, exception_file_site_list) != NULL)
+		return true;
+	else
+		return inURLList(url, exception_file_url_list) != NULL;
 }
 
 // look in given URL list for given URL
-char *FOptionContainer::inURLList(String &url, unsigned int list) {
+char *FOptionContainer::inURLList(String &url, unsigned int list, bool doblanket, bool ip, bool ssl) {
+	// Perform blanket matching if desired
+	if (doblanket) {
+		char *r = testBlanketBlock(list, ip, ssl);
+		if (r) {
+			return r;
+		}
+	}
+
 	int fl;
 	char *i;
 	String foundurl;
@@ -1025,28 +1057,28 @@ char *FOptionContainer::inURLList(String &url, unsigned int list) {
 	return NULL;
 }
 
-char *FOptionContainer::inBannedURLList(String url)
+char *FOptionContainer::inBannedURLList(String url, bool doblanket, bool ip, bool ssl)
 {
 #ifdef DGDEBUG
 	std::cout<<"inBannedURLList"<<std::endl;
 #endif
-	return inURLList(url, banned_url_list);
+	return inURLList(url, banned_url_list, doblanket, ip, ssl);
 }
 
-bool FOptionContainer::inGreyURLList(String url)
+bool FOptionContainer::inGreyURLList(String url, bool doblanket, bool ip, bool ssl)
 {
 #ifdef DGDEBUG
 	std::cout<<"inGreyURLList"<<std::endl;
 #endif
-	return inURLList(url, grey_url_list) != NULL;
+	return inURLList(url, grey_url_list, doblanket, ip, ssl) != NULL;
 }
 
-bool FOptionContainer::inExceptionURLList(String url)
+bool FOptionContainer::inExceptionURLList(String url, bool doblanket, bool ip, bool ssl)
 {
 #ifdef DGDEBUG
 	std::cout<<"inExceptionURLList"<<std::endl;
 #endif
-	return inURLList(url, exception_url_list) != NULL;
+	return inURLList(url, exception_url_list, doblanket, ip, ssl) != NULL;
 }
 
 // TODO: Store the modified URL somewhere, instead of re-processing it every time.

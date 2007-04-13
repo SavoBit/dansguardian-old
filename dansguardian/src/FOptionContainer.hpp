@@ -70,11 +70,6 @@ public:
 	bool byuser;
 #endif
 
-	bool blanketblock;
-	bool blanket_ip_block;
-	bool blanketsslblock;
-	bool blanketssl_ip_block;
-	
 	// File filtering mode - should banned or exception lists be used?
 	// if true, use exception lists & exception file site list; otherwise,
 	// use banned MIME type & extension lists.
@@ -195,6 +190,7 @@ public:
 	unsigned int exception_extension_list;
 	unsigned int exception_mimetype_list;
 	unsigned int exception_file_site_list;
+	unsigned int exception_file_url_list;
 
    
 	// regex match lists
@@ -220,8 +216,7 @@ public:
 	std::string access_denied_address;
 	String access_denied_domain;
 
-	FOptionContainer():blanketblock(false), blanket_ip_block(false),
-		blanketsslblock(false), blanketssl_ip_block(false),
+	FOptionContainer():
 		block_downloads(false), banned_page(NULL),
 		banned_phrase_flag(false), exception_site_flag(false), exception_url_flag(false),
 		banned_extension_flag(false), banned_mimetype_flag(false), banned_site_flag(false),
@@ -229,18 +224,18 @@ public:
 		banned_regexpurl_flag(false), exception_regexpurl_flag(false),
 		content_regexp_flag(false), url_regexp_flag(false),
 		exception_extension_flag(false), exception_mimetype_flag(false),
-		exception_file_site_flag(false) {};
+		exception_file_site_flag(false), exception_file_url_flag(false) {};
 	~FOptionContainer();
 	bool read(const char *filename);
 	void reset();
 	bool isOurWebserver(String url);
-	char *inBannedSiteList(String url);
-	char *inBannedURLList(String url);
-	bool inGreySiteList(String url);
-	bool inGreyURLList(String url);
-	bool inExceptionSiteList(String url);
+	char *inBannedSiteList(String url, bool doblanket = false, bool ip = false, bool ssl = false);
+	char *inBannedURLList(String url, bool doblanket = false, bool ip = false, bool ssl = false);
+	bool inGreySiteList(String url, bool doblanket = false, bool ip = false, bool ssl = false);
+	bool inGreyURLList(String url, bool doblanket = false, bool ip = false, bool ssl = false);
+	bool inExceptionSiteList(String url, bool doblanket = false, bool ip = false, bool ssl = false);
+	bool inExceptionURLList(String url, bool doblanket = false, bool ip = false, bool ssl = false);
 	bool inExceptionFileSiteList(String url);
-	bool inExceptionURLList(String url);
 	int inBannedRegExpURLList(String url);
 	int inExceptionRegExpURLList(String url);
 	char *inExtensionList(unsigned int list, String url);
@@ -269,6 +264,7 @@ private:
 	bool exception_extension_flag;
 	bool exception_mimetype_flag;
 	bool exception_file_site_flag;
+	bool exception_file_url_flag;
 	std::deque<int> banned_phrase_list_index;
 
 	std::deque<std::string > conffile;
@@ -288,8 +284,10 @@ private:
 	bool realitycheck(int l, int minl, int maxl, char *emessage);
 	int inRegExpURLList(String &url, std::deque<RegExp> &list_comp, std::deque<unsigned int> &list_ref, unsigned int list);
 
-	char *inURLList(String &url, unsigned int list);
-	char *inSiteList(String &url, unsigned int list);
+	char *inURLList(String &url, unsigned int list, bool doblanket = false, bool ip = false, bool ssl = false);
+	char *inSiteList(String &url, unsigned int list, bool doblanket = false, bool ip = false, bool ssl = false);
+
+	char *testBlanketBlock(unsigned int list, bool ip, bool ssl);
 };
 
 #endif
