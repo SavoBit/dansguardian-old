@@ -775,6 +775,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			// being a banned user/IP overrides the fact that a site may be in the exception lists
 			// needn't check these lists in bypass modes
 			if (!(isbanneduser || isbannedip || isbypass)) {
+				bool is_ssl = header.requestType() == "CONNECT";
+				bool is_ip = isIPHostnameStrip(urld);
 				if ((gmode == 2)) {	// admin user
 					isexception = true;
 					exceptionreason = o.language_list.getTranslation(601);
@@ -786,7 +788,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					exceptionreason = o.language_list.getTranslation(600);
 					// Exception client IP match.
 				}
-				else if ((*o.fg[filtergroup]).inExceptionSiteList(urld)) {	// allowed site
+				else if ((*o.fg[filtergroup]).inExceptionSiteList(urld, true, is_ip, is_ssl)) {	// allowed site
 					if ((*o.fg[0]).isOurWebserver(url)) {
 						isourwebserver = true;
 					} else {
@@ -795,7 +797,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						// Exception site match.
 					}
 				}
-				else if ((*o.fg[filtergroup]).inExceptionURLList(urld)) {	// allowed url
+				else if ((*o.fg[filtergroup]).inExceptionURLList(urld, true, is_ip, is_ssl)) {	// allowed url
 					isexception = true;
 					exceptionreason = o.language_list.getTranslation(603);
 					// Exception url match.
@@ -894,7 +896,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// this could be achieved with exception phrases (which are, of course, always checked
 				// after the URL) too, but there are cases for both, and flexibility is good.
 				if (o.recheck_replaced_urls && !(isbanneduser || isbannedip)) {
-					if ((*o.fg[filtergroup]).inExceptionSiteList(urld)) {	// allowed site
+					bool is_ssl = header.requestType() == "CONNECT";
+					bool is_ip = isIPHostnameStrip(urld);
+					if ((*o.fg[filtergroup]).inExceptionSiteList(urld, true, is_ip, is_ssl)) {	// allowed site
 						if ((*o.fg[0]).isOurWebserver(url)) {
 							isourwebserver = true;
 						} else {
@@ -903,7 +907,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							// Exception site match.
 						}
 					}
-					else if ((*o.fg[filtergroup]).inExceptionURLList(urld)) {	// allowed url
+					else if ((*o.fg[filtergroup]).inExceptionURLList(urld, true, is_ip, is_ssl)) {	// allowed url
 						isexception = true;
 						exceptionreason = o.language_list.getTranslation(603);
 						// Exception url match.
@@ -964,24 +968,20 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				checkme.whatIsNaughtyLog = exceptionreason;
 			}
 
-			// Improved IF structure as suggested by AFN
-
 			if (isconnect && !isbypass && !isexception) {
-				// send header to proxy
-				proxysock.readyForOutput(10);
-				header.out(NULL, &proxysock, __DGHEADER_SENDALL, true);
-				// get header from proxy
-				proxysock.checkForInput(120);
-				docheader.in(&proxysock, persist);
-				persist = docheader.isPersistent();
-
-				wasrequested = true;
-				
-				if (!(docheader.returnCode() == 200)) {
+				if (!authed) {
 #ifdef DGDEBUG
 					std::cout << "CONNECT request response not 200 - doing standard filtering on auth required response" << std::endl;
 #endif
 					isconnect = false;
+					// send header to proxy
+					proxysock.readyForOutput(10);
+					header.out(NULL, &proxysock, __DGHEADER_SENDALL, true);
+					// get header from proxy
+					proxysock.checkForInput(120);
+					docheader.in(&proxysock, persist);
+					persist = docheader.isPersistent();
+					wasrequested = true;
 				} else {
 #ifdef DGDEBUG
 					std::cout << "CONNECT request response is 200 - attempting pre-emptive ban" << std::endl;
@@ -1157,8 +1157,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				{
 					bool download_exception = false;
 					
-					// If in blanket download block mode, check the exception file site list. Actually, this is useful outside blanket block mode too...
-					if (/*o.fg[filtergroup]->block_downloads &&*/ (o.fg[filtergroup]->inExceptionFileSiteList(urld))) {
+					// If in blanket download block mode, check the exception file site & URL lists. Actually, this is useful outside blanket block mode too...
+					if (o.fg[filtergroup]->inExceptionFileSiteList(urld)) {
 						download_exception = true;
 					}
 
@@ -1667,40 +1667,12 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 	temp = (*urld);
 
 	// only apply bans to things not in the grey lists
-	if (!((*o.fg[filtergroup]).inGreySiteList(temp) || (*o.fg[filtergroup]).inGreyURLList(temp))) {
-		bool isssl = header->requestType() == "CONNECT";
-		bool bblock = o.fg[filtergroup]->blanketblock;
-		bool bsslblock = isssl && (o.fg[filtergroup]->blanketsslblock);
-
-		if (!(*checkme).isItNaughty && (bblock || bsslblock)) {
-			if (bblock) {
-				(*checkme).whatIsNaughty = o.language_list.getTranslation(502);
-				(*checkme).whatIsNaughtyCategories = "Blanket Block";
-			} else {
-				(*checkme).whatIsNaughty = o.language_list.getTranslation(506);
-				(*checkme).whatIsNaughtyCategories = "Blanket SSL Block";
-			}
-			// Blanket Block is active and that site is not on the white list.
-			(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-			(*checkme).isItNaughty = true;
-		}
-
+	bool is_ssl = header->requestType() == "CONNECT";
+	bool is_ip = isIPHostnameStrip(temp);
+	if (!((*o.fg[filtergroup]).inGreySiteList(temp, true, is_ip, is_ssl) || (*o.fg[filtergroup]).inGreyURLList(temp, true, is_ip, is_ssl))) {
 		if (!(*checkme).isItNaughty) {
-			bool bipblock = o.fg[filtergroup]->blanket_ip_block;
-			bool bsslipblock = isssl && (o.fg[filtergroup]->blanketssl_ip_block);
-			if (isIPHostnameStrip(temp) && (bipblock || bsslipblock)) {
-				if (bipblock) {
-					(*checkme).whatIsNaughty = o.language_list.getTranslation(505);
-					(*checkme).whatIsNaughtyCategories = "Blanket IP Block";
-				} else {
-					(*checkme).whatIsNaughty = o.language_list.getTranslation(507);
-					(*checkme).whatIsNaughtyCategories = "Blanket SSL IP Block";
-				}
-				// Blanket IP Block is active and that address is an IP only address.
-				(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-				(*checkme).isItNaughty = true;
-			}
-			else if ((i = (*o.fg[filtergroup]).inBannedSiteList(temp)) != NULL) {
+			if ((i = (*o.fg[filtergroup]).inBannedSiteList(temp, true, is_ip, is_ssl)) != NULL) {
+				// need to reintroduce ability to produce the blanket block messages
 				(*checkme).whatIsNaughty = o.language_list.getTranslation(500);  // banned site
 				(*checkme).whatIsNaughty += i;
 				(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
@@ -1710,7 +1682,7 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 		}
 
 		if (!(*checkme).isItNaughty) {
-			if ((i = (*o.fg[filtergroup]).inBannedURLList(temp)) != NULL) {
+			if ((i = (*o.fg[filtergroup]).inBannedURLList(temp, true, is_ip, is_ssl)) != NULL) {
 				(*checkme).whatIsNaughty = o.language_list.getTranslation(501);
 				// Banned URL:
 				(*checkme).whatIsNaughty += i;
