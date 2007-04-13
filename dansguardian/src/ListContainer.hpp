@@ -97,6 +97,11 @@ public:
 	
 	bool isNow();
 
+	bool blanketblock;
+	bool blanket_ip_block;
+	bool blanketsslblock;
+	bool blanketssl_ip_block;
+
 private:
 	bool sourceisexception;
 	bool sourcestartswith;

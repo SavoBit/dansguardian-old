@@ -58,7 +58,8 @@ extern OptionContainer o;
 ListContainer::ListContainer():refcount(1), parent(false), filedate(0), used(false), bannedpfiledate(0), exceptionpfiledate(0), weightedpfiledate(0),
 	sourceisexception(false), sourcestartswith(false), sourcefilters(0), data(NULL), realgraphdata(NULL), maxchildnodes(0), graphitems(0),
 	data_length(0), data_memory(0), items(0), isSW(false), issorted(false), graphused(false), force_quick_search(false),
-	sthour(0), stmin(0), endhour(0), endmin(0), istimelimited(false)
+	sthour(0), stmin(0), endhour(0), endmin(0), blanketblock(false), blanket_ip_block(false), blanketsslblock(false), blanketssl_ip_block(false),
+	istimelimited(false)
 {
 }
 
@@ -398,6 +399,21 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 				continue;
 			}
 			continue;  // it's a comment
+		}
+
+		// blanket block flags
+		if (linebuffer == "**") {
+			blanketblock = true;
+			continue;
+		} else if (linebuffer == "*ip") {
+			blanket_ip_block = true;
+			continue;
+		} else if (linebuffer == "**s") {
+			blanketsslblock = true;
+			continue;
+		} else if (linebuffer == "**ips") {
+			blanketssl_ip_block = true;
+			continue;
 		}
 
 		if (temp.contains("#")) {
@@ -1249,6 +1265,20 @@ bool ListContainer::readProcessedItemList(const char *filename, bool startswith,
 				continue;
 			}
 			continue;  // it's a comment man
+		}
+		// blanket block flags
+		if (linebuffer == "**") {
+			blanketblock = true;
+			continue;
+		} else if (linebuffer == "*ip") {
+			blanket_ip_block = true;
+			continue;
+		} else if (linebuffer == "**s") {
+			blanketsslblock = true;
+			continue;
+		} else if (linebuffer == "**ips") {
+			blanketssl_ip_block = true;
+			continue;
 		}
 		slen = linebuffer.length();
 		if (slen < 3)
