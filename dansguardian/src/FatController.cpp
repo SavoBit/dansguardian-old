@@ -1169,8 +1169,8 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 			case 4:
 				builtline = when +"\t"+ who + "\t" + from + "\t" + where + "\t" + what + "\t" + how
 					+ "\t" + ssize + "\t" + sweight + "\t" + cat +  "\t" + stringgroup + "\t"
-					+ stringcode + "\t" + mimetype + "\t" + clienthost + "\t" + o.fg[filtergroup]->name;
-				if (o.log_user_agent) builtline += "\t" + useragent;
+					+ stringcode + "\t" + mimetype + "\t" + clienthost + "\t" + o.fg[filtergroup]->name
+					+ "\t" + (o.log_user_agent ? useragent : "-");
 				break;
 			case 3:
 				{
@@ -1218,17 +1218,14 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 			case 2:
 				builtline = "\"" + when  +"\",\""+ who + "\",\"" + from + "\",\"" + where + "\",\"" + what + "\",\""
 					+ how + "\",\"" + ssize + "\",\"" + sweight + "\",\"" + cat +  "\",\"" + stringgroup + "\",\""
-					+ stringcode + "\",\"" + mimetype + "\",\"" + clienthost + "\",\"" + o.fg[filtergroup]->name;
-				if (o.log_user_agent)
-					builtline += "\",\"" + useragent;
-				builtline += "\"";
+					+ stringcode + "\",\"" + mimetype + "\",\"" + clienthost + "\",\"" + o.fg[filtergroup]->name + "\",\""
+					+ (o.log_user_agent ? useragent : "-") + "\"";
 				break;
 			default:
 				builtline = when +" "+ who + " " + from + " " + where + " " + what + " "
 					+ how + " " + ssize + " " + sweight + " " + cat +  " " + stringgroup + " "
-					+ stringcode + " " + mimetype + " " + clienthost + " " + o.fg[filtergroup]->name;
-				if (o.log_user_agent) 
-					builtline += " " + useragent;
+					+ stringcode + " " + mimetype + " " + clienthost + " " + o.fg[filtergroup]->name + " "
+					+ (o.log_user_agent ? useragent : "-");
 			}
 
 			if (!logsyslog)
