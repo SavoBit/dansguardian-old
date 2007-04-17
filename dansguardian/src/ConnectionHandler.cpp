@@ -1558,22 +1558,6 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 	if ((isexception && (o.log_exception_hits == 2))
 		|| isnaughty || o.ll == 3 || (o.ll == 2 && istext))
 	{
-		// connect to dedicated logging proc
-		UDSocket ipcsock;
-		if (ipcsock.getFD() < 0) {
-			if (!is_daemonised)
-				std::cout << "Error creating IPC socket to log" << std::endl;
-			syslog(LOG_ERR, "Error creating IPC socket to log");
-			return;
-		}
-		if (ipcsock.connect((char *) o.ipc_filename.c_str()) < 0) {
-			if (!is_daemonised)
-				std::cout << "Error connecting via IPC socket to log: " << strerror(errno) << std::endl;
-			syslog(LOG_ERR, "Error connecting via IPC socket to log: %s", strerror(errno));
-			ipcsock.close();
-			return;
-		}
-
 		// put client hostname in log if enabled.
 		// for banned & exception IP/hostname matches, we want to output exactly what was matched against,
 		// be it hostname or IP - therefore only do lookups here when we don't already have a cached hostname,
@@ -1587,6 +1571,38 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 				clienthost = new std::string(names->front().toCharArray());
 			delete names;
 		}
+
+		// Search 'log-only' domain, url and regexp url lists
+		std::string *newcat = NULL;
+		if (!cat || cat->length() == 0) {
+#ifdef DGDEBUG
+			std::cout << "Checking for log-only categories" << std::endl;
+#endif
+			char* c = o.fg[filtergroup]->inLogSiteList(where);
+#ifdef DGDEBUG
+			if (c) std::cout << "Found log-only domain category: " << c << std::endl;
+#endif
+			if (!c) {
+				c = o.fg[filtergroup]->inLogURLList(where);
+#ifdef DGDEBUG
+				if (c) std::cout << "Found log-only URL category: " << c << std::endl;
+#endif
+			}
+			if (!c) {
+				c = o.fg[filtergroup]->inLogRegExpURLList(where);
+#ifdef DGDEBUG
+				if (c) std::cout << "Found log-only regexp URL category: " << c << std::endl;
+#endif
+			}
+			if (c) {
+				newcat = new std::string(c);
+				cat = newcat;
+			}
+		}
+#ifdef DGDEBUG
+		else
+			std::cout << "Not looking for log-only category; current cat string is: " << *cat << " (" << cat->length() << ")" << std::endl;
+#endif
 
 		// Formatting code moved into log_listener in FatController.cpp
 		// Original patch by J. Gauthier
@@ -1623,6 +1639,26 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 #ifdef DGDEBUG   
 		std::cout << "...built" << std::endl;
 #endif
+
+		delete newcat;
+
+		// connect to dedicated logging proc
+		UDSocket ipcsock;
+		if (ipcsock.getFD() < 0) {
+			if (!is_daemonised)
+				std::cout << "Error creating IPC socket to log" << std::endl;
+			syslog(LOG_ERR, "Error creating IPC socket to log");
+			return;
+		}
+		if (ipcsock.connect((char *) o.ipc_filename.c_str()) < 0) {
+			if (!is_daemonised)
+				std::cout << "Error connecting via IPC socket to log: " << strerror(errno) << std::endl;
+			syslog(LOG_ERR, "Error connecting via IPC socket to log: %s", strerror(errno));
+			ipcsock.close();
+			return;
+		}
+
+		// send data
 		try {
 			ipcsock.setTimeout(10);
 			ipcsock.writeString(data.toCharArray());
