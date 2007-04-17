@@ -191,7 +191,9 @@ public:
 	unsigned int exception_mimetype_list;
 	unsigned int exception_file_site_list;
 	unsigned int exception_file_url_list;
-
+	unsigned int log_site_list;
+	unsigned int log_url_list;
+	unsigned int log_regexpurl_list;
    
 	// regex match lists
 	std::deque<RegExp> banned_regexpurl_list_comp;
@@ -200,6 +202,9 @@ public:
 	std::deque<RegExp> exception_regexpurl_list_comp;
 	std::deque<String> exception_regexpurl_list_source;
 	std::deque<unsigned int> exception_regexpurl_list_ref;
+	std::deque<RegExp> log_regexpurl_list_comp;
+	std::deque<String> log_regexpurl_list_source;
+	std::deque<unsigned int> log_regexpurl_list_ref;
 
 	// regex search & replace lists
 	std::deque<RegExp> content_regexp_list_comp;
@@ -224,7 +229,8 @@ public:
 		banned_regexpurl_flag(false), exception_regexpurl_flag(false),
 		content_regexp_flag(false), url_regexp_flag(false),
 		exception_extension_flag(false), exception_mimetype_flag(false),
-		exception_file_site_flag(false), exception_file_url_flag(false) {};
+		exception_file_site_flag(false), exception_file_url_flag(false),
+		log_site_flag(false), log_url_flag(false), log_regexpurl_flag(false) {};
 	~FOptionContainer();
 	bool read(const char *filename);
 	void reset();
@@ -240,6 +246,11 @@ public:
 	int inExceptionRegExpURLList(String url);
 	char *inExtensionList(unsigned int list, String url);
 	bool isIPHostname(String url);
+
+	// log-only lists - return category
+	char* inLogURLList(String url);
+	char* inLogSiteList(String url);
+	char* inLogRegExpURLList(String url);
 	
 	// get HTML template for this group
 	HTMLTemplate *getHTMLTemplate();
@@ -265,6 +276,9 @@ private:
 	bool exception_mimetype_flag;
 	bool exception_file_site_flag;
 	bool exception_file_url_flag;
+	bool log_site_flag;
+	bool log_url_flag;
+	bool log_regexpurl_flag;
 	std::deque<int> banned_phrase_list_index;
 
 	std::deque<std::string > conffile;

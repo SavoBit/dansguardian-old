@@ -81,6 +81,9 @@ FOptionContainer::~FOptionContainer()
 	if (exception_mimetype_flag) o.lm.deRefList(exception_mimetype_list);
 	if (exception_file_site_flag) o.lm.deRefList(exception_file_site_list);
 	if (exception_file_url_flag) o.lm.deRefList(exception_file_url_list);
+	if (log_site_flag) o.lm.deRefList(log_site_list);
+	if (log_url_flag) o.lm.deRefList(log_url_list);
+	if (log_regexpurl_flag) o.lm.deRefList(log_regexpurl_list);
 	delete banned_page;
 }
 
@@ -103,6 +106,9 @@ void FOptionContainer::reset()
 	if (exception_mimetype_flag) o.lm.deRefList(exception_mimetype_list);
 	if (exception_file_site_flag) o.lm.deRefList(exception_file_site_list);
 	if (exception_file_url_flag) o.lm.deRefList(exception_file_url_list);
+	if (log_site_flag) o.lm.deRefList(log_site_list);
+	if (log_url_flag) o.lm.deRefList(log_url_list);
+	if (log_regexpurl_flag) o.lm.deRefList(log_regexpurl_list);
 	banned_phrase_flag = false;
 	exception_site_flag = false;
 	exception_url_flag = false;
@@ -120,6 +126,9 @@ void FOptionContainer::reset()
 	exception_mimetype_flag = false;
 	exception_file_site_flag = false;
 	exception_file_url_flag = false;
+	log_site_flag = false;
+	log_url_flag = false;
+	log_regexpurl_flag = false;
 	block_downloads = false;
 	banned_phrase_list_index.clear();
 	conffile.clear();
@@ -133,6 +142,9 @@ void FOptionContainer::reset()
 	exception_regexpurl_list_comp.clear();
 	exception_regexpurl_list_source.clear();
 	exception_regexpurl_list_ref.clear();
+	log_regexpurl_list_comp.clear();
+	log_regexpurl_list_source.clear();
+	log_regexpurl_list_ref.clear();
 	delete banned_page;
 	banned_page = NULL;
 }
@@ -465,6 +477,9 @@ bool FOptionContainer::read(const char *filename)
 			std::string exception_mimetype_list_location(findoptionS("exceptionmimetypelist"));
 			std::string exception_file_site_list_location(findoptionS("exceptionfilesitelist"));
 			std::string exception_file_url_list_location(findoptionS("exceptionfileurllist"));
+			std::string log_url_list_location(findoptionS("logurllist"));
+			std::string log_site_list_location(findoptionS("logsitelist"));
+			std::string log_regexpurl_list_location(findoptionS("logregexpurllist"));
 
 			if (enable_PICS) {
 				pics_rsac_nudity = findoptionI("RSACnudity");
@@ -619,6 +634,28 @@ bool FOptionContainer::read(const char *filename)
 				return false;
 			}		// grey urls
 			grey_url_flag = true;
+			
+			// log-only lists
+			if (readFile(log_url_list_location.c_str(), &log_url_list, true, true, "logurllist")) {
+				log_url_flag = true;
+#ifdef DGDEBUG
+				std::cout << "Enabled log-only URL list" << std::endl;
+#endif
+			}
+			if (readFile(log_site_list_location.c_str(), &log_site_list, false, true, "logsitelist")) {
+				log_site_flag = true;
+#ifdef DGDEBUG
+				std::cout << "Enabled log-only domain list" << std::endl;
+#endif
+			}
+			if (readRegExURLFile(log_regexpurl_list_location.c_str(), "logregexpurllist", log_regexpurl_list,
+				log_regexpurl_list_comp, log_regexpurl_list_source, log_regexpurl_list_ref))
+			{
+				log_regexpurl_flag = true;
+#ifdef DGDEBUG
+				std::cout << "Enabled log-only RegExp URL list" << std::endl;
+#endif
+			}
 
 			if (!readRegExURLFile(banned_regexpurl_list_location.c_str(),"bannedregexpurllist",banned_regexpurl_list,
 				banned_regexpurl_list_comp, banned_regexpurl_list_source, banned_regexpurl_list_ref))
@@ -1079,6 +1116,36 @@ bool FOptionContainer::inExceptionURLList(String url, bool doblanket, bool ip, b
 	std::cout<<"inExceptionURLList"<<std::endl;
 #endif
 	return inURLList(url, exception_url_list, doblanket, ip, ssl) != NULL;
+}
+
+// New log-only site lists
+char* FOptionContainer::inLogURLList(String url)
+{
+	if (!log_url_flag)
+		return NULL;
+	if (inURLList(url, log_url_list) != NULL) {
+		return o.lm.l[log_url_list]->lastcategory.toCharArray();
+	}
+	return NULL;
+}
+
+char* FOptionContainer::inLogSiteList(String url)
+{
+	if (!log_site_flag)
+		return NULL;
+	if (inSiteList(url, log_site_list) != NULL) {
+		return o.lm.l[log_site_list]->lastcategory.toCharArray();
+	}
+	return NULL;
+}
+
+char* FOptionContainer::inLogRegExpURLList(String url) {
+	if (!log_regexpurl_flag)
+		return NULL;
+	int j = inRegExpURLList(url, log_regexpurl_list_comp, log_regexpurl_list_ref, log_regexpurl_list);
+	if (j == -1)
+		return NULL;
+	return o.lm.l[log_regexpurl_list_ref[j]]->category.toCharArray();
 }
 
 // TODO: Store the modified URL somewhere, instead of re-processing it every time.
