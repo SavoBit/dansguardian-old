@@ -593,7 +593,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 	std::string bannedphrase;
 	std::string exceptionphrase;
 	String bannedcategory;
-	int type, index, weight;
+	int type, index, weight, time;
 	bool allcmatched = true, bannedcombi = false;
 	std::string s1;
 
@@ -627,7 +627,21 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 		if (index == -2) {
 			if (allcmatched) {
 				type = *(++combicurrent);
-				if (type == -1) {	// combination exception
+				// check this time limit against the list of time limits
+				time = *(++combicurrent);
+				if (not (o.lm.l[o.fg[filtergroup]->banned_phrase_list]->checkTimeAtD(time))) {
+					// nope - so don't take any notice of it
+#ifdef DGDEBUG
+					combicurrent++;
+					cat = (*++combicurrent);
+					std::cout << "Ignoring combi phrase based on time limits: " << combisofar << "; "
+						<< o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat) << std::endl;
+#else
+					combicurrent += 2;
+#endif
+					combisofar = "";
+				}
+				else if (type == -1) {	// combination exception
 					isItNaughty = false;
 					isException = true;
 					whatIsNaughtyLog = o.language_list.getTranslation(605);
@@ -685,7 +699,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 				}
 			} else {
 				allcmatched = true;
-				combicurrent += 3;
+				combicurrent += 4;
 			}
 		} else {
 			if (allcmatched) {
@@ -717,8 +731,18 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 	// now check non-combi phrases
 	foundcurrent = foundtop;
 	while (foundcurrent != foundend) {
-		type = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getTypeAt(*foundcurrent);
+		// check time for current phrase
+		if (not o.lm.l[o.fg[filtergroup]->banned_phrase_list]->checkTimeAt(*foundcurrent)) {
+#ifdef DGDEBUG
+			std::cout << "Ignoring phrase based on time limits: "
+				<< (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent) << ", "
+				<< (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(*foundcurrent) << std::endl;
+#endif
+			foundcurrent++;
+			continue;
+		}
 		// 0=banned, 1=weighted, -1=exception, 2=combi, 3=weightedcombi
+		type = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getTypeAt(*foundcurrent);
 		if (type == 0) {
 			// if we already found a combi ban, we don't need to know this stuff
 			if (!bannedcombi) {
