@@ -35,6 +35,12 @@
 
 // DECLARATIONS
 
+// time limit information
+typedef struct TimeLimit {
+	unsigned int sthour, stmin, endhour, endmin;
+	String days, timetag;
+};
+
 class ListContainer
 {
 public:
@@ -59,7 +65,7 @@ public:
 
 	void reset();
 
-	bool readPhraseList(const char *filename, bool isexception);
+	bool readPhraseList(const char *filename, bool isexception, int catindex = -1, int timeindex = -1);
 	bool readItemList(const char *filename, bool startswith, int filters);
 
 	bool inList(char *string);
@@ -95,7 +101,9 @@ public:
 
 	void graphSearch(std::deque<unsigned int >& result, char *doc, int len);
 	
-	bool isNow();
+	bool isNow(int index = -1);
+	bool checkTimeAt(unsigned int index);
+	bool checkTimeAtD(int index);
 
 	bool blanketblock;
 	bool blanket_ip_block;
@@ -133,20 +141,22 @@ private:
 	bool force_quick_search;
 	
 	//time-limited lists - only items (sites, URLs), not phrases
-	unsigned int sthour, stmin, endhour, endmin;
-	String days, timetag;
+	TimeLimit listtimelimit;
 	bool istimelimited;
 
 	//categorised lists - both phrases & items
-	std::vector<String > listcategory;
-	std::vector<int > categoryindex;
+	std::vector<String> listcategory;
+	std::vector<int> categoryindex;
 
+	// set of time limits for phrase lists
+	std::vector<int> timelimitindex;
+	std::vector<TimeLimit> timelimits;
 
 	bool readAnotherItemList(const char *filename, bool startswith, int filters);
 
-	void readPhraseListHelper(String line, bool isexception, int catindex);
-	void readPhraseListHelper2(String phrase, int type, int weighting, int catindex);
-	bool addToItemListPhrase(char *s, int len, int type, int weighting, bool combi, int catindex);
+	void readPhraseListHelper(String line, bool isexception, int catindex, int timeindex);
+	void readPhraseListHelper2(String phrase, int type, int weighting, int catindex, int timeindex);
+	bool addToItemListPhrase(char *s, int len, int type, int weighting, bool combi, int catindex, int timeindex);
 	void graphSizeSort(int l, int r, std::deque<unsigned int > *sizelist);
 	void graphAdd(String s, int inx, int item);
 	int graphFindBranches(unsigned int pos);
@@ -165,7 +175,7 @@ private:
 	int getFileDate(const char *filename);
 	void increaseMemoryBy(int bytes);
 	//categorised & time-limited lists support
-	bool readTimeTag(String * tag);
+	bool readTimeTag(String * tag, TimeLimit& tl);
 	int getCategoryIndex(String * lcat);
 };
 

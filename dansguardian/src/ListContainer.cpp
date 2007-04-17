@@ -56,10 +56,10 @@ extern OptionContainer o;
 
 // Constructor - set default values
 ListContainer::ListContainer():refcount(1), parent(false), filedate(0), used(false), bannedpfiledate(0), exceptionpfiledate(0), weightedpfiledate(0),
+	blanketblock(false), blanket_ip_block(false), blanketsslblock(false), blanketssl_ip_block(false),
 	sourceisexception(false), sourcestartswith(false), sourcefilters(0), data(NULL), realgraphdata(NULL), maxchildnodes(0), graphitems(0),
 	data_length(0), data_memory(0), items(0), isSW(false), issorted(false), graphused(false), force_quick_search(false),
-	sthour(0), stmin(0), endhour(0), endmin(0), blanketblock(false), blanket_ip_block(false), blanketsslblock(false), blanketssl_ip_block(false),
-	istimelimited(false)
+	/*sthour(0), stmin(0), endhour(0), endmin(0),*/ istimelimited(false)
 {
 }
 
@@ -95,12 +95,12 @@ void ListContainer::reset()
 	issorted = false;
 	graphused = false;
 	force_quick_search = 0;
-	sthour = 0;
+	/*sthour = 0;
 	stmin = 0;
 	endhour = 0;
 	endmin = 0;
 	days = "";
-	timetag = "";
+	timetag = "";*/
 	category = "";
 	istimelimited = false;
 	combilist.clear();
@@ -108,7 +108,9 @@ void ListContainer::reset()
 	list.clear();
 	weight.clear();
 	itemtype.clear();
+	timelimitindex.clear();
 	morelists.clear();
+	timelimits.clear();
 	listcategory.clear();
 	categoryindex.clear();
 	used = false;
@@ -132,7 +134,8 @@ bool ListContainer::previousUseItem(const char *filename, bool startswith, int f
 }
 
 // for phrase lists - read in the given file, which may be an exception list
-bool ListContainer::readPhraseList(const char *filename, bool isexception)
+// inherit category and time limits from parent
+bool ListContainer::readPhraseList(const char *filename, bool isexception, int catindex, int timeindex)
 {
 	sourcefile = filename;
 	sourceisexception = isexception;
@@ -140,7 +143,6 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 	String temp;  // a String for temporary manipulation
 	String line;
 	String lcat;
-	int catindex;
 	int len = getFileLength(filename);
 	if (len < 0) {
 		if (!is_daemonised) {
@@ -164,7 +166,6 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 		return false;
 	}
 	lcat = "";
-	catindex = -1;
 	bool caseinsensitive = true;
 	while (!listfile.eof()) {	// keep going until end of file
 		getline(listfile, linebuffer);  // grab a line
@@ -177,12 +178,12 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 			if (caseinsensitive)
 				line.toLower();
 			if (line.startsWith("<"))
-				readPhraseListHelper(line, isexception, catindex);
+				readPhraseListHelper(line, isexception, catindex, timeindex);
 			// handle included list files
 			else if (line.startsWith(".")) {
 				temp = line.after(".include<").before(">");
 				if (temp.length() > 0) {
-					if (!readPhraseList(temp.toCharArray(), isexception)) {
+					if (!readPhraseList(temp.toCharArray(), isexception, catindex, timeindex)) {
 						listfile.close();
 						return false;
 					}
@@ -201,7 +202,6 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 				std::cout << "List category: " << lcat << std::endl;
 				std::cout << "Category list index: " << catindex << std::endl;
 #endif
-				continue;
 			}
 			// phrase lists can also be marked as not to be case-converted,
 			// to aid support for exotic character encodings
@@ -211,6 +211,19 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 #endif
 				caseinsensitive = false;
 			}
+			// Read in time tags; set timeindex to the ID of the new tag
+			else if (line.startsWith("#time: ")) {	// see if we have a time tag
+				TimeLimit tl;
+				if (!readTimeTag(&line, tl)) {
+					return false;
+				}
+				timelimits.push_back(tl);
+				timeindex = timelimits.size() - 1;
+#ifdef DGDEBUG
+				std::cout << "Found time limit on phrase list. Now have " << timelimits.size() << " limits on this list (including parents)." << std::endl;
+#endif
+				continue;
+			}
 		}
 	}
 	listfile.close();
@@ -218,7 +231,7 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception)
 }
 
 // for phrase lists - helper function for readPhraseList
-void ListContainer::readPhraseListHelper(String line, bool isexception, int catindex)
+void ListContainer::readPhraseListHelper(String line, bool isexception, int catindex, int timeindex)
 {
 	// read in weighting value, if there
 	int weighting = line.after("><").before(">").toInteger();
@@ -242,20 +255,20 @@ void ListContainer::readPhraseListHelper(String line, bool isexception, int cati
 		while (line.length() > 2) {
 			line = line.after("<");
 			// combination banned, weighted, or exception
-			readPhraseListHelper2(line.before(">"), type + 11, weighting, catindex);
+			readPhraseListHelper2(line.before(">"), type + 11, weighting, catindex, timeindex);
 			line = line.after(">,");
 		}
 		// end of combi marker
-		readPhraseListHelper2("", type + 21, weighting, catindex);
+		readPhraseListHelper2("", type + 21, weighting, catindex, timeindex);
 	} else {
 		line = line.after("<").before(">");
 		// push type & weighting for this individual phrase onto combi list (not combination phrase)
-		readPhraseListHelper2(line, type, weighting, catindex);
+		readPhraseListHelper2(line, type, weighting, catindex, timeindex);
 	}
 }
 
 // for phrase lists - push phrase, type, weighting & category onto combi list
-void ListContainer::readPhraseListHelper2(String phrase, int type, int weighting, int catindex)
+void ListContainer::readPhraseListHelper2(String phrase, int type, int weighting, int catindex, int timeindex)
 {
 	// -1=exception
 	// 0=banned
@@ -268,6 +281,7 @@ void ListContainer::readPhraseListHelper2(String phrase, int type, int weighting
 	if (type > 19) {
 		combilist.push_back(-2);  // mark an end of a combi
 		combilist.push_back(type - 21);  // store the combi type
+		combilist.push_back(timeindex);  // store the combi timtime limitt
 		combilist.push_back(weighting);  // store the combi weight
 		combilist.push_back(catindex);  // store the combi category
 		return;
@@ -286,7 +300,7 @@ void ListContainer::readPhraseListHelper2(String phrase, int type, int weighting
 	}
 
 	if (type < 10) {
-		if (!addToItemListPhrase(phrase.toCharArray(), phrase.length(), type, weighting, false, catindex)) {
+		if (!addToItemListPhrase(phrase.toCharArray(), phrase.length(), type, weighting, false, catindex, timeindex)) {
 			if (!is_daemonised) {
 				std::cerr << "Duplicate phrase, dropping: " << phrase << std::endl;
 			}
@@ -298,11 +312,11 @@ void ListContainer::readPhraseListHelper2(String phrase, int type, int weighting
 
 	// must be a combi if got here
 
-	addToItemListPhrase(phrase.toCharArray(), phrase.length(), type, weighting, true, catindex);
+	addToItemListPhrase(phrase.toCharArray(), phrase.length(), type, weighting, true, catindex, timeindex);
 }
 
 // for item lists - add phrases to list proper
-bool ListContainer::addToItemListPhrase(char *s, int len, int type, int weighting, bool combi, int catindex)
+bool ListContainer::addToItemListPhrase(char *s, int len, int type, int weighting, bool combi, int catindex, int timeindex)
 {
 	int i;
 	list.push_back(data_length);
@@ -319,6 +333,7 @@ bool ListContainer::addToItemListPhrase(char *s, int len, int type, int weightin
 	weight.push_back(weighting);
 	itemtype.push_back(type);
 	categoryindex.push_back(catindex);
+	timelimitindex.push_back(timeindex);
 	return true;
 }
 
@@ -386,7 +401,7 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 		//item lists (URLs, domains) can be both categorised and time-limited
 		if (linebuffer[0] == '#') {
 			if (temp.startsWith("#time: ")) {	// see if we have a time tag
-				if (!readTimeTag(&temp)) {
+				if (!readTimeTag(&temp, listtimelimit)) {
 					return false;
 				}
 				continue;
@@ -623,20 +638,34 @@ char *ListContainer::findEndsWith(char *string)
 	return NULL;
 }
 
+// For phrase lists - grab the text, score and type of a given phrase, based on item number within list
 std::string ListContainer::getItemAtInt(int index)
 {
 	std::string s(data + list[index]);
 	return s;
 }
-
 int ListContainer::getWeightAt(unsigned int index)
 {
 	return weight[index];
 }
-
 int ListContainer::getTypeAt(unsigned int index)
 {
 	return itemtype[index];
+}
+// Phrase lists - check whether the current time is within the limit imposed upon the given phrase
+bool ListContainer::checkTimeAt(unsigned int index)
+{
+	if (timelimitindex[index] == -1) {
+		return true;
+	}
+	return isNow(timelimitindex[index]);
+}
+bool ListContainer::checkTimeAtD(int index)
+{
+	if (index == -1) {
+		return true;
+	}
+	return isNow(index);
 }
 
 void ListContainer::doSort(const bool startsWith)
@@ -686,8 +715,8 @@ bool ListContainer::createCacheFile()
 		f += ">\n";
 		listfile.write(f.toCharArray(), f.length());
 	}
-	if (timetag.length() > 10) {	// no point in writing corrupt short one
-		f = timetag;
+	if (listtimelimit.timetag.length() > 10) {	// no point in writing corrupt short one
+		f = listtimelimit.timetag;
 		f += "\n";
 		listfile.write(f.toCharArray(), f.length());
 	}
@@ -1089,6 +1118,7 @@ void ListContainer::graphAdd(String s, int inx, int item)
 					itemtype[px] = itemtype[item];
 					weight[px] = weight[item];
 					categoryindex[px] = categoryindex[item];
+					timelimitindex[px] = timelimitindex[item];
 				}
 			}
 		}
@@ -1252,7 +1282,7 @@ bool ListContainer::readProcessedItemList(const char *filename, bool startswith,
 		else if (linebuffer[0] == '#') {
 			temp = linebuffer.c_str();
 			if (temp.startsWith("#time: ")) {	// see if we have a time tag
-				if (!readTimeTag(&temp)) {
+				if (!readTimeTag(&temp, listtimelimit)) {
 					return false;
 				}
 				continue;
@@ -1476,7 +1506,7 @@ bool ListContainer::upToDate()
 	return true;
 }
 
-bool ListContainer::readTimeTag(String * tag)
+bool ListContainer::readTimeTag(String * tag, TimeLimit& tl)
 {
 #ifdef DGDEBUG
 	std::cout << "Found a time tag" << std::endl;
@@ -1528,18 +1558,25 @@ bool ListContainer::readTimeTag(String * tag)
 		return false;
 	}
 	istimelimited = true;
-	sthour = tsthour;
-	stmin = tstmin;
-	endhour = tendhour;
-	endmin = tendmin;
-	days = tdays;
-	timetag = (*tag);
+	tl.sthour = tsthour;
+	tl.stmin = tstmin;
+	tl.endhour = tendhour;
+	tl.endmin = tendmin;
+	tl.days = tdays;
+	tl.timetag = (*tag);
 	return true;
 }
 
-bool ListContainer::isNow()
+
+// Returns true if the current time is within the limits specified on this list.
+// For phrases, the time limit list index must be passed in -
+// included lists don't have their own ListContainer, so time limits are stored differently.
+bool ListContainer::isNow(int index)
 {
-	// returns true if the current time is within the limits specified on this list
+	TimeLimit& tl = listtimelimit;
+	if (index > -1) {
+		tl = timelimits[index];
+	}
 	if (!istimelimited) {
 		return true;
 	}
@@ -1558,8 +1595,8 @@ bool ListContainer::isNow()
 	wday--;
 	unsigned char cday = '0' + wday;
 	bool matchday = false;
-	for (int i = 0; i < days.length(); i++) {
-		if (days[i] == cday) {
+	for (int i = 0; i < tl.days.length(); i++) {
+		if (tl.days[i] == cday) {
 			matchday = true;
 			break;
 		}
@@ -1567,24 +1604,24 @@ bool ListContainer::isNow()
 	if (!matchday) {
 		return false;
 	}
-	if (hour < sthour) {
+	if (hour < tl.sthour) {
 		return false;
 	}
-	if (hour > endhour) {
+	if (hour > tl.endhour) {
 		return false;
 	}
-	if (hour == sthour) {
-		if (min < stmin) {
+	if (hour == tl.sthour) {
+		if (min < tl.stmin) {
 			return false;
 		}
 	}
-	if (hour == endhour) {
-		if (min > endmin) {
+	if (hour == tl.endhour) {
+		if (min > tl.endmin) {
 			return false;
 		}
 	}
 #ifdef DGDEBUG
-	std::cout << "time match " << sthour << ":" << stmin << "-" << endhour << ":" << endmin << " " << hour << ":" << min << " " << sourcefile << std::endl;
+	std::cout << "time match " << tl.sthour << ":" << tl.stmin << "-" << tl.endhour << ":" << tl.endmin << " " << hour << ":" << min << " " << sourcefile << std::endl;
 #endif
 	return true;
 }
