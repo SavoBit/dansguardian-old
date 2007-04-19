@@ -362,6 +362,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	bool wasscanned = false;
 	bool contentmodified = false;
 	bool urlmodified = false;
+	bool headermodified = false;
 	bool isconnect;
 	bool ishead;
 	bool scanerror;
@@ -468,6 +469,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				wasscanned = false;
 				contentmodified = false;
 				urlmodified = false;
+				headermodified = false;
 
 				authed = false;
 				isbanneduser = false;
@@ -960,6 +962,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				}
 			}
 
+			// Outgoing header modifications
+			headermodified = header.headerRegExp(filtergroup);
+
 			// if o.content_scan_exceptions is on then exceptions have to
 			// pass on until later for AV scanning too.
 			// Bloody annoying feature that adds mess and complexity to the code
@@ -1376,7 +1381,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
 					rtype, docsize, &checkme.whatIsNaughtyCategories, true, false, false, &thestart,
 					cachehit, 403, mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup,
-					&header, (wasrequested ? &docheader : NULL), contentmodified, urlmodified);
+					&header, (wasrequested ? &docheader : NULL), contentmodified, urlmodified, headermodified);
 				if (denyAccess(&peerconn, &proxysock, &header, &docheader, &url, &checkme, &clientuser,&clientip, filtergroup, ispostblock, headersent, wasinfected, scanerror))
 				{
 					return;  // not stealth mode
@@ -1415,7 +1420,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						rtype, docsize, NULL, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
-						contentmodified, urlmodified);
+						contentmodified, urlmodified, headermodified);
 				}
 
 				peerconn.readyForOutput(10);  // check for error/timeout needed
@@ -1485,7 +1490,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						rtype, docsize, NULL, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
-						contentmodified, urlmodified);
+						contentmodified, urlmodified, headermodified);
 				}
 			} else if (!ishead /*&& !docheader.isRedirection()*/) {	// was not supposed to be checked
 				fdt.reset();
@@ -1499,7 +1504,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					rtype, docsize, NULL, false, isexception,
 					docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 					wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
-					contentmodified, urlmodified);
+					contentmodified, urlmodified, headermodified);
 			}
 		} // while persist
 	}
@@ -1533,7 +1538,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		std::string &what, String &how, int &size, std::string *cat, bool isnaughty,
 		bool isexception, bool istext, struct timeval *thestart, bool cachehit,
 		int code, std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness, int filtergroup,
-		HTTPHeader* reqheader, HTTPHeader* respheader, bool contentmodified, bool urlmodified)
+		HTTPHeader* reqheader, HTTPHeader* respheader, bool contentmodified, bool urlmodified, bool headermodified)
 {
 
 	// don't log if logging disabled entirely, or if it's an ad block and ad logging is disabled,
@@ -1625,6 +1630,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		data += String(wasinfected)+cr;
 		data += String(contentmodified)+cr;
 		data += String(urlmodified)+cr;
+		data += String(headermodified)+cr;
 		data += String(size)+cr;
 		data += String(filtergroup)+cr;
 		data += String(code)+cr;
@@ -1734,6 +1740,13 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 				(*checkme).whatIsNaughty = o.language_list.getTranslation(504);
 				// Banned Regular Expression URL found.
 				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_regexpurl_list_ref[j]]).category.toCharArray();
+			}
+			else if ((j = o.fg[filtergroup]->inBannedRegExpHeaderList(header->header)) >= 0) {
+				checkme->isItNaughty = true;
+				checkme->whatIsNaughtyLog = o.language_list.getTranslation(508);
+				checkme->whatIsNaughtyLog += o.fg[filtergroup]->banned_regexpheader_list_source[j].toCharArray();
+				checkme->whatIsNaughty = o.language_list.getTranslation(509);
+				checkme->whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_regexpheader_list_ref[j]]->category.toCharArray();
 			}
 		}
 		// look for URLs within URLs - ban, for example, images originating from banned sites during a Google image search.

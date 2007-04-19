@@ -24,6 +24,8 @@
 "505","Blanket IP Block is active and that address is an IP only address."
 "506","Blanket SSL Block is active and that site is not on the white or grey list."
 "507","Blanket SSL IP Block is active and that address is an IP only address."
+"508","Banned Regular Expression HTTP header: ",
+"509","Banned Regular Expression HTTP header found."
 
 "600","Exception client IP match."
 "601","Exception client user match."

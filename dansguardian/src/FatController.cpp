@@ -875,7 +875,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 	int port = 80, size = 0, isnaughty = 0, isexception = 0, code = 200;
 	int cachehit = 0, wasinfected = 0, wasscanned = 0, naughtiness = 0, filtergroup = 0;
 	long tv_sec = 0, tv_usec = 0;
-	int contentmodified = 0, urlmodified = 0;
+	int contentmodified = 0, urlmodified = 0, headermodified = 0;
 
 	ofstream* logfile = NULL;
 	if (!logsyslog) {
@@ -937,7 +937,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 			// read in the various parts of the log string
 			bool error = false;
 			int itemcount = 0;
-			while(itemcount < (o.log_user_agent ? 23 : 22)) {
+			while(itemcount < (o.log_user_agent ? 24 : 23)) {
 				try {
 					rc = ipcpeersock->getLine(logline, 8192, 3, true);  // throws on err
 					if (rc < 0) {
@@ -993,30 +993,33 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 							urlmodified = atoi(logline);
 							break;
 						case 14:
-							size = atoi(logline);
+							headermodified = atoi(logline);
 							break;
 						case 15:
-							filtergroup = atoi(logline);
+							size = atoi(logline);
 							break;
 						case 16:
-							code = atoi(logline);
+							filtergroup = atoi(logline);
 							break;
 						case 17:
-							cachehit = atoi(logline);
+							code = atoi(logline);
 							break;
 						case 18:
-							mimetype = logline;
+							cachehit = atoi(logline);
 							break;
 						case 19:
-							tv_sec = atol(logline);
+							mimetype = logline;
 							break;
 						case 20:
-							tv_usec = atol(logline);
+							tv_sec = atol(logline);
 							break;
 						case 21:
-							clienthost = logline;
+							tv_usec = atol(logline);
 							break;
 						case 22:
+							clienthost = logline;
+							break;
+						case 23:
 							useragent = logline;
 							break;
 						}
@@ -1081,6 +1084,9 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 			}
 			if (urlmodified) {
 				what = "*URLMOD* " + what;
+			}
+			if (headermodified) {
+				what = "*HEADERMOD* " + what;
 			}
 
 			std::string builtline, year, month, day, hour, min, sec, when, ssize, sweight, vbody, utime;
