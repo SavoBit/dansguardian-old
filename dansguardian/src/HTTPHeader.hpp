@@ -109,8 +109,8 @@ public:
 	void removeEncoding(int newlen);
 	void setContentLength(int newlen);
 	// regexp search and replace
-	// urlRegExp Code originally from from Ton Gorter 2004
 	bool urlRegExp(int filtergroup);
+	bool headerRegExp(int filtergroup);
 	// make a connection persistent - or not
 	void makePersistent(bool persist = true);
 
@@ -176,6 +176,10 @@ private:
 	// modifies the URL in all relevant header lines after a regexp search and replace
 	// setURL Code originally from from Ton Gorter 2004
 	void setURL(String &url);
+
+	// Generic search & replace code, called by urlRegExp and headerRegExp
+	// urlRegExp Code originally from from Ton Gorter 2004
+	bool regExp(String &line, std::deque<RegExp> &regexp_list, std::deque<String> &replacement_list);
 
 	// grab cookies from headers
 	String getCookie(const char *cookie);

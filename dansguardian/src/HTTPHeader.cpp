@@ -428,33 +428,28 @@ void HTTPHeader::setURL(String &url) {
 
 // Does a regexp search and replace.
 // urlRegExp Code originally from from Ton Gorter 2004
-bool HTTPHeader::urlRegExp(int filtergroup) {
-
-#ifdef DGDEBUG
-	std::cout << "Starting url reg exp replace" << std::endl;
-#endif
+bool HTTPHeader::regExp(String& line, std::deque<RegExp>& regexp_list, std::deque<String>& replacement_list) {
 	RegExp *re;
 	String replacement;
 	String repstr;
-	String oldUrl(url());
-	String newUrl;
-	bool urlmodified = false;
+	String newLine;
+	bool linemodified = false;
 	unsigned int i;
 	int j, k;
-	unsigned int s =  (*o.fg[filtergroup]).url_regexp_list_comp.size();
+	unsigned int s = regexp_list.size();
 	int matches, submatches;
 	int match;
 	int srcoff;
 	int nextoffset;
 	unsigned int matchlen;
-	int oldurllen;
+	int oldlinelen;
 
 	// iterate over our list of precompiled regexes
 	for (i = 0; i < s; i++) {
-		newUrl = "";
-		re = &((*o.fg[filtergroup]).url_regexp_list_comp[i]);
-		if (re->match(oldUrl.toCharArray())) {
-			repstr = (*o.fg[filtergroup]).url_regexp_list_rep[i];
+		newLine = "";
+		re = &(regexp_list[i]);
+		if (re->match(line.toCharArray())) {
+			repstr = replacement_list[i];
 			matches = re->numberOfMatches();
 
 			srcoff = 0;
@@ -465,7 +460,7 @@ bool HTTPHeader::urlRegExp(int filtergroup) {
 				
 				// copy next chunk of unmodified data
 				if (nextoffset > srcoff) {
-					newUrl += oldUrl.subString(srcoff, nextoffset - srcoff);
+					newLine += line.subString(srcoff, nextoffset - srcoff);
 					srcoff = nextoffset;
 				}
 
@@ -492,30 +487,55 @@ bool HTTPHeader::urlRegExp(int filtergroup) {
 				}
 				
 				// copy filled in replacement string
-				newUrl += replacement;
+				newLine += replacement;
 				srcoff += matchlen;
 				j += submatches;
 			}
-			oldurllen = oldUrl.length();
-			if (srcoff < oldurllen) {
-				newUrl += oldUrl.subString(srcoff, oldurllen - srcoff);
+			oldlinelen = line.length();
+			if (srcoff < oldlinelen) {
+				newLine += line.subString(srcoff, oldlinelen - srcoff);
 			}
-			// copy newUrl into oldUrl and continue with other regexes
-			/*setURL(*/oldUrl = newUrl/*)*/;
-			urlmodified = true;
 #ifdef DGDEBUG
-			std::cout << "URL modified!" << std::endl;
+			std::cout << "Line modified! (" << line << " -> " << newLine << ")" << std::endl;
 #endif
+			// copy newLine into line and continue with other regexes
+			line = newLine;
+			linemodified = true;
 		}
 	}
 	
-	// surely we can get away with doing this once, not every time round the loop?
-	if (urlmodified) {
-		// replace URL string in all relevant header lines
-		setURL(oldUrl);
+	return linemodified;
+}
+
+// Perform searches and replacements on URL
+bool HTTPHeader::urlRegExp(int filtergroup) {
+	// exit immediately if list is empty
+	if (not o.fg[filtergroup]->url_regexp_list_comp.size())
+		return false;
+#ifdef DGDEBUG
+	std::cout << "Starting URL reg exp replace" << std::endl;
+#endif
+	String newUrl(url());
+	if (regExp(newUrl, o.fg[filtergroup]->url_regexp_list_comp, o.fg[filtergroup]->url_regexp_list_rep)) {
+		setURL(newUrl);
+		return true;
 	}
-	
-	return urlmodified;
+	return false;
+}
+
+// Perform searches and replacements on header lines
+bool HTTPHeader::headerRegExp(int filtergroup) {
+	// exit immediately if list is empty
+	if (not o.fg[filtergroup]->header_regexp_list_comp.size())
+		return false;
+	bool result = false;
+	for (std::deque<String>::iterator i = header.begin(); i != header.end(); i++) {
+#ifdef DGDEBUG
+		std::cout << "Starting header reg exp replace: " << *i << std::endl;
+#endif
+		result |= regExp(*i, o.fg[filtergroup]->header_regexp_list_comp, o.fg[filtergroup]->header_regexp_list_rep);
+	}
+	return result;
 }
 
 // *
