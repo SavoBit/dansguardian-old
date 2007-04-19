@@ -185,8 +185,10 @@ public:
 	unsigned int grey_url_list;
 	unsigned int banned_regexpurl_list;
 	unsigned int exception_regexpurl_list;
+	unsigned int banned_regexpheader_list;
 	unsigned int content_regexp_list;
 	unsigned int url_regexp_list;
+	unsigned int header_regexp_list;
 	unsigned int exception_extension_list;
 	unsigned int exception_mimetype_list;
 	unsigned int exception_file_site_list;
@@ -202,6 +204,9 @@ public:
 	std::deque<RegExp> exception_regexpurl_list_comp;
 	std::deque<String> exception_regexpurl_list_source;
 	std::deque<unsigned int> exception_regexpurl_list_ref;
+	std::deque<RegExp> banned_regexpheader_list_comp;
+	std::deque<String> banned_regexpheader_list_source;
+	std::deque<unsigned int> banned_regexpheader_list_ref;
 	std::deque<RegExp> log_regexpurl_list_comp;
 	std::deque<String> log_regexpurl_list_source;
 	std::deque<unsigned int> log_regexpurl_list_ref;
@@ -211,6 +216,8 @@ public:
 	std::deque<String> content_regexp_list_rep;
 	std::deque<RegExp> url_regexp_list_comp;
 	std::deque<String> url_regexp_list_rep;
+	std::deque<RegExp> header_regexp_list_comp;
+	std::deque<String> header_regexp_list_rep;
 
 	// precompiled reg exps for speed
 	RegExp pics1;
@@ -226,8 +233,8 @@ public:
 		banned_phrase_flag(false), exception_site_flag(false), exception_url_flag(false),
 		banned_extension_flag(false), banned_mimetype_flag(false), banned_site_flag(false),
 		banned_url_flag(false), grey_site_flag(false), grey_url_flag(false),
-		banned_regexpurl_flag(false), exception_regexpurl_flag(false),
-		content_regexp_flag(false), url_regexp_flag(false),
+		banned_regexpurl_flag(false), exception_regexpurl_flag(false), banned_regexpheader_flag(false),
+		content_regexp_flag(false), url_regexp_flag(false), header_regexp_flag(false),
 		exception_extension_flag(false), exception_mimetype_flag(false),
 		exception_file_site_flag(false), exception_file_url_flag(false),
 		log_site_flag(false), log_url_flag(false), log_regexpurl_flag(false) {};
@@ -244,6 +251,7 @@ public:
 	bool inExceptionFileSiteList(String url);
 	int inBannedRegExpURLList(String url);
 	int inExceptionRegExpURLList(String url);
+	int inBannedRegExpHeaderList(std::deque<String> &header);
 	char *inExtensionList(unsigned int list, String url);
 	bool isIPHostname(String url);
 
@@ -270,8 +278,10 @@ private:
 	bool grey_url_flag;
 	bool banned_regexpurl_flag;
 	bool exception_regexpurl_flag;
+	bool banned_regexpheader_flag;
 	bool content_regexp_flag;
 	bool url_regexp_flag;
+	bool header_regexp_flag;
 	bool exception_extension_flag;
 	bool exception_mimetype_flag;
 	bool exception_file_site_flag;
@@ -286,11 +296,11 @@ private:
 	bool precompileregexps();
 	bool readbplfile(const char *banned, const char *exception, const char *weighted);
 	bool readFile(const char *filename, unsigned int* whichlist, bool sortsw, bool cache, const char *listname);
-	bool readRegExURLFile(const char *filename, const char *listname, unsigned int& listref,
+	bool readRegExMatchFile(const char *filename, const char *listname, unsigned int& listref,
 		std::deque<RegExp> &list_comp, std::deque<String> &list_source, std::deque<unsigned int> &list_ref);
-	bool compileRegExURLFile(unsigned int list, std::deque<RegExp> &list_comp,
+	bool compileRegExMatchFile(unsigned int list, std::deque<RegExp> &list_comp,
 		std::deque<String> &list_source, std::deque<unsigned int> &list_ref);
-	bool readRegExListFile(const char *filename, const char *listname, unsigned int& listid,
+	bool readRegExReplacementFile(const char *filename, const char *listname, unsigned int& listid,
 	std::deque<String> &list_rep, std::deque<RegExp> &list_comp);
 
 	int findoptionI(const char *option);

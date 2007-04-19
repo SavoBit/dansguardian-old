@@ -75,8 +75,10 @@ FOptionContainer::~FOptionContainer()
 	if (grey_url_flag) o.lm.deRefList(grey_url_list);
 	if (banned_regexpurl_flag) o.lm.deRefList(banned_regexpurl_list);
 	if (exception_regexpurl_flag) o.lm.deRefList(exception_regexpurl_list);
+	if (banned_regexpheader_flag) o.lm.deRefList(banned_regexpheader_list);
 	if (content_regexp_flag) o.lm.deRefList(content_regexp_list);
 	if (url_regexp_flag) o.lm.deRefList(url_regexp_list);
+	if (header_regexp_flag) o.lm.deRefList(header_regexp_list);
 	if (exception_extension_flag) o.lm.deRefList(exception_extension_list);
 	if (exception_mimetype_flag) o.lm.deRefList(exception_mimetype_list);
 	if (exception_file_site_flag) o.lm.deRefList(exception_file_site_list);
@@ -100,8 +102,10 @@ void FOptionContainer::reset()
 	if (grey_url_flag) o.lm.deRefList(grey_url_list);
 	if (banned_regexpurl_flag) o.lm.deRefList(banned_regexpurl_list);
 	if (exception_regexpurl_flag) o.lm.deRefList(exception_regexpurl_list);
+	if (banned_regexpheader_flag) o.lm.deRefList(banned_regexpheader_list);
 	if (content_regexp_flag) o.lm.deRefList(content_regexp_list);
 	if (url_regexp_flag) o.lm.deRefList(url_regexp_list);
+	if (header_regexp_flag) o.lm.deRefList(header_regexp_list);
 	if (exception_extension_flag) o.lm.deRefList(exception_extension_list);
 	if (exception_mimetype_flag) o.lm.deRefList(exception_mimetype_list);
 	if (exception_file_site_flag) o.lm.deRefList(exception_file_site_list);
@@ -120,8 +124,10 @@ void FOptionContainer::reset()
 	grey_url_flag = false;
 	banned_regexpurl_flag = false;
 	exception_regexpurl_flag = false;
+	banned_regexpheader_flag = false;
 	content_regexp_flag = false;
 	url_regexp_flag = false;
+	header_regexp_flag = false;
 	exception_extension_flag = false;
 	exception_mimetype_flag = false;
 	exception_file_site_flag = false;
@@ -136,12 +142,17 @@ void FOptionContainer::reset()
 	content_regexp_list_rep.clear();
 	url_regexp_list_comp.clear();
 	url_regexp_list_rep.clear();
+	header_regexp_list_comp.clear();
+	header_regexp_list_rep.clear();
 	banned_regexpurl_list_comp.clear();
 	banned_regexpurl_list_source.clear();
 	banned_regexpurl_list_ref.clear();
 	exception_regexpurl_list_comp.clear();
 	exception_regexpurl_list_source.clear();
 	exception_regexpurl_list_ref.clear();
+	banned_regexpheader_list_comp.clear();
+	banned_regexpheader_list_source.clear();
+	banned_regexpheader_list_ref.clear();
 	log_regexpurl_list_comp.clear();
 	log_regexpurl_list_source.clear();
 	log_regexpurl_list_ref.clear();
@@ -469,8 +480,10 @@ bool FOptionContainer::read(const char *filename)
 			std::string grey_url_list_location(findoptionS("greyurllist"));
 			std::string banned_regexpurl_list_location(findoptionS("bannedregexpurllist"));
 			std::string exception_regexpurl_list_location(findoptionS("exceptionregexpurllist"));
+			std::string banned_regexpheader_list_location(findoptionS("bannedregexpheaderlist"));
 			std::string content_regexp_list_location(findoptionS("contentregexplist"));
 			std::string url_regexp_list_location(findoptionS("urlregexplist"));
+			std::string header_regexp_list_location(findoptionS("headerregexplist"));
 			std::string exceptions_site_list_location(findoptionS("exceptionsitelist"));
 			std::string exceptions_url_list_location(findoptionS("exceptionurllist"));
 			std::string exception_extension_list_location(findoptionS("exceptionextensionlist"));
@@ -648,7 +661,7 @@ bool FOptionContainer::read(const char *filename)
 				std::cout << "Enabled log-only domain list" << std::endl;
 #endif
 			}
-			if (readRegExURLFile(log_regexpurl_list_location.c_str(), "logregexpurllist", log_regexpurl_list,
+			if (readRegExMatchFile(log_regexpurl_list_location.c_str(), "logregexpurllist", log_regexpurl_list,
 				log_regexpurl_list_comp, log_regexpurl_list_source, log_regexpurl_list_ref))
 			{
 				log_regexpurl_flag = true;
@@ -657,29 +670,41 @@ bool FOptionContainer::read(const char *filename)
 #endif
 			}
 
-			if (!readRegExURLFile(banned_regexpurl_list_location.c_str(),"bannedregexpurllist",banned_regexpurl_list,
+			if (!readRegExMatchFile(banned_regexpurl_list_location.c_str(),"bannedregexpurllist",banned_regexpurl_list,
 				banned_regexpurl_list_comp, banned_regexpurl_list_source, banned_regexpurl_list_ref))
 			{
 				return false;
 			}		// banned reg exp urls
 			banned_regexpurl_flag = true;
 
-			if (!readRegExURLFile(exception_regexpurl_list_location.c_str(),"exceptionregexpurllist",exception_regexpurl_list,
+			if (!readRegExMatchFile(exception_regexpurl_list_location.c_str(),"exceptionregexpurllist",exception_regexpurl_list,
 				exception_regexpurl_list_comp, exception_regexpurl_list_source, exception_regexpurl_list_ref))
 			{
 				return false;
 			}		// exception reg exp urls
 			exception_regexpurl_flag = true;
 
-			if (!readRegExListFile(content_regexp_list_location.c_str(),"contentregexplist",content_regexp_list,content_regexp_list_rep,content_regexp_list_comp)) {
+			if (!readRegExMatchFile(banned_regexpheader_list_location.c_str(), "bannedregexpheaderlist", banned_regexpheader_list,
+				banned_regexpheader_list_comp, banned_regexpheader_list_source, banned_regexpheader_list_ref))
+			{
+				return false;
+			}		// banned reg exp headers
+			banned_regexpheader_flag = true;
+
+			if (!readRegExReplacementFile(content_regexp_list_location.c_str(),"contentregexplist",content_regexp_list,content_regexp_list_rep,content_regexp_list_comp)) {
 				return false;
 			}		// content replacement regular expressions
 			content_regexp_flag = true;
 
-			if (!readRegExListFile(url_regexp_list_location.c_str(),"urlregexplist",url_regexp_list,url_regexp_list_rep,url_regexp_list_comp)) {
+			if (!readRegExReplacementFile(url_regexp_list_location.c_str(),"urlregexplist",url_regexp_list,url_regexp_list_rep,url_regexp_list_comp)) {
 				return false;
 			}  // url replacement regular expressions
 			url_regexp_flag = true;
+
+			if (!readRegExReplacementFile(header_regexp_list_location.c_str(), "headerregexplist", header_regexp_list, header_regexp_list_rep, header_regexp_list_comp)) {
+				return false;
+			}  // header replacement regular expressions
+			header_regexp_flag = true;
 #ifdef DGDEBUG
 			std::cout << "Lists in memory" << std::endl;
 #endif
@@ -809,7 +834,7 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 }
 
 // read regexp url list
-bool FOptionContainer::readRegExURLFile(const char *filename, const char *listname, unsigned int& listref,
+bool FOptionContainer::readRegExMatchFile(const char *filename, const char *listname, unsigned int& listref,
 	std::deque<RegExp> &list_comp, std::deque<String> &list_source, std::deque<unsigned int> &list_ref)
 {
 	int result = o.lm.newItemList(filename, true, 32, true);
@@ -821,16 +846,16 @@ bool FOptionContainer::readRegExURLFile(const char *filename, const char *listna
 		return false;
 	}
 	listref = (unsigned) result;
-	return compileRegExURLFile(listref, list_comp, list_source, list_ref);
+	return compileRegExMatchFile(listref, list_comp, list_source, list_ref);
 }
 
 // NOTE TO SELF - MOVE TO LISTCONTAINER TO SOLVE FUDGE
 // compile regexp url list
-bool FOptionContainer::compileRegExURLFile(unsigned int list, std::deque<RegExp> &list_comp,
+bool FOptionContainer::compileRegExMatchFile(unsigned int list, std::deque<RegExp> &list_comp,
 	std::deque<String> &list_source, std::deque<unsigned int> &list_ref)
 {
 	for (unsigned int i = 0; i < (*o.lm.l[list]).morelists.size(); i++) {
-		if (!compileRegExURLFile((*o.lm.l[list]).morelists[i],list_comp,list_source,list_ref)) {
+		if (!compileRegExMatchFile((*o.lm.l[list]).morelists[i],list_comp,list_source,list_ref)) {
 			return false;
 		}
 	}
@@ -858,7 +883,7 @@ bool FOptionContainer::compileRegExURLFile(unsigned int list, std::deque<RegExp>
 }
 
 // content and URL regular expression replacement files
-bool FOptionContainer::readRegExListFile(const char *filename, const char *listname, unsigned int& listid,
+bool FOptionContainer::readRegExReplacementFile(const char *filename, const char *listname, unsigned int& listid,
 	std::deque<String> &list_rep, std::deque<RegExp> &list_comp)
 {
 	int result = o.lm.newItemList(filename, true, 32, true);
@@ -1163,6 +1188,31 @@ char *FOptionContainer::inExtensionList(unsigned int list, String url)
 	return (*o.lm.l[list]).findEndsWith(url.toCharArray());
 }
 
+// is this line of the headers in the banned regexp header list?
+int FOptionContainer::inBannedRegExpHeaderList(std::deque<String> &header)
+{
+
+	for (std::deque<String>::iterator k = header.begin(); k != header.end(); k++) {
+#ifdef DGDEBUG
+		std::cout << "inBannedRegExpHeaderList: " << *k << std::endl;
+#endif
+		unsigned int i = 0;
+		for (std::deque<RegExp>::iterator j = banned_regexpheader_list_comp.begin(); j != banned_regexpheader_list_comp.end(); j++) {
+			if (o.lm.l[banned_regexpheader_list_ref[i]]->isNow()) {
+				j->match(k->toCharArray());
+				if (j->matched())
+					return i;
+			}
+#ifdef DGDEBUG
+			else
+				std::cout << "Outside included regexp list's time limit" << std::endl;
+#endif
+			i++;
+		}
+	}
+	return -1;
+}
+
 // is this URL in the given regexp URL list?
 int FOptionContainer::inRegExpURLList(String &url, std::deque<RegExp> &list_comp, std::deque<unsigned int> &list_ref, unsigned int list)
 {
@@ -1204,15 +1254,15 @@ int FOptionContainer::inRegExpURLList(String &url, std::deque<RegExp> &list_comp
 #endif
 		unsigned int i = 0;
 		for (std::deque<RegExp>::iterator j = list_comp.begin(); j != list_comp.end(); j++) {
-			j->match(url.toCharArray());
-			if (j->matched()) {
-				if (o.lm.l[list_ref[i]]->isNow())
+			if (o.lm.l[list_ref[i]]->isNow()) {
+				j->match(url.toCharArray());
+				if (j->matched())
 					return i;
-#ifdef DGDEBUG
-				else
-					std::cout << "Outside included regexp list's time limit" << std::endl;
-#endif
 			}
+#ifdef DGDEBUG
+			else
+				std::cout << "Outside included regexp list's time limit" << std::endl;
+#endif
 			i++;
 		}
 	}
