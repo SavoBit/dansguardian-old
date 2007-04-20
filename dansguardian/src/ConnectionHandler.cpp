@@ -1094,6 +1094,16 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					std::cout<<"Setting GBYPASS cookie; bypasstimestamp = "<<bypasstimestamp<<std::endl;
 #endif
 					docheader.setCookie("GBYPASS", hashedCookie(&urldomain, filtergroup, &clientip, bypasstimestamp).toCharArray());
+					// redirect user to URL with GBYPASS parameter no longer appended
+					docheader.header[0] = "HTTP/1.0 302 Redirect";
+					String loc("Location: ");
+					loc += header.url();
+					docheader.header.push_back(loc);
+					docheader.setContentLength(0);
+					docheader.makePersistent(false);
+					docheader.out(NULL, &peerconn, __DGHEADER_SENDALL);
+					proxysock.close();
+					break;
 				}
 				
 				// don't run scanTest on redirections or head requests
