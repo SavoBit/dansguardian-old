@@ -14,15 +14,15 @@
  
 
 #Block Un-filtered character sets
-<x-sjis><250>	#New character set - not used much
-<ISO-2022-JP><250>	#Used primarily for email
-<CP932><250>		#Unknown 
+#<x-sjis><250>	#New character set - not used much
+#<ISO-2022-JP><250>	#Used primarily for email
+#<CP932><250>		#Unknown 
 
 #######################################
 #Shift_JIS
 #######################################
 
-<Shift_JIS><1>	#CharSet Identifier for Troubleshooting
+#<Shift_JIS><1>	#CharSet Identifier for Troubleshooting
 
 <­—><50> #little woman (girl)
 <—><10> #woman
@@ -104,7 +104,7 @@
 #UTF-8
 #######################################
 
-<UTF-8><1>	#CharSet Identifier for Troubleshooting
+#<UTF-8><1>	#CharSet Identifier for Troubleshooting
 
 <å°‘å¥³><50> #little woman (girl)
 <å¥³><10> #woman
@@ -185,7 +185,7 @@
 #EUC-JP
 #######################################
 
-<EUC-JP><1>	#CharSet Identifier for Troubleshooting
+#<EUC-JP><1>	#CharSet Identifier for Troubleshooting
 
 <¾¯½÷><50> #little woman (girl)
 <½÷><10> #woman
