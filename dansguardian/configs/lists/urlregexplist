@@ -40,8 +40,8 @@
 #"(^http://www\.alltheweb\.com/customize\?)(.*)(&?)(copt_offensive=[^&]*)"->"\1\2\3copt_offensive=on"
 
 # Yahoo - remove 'vm=...' and add 'vm=r'
-#"(^http://[0-9a-z]+\.yahoo\.[a-z]+[-/%.0-9a-z]*/search\?)(.*)(&?)(vm=[^&]*)"->"\1\2\3"
-#"(^http://[0-9a-z]+\.yahoo\.[a-z]+[-/%.0-9a-z]*/search\?)"->"\1vm=r&"
+"(^http://[.0-9a-z]+\.yahoo\.[a-z]+[-/%.0-9a-z]*/search)(.*)(&?)(vm=[^&]*)"->"\1\2\3"
+"(^http://[.0-9a-z]+\.yahoo\.[a-z]+[-/%.0-9a-z]*/search+.*\?)"->"\1vm=r&"
 
 # Hotbot - remove 'adf=...' and add 'adf=on'
 #"(^http://[0-9a-z]+\.hotbot\.[a-z]+/default\.asp\?)(.*)(&?)(adf=[^&]*)"->"\1\2\3"
