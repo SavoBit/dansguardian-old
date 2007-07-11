@@ -64,13 +64,9 @@ public:
 
 private:
 	// virus database root node
-	// Update to support ClamAV 0.90 in addition to 0.88
+	// Update to support ClamAV 0.90
 	// Based on patch supplied by Aecio F. Neto
-#ifdef CL_SCAN_ALGORITHMIC
 	struct cl_engine *root;
-#else
-	struct cl_node *root;
-#endif
 	// archive limit options
 	struct cl_limits limits;
 
@@ -221,13 +217,6 @@ int clamavinstance::doRC(int rc, const char *vn)
 // initialise libclamav
 int clamavinstance::init(void* args)
 {
-#ifdef DGDEBUG
-#ifdef CL_SCAN_ALGORITHMIC
-	std::cout << "Using ClamAV >= 0.90 code" << std::endl;
-#else
-	std::cout << "Using ClamAV <= 0.88 code" << std::endl;
-#endif
-#endif
 	// always include these lists
 	if (!readStandardLists()) {
 		return DGCS_ERROR;
@@ -284,17 +273,9 @@ int clamavinstance::init(void* args)
 
 	// load virus database
 	unsigned int virnum = 0;
-#ifdef CL_SCAN_ALGORITHMIC
 	int rc = cl_load(cl_retdbdir(), &root, &virnum, CL_DB_STDOPT);
-#else
-	int rc = cl_loaddbdir(cl_retdbdir(), &root, &virnum);
-#endif
 #ifdef DGDEBUG
-#ifdef CL_SCAN_ALGORITHMIC
 	std::cout << "engine: " << root << " virnum: " << virnum << std::endl;
-#else
-	std::cout << "root: " << root << " virnum: " << virnum << std::endl;
-#endif
 #endif
 	if (rc != 0) {
 		if (!is_daemonised)
