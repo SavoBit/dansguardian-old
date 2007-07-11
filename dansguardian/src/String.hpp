@@ -34,46 +34,33 @@
 
 // DECLARATIONS
 
-class String
+class String:public std::string
 {
 public:
-	String();
-	~String();
+	String():std::string() {};
+	//~String();
 	
 	// constructor from c-string
-	String(const char* bs);
+	String(const char* bs):std::string(bs) {};
 	// copy constructor
-	String(const String &s);
+	String(const String &s):std::string(s) {};
 	// construct string represenations of numbers
 	String(const int num);
 	String(const long num);
 	String(const unsigned int num);
 	// substring constructors
-	String(const char *bs, int len);
-	String(const char *bs, int start, int len);
+	String(const char *bs, int len):std::string(bs, len) {};
+	String(const char *bs, int start, int len):std::string(bs+start, len) {};
 	// construct from c++ string
-	String(const std::string & s);
+	String(const std::string &s):std::string(s) {};
 	
-	// stream output operator
-	friend std::ostream & operator <<(std::ostream & out, const String & s);
-	// concatenation operator(s) ("checkme:" on the second one)
-	friend String operator+(const String & lhs, const String & s);
-	String operator+(const String & s);
-	// concatenate & assign
-	String & operator +=(const String & s);
-	// assignment operator
-	String & operator =(const String & s);
-	// boolean operators
-	bool operator !=(const String & s);
-	bool operator ==(const String & s);
-	// index operator
-	char operator [] (int i) const;
-
-	// return string length
-	int length();
+	String operator+(const int& i) { return (*this) + String(i); };
 
 	// return c-string
-	char* toCharArray();
+	char* toCharArray() { return (char*)(this->c_str()); };
+	// return substring of length l from start
+	String subString(int start, int l) { return this->substr(start, l); };
+
 	// convert to integer/long integer
 	int toInteger();
 	long int toLong();
@@ -82,8 +69,6 @@ public:
 	// case conversions
 	void toLower();
 	void toUpper();
-	// return substring of length l from start
-	String subString(int start, int l);
 
 	// decode %xx to characters (checkme: duplicate code?)
 	void hexDecode();
@@ -95,17 +80,17 @@ public:
 	// (pass the search string in in lowercase; only the text being searched
 	// is converted)
 	bool startsWithLower(const String s);
+	// return offset of substring s within the string
+	int indexOf(const char *s);
 	// does it contain this text?
 	bool contains(const char *s);
 	// index operator mark 2
-	unsigned char charAt(int index);
+	unsigned char charAt(int index) { return (*this)[index]; };
 
 	// return string following first occurrence of bs
 	String after(const char *bs);
 	// return string preceding first occurrence of bs
 	String before(const char *bs);
-	// return offset of substring s within the string
-	int indexOf(const char *s);
 	// search & replace
 	void replace(const char *what, const char *with);
 
@@ -126,11 +111,6 @@ public:
 	// generate MD5 hash of string (using given salt)
 	String md5();
 	String md5(const char *salt);
-
-private:
-	// the actual string data & its length
-	char *data;
-	int sl;
 };
 
 #endif

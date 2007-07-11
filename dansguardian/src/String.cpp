@@ -25,8 +25,6 @@
 #include "String.hpp"
 #include "md5.hpp"
 
-#include <algorithm>
-
 #if defined(__GNUC__) && __GNUC__ < 3 && __GNUC_MINOR__ < 96
 #warning "Using strstream instead of sstream"
 #include <strstream>
@@ -34,95 +32,25 @@
 #include <sstream>
 #endif
 
-#include <cstdlib>
-#include <cstring>
-#include <syslog.h>
-#include <ctype.h>
-
-
-// IMPLEMENTATION
-
-// default contructor - i.e. an empty String
-String::String():data(new char[1]), sl(0)
-{
-	data[0] = '\0';
-}
-
-// destructor - called when String is destroyed
-String::~String()
-{
-	delete[]data;
-}
-
-// constructor from a c-string
-String::String(const char *bs)
-{
-	int l = strlen(bs);
-	data = new char[l + 1];
-	memcpy(data, bs, l);
-	sl = l;
-	data[sl] = '\0';
-}
-
-// copy constructor
-String::String(const String & s)
-{
-	int l = s.sl;
-	data = new char[l + 1];
-	memcpy(data, s.data, l + 1);
-	sl = l;
-}
-
-// constructor from C++ string
-String::String(const std::string & s)
-{
-	int l = s.length();
-	data = new char[l + 1];
-	memcpy(data, s.c_str(), l);
-	sl = l;
-	data[sl] = '\0';
-}
-
-// substring constructor (takes c-style string & amount to copy)
-String::String(const char *bs, int len)
-{
-	data = new char[len + 1];
-	memcpy(data, bs, len);
-	sl = len;
-	data[sl] = '\0';
-}
-
-// substring constructor with offset option
-String::String(const char *bs, int start, int len)
-{
-	data = new char[len + 1];
-	memcpy(data, bs + start, len);
-	sl = len;
-	data[sl] = '\0';
-}
-
 // construct string representations of ints/longs
 #if defined(__GNUC__) && __GNUC__ < 3 && __GNUC_MINOR__ < 96
 String::String(const int num)
 {
 	std::ostrstream buf;
 	buf << num << std::ends;
-	data = buf.str();  // with side effect: it calls buf.freeze()
-	sl = buf.pcount() - 1;
+	*this = buf.str();  // with side effect: it calls buf.freeze()
 }
 String::String(const long num)
 {
 	std::ostrstream buf;
 	buf << num << std::ends;
-	data = buf.str();
-	sl = buf.pcount() - 1;
+	*this = buf.str();
 }
 String::String(const unsigned int num)
 {
 	std::ostrstream buf;
 	buf << num << std::ends;
-	data = buf.str();
-	sl = buf.pcount() - 1;
+	*this = buf.str();
 }
 #else
 String::String(const int num)
@@ -136,183 +64,49 @@ String::String(const int num)
 	// length is, since it counts the NULL byte in the stringstream's
 	// own buffer.
 	int l = buf.str().length();
-	data = new char[l+1];
+	char* data = new char[l+1];
 	buf >> data;
-	sl = l - 1;
+	*this = data;
+	delete[] data;
 }
 String::String(const long num)
 {
 	std::stringstream buf;
 	buf << num << std::ends;
 	int l = buf.str().length();
-	data = new char[l+1];
+	char* data = new char[l+1];
 	buf >> data;
-	sl = l - 1;
+	*this = data;
+	delete[] data;
 }
 String::String(const unsigned int num)
 {
 	std::stringstream buf;
 	buf << num << std::ends;
 	int l = buf.str().length();
-	data = new char[l+1];
+	char* data = new char[l+1];
 	buf >> data;
-	sl = l - 1;
+	*this = data;
+	delete[] data;
 }
 #endif
-
-// *
-// *
-// * Operators
-// *
-// *
-
-// stream output operator
-std::ostream & operator <<(std::ostream & out, const String & s)
-{
-	out.write(s.data, s.sl);
-	return out;
-}
-
-// assignment operator
-String & String::operator =(const String & s)
-{
-	if (&s == this) {
-		return *this;
-	}
-	delete[]data;
-	data = new char[s.sl + 1];
-	memcpy(data, s.data, s.sl + 1);
-	sl = s.sl;
-	return *this;
-}
-
-// inequality operator
-bool String::operator !=(const String & s)
-{
-	if (sl != s.sl) {
-		return true;
-	}
-	int result = memcmp(data, s.data, sl);
-	if (result == 0) {
-		return false;
-	}
-	return true;
-}
-
-// equality operator
-bool String::operator ==(const String & s)
-{
-	if (sl != s.sl) {
-		return false;
-	}
-	int result = memcmp(data, s.data, sl);
-	if (result == 0) {
-		return true;
-	}
-	return false;
-}
-
-// concatenate & assign operator
-String & String::operator +=(const String & s)
-{
-	if (&s == this) {
-		return *this;
-	}
-	char *temp = new char[sl + s.sl + 1];
-	memcpy(temp, data, sl);
-	memcpy(temp + sl, s.data, s.sl + 1);
-	delete[]data;
-	sl += s.sl;
-	data = temp;
-	return *this;
-}
-
-// concatenation operator
-String String::operator +(const String & s)
-{
-	String t(*this);
-	t += s;
-	return (t);
-}
-
-// ...and again? (checkme: when is this called instead of the above?)
-String operator+(const String & lhs, const String & s)
-{
-	String t(lhs);
-	t += s;
-	return (t);
-}
-
-// index operator
-char String::operator [] (int i) const
-{
-	return (data[i]);
-}
-
-// *
-// *
-// * Other funcs
-// *
-// *
-
-// return string length
-int String::length()
-{
-	return sl;
-}
-
-// *
-// *
-// * Conversions
-// *
-// *
-
-// return c-style string
-char *String::toCharArray()
-{
-	return data;
-}
 
 // string-to-integer conversion
 int String::toInteger()
 {
-	if (sl == 0) {
+	if (this->length() == 0) {
 		return 0;
 	}
-	return (atoi(data));
+	return (atoi(this->c_str()));
 }
 
 // string-to-long-int conversion
 long int String::toLong()
 {
-	if (sl == 0) {
+	if (this->length() == 0) {
 		return 0;
 	}
-	return (atol(data));
-}
-
-// case conversions
-void String::toLower()
-{
-	for (int i = 0; i < sl; i++) {
-		data[i] = tolower(data[i]);
-	}
-}
-
-void String::toUpper()
-{
-	for (int i = 0; i < sl; i++) {
-		data[i] = toupper(data[i]);
-	}
-}
-
-// return a substring of length l, beginning at start
-String String::subString(int start, int l)
-{
-	if ((start + l) > sl) {
-		return "";
-	}
-	return (String(data + start, l));
+	return (atol(this->c_str()));
 }
 
 // return integer from hex string
@@ -323,12 +117,12 @@ int String::hexToInteger() {
 	int intValue = 0;  // integer value of hex string
 	int digit[5];      // hold values to convert
 	while (n < 4) {
-		if (data[n]=='\0')
+		if ((*this)[n]=='\0')
 			break;
-		if (data[n] > '0' && data[n] < '9' )
-			digit[n] = data[n] & 0x0f;
-		else if ((data[n] >='a' && data[n] <= 'f') || (data[n] >='A' && data[n] <= 'F'))
-			digit[n] = (data[n] & 0x0f) + 9;
+		if ((*this)[n] > '0' && (*this)[n] < '9' )
+			digit[n] = (*this)[n] & 0x0f;
+		else if (((*this)[n] >='a' && (*this)[n] <= 'f') || ((*this)[n] >='A' && (*this)[n] <= 'F'))
+			digit[n] = ((*this)[n] & 0x0f) + 9;
 		else break;
 		n++;
 	}
@@ -346,10 +140,36 @@ int String::hexToInteger() {
 	return (intValue);
 }
 
+// case conversions
+void String::toLower()
+{
+	unsigned int l = this->length();
+	char* c = new char[l + 1];
+	const char* d = this->c_str();
+	for (unsigned int i = 0; i < l; i++) {
+		c[i] = tolower(d[i]);
+	}
+	*this = String(c, l);
+}
+
+void String::toUpper()
+{
+	unsigned int l = this->length();
+	char* c = new char[l + 1];
+	const char* d = this->c_str();
+	for (unsigned int i = 0; i < l; i++) {
+		c[i] = toupper(d[i]);
+	}
+	*this = String(c, l);
+}
+
 // decode %xx to individual characters (checkme: i'm sure this is duplicated elsewhere...)
 void String::hexDecode()
 {
-	char *temp = new char[sl + 1];
+	if (this->length() < 3)
+		return;
+	char *temp = new char[this->length() + 1];
+	const char *t = this->c_str();
 	unsigned char c;
 	unsigned char c1;
 	unsigned char c2;
@@ -357,13 +177,13 @@ void String::hexDecode()
 	char hexval[5] = "0x";  // Initializes a "hexadecimal string"
 	hexval[4] = '\0';
 	char *ptr;  // pointer required by strtol
-	int j = 0;
-	int end = sl - 2;
-	int i;
+	unsigned int j = 0;
+	unsigned int end = this->length() - 2;
+	unsigned int i, k;
 	for (i = 0; i < end;) {
-		c1 = data[i];
-		c2 = data[i + 1];
-		c3 = data[i + 2];
+		c1 = t[i];
+		c2 = t[i + 1];
+		c3 = t[i + 2];
 		if (c1 == '%' && (((c2 >= '0') && (c2 <= '9')) || ((c2 >= 'a') && (c2 <= 'f')) || ((c2 >= 'A') && (c2 <= 'F'))) && (((c3 >= '0') && (c3 <= '9')) || ((c3 >= 'a') && (c3 <= 'f')) || ((c3 >= 'A') && (c3 <= 'F')))) {
 			hexval[2] = c2;
 			hexval[3] = c3;
@@ -375,27 +195,31 @@ void String::hexDecode()
 		}
 		temp[j++] = c;
 	}
-	for (; i < sl; i++) {
-		temp[j++] = data[i];  // copy last 2 bytes if any//
+	k = this->length();
+	for (; i < k; i++) {
+		temp[j++] = t[i];  // copy last 2 bytes if any//
 	}
-	delete[]data;
-	sl = j;
-	data = new char[sl + 1];
-	memcpy(data, temp, sl);
-	data[sl] = '\0';
+	temp[j] = '\0';
+	(*this) = String(temp, j);
 	delete[]temp;
 }
-
-// *
-// *
-// * Searches
-// *
-// *
 
 // does this string start with the given text?
 bool String::startsWith(const String s)
 {
-	if (!strncmp(data, s.data, s.sl)) {
+	if (!strncmp(this->c_str(), s.c_str(), s.length())) {
+		return true;
+	}
+	return false;
+}
+
+// does this string end with the given text?
+bool String::endsWith(const String s)
+{
+	if (s.length() > this->length()) {
+		return false;
+	}
+	if (!strncmp((this->c_str() + this->length() - s.length()), s.c_str(), s.length())) {
 		return true;
 	}
 	return false;
@@ -406,23 +230,20 @@ bool String::startsWith(const String s)
 // is converted)
 bool String::startsWithLower(const String s)
 {
-	for (int i = 0; i < s.sl; i++) {
-		if (tolower(data[i]) != s.data[i])
+	for (unsigned int i = 0; i < s.length(); i++) {
+		if (tolower((*this)[i]) != s[i])
 			return false;
 	}
 	return true;
 }
 
-// does this string end with the given text?
-bool String::endsWith(const String s)
+// find the position of the given substring within the string
+int String::indexOf(const char *s)
 {
-	if (s.sl > sl) {
-		return false;
-	}
-	if (!strncmp((data + sl - s.sl), s.data, s.sl)) {
-		return true;
-	}
-	return false;
+	size_type i = this->find(s);
+	if (i != std::string::npos)
+		return i;
+	return -1;
 }
 
 // does this string contain given substring?
@@ -434,191 +255,76 @@ bool String::contains(const char *s)
 	return false;
 }
 
-// index operator mark 2
-unsigned char String::charAt(int index)
-{
-	if (index >= sl) {
-		return 0;
-	}
-	if (index < 0) {
-		return 0;
-	}
-	unsigned char c = data[index];
-	return c;
-}
-
 // grab the part of the string that follows the first occurrence of given text
 String String::after(const char *bs)
 {
-	int l = strlen(bs);
-	if (l >= sl) {
+	size_type i = this->find(bs);
+	if (i == std::string::npos)
 		return "";
-	}
-	char *result = NULL;
-	result = strstr(data, bs);
-	if (result == NULL) {
-		return "";
-	}
-	return (String(result + l));
+	return this->substr(i + strlen(bs));
 }
 
 // grab the part of the string that precedes the first occurrence of given text
 String String::before(const char *bs)
 {
-	int l = strlen(bs);
-	if (l >= sl) {
+	size_type i = this->find(bs);
+	if (i == std::string::npos)
 		return "";
-	}
-	char *result = NULL;
-	result = strstr(data, bs);
-	if (result == NULL) {
-		return "";
-	}
-	return (String(data, (int) (result - data)));
+	return this->substr(0, i);
 }
 
-// find the position of the given substring within the string
-int String::indexOf(const char *s)
-{
-	if (sl == 0) {
-		return -1;
-	}
-	if ((signed) strlen(s) > sl) {
-		return -1;
-	}
-	char *pos;
-	pos = strstr(data, s);
-	if (pos == NULL) {
-		return -1;
-	}
-	return ((int) (pos - data));
-}
-
-// search & replace "what" with "with"
-void String::replace(const char *what, const char *with)
-{
-	if (sl == 0) {
-		return;
-	}
-	unsigned int whatlen = strlen(what);
-	if (whatlen < (unsigned) 1 || whatlen > (unsigned) sl) {
-		return;
-	}
-	unsigned int withlen = strlen(with);
-	char *pos;
-	unsigned int offset;
-	unsigned int i;
-	unsigned int j;
-	unsigned int newlen;
-	while ((pos = strstr(data, what)) != NULL) {
-		offset = (unsigned int) (pos - data);
-		newlen = sl + withlen - whatlen;
-		char *temp = new char[newlen + 1];
-		for (i = 0; i < offset; i++) {
-			temp[i] = data[i];
-		}
-		for (i = 0; i < withlen; i++) {
-			temp[i + offset] = with[i];
-		}
-		j = offset + withlen;
-		for (i = offset + whatlen; i < (unsigned) sl; i++) {
-			temp[j++] = data[i];
-		}
-		temp[newlen] = '\0';
-		delete[]data;
-		data = temp;
-		sl = newlen;
-	}
-}
-
-// *
-// *
-// * Tidy-up functions
-// *
-// *
-
-// removes a char from the end
+// remove characters from end/beginning
 void String::chop()
 {
-	if (sl < 1)
-		return;  // can't have -ve String length
-	char *temp = new char[sl];
-	memcpy(temp, data, sl - 1);
-	delete[]data;
-	data = temp;
-	sl -= 1;
-	data[sl] = '\0';
+	*this = this->substr(0, this->length() - 1);
 }
-
-// removes a char from the begining
 void String::lop()
 {
-	if (sl < 1)
-		return;  // can't have -ve String length
-	char *temp = new char[sl];
-	memcpy(temp, data + 1, sl - 1);
-	delete[]data;
-	data = temp;
-	sl -= 1;
-	data[sl] = '\0';
+	*this = this->substr(1);
 }
 
-// remove whitespace from beginning and end
+// remove leading & trailing whitespace
 void String::removeWhiteSpace()
 {
-	if (sl < 1)
-		return;  // nothing to remove
-	while ((sl > 0) && ((unsigned char) data[sl - 1] < 33)) {
-		chop();
-	}
-	while ((sl > 0) && ((unsigned char) data[0] < 33)) {
-		lop();
-	}
+	size_type start = this->find_first_not_of(' ');
+	if (start == std::string::npos)
+		start = 0;
+	size_type end = this->find_last_not_of(' ');
+	if (end == std::string::npos)
+		end = this->length() - 1;
+	*this = this->substr(start, (end - start)+1);
 }
 
-// remove protocol prefix
+// remove protocol specifier
 void String::removePTP()
 {
-	if (startsWith("http://") || startsWith("ftp://")
-	    || startsWith("https://")) {
-		int pos = strstr(data, "://") - data + 3;
-		char *temp = new char[sl - pos + 1];
-		memcpy(temp, data + pos, sl - pos);
-		delete[]data;
-		data = temp;
-		sl -= pos;
-		data[sl] = '\0';
+	if (this->startsWith("http://") || this->startsWith("https://")
+		|| this->startsWith("https://"))
+	{
+		*this = this->after("://");
 	}
 }
 
-// truncate string to given length
+// limit string to given length
 int String::limitLength(unsigned int l)
 {
-	if (l >= (unsigned) sl || l < 1) {
-		return sl;
-	}
-	char *temp = new char[l + 1];
-	memcpy(temp, data, l);
-	delete[]data;
-	data = temp;
-	sl = l;
-	data[sl] = '\0';
-	return sl;
+	*this = this->substr(0, l);
+	return this->length();
 }
 
 // remove repeated occurrences of given character
 void String::removeMultiChar(unsigned char c)
 {
-	char *temp = new char[sl + 1];
-	int j = 0;
+	std::string temp;
 	unsigned char t;
 	bool wasslash = false;
-	for (int i = 0; i < sl; i++) {
-		t = data[i];
+	unsigned int l = this->length();
+	for (unsigned int i = 0; i < l; i++) {
+		t = (*this)[i];
 		if (t != c) {
 			// we didn't find the character - copy what we did find,
 			// and clear repetition flag
-			temp[j++] = t;
+			temp += t;
 			wasslash = false;
 			continue;
 		}
@@ -630,41 +336,34 @@ void String::removeMultiChar(unsigned char c)
 		// we found the character, without repetition flag set
 		// - copy only first occurrence & set repetition flag
 		wasslash = true;
-		temp[j++] = t;
+		temp += t;
 	}
-	// copy new, cleaned string into permanent storage
-	char *temp2 = new char[j + 1];
-	memcpy(temp2, temp, j);
-	temp2[j] = '\0';
-	delete[]temp;
-	delete[]data;
-	data = temp2;
-	sl = j;
+	*this = temp;
 }
 
 // tidy up slashes, trailing dots, etc. in file paths
 void String::realPath()
 {
-	if (sl < 3) {
+	if (this->length() < 3) {
 		return;
 	}
-	char *temp = new char[sl + 1];
+	char *temp = new char[this->length() + 1];
 	unsigned char b, c, d;
-	unsigned int offset = 0;
-	for (int i = 0; i < sl; i++) {
-		b = data[i];
+	unsigned int offset = 0, l = this->length();
+	for (unsigned int i = 0; i < l; i++) {
+		b = (*this)[i];
 		if (b == '/') {
-			if (data[i + 1] == '/') {	// ignore multiple slashes
+			if ((*this)[i + 1] == '/') {	// ignore multiple slashes
 				continue;
 			}
 		}
 		if (b == '.') {
-			c = data[i + 1];
+			c = (*this)[i + 1];
 			if (c == '\0' || c == '/') {
 				continue;  // ignore just dot
 			}
 			if (c == '.') {
-				d = data[i + 2];
+				d = (*this)[i + 2];
 				if (d == '\0' || d == '/' || d == '\\') {
 					if (offset > 0) {
 						offset--;
@@ -684,13 +383,9 @@ void String::realPath()
 		}
 		temp[offset++] = b;
 	}
-	char *temp2 = new char[offset + 1];
-	memcpy(temp2, temp, offset);
-	temp2[offset] = '\0';
-	delete[]data;
-	delete[]temp;
-	data = temp2;
-	sl = offset;
+	temp[offset] = '\0';
+	*this = temp;
+	delete[] temp;
 }
 
 // *
@@ -714,7 +409,7 @@ String String::md5()
 
 	String ret;
 
-	md5_buffer(data, (size_t) sl, md5array);
+	md5_buffer(this->c_str(), (size_t) this->length(), md5array);
 
 	for (i = 0; i < 16; i++) {
 		sprintf(buf, "%02X", (unsigned char) (md5array[i]));
