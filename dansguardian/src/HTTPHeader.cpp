@@ -406,7 +406,7 @@ void HTTPHeader::setURL(String &url) {
 #ifdef DGDEBUG
 		std::cout << "setURL: header[] line changed from: " << (*phost) << std::endl;
 #endif
-		(*phost) = String("Host: ") + hostname + ":" + port + "\r";
+		(*phost) = String("Host: ") + hostname; (*phost) += ":"; (*phost) += port; (*phost) += "\r";
 #ifdef DGDEBUG
 		std::cout << " to " << (*phost) << std::endl;
 #endif
@@ -435,14 +435,14 @@ bool HTTPHeader::regExp(String& line, std::deque<RegExp>& regexp_list, std::dequ
 	String newLine;
 	bool linemodified = false;
 	unsigned int i;
-	int j, k;
+	unsigned int j, k;
 	unsigned int s = regexp_list.size();
-	int matches, submatches;
-	int match;
-	int srcoff;
-	int nextoffset;
+	unsigned int matches, submatches;
+	unsigned int match;
+	unsigned int srcoff;
+	unsigned int nextoffset;
 	unsigned int matchlen;
-	int oldlinelen;
+	unsigned int oldlinelen;
 
 	// iterate over our list of precompiled regexes
 	for (i = 0; i < s; i++) {
@@ -1240,7 +1240,7 @@ String HTTPHeader::hexToChar(String n, bool all)
 		return n;
 	}
 	c = a * 16 + b;
-	if (all || (c >= 'a' && c <= 'z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '-')) {
+	if (all || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '-')) {
 		buf[0] = c;
 		buf[1] = '\0';
 		n = buf;
