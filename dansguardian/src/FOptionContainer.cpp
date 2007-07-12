@@ -1043,7 +1043,7 @@ char *FOptionContainer::inURLList(String &url, unsigned int list, bool doblanket
 		}
 	}
 
-	int fl;
+	unsigned int fl;
 	char *i;
 	String foundurl;
 #ifdef DGDEBUG

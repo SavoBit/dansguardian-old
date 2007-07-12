@@ -223,7 +223,7 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 	urld.toLower();
 	urld.removePTP();
 	String domain, tempurl, foundurl, path, extension;
-	int fl;
+	unsigned int fl;
 	if (urld.contains("/")) {
 		domain = urld.before("/");
 		path = "/" + urld.after("/");

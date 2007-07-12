@@ -445,13 +445,13 @@ bool DataBuffer::contentRegExp(int filtergroup)
 #endif
 	bool contentmodified = false;
 	unsigned int i;
-	int j, k, m;
+	unsigned int j, k, m;
 	unsigned int s = (*o.fg[filtergroup]).content_regexp_list_comp.size();
-	int matches;
-	int submatch, submatches;
+	unsigned int matches;
+	unsigned int submatch, submatches;
 	RegExp *re;
 	String *replacement;
-	int replen;
+	unsigned int replen;
 	int sizediff;
 	char *newblock;
 	char *dstpos;
