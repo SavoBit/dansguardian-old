@@ -106,6 +106,7 @@ void ListContainer::reset()
 	combilist.clear();
 	slowgraph.clear();
 	list.clear();
+	lengthlist.clear();
 	weight.clear();
 	itemtype.clear();
 	timelimitindex.clear();
@@ -320,6 +321,7 @@ bool ListContainer::addToItemListPhrase(char *s, int len, int type, int weightin
 {
 	int i;
 	list.push_back(data_length);
+	lengthlist.push_back(len);
 	for (i = 0; i < len; i++) {
 		data[data_length + i] = s[i];
 	}
@@ -641,7 +643,7 @@ char *ListContainer::findEndsWith(char *string)
 // For phrase lists - grab the text, score and type of a given phrase, based on item number within list
 std::string ListContainer::getItemAtInt(int index)
 {
-	std::string s(data + list[index]);
+	std::string s(data + list[index], lengthlist[index]);
 	return s;
 }
 int ListContainer::getWeightAt(unsigned int index)
@@ -770,7 +772,7 @@ void ListContainer::makeGraph(bool fqs)
 	graphSizeSort(0, items - 1, &sizelist);
 
 	for (i = 0; i < items; i++) {
-		graphAdd(data + list[sizelist[i]], 0, sizelist[i]);
+		graphAdd(String(data + list[sizelist[i]], lengthlist[sizelist[i]]), 0, sizelist[i]);
 	}
 
 #ifdef DGDEBUG
@@ -1315,6 +1317,7 @@ bool ListContainer::readProcessedItemList(const char *filename, bool startswith,
 			continue;
 		i = slen - 1;
 		list.push_back(data_length);
+		lengthlist.push_back(slen);
 		for (; i >= 0; i--) {
 			data[data_length + i] = linebuffer[i];
 		}
@@ -1330,6 +1333,7 @@ void ListContainer::addToItemList(char *s, int len)
 {
 	int i;
 	list.push_back(data_length);
+	lengthlist.push_back(len);
 	for (i = 0; i < len; i++) {
 		data[data_length + i] = s[i];
 	}
@@ -1595,7 +1599,7 @@ bool ListContainer::isNow(int index)
 	wday--;
 	unsigned char cday = '0' + wday;
 	bool matchday = false;
-	for (int i = 0; i < tl.days.length(); i++) {
+	for (unsigned int i = 0; i < tl.days.length(); i++) {
 		if (tl.days[i] == cday) {
 			matchday = true;
 			break;

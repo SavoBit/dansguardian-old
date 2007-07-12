@@ -136,6 +136,7 @@ private:
 	bool issorted;
 	bool graphused;
 	std::vector<unsigned int > list;
+	std::vector<unsigned int > lengthlist;
 	std::vector<int > weight;
 	std::vector<int > itemtype;  // 0=banned, 1=weighted, -1=exception
 	bool force_quick_search;
