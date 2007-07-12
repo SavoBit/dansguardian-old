@@ -32,6 +32,28 @@
 # Remove the first # from the line above to enable this list only from
 # 9am to 5pm, Monday to Friday.
 
-#List other sites to block:
+
+# Blanket match.  To greylist all sites except those in the
+# exceptionsitelist and greysitelist files, remove
+# the # from the next line to leave only a '**':
+#**
+
+# Blanket SSL/CONNECT match.  To greylist all SSL 
+# and CONNECT tunnels except to addresses in the
+# exceptionsitelist and greysitelist files, remove
+# the # from the next line to leave only a '**s':
+#**s
+
+# Blanket IP match.  To greylist all sites specified only as an IP,
+# remove the # from the next line to leave only a '*ip':
+#*ip
+
+# Blanket SSL/CONNECT IP match.  To greylist all SSL and CONNECT
+# tunnels to sites specified only as an IP,
+# remove the # from the next line to leave only a '*ips':
+#*ips
+
+
+#List other sites to greylist:
 
 #www.bbc.co.uk

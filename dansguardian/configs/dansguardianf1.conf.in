@@ -67,6 +67,26 @@ bannedmimetypelist = '@DGCONFDIR@/lists/bannedmimetypelist'
 exceptionfilesitelist = '@DGCONFDIR@/lists/exceptionfilesitelist'
 exceptionfileurllist = '@DGCONFDIR@/lists/exceptionfileurllist'
 
+# Categorise without blocking:
+# Supply categorised lists here and the category string shall be logged against
+# matching requests, but matching these lists does not perform any filtering
+# action.
+#logsitelist = '@DGCONFDIR@/lists/logsitelist'
+#logurllist = '@DGCONFDIR@/lists/logurllist'
+#logregexpurllist = '@DGCONFDIR@/lists/logregexpurllist'
+
+# Outgoing HTTP header rules:
+# Optional lists for blocking based on, and modification of, outgoing HTTP
+# request headers.  Format for headerregexplist is one modification rule per
+# line, similar to content/URL modifications.  Format for
+# bannedregexpheaderlist is one regular expression per line, with matching
+# headers causing a request to be blocked.
+# Headers are matched/replaced on a line-by-line basis, not as a contiguous
+# block.
+# Use for example, to remove cookies or prevent certain user-agents.
+headerregexplist = '@DGCONFDIR@/lists/headerregexplist'
+bannedregexpheaderlist = '@DGCONFDIR@/lists/bannedregexpheaderlist'
+
 # Naughtyness limit
 # This the limit over which the page will be blocked.  Each weighted phrase is given
 # a value either positive or negative and the values added up.  Phrases to do with
@@ -211,7 +231,6 @@ deepurlanalysis = off
 # e.g. @DGDATADIR@/languages/ukenglish/custom.html
 #
 #htmltemplate = 'custom.html'
-
 
 # Email reporting - original patch by J. Gauthier
 
