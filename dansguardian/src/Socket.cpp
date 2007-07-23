@@ -30,6 +30,7 @@
 #include <cerrno>
 #include <unistd.h>
 #include <stdexcept>
+#include <netinet/tcp.h>
 
 
 // IMPLEMENTATION
@@ -43,6 +44,8 @@ Socket::Socket()
 	my_adr.sin_family = AF_INET;
 	peer_adr.sin_family = AF_INET;
 	peer_adr_length = sizeof(struct sockaddr_in);
+	int f = 1;
+	setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, &f, sizeof(int));
 }
 
 // create socket from pre-existing FD (address structs will be invalid!)
@@ -53,6 +56,8 @@ Socket::Socket(int fd):BaseSocket(fd)
 	my_adr.sin_family = AF_INET;
 	peer_adr.sin_family = AF_INET;
 	peer_adr_length = sizeof(struct sockaddr_in);
+	int f = 1;
+	setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, &f, sizeof(int));
 }
 
 // create socket from pre-existing FD, storing local & remote IPs
@@ -65,6 +70,8 @@ Socket::Socket(int newfd, struct sockaddr_in myip, struct sockaddr_in peerip):Ba
 	my_adr = myip;
 	peer_adr = peerip;
 	peer_adr_length = sizeof(struct sockaddr_in);
+	int f = 1;
+	setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, &f, sizeof(int));
 }
 
 // find the ip to which the client has connected
