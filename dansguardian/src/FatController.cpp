@@ -1043,7 +1043,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 
 			if (port != 0 && port != 80) {
 				// put port numbers of non-standard HTTP requests into the logged URL
-				String newwhere(where.c_str());
+				String newwhere(where);
 				if (newwhere.after("://").contains("/")) {
 					String proto, host, path;
 					proto = newwhere.before("://");
@@ -1057,10 +1057,10 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 					newwhere += String((int) port);
 					newwhere += "/";
 					newwhere += path;
-					where = newwhere.toCharArray();
+					where = newwhere;
 				} else {
 					where += ":";
-					where += String((int) port).toCharArray();
+					where += String((int) port);
 				}
 			}
 
@@ -1102,9 +1102,9 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 				if (temp.length() > 3) {
 					temp = "999";
 				}
-				utime = temp.toCharArray();
+				utime = temp;
 				utime = "." + utime;
-				utime = String((int) theend.tv_sec).toCharArray() + utime;
+				utime = String((int) theend.tv_sec) + utime;
 			}
 
 			if (o.log_file_format != 3) {
@@ -1114,20 +1114,20 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 				struct tm *tmnow;  // to hold the result from localtime()
 				time(&tnow);  // get the time after the lock so all entries in order
 				tmnow = localtime(&tnow);  // convert to local time (BST, etc)
-				year = String(tmnow->tm_year + 1900).toCharArray();
-				month = String(tmnow->tm_mon + 1).toCharArray();
-				day = String(tmnow->tm_mday).toCharArray();
-				hour = String(tmnow->tm_hour).toCharArray();
+				year = String(tmnow->tm_year + 1900);
+				month = String(tmnow->tm_mon + 1);
+				day = String(tmnow->tm_mday);
+				hour = String(tmnow->tm_hour);
 				temp = String(tmnow->tm_min);
 				if (temp.length() == 1) {
 					temp = "0" + temp;
 				}
-				min = temp.toCharArray();
+				min = temp;
 				temp = String(tmnow->tm_sec);
 				if (temp.length() == 1) {
 					temp = "0" + temp;
 				}
-				sec = temp.toCharArray();
+				sec = temp;
 				when = year + "." + month + "." + day + " " + hour + ":" + min + ":" + sec;
 				// truncate long log items
 				/*if ((o.max_logitem_length > 0) && (when.length() > o.max_logitem_length))
@@ -1138,8 +1138,8 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 					
 			}
 
-			sweight = String(naughtiness).toCharArray();
-			ssize = String(size).toCharArray();
+			sweight = String(naughtiness);
+			ssize = String(size);
 
 			// truncate long log items
 			if (o.max_logitem_length > 0) {
@@ -1168,8 +1168,8 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 				clienthost[0]=0;
 			}
 
-			std::string stringcode(String(code).toCharArray());
-			std::string stringgroup(String(filtergroup+1).toCharArray());
+			String stringcode(code);
+			String stringgroup(filtergroup+1);
 
 			switch (o.log_file_format) {
 			case 4:
@@ -1190,17 +1190,17 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 					while (temp.length() < 6) {
 						temp = " " + temp;
 					}
-					duration = temp.toCharArray();
+					duration = temp;
 
 					if (code == 403) {
 						hitmiss = "TCP_DENIED/403";
 					} else {
 						if (cachehit) {
 							hitmiss = "TCP_HIT/";
-							hitmiss += stringcode;
+							hitmiss.append(stringcode);
 						} else {
 							hitmiss = "TCP_MISS/";
-							hitmiss += stringcode;
+							hitmiss.append(stringcode);
 						}
 					}
 					hier = "DEFAULT_PARENT/";
