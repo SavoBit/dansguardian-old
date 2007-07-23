@@ -41,7 +41,6 @@
 #include <istream.h>
 #endif
 
-
 // DEFINES
 
 #define __DGHEADER_SENDALL 0
@@ -156,7 +155,7 @@ int DataBuffer::bufferReadFromSocket(Socket * sock, char *buffer, int size, int 
 	struct timeval nowadays;
 	gettimeofday(&starttime, NULL);
 	while (pos < size) {
-		rc = sock->readFromSocket(&buffer[pos], size - pos, 0, sockettimeout);
+		rc = sock->readFromSocket(&buffer[pos], size - pos, 0, sockettimeout, false);
 		if (rc < 1) {
 			// none recieved or an error
 			if (pos > 0) {
