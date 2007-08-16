@@ -1075,7 +1075,7 @@ void ListContainer::graphAdd(String s, int inx, int item)
 	unsigned char c;
 	bool found = false;
 	String t;
-	int i, px, it;
+	int i, px;
 	int numlinks;
 	int *graphdata;
 	int *graphdata2 = realgraphdata + ROOTOFFSET;
@@ -1106,17 +1106,30 @@ void ListContainer::graphAdd(String s, int inx, int item)
 			if (px == 1) {
 				// the exact phrase is already there
 				px = graphdata2[(graphdata[inx * GRAPHENTRYSIZE + 4 + i]) * GRAPHENTRYSIZE + 3];
-				it = itemtype[px];
 
-				if ((it > 9 && itemtype[item] < 10) || itemtype[item] == -1) {
+				// -1=exception
+				// 0=banned
+				// 1=weighted
+				// 10 = combination exception
+				// 11 = combination banned
+				// 12 = combination weighted
+				// 20,21,22 = end of combi marker
+				if ((itemtype[px] > 9 && itemtype[item] < 10) ||
+					(itemtype[px] == 1 && itemtype[item] == 1 && (weight[item] > weight[px])) ||
+					(itemtype[px] == 1 && itemtype[item] == 0) ||
+					itemtype[item] == -1)
+				{
 					// exists as a combi entry already
 					// if got here existing entry must be a combi AND
 					// new entry is not a combi so we overwrite the
 					// existing values as combi values and types are
 					// stored in the combilist
 					// OR
-					// its a an exception
-					// exception phrases take precedence
+					// both are weighted phrases and the new phrase is higher weighted
+					// OR
+					// the existing phrase is weighted and the new phrase is banned
+					// OR
+					// new phrase is an exception; exception phrases take precedence
 					itemtype[px] = itemtype[item];
 					weight[px] = weight[item];
 					categoryindex[px] = categoryindex[item];
