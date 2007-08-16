@@ -1774,6 +1774,14 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 #ifdef DGDEBUG
 				std::cout << "deep analysing: " << deepurl << std::endl;
 #endif
+				if (o.fg[filtergroup]->inExceptionSiteList(deepurl) || o.fg[filtergroup]->inGreySiteList(deepurl)
+					|| o.fg[filtergroup]->inExceptionURLList(deepurl) || o.fg[filtergroup]->inGreyURLList(deepurl))
+				{
+#ifdef DGDEBUG
+					std::cout << "deep site found in exception/grey list; skipping" << std::endl;
+#endif
+					continue;
+				}
 				if ((i = (*o.fg[filtergroup]).inBannedSiteList(deepurl)) != NULL) {
 					(*checkme).whatIsNaughty = o.language_list.getTranslation(500); // banned site
 					(*checkme).whatIsNaughty += i;
