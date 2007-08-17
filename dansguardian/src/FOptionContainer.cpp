@@ -649,19 +649,19 @@ bool FOptionContainer::read(const char *filename)
 			grey_url_flag = true;
 			
 			// log-only lists
-			if (readFile(log_url_list_location.c_str(), &log_url_list, true, true, "logurllist")) {
+			if (log_url_list_location.length() && readFile(log_url_list_location.c_str(), &log_url_list, true, true, "logurllist")) {
 				log_url_flag = true;
 #ifdef DGDEBUG
 				std::cout << "Enabled log-only URL list" << std::endl;
 #endif
 			}
-			if (readFile(log_site_list_location.c_str(), &log_site_list, false, true, "logsitelist")) {
+			if (log_site_list_location.length() && readFile(log_site_list_location.c_str(), &log_site_list, false, true, "logsitelist")) {
 				log_site_flag = true;
 #ifdef DGDEBUG
 				std::cout << "Enabled log-only domain list" << std::endl;
 #endif
 			}
-			if (readRegExMatchFile(log_regexpurl_list_location.c_str(), "logregexpurllist", log_regexpurl_list,
+			if (log_regexpurl_list_location.length() && readRegExMatchFile(log_regexpurl_list_location.c_str(), "logregexpurllist", log_regexpurl_list,
 				log_regexpurl_list_comp, log_regexpurl_list_source, log_regexpurl_list_ref))
 			{
 				log_regexpurl_flag = true;
