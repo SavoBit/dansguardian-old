@@ -52,6 +52,12 @@ String::String(const unsigned int num)
 	buf << num << std::ends;
 	*this = buf.str();
 }
+String::String(const long unsigned int num)
+{
+	std::ostrstream buf;
+	buf << num << std::ends;
+	*this = buf.str();
+}
 #else
 String::String(const int num)
 {
@@ -80,6 +86,16 @@ String::String(const long num)
 	delete[] data;
 }
 String::String(const unsigned int num)
+{
+	std::stringstream buf;
+	buf << num << std::ends;
+	int l = buf.str().length();
+	char* data = new char[l+1];
+	buf >> data;
+	*this = data;
+	delete[] data;
+}
+String::String(const long unsigned num)
 {
 	std::stringstream buf;
 	buf << num << std::ends;
