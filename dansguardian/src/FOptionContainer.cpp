@@ -274,7 +274,7 @@ bool FOptionContainer::read(const char *filename)
 		}
 
 		if (findoptionS("notifycontent") == "on") {
-			if (use_smtp) {
+			if (!use_smtp) {
 				if (!is_daemonised)
 					std::cerr << "notifycontent cannot be on while usesmtp is off." << std::endl;
 				syslog(LOG_ERR, "notifycontent cannot be on while usesmtp is off.");
