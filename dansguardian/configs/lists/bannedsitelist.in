@@ -69,7 +69,7 @@ badboys.com
 
 #Remove the # from the following and edit as needed to use a stock
 #squidGuard/urlblacklists collection.
-#.Include<@DGCONFDIR@/lists/blacklists/adults/domains>
+#.Include<@DGCONFDIR@/lists/blacklists/adult/domains>
 #.Include<@DGCONFDIR@/lists/blacklists/aggressive/domains>
 #.Include<@DGCONFDIR@/lists/blacklists/artnudes/domains>
 #.Include<@DGCONFDIR@/lists/blacklists/audio-video/domains>
