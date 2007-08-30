@@ -1,6 +1,5 @@
 #!/bin/env perl
 use strict;
-use Data::Dumper;
 my $fname = $ARGV[0];
 my @questions;
 my @answers;
@@ -39,7 +38,7 @@ while(<FILE>) {
 		$answer =~ s/"/&quot;/g; #"
 		$answer =~ s/</&lt;/g;
 		$answer =~ s/>/&gt;/g;
-		$answer =~ s/(http:\/\/[^ ]*)/<a href="$1">$1<\/a>/g;
+		$answer =~ s/(http:\/\/[^\s]*)/<a href="$1">$1<\/a>/g;
 		push(@questions, $question);
 		push(@answers, $answer);
 	}
@@ -50,6 +49,17 @@ print qq|<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
 <html>
 	<head>
 		<title>DansGuardian 2.9 FAQ</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<style type="text/css">
+			p {
+				text-align: justify;
+				margin-bottom: 0;
+				margin-top: 0.5em;
+			}
+			p.q {
+				text-indent: 2em;
+			}
+		</style>
 	</head>
 	<body>
 		<h1>Contents</h1>
@@ -67,8 +77,8 @@ $count = 0;
 foreach my $question (@questions) {
 	my $answer = $answers[$count++];
 	chomp $answer;
-	$answer =~ s/\n/<\/p><p>/g;
-	print qq|		<p id="q$count" style="margin-top: 2em;"><a href="#top">^</a> <strong>$count.</strong> <em>$question</em></p>
+	$answer =~ s/\n/<\/p><p class='q'>/g;
+	print qq|		<p id="q$count" style="margin-top: 2em;"><a href="#top">^</a> <b>$count.</b> <i>$question</i></p>
 		<p>$answer</p>
 |;
 }
