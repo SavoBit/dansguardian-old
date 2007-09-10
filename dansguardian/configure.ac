@@ -104,6 +104,7 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([dup2 gettimeofday memset select])
 AC_CHECK_FUNCS([strerror strstr strtol])
 AC_CHECK_FUNCS([setuid setgid umask seteuid setreuid setlocale strdup])
+AC_SEARCH_LIBS([floor], [m])
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([socket], [socket], [], [
 	AC_CHECK_LIB(

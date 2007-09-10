@@ -29,6 +29,7 @@
 #include "RegExp.hpp"
 #include <cstdlib>
 #include <cstdio>
+#include <ctime>
 #include <unistd.h>
 #include "String.hpp"
 #include <iostream>

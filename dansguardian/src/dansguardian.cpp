@@ -27,6 +27,7 @@
 
 #include <iostream>
 #include <cstdio>
+#include <ctime>
 #include <unistd.h>
 #include <cerrno>
 #include <syslog.h>

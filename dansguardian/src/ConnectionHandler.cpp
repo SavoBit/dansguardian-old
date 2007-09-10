@@ -32,6 +32,7 @@
 #include <syslog.h>
 #include <cerrno>
 #include <cstdio>
+#include <ctime>
 #include <algorithm>
 #include <netdb.h>
 #include <cstdlib>

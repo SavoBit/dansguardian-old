@@ -25,6 +25,7 @@
 
 #include <syslog.h>
 #include <algorithm>
+#include <ctime>
 #include <sys/stat.h>
 #include <sys/time.h>
 

@@ -33,6 +33,7 @@
 
 #include <syslog.h>
 #include <csignal>
+#include <ctime>
 #include <sys/stat.h>
 #include <pwd.h>
 #include <cerrno>
