@@ -33,6 +33,10 @@
 
 #listcategory: "Weighted Phrases"
 
+#To enable several non-PICS self-labelling and self-rating systems.  
+#Enabled as a bannedsitelist by default.  Disable there before enabling as a phraselist.
+#.Include<@DGCONFDIR@/lists/phraselists/selflabeling/weighted>
+
 #Good Phrases (to allow medical, education, news and other good sites)
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general>
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_news>
@@ -51,6 +55,7 @@
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_italian>
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_japanese> #ALPHA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_malay> #BETA#
+.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_norwegian> #BETA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_portuguese>
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_spanish> #ALPHA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_russian> #BETA#
@@ -101,8 +106,17 @@
 #.Include<@DGCONFDIR@/lists/phraselists/personals/weighted>
 #.Include<@DGCONFDIR@/lists/phraselists/personals/weighted_portuguese>
 #.Include<@DGCONFDIR@/lists/phraselists/sport/weighted> #ALPHA#
+#.Include<@DGCONFDIR@/lists/phraselists/travel/weighted>
 
 #System Management and Security
+#.Include<@DGCONFDIR@/lists/phraselists/domainsforsale/weighted>
+#.Include<@DGCONFDIR@/lists/phraselists/idtheft/weighted>
 .Include<@DGCONFDIR@/lists/phraselists/malware/weighted> #BETA#
 .Include<@DGCONFDIR@/lists/phraselists/proxies/weighted>
+#.Include<@DGCONFDIR@/lists/phraselists/upstreamfilter/weighted>
 .Include<@DGCONFDIR@/lists/phraselists/warezhacking/weighted>
+
+#Miscellaneous	
+#.Include<@DGCONFDIR@/lists/phraselists/secretsocieties/weighted>
+
+
