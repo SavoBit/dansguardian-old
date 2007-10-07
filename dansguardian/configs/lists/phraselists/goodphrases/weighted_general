@@ -1,10 +1,30 @@
+#
+#Generally Good Phrases to balance out bad phrases tagged on a page.
+#
+
+#Following Added to exempt DansGuardian blocking sites
+<regexp>,<dansguardian><-200>
+<bannedsitelist><-20>
+<reportinglevel><-20>
+<transparent><-20>
+<authenticated><-20>
+< logrotat>,<dansguardian><-200>
+< weightedphraselist><-50>
+< weightedphrasemode>,<dansguardian><-200>
+< configuring>,<dansguardian><-200>
+< building><-20>
+< apache>,<web><-20>
+< binary><-20>
+< naughtynesslimit><-50>
+#
+
 < smoothwall ><-20>
 <smoothwall ><-20>
-<dansguardian><-30>
+<dansguardian><-50>
 < dns ><-20>
 < wikipedia ><-30>
 <network management><-50>
-<firewall><-20>
+<firewall><-50>
 < vpn ><-20>
 <network security><-50>
 <anti-virus><-50>

@@ -5,10 +5,40 @@
 
 #listcategory: "Proxies"
 
-#PHProxy or Poxy
+#PHProxy, Poxy
 <phproxy>,<post><150>
 <phproxy><100>
-<include form>,<remove scripts>,<accept cookies>,<show images>,<show referer><100>
+<include form>,<remove scripts>,<accept cookies>,<show images>,<show referer><200>
+<proxy>,<Include mini URL><50>
+<proxy>,<Remove client-side scripting><50>
+<proxy>,<Strip page title><50>
+<FreeProxyTemplates><200>
+<proxnetwork><200>
+<remove_scripts><50>
+
+#Glype
+< glype ><150>
+<proxy>,<encode url><50>
+<proxy>,<allow cookies><50>
+
+#Zelune
+<__proxy_url><150>
+<__proxy_action><50>
+<redirect_browse><50>
+< zelune><100>
+<proxy_url><40>
+<proxy_options><30>
+<proxy>,<enter site url><150>
+<surf>,<enter url><50>
+<proxyshout><100>
+<proxy.com><100>
+
+#Surrogafier
+< surrogafy><100>
+< surrogafier><100>
+<proxy>,<encrypt urls><150>
+<proxy>,<remove scripts><150>
+
 
 #CGIPROXY
 <start browsing through this cgi-based proxy by entering a url below><200>
@@ -48,6 +78,12 @@
 < proxies><30>
 <public prox><30>
 <proxy list><20>
+<unblock websites><40>
+<unblock>,<myspace><40>
+<unblock>,< bebo><40>
+<unblock>,< facebook><40>
+<unblock>,< friendster><40>
+<unblock>,<myspace><40>
 
 #DansGuardian Bypass
 <hacking dansguardian><50>
