@@ -54,11 +54,11 @@
 
 #general gaming
 <game>,<cheats><30>
-<game>,<codes><30>
+#<game>,<codes><30>
 <game>,< simulation><30>
 <game>,< strategy><30>
 <game>,< adventure><30>
-<game>,< action><30>
+#<game>,< action><30>
 <game>,< rpg><30>
 <game>,< sport><30>
 

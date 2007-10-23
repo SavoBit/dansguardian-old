@@ -18,7 +18,7 @@
 <bearshare><20>
 <bitcomet><20>
 <dshare><20>
-< direct connect ><20>
+#< direct connect ><20>
 <edonkey><20>
 <emule><20>
 <grobster><20>
@@ -45,7 +45,7 @@
 
 #Networks
 <ed2k ><20>
-<direct-connect><20>
+#<direct-connect><20>
 < fasttrack ><20>
 <gnutella ><20>
 <kad ><20>

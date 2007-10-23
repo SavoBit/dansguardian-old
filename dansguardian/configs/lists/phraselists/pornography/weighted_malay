@@ -28,7 +28,7 @@
 <kiwak><80>
 <konek><80>
 <konek>,<cipap><150>
-<kote><80>
+#<kote><80>  Recommended by Dave BurkHolder
 <kote>,<cipap><150>
 <lancau><80>
 <lanciao><80>
@@ -47,7 +47,7 @@
 <ramas>,<ghairah><80>
 <rangsang><10>
 <rogol><10>
-<sial><50>
+< sial><50>
 <telanjang><80>
 <telur><10>
 <testis><10>
