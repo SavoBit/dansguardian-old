@@ -107,12 +107,14 @@
 #.Include<@DGCONFDIR@/lists/phraselists/personals/weighted_portuguese>
 #.Include<@DGCONFDIR@/lists/phraselists/sport/weighted> #ALPHA#
 #.Include<@DGCONFDIR@/lists/phraselists/travel/weighted>
+#.Include<@DGCONFDIR@/lists/phraselists/music/weighted>
 
 #System Management and Security
 #.Include<@DGCONFDIR@/lists/phraselists/domainsforsale/weighted>
 #.Include<@DGCONFDIR@/lists/phraselists/idtheft/weighted>
 .Include<@DGCONFDIR@/lists/phraselists/malware/weighted> #BETA#
 .Include<@DGCONFDIR@/lists/phraselists/proxies/weighted>
+#.Include<@DGCONFDIR@/lists/phraselists/translation/weighted>
 #.Include<@DGCONFDIR@/lists/phraselists/upstreamfilter/weighted>
 .Include<@DGCONFDIR@/lists/phraselists/warezhacking/weighted>
 #.Include<@DGCONFDIR@/lists/phraselists/peer2peer/weighted>
