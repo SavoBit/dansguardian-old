@@ -2,11 +2,11 @@ MAINTAINERCLEANFILES    = Makefile.in
 
 DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists/phraselists
 PHRASELISTS = badwords chat drugadvocacy gambling games goodphrases \
-	      googlesearches gore illegaldrugs intolerance legaldrugs malware \
-	      news nudism peer2peer personals pornography proxies sport \
-	      violence warezhacking weapons webmail forums frenchbadwords \
-	      italianbadwords frenchpornography germanpornography \
-	      dutchbadwords rta
+		googlesearches gore illegaldrugs intolerance legaldrugs \
+		malware news nudism peer2peer personals pornography \
+		proxies sport violence warezhacking weapons webmail \
+		forums rta conspiracy domainsforsale idtheft safelabel \
+		travel upstreamfilter secretsocieties
 
 install-data-local: 
 	for l in $(PHRASELISTS); do \

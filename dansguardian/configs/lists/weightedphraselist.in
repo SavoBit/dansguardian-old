@@ -35,7 +35,7 @@
 
 #To enable several non-PICS self-labelling and self-rating systems.  
 #Enabled as a bannedsitelist by default.  Disable there before enabling as a phraselist.
-#.Include<@DGCONFDIR@/lists/phraselists/selflabeling/weighted>
+##.Include<@DGCONFDIR@/lists/phraselists/safelabel/weighted>
 
 #Good Phrases (to allow medical, education, news and other good sites)
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general>
@@ -115,8 +115,10 @@
 .Include<@DGCONFDIR@/lists/phraselists/proxies/weighted>
 #.Include<@DGCONFDIR@/lists/phraselists/upstreamfilter/weighted>
 .Include<@DGCONFDIR@/lists/phraselists/warezhacking/weighted>
+#.Include<@DGCONFDIR@/lists/phraselists/peer2peer/weighted>
 
 #Miscellaneous	
+#.Include<@DGCONFDIR@/lists/phraselists/conspiracy/weighted>
 #.Include<@DGCONFDIR@/lists/phraselists/secretsocieties/weighted>
 
 
