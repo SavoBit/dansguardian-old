@@ -6,7 +6,7 @@ PHRASELISTS = badwords chat drugadvocacy gambling games goodphrases \
 		malware news nudism peer2peer personals pornography \
 		proxies sport violence warezhacking weapons webmail \
 		forums rta conspiracy domainsforsale idtheft safelabel \
-		travel upstreamfilter secretsocieties
+		travel upstreamfilter secretsocieties translation music
 
 install-data-local: 
 	for l in $(PHRASELISTS); do \
