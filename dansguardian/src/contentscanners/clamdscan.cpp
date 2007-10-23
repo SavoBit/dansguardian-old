@@ -153,7 +153,6 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 	char *buff = new char[4096];
 	int rc;
 	try {
-		stripedsocks.checkForInput(o.content_scanner_timeout);
 		rc = stripedsocks.getLine(buff, 4096, o.content_scanner_timeout);
 	} catch(exception & e) {
 		delete[]buff;
