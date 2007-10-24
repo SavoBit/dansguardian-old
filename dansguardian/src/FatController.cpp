@@ -859,14 +859,11 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 
 #ifdef __EMAIL
 	// Email notification patch by J. Gauthier
-	char *vbody_temp = new char[8192];   
-   
 	map<string,int> violation_map;
 	map<string,int> timestamp_map;   
 	map<string,string> vbody_map;
 
 	int curv_tmp, stamp_tmp, byuser;
-	int smtppid;
 #endif
 	
 	//String where, what, how;
@@ -1165,8 +1162,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 			if (o.anonymise_logs) {
 				who = "";
 				from = "0.0.0.0";
-				//delete clienthost;
-				clienthost[0]=0;
+				clienthost.clear();
 			}
 
 			String stringcode(code);
@@ -1253,37 +1249,49 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 
 				// virus
 				if ((wasscanned && wasinfected) && (o.fg[filtergroup]->notifyav))  {
-					if ((smtppid = fork() == 0))  {
-						FILE* mail = popen (o.mailer.c_str(), "w");
-						if (mail==NULL) {
-							syslog(LOG_ERR, "Unable to contact defined mailer.");
-						}
-						else {
-							fprintf(mail, "To: %s\n", o.fg[filtergroup]->avadmin.c_str());
-							fprintf(mail, "From: %s\n", o.fg[filtergroup]->mailfrom.c_str());
-							fprintf(mail, "Subject: %s\n", o.fg[filtergroup]->avsubject.c_str());
-							fprintf(mail, "A virus was detected by DansGuardian.\n\n");
-							fprintf(mail, "%-10s%s\n", "Data/Time:", when.c_str());
-							if (who != "-")
-								fprintf(mail, "%-10s%s\n", "User:", who.c_str());
-							fprintf(mail, "%-10s%s (%s)\n", "From:", from.c_str(),  ((clienthost.length() > 0) ? clienthost.c_str() : "-"));
-							fprintf(mail, "%-10s%s\n", "Where:", where.c_str());
-							// specifically, the virus name comes after message 1100 ("Virus or bad content detected.")
-							String swhat(what);
-							fprintf(mail, "%-10s%s\n", "Why:", swhat.after(o.language_list.getTranslation(1100)).toCharArray() + 1);
-							fprintf(mail, "%-10s%s\n", "Method:", how.c_str());
-							fprintf(mail, "%-10s%s\n", "Size:", ssize.c_str());
-							fprintf(mail, "%-10s%s\n", "Weight:", sweight.c_str());
-							if (cat.c_str()!=NULL)
-								fprintf(mail, "%-10s%s\n", "Category:", cat.c_str());
-							fprintf(mail, "%-10s%s\n", "Mime type:", mimetype.c_str());
-							fprintf(mail, "%-10s%s\n", "Group:", o.fg[filtergroup]->name.c_str());
-							fprintf(mail, "%-10s%s\n", "HTTP resp:", stringcode.c_str());
+					// Use a double fork to ensure child processes are reaped adequately.
+					pid_t smtppid;
+					if ((smtppid = fork()) != 0) {
+						// Parent immediately waits for first child
+						waitpid(smtppid, NULL, 0);
+					} else {
+						// First child forks off the *real* process, but immediately exits itself
+						if (fork() == 0)  {
+							// Second child - do stuff
+							setsid();
+							FILE* mail = popen (o.mailer.c_str(), "w");
+							if (mail==NULL) {
+								syslog(LOG_ERR, "Unable to contact defined mailer.");
+							}
+							else {
+								fprintf(mail, "To: %s\n", o.fg[filtergroup]->avadmin.c_str());
+								fprintf(mail, "From: %s\n", o.fg[filtergroup]->mailfrom.c_str());
+								fprintf(mail, "Subject: %s\n", o.fg[filtergroup]->avsubject.c_str());
+								fprintf(mail, "A virus was detected by DansGuardian.\n\n");
+								fprintf(mail, "%-10s%s\n", "Data/Time:", when.c_str());
+								if (who != "-")
+									fprintf(mail, "%-10s%s\n", "User:", who.c_str());
+								fprintf(mail, "%-10s%s (%s)\n", "From:", from.c_str(),  ((clienthost.length() > 0) ? clienthost.c_str() : "-"));
+								fprintf(mail, "%-10s%s\n", "Where:", where.c_str());
+								// specifically, the virus name comes after message 1100 ("Virus or bad content detected.")
+								String swhat(what);
+								fprintf(mail, "%-10s%s\n", "Why:", swhat.after(o.language_list.getTranslation(1100)).toCharArray() + 1);
+								fprintf(mail, "%-10s%s\n", "Method:", how.c_str());
+								fprintf(mail, "%-10s%s\n", "Size:", ssize.c_str());
+								fprintf(mail, "%-10s%s\n", "Weight:", sweight.c_str());
+								if (cat.c_str()!=NULL)
+									fprintf(mail, "%-10s%s\n", "Category:", cat.c_str());
+								fprintf(mail, "%-10s%s\n", "Mime type:", mimetype.c_str());
+								fprintf(mail, "%-10s%s\n", "Group:", o.fg[filtergroup]->name.c_str());
+								fprintf(mail, "%-10s%s\n", "HTTP resp:", stringcode.c_str());
 
-							pclose(mail);
+								pclose(mail);
+							}
+							// Second child exits
+							_exit(0);
 						}
-						// child exits
-						_exit(0);				 
+						// First child exits
+						_exit(0);
 					}
 				}
 
@@ -1313,6 +1321,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 						o.fg[filtergroup]->current_violations++;
 
 					// construct email report
+					char *vbody_temp = new char[8192];   
 					sprintf(vbody_temp, "%-10s%s\n", "Data/Time:", when.c_str());
 					vbody+=vbody_temp;
 
@@ -1342,6 +1351,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 					vbody+=vbody_temp;
 					sprintf(vbody_temp, "%-10s%s\n\n", "HTTP resp:", stringcode.c_str());
 					vbody+=vbody_temp;
+					delete[] vbody_temp;
 					
 					// store the report with the group/user
 					if (byuser) {
@@ -1358,34 +1368,46 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 					// if threshold exceeded, send mail
 					if (curv_tmp >= o.fg[filtergroup]->violations) {
 						if ((o.fg[filtergroup]->threshold == 0) || ( (time(0) - stamp_tmp) <= o.fg[filtergroup]->threshold)) {
-							if ((smtppid = fork() == 0)) {
-								FILE* mail = popen (o.mailer.c_str(), "w");
-								if (mail==NULL) {
-									syslog(LOG_ERR, "Unable to contact defined mailer.");
-								}
-								else {
-									fprintf(mail, "To: %s\n", o.fg[filtergroup]->contentadmin.c_str());
-									fprintf(mail, "From: %s\n", o.fg[filtergroup]->mailfrom.c_str());
+							// Use a double fork to ensure child processes are reaped adequately.
+							pid_t smtppid;
+							if ((smtppid = fork()) != 0) {
+								// Parent immediately waits for first child
+								waitpid(smtppid, NULL, 0);
+							} else {
+								// First child forks off the *real* process, but immediately exits itself
+								if (fork() == 0)  {
+									// Second child - do stuff
+									setsid();
+									FILE* mail = popen (o.mailer.c_str(), "w");
+									if (mail==NULL) {
+										syslog(LOG_ERR, "Unable to contact defined mailer.");
+									}
+									else {
+										fprintf(mail, "To: %s\n", o.fg[filtergroup]->contentadmin.c_str());
+										fprintf(mail, "From: %s\n", o.fg[filtergroup]->mailfrom.c_str());
 
-									if (byuser)
-										fprintf(mail, "Subject: %s (%s)\n", o.fg[filtergroup]->contentsubject.c_str(), who.c_str());
-									else
-										fprintf(mail, "Subject: %s\n", o.fg[filtergroup]->contentsubject.c_str());
+										if (byuser)
+											fprintf(mail, "Subject: %s (%s)\n", o.fg[filtergroup]->contentsubject.c_str(), who.c_str());
+										else
+											fprintf(mail, "Subject: %s\n", o.fg[filtergroup]->contentsubject.c_str());
 
-									fprintf(mail, "%i violation%s ha%s occured within %i seconds.\n",
-										curv_tmp,
-										(curv_tmp==1)?"":"s",
-										(curv_tmp==1)?"s":"ve",									 
-										o.fg[filtergroup]->threshold);
+										fprintf(mail, "%i violation%s ha%s occured within %i seconds.\n",
+											curv_tmp,
+											(curv_tmp==1)?"":"s",
+											(curv_tmp==1)?"s":"ve",									 
+											o.fg[filtergroup]->threshold);
 
-									fprintf(mail, "%s\n\n", "This exceeds the notification threshold.");
-									if (byuser)
-										fprintf(mail, "%s", vbody_map[who].c_str());
-									else
-										fprintf(mail, "%s", o.fg[filtergroup]->violationbody.c_str());
+										fprintf(mail, "%s\n\n", "This exceeds the notification threshold.");
+										if (byuser)
+											fprintf(mail, "%s", vbody_map[who].c_str());
+										else
+											fprintf(mail, "%s", o.fg[filtergroup]->violationbody.c_str());
 										pclose(mail);
 									}
-								// child exits
+									// Second child exits
+									_exit(0);
+								}
+								// First child exits
 								_exit(0);
 							}
 						}
