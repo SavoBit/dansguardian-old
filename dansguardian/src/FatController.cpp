@@ -855,8 +855,6 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 	UDSocket* ipcpeersock;  // the socket which will contain the ipc connection
 	int rc, ipcsockfd;
 
-	char *logline = new char[8192];
-
 #ifdef __EMAIL
 	// Email notification patch by J. Gauthier
 	map<string,int> violation_map;
@@ -937,6 +935,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 			int itemcount = 0;
 			while(itemcount < (o.log_user_agent ? 24 : 23)) {
 				try {
+				    	char *logline = new char[8192];
 					rc = ipcpeersock->getLine(logline, 8192, 3, true);  // throws on err
 					if (rc < 0) {
 						delete ipcpeersock;
@@ -1022,6 +1021,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 							break;
 						}
 					}
+					delete[]logline;
 				}
 				catch(exception & e) {
 					delete ipcpeersock;
