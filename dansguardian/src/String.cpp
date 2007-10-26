@@ -315,7 +315,7 @@ void String::removeWhiteSpace()
 void String::removePTP()
 {
 	if (this->startsWith("http://") || this->startsWith("https://")
-		|| this->startsWith("https://"))
+		|| this->startsWith("ftp://"))
 	{
 		*this = this->after("://");
 	}
