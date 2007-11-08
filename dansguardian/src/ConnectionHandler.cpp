@@ -379,6 +379,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	String urldomain;
 
 	std::string exceptionreason;  // to hold the reason for not blocking
+	std::string exceptioncat;
 
 	int docsize = 0;  // to store the size of the returned document for logging
 
@@ -483,6 +484,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				docsize = 0;  // to store the size of the returned document for logging
 				mimetype = "-";
 				exceptionreason = "";
+				exceptioncat = "";
 
 				sendtoscanner.clear();
 				
@@ -798,18 +800,21 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						isexception = true;
 						exceptionreason = o.language_list.getTranslation(602);
 						// Exception site match.
+						exceptioncat = (*o.lm.l[(*o.fg[filtergroup]).exception_site_list]).lastcategory.toCharArray();
 					}
 				}
 				else if ((*o.fg[filtergroup]).inExceptionURLList(urld, true, is_ip, is_ssl)) {	// allowed url
 					isexception = true;
 					exceptionreason = o.language_list.getTranslation(603);
 					// Exception url match.
+					exceptioncat = (*o.lm.l[(*o.fg[filtergroup]).exception_url_list]).lastcategory.toCharArray();
 				}
 				else if ((rc = (*o.fg[filtergroup]).inExceptionRegExpURLList(urld)) > -1) {
 					isexception = true;
 					// exception regular expression url match:
 					exceptionreason = o.language_list.getTranslation(609);
 					exceptionreason += (*o.fg[filtergroup]).exception_regexpurl_list_source[rc].toCharArray();
+					exceptioncat = o.lm.l[o.fg[filtergroup]->exception_regexpurl_list_ref[rc]]->category.toCharArray();
 				}
 			}
 
@@ -855,7 +860,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					docsize = fdt.throughput;
 					if (!isourwebserver) {	// don't log requests to the web server
 						String rtype(header.requestType());
-						doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, false, isexception,
+						doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, (exceptioncat.length() ? &exceptioncat : NULL), false, isexception,
 							false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
 							mimetype, wasinfected, wasscanned, 0, filtergroup, &header, &docheader);
 					}
@@ -908,18 +913,21 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							isexception = true;
 							exceptionreason = o.language_list.getTranslation(602);
 							// Exception site match.
+							exceptioncat = (*o.lm.l[(*o.fg[filtergroup]).exception_site_list]).lastcategory.toCharArray();
 						}
 					}
 					else if ((*o.fg[filtergroup]).inExceptionURLList(urld, true, is_ip, is_ssl)) {	// allowed url
 						isexception = true;
 						exceptionreason = o.language_list.getTranslation(603);
 						// Exception url match.
+						exceptioncat = (*o.lm.l[(*o.fg[filtergroup]).exception_url_list]).lastcategory.toCharArray();
 					}
 					else if ((rc = (*o.fg[filtergroup]).inExceptionRegExpURLList(urld)) > -1) {
 						isexception = true;
 						// exception regular expression url match:
 						exceptionreason = o.language_list.getTranslation(609);
 						exceptionreason += (*o.fg[filtergroup]).exception_regexpurl_list_source[rc].toCharArray();
+						exceptioncat = o.lm.l[o.fg[filtergroup]->exception_regexpurl_list_ref[rc]]->category.toCharArray();
 					}
 					// don't filter exception and local web server
 					if ((isexception
@@ -946,8 +954,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							docsize = fdt.throughput;
 							if (!isourwebserver) {	// don't log requests to the web server
 								String rtype(header.requestType());
-								doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, false, isexception,
-									false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
+								doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, (exceptioncat.length() ? &exceptioncat : NULL),
+									false, isexception, false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
 									mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
 									// content wasn't modified, but URL was
 									false, true);
@@ -972,6 +980,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			if (isexception) {
 				checkme.isException = true;
 				checkme.whatIsNaughtyLog = exceptionreason;
+				checkme.whatIsNaughtyCategories = exceptioncat;
 			}
 
 			if (isconnect && !isbypass && !isexception) {
