@@ -72,10 +72,10 @@ void NaughtyFilter::reset()
 {
 	isItNaughty = false;
 	isException = false;
-	/*filtergroup = 0;
+	filtergroup = 0;
 	whatIsNaughty = "";
 	whatIsNaughtyLog = "";
-	whatIsNaughtyCategories = "";*/
+	whatIsNaughtyCategories = "";
 	usedisplaycats = false;
 	naughtiness = 0;
 }
@@ -648,6 +648,9 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 					// Combination exception phrase found:
 					whatIsNaughtyLog += combisofar;
 					whatIsNaughty = "";
+					++combicurrent;
+					cat = *(++combicurrent);
+					whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat);
 					return;
 				}
 				else if (type == 1) {	// combination weighting
@@ -795,6 +798,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 			// Exception phrase found:
 			whatIsNaughtyLog += (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent);
 			whatIsNaughty = "";
+			whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAt(*foundcurrent, NULL);
 			return;  // no point in going further
 		}
 		foundcurrent++;

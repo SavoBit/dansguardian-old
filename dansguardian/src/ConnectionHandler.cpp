@@ -1030,7 +1030,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					fdt.tunnel(proxysock, peerconn, true);  // not expected to exception
 					docsize = fdt.throughput;
 					String rtype(header.requestType());
-					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, NULL, false,
+					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, &checkme.whatIsNaughtyCategories, false,
 						isexception, false, &thestart,
 						cachehit, (wasrequested ? docheader.returnCode() : 200), mimetype, wasinfected,
 						wasscanned, checkme.naughtiness, filtergroup, &header, &docheader, false, urlmodified);
@@ -1437,7 +1437,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				if (!docheader.authRequired() && !pausedtoobig) {
 					String rtype(header.requestType());
 					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
-						rtype, docsize, NULL, false, isexception,
+						rtype, docsize, &checkme.whatIsNaughtyCategories, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
 						contentmodified, urlmodified, headermodified);
@@ -1507,7 +1507,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					docsize += fdt.throughput;
 					String rtype(header.requestType());
 					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
-						rtype, docsize, NULL, false, isexception,
+						rtype, docsize, &checkme.whatIsNaughtyCategories, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
 						contentmodified, urlmodified, headermodified);
@@ -1521,7 +1521,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				docsize = fdt.throughput;
 				String rtype(header.requestType());
 				if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
-					rtype, docsize, NULL, false, isexception,
+					rtype, docsize, &checkme.whatIsNaughtyCategories, false, isexception,
 					docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 					wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
 					contentmodified, urlmodified, headermodified);
