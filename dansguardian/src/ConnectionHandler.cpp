@@ -1517,7 +1517,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #ifdef DGDEBUG
 				std::cout << "tunnel activated" << std::endl;
 #endif
-				fdt.tunnel(proxysock, peerconn, false, docheader.contentLength(), true);
+				fdt.tunnel(proxysock, peerconn, isconnect, docheader.contentLength(), true);
 				docsize = fdt.throughput;
 				String rtype(header.requestType());
 				if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
