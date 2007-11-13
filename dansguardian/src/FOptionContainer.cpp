@@ -826,7 +826,8 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 				return false;
 			}
 		}
-		(*o.lm.l[banned_phrase_list]).makeGraph(force_quick_search);
+		if (!(*o.lm.l[banned_phrase_list]).makeGraph(force_quick_search))
+			return false;
 
 		(*o.lm.l[banned_phrase_list]).used = true;
 	}

@@ -26,7 +26,6 @@
 
 #include <syslog.h>
 #include <algorithm>
-#include <deque>
 
 
 // GLOBALS 
@@ -45,12 +44,11 @@ extern RegExp absurl_re, relurl_re;
 // operator so that the STL sort algorithm can be applied to lists of these.
 class listent {
 public:
-	listent(const int& c, const int& w, String& s) {
+	listent() {};
+	listent(const int& w, String& s) {
 		weight = w;
-		cat = c;
 		string = s;
 	};
-	int cat;
 	int weight;
 	String string;
 	int operator < (const listent &a) const {
@@ -418,9 +416,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 	String currcat("Embedded URLs");
 
 	// found categories list & reusable iterators
-	std::deque<listent> listcategories;
-	std::deque<listent>::iterator cattop = listcategories.begin();
-	std::deque<listent>::iterator catcurrent;
+	std::map<int, listent> listcategories;
 
 	// check for embedded references to banned sites/URLs.
 	// have regexes that check for URLs in pages (look for attributes (src, href, javascript location)
@@ -443,10 +439,10 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 	// if weighted phrases are enabled, and we have been passed a URL and domain, and embedded URL checking is enabled...
 	// then check for embedded URLs!
 	if (url != NULL && o.fg[filtergroup]->embedded_url_weight > 0) {
-		listent *ourcat = NULL;
-		std::deque<String> found;
-		std::deque<String>::iterator foundtop = found.begin();
-		std::deque<String>::iterator foundcurrent;
+		std::map<int, listent>::iterator ourcat;
+		bool catinited = false;
+		std::map<String, unsigned int> found;
+		std::map<String, unsigned int>::iterator founditem;
 
 		String u;
 		char* j;
@@ -472,31 +468,23 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 					// but because inBanned* methods do some cleaning up of their own, we don't know the form to check against.
 					// we actually want these cleanups do be done before passing to inBanned*/inException* - this would
 					// speed up ConnectionHandler a bit too.
-					isfound = false;
-					if (o.weighted_phrase_mode == 2) {
-						foundcurrent = foundtop;
-						while (foundcurrent != found.end()) {
-							if (*foundcurrent == j) {
-								isfound = true;
-								break;
-							}
-							foundcurrent++;
-						}
-					}
-					if (!isfound) {
+					founditem = found.find(j);
+					if ((o.weighted_phrase_mode == 2) && (founditem != found.end())) {
+						founditem->second++;
+					} else {
 						// add the site to the found phrases list
+						found[j] = 1;
 						if (weightedphrase.length() == 0)
 							weightedphrase = "[";
 						else
 							weightedphrase += " ";
 						weightedphrase += j;
-						if (ourcat == NULL) {
-							listcategories.push_back(listent(-1,o.fg[filtergroup]->embedded_url_weight,currcat));
-							ourcat = &(listcategories.back());
+						if (!catinited) {
+							listcategories[-1] = listent(o.fg[filtergroup]->embedded_url_weight,currcat);
+							ourcat = listcategories.find(-1);
+							catinited = true;
 						} else
-							ourcat->weight += o.fg[filtergroup]->embedded_url_weight;
-						if (o.weighted_phrase_mode == 2)
-							found.push_back(j);
+							ourcat->second.weight += o.fg[filtergroup]->embedded_url_weight;
 					}
 				}
 			}
@@ -550,41 +538,33 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 					// but because inBanned* methods do some cleaning up of their own, we don't know the form to check against.
 					// we actually want these cleanups do be done before passing to inBanned*/inException* - this would
 					// speed up ConnectionHandler a bit too.
-					isfound = false;
-					if (o.weighted_phrase_mode == 2) {
-						foundcurrent = foundtop;
-						while (foundcurrent != found.end()) {
-							if (*foundcurrent == j) {
-								isfound = true;
-								break;
-							}
-							foundcurrent++;
-						}
-					}
-					if (!isfound) {
+					founditem = found.find(j);
+					if ((o.weighted_phrase_mode == 2) && (founditem != found.end())) {
+						founditem->second++;
+					} else {
 						// add the site to the found phrases list
+						found[j] = 1;
 						if (weightedphrase.length() == 0)
 							weightedphrase = "[";
 						else
 							weightedphrase += " ";
 						weightedphrase += j;
-						if (ourcat == NULL) {
-							listcategories.push_back(listent(-1,o.fg[filtergroup]->embedded_url_weight,currcat));
-							ourcat = &(listcategories.back());
+						if (!catinited) {
+							listcategories[-1] = listent(o.fg[filtergroup]->embedded_url_weight,currcat);
+							ourcat = listcategories.find(-1);
+							catinited = true;
 						} else
-							ourcat->weight += o.fg[filtergroup]->embedded_url_weight;
-						if (o.weighted_phrase_mode == 2)
-							found.push_back(j);
+							ourcat->second.weight += o.fg[filtergroup]->embedded_url_weight;
 					}
 				}
 			}
 		}
-		if (ourcat != NULL) {
-			weighting = ourcat->weight;
+		if (catinited) {
+			weighting = ourcat->second.weight;
 			weightedphrase += "]";
 #ifdef DGDEBUG
 			std::cout << weightedphrase << std::endl;
-			std::cout << "score from embedded URLs: " << ourcat->weight << std::endl;
+			std::cout << "score from embedded URLs: " << ourcat->second.weight << std::endl;
 #endif
 		}
 	}
@@ -599,21 +579,12 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 
 	// this line here searches for phrases contained in the list - the rest of the code is all sorting
 	// through it to find the categories, weightings, types etc. of what has actually been found.
-	std::deque<unsigned int> found;
+	std::map<std::string, std::pair<unsigned int, unsigned int> > found;
 	(*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).graphSearch(found, file, l);
 
 	// cache reusable iterators
-	std::deque<unsigned int>::iterator foundtop = found.begin();
-	std::deque<unsigned int>::iterator foundend = found.end();
-	std::deque<unsigned int>::iterator foundcurrent;
-	std::deque<unsigned int>::iterator alreadyfound;
-
-	// de-duplicate list of phrases if in weighted phrase mode 2
-	if (o.weighted_phrase_mode == 2) {
-		std::sort(foundtop, foundend);
-		foundend = std::unique(foundtop, foundend);
-		found.erase(foundend, found.end());
-	}
+	std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator foundend = found.end();
+	std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator foundcurrent;
 
 	// look for combinations first
 	//if banned must wait for exception later
@@ -621,10 +592,15 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 	std::string combisofar;
 
 	std::vector<int>::iterator combicurrent = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.begin();
+	std::map<int, listent>::iterator catcurrent;
+	int lowest_occurrences = -1;
 
 	while (combicurrent != o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.end()) {
+		// Grab the current combination phrase part
 		index = *combicurrent;
+		// Do stuff if what we have is an end marker (end of one list of parts)
 		if (index == -2) {
+			// Were all the parts in this combination matched?
 			if (allcmatched) {
 				type = *(++combicurrent);
 				// check this time limit against the list of time limits
@@ -655,25 +631,18 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 				}
 				else if (type == 1) {	// combination weighting
 					weight = *(++combicurrent);
-					weighting += weight;
+					weighting += weight * (o.weighted_phrase_mode == 2 ? 1 : lowest_occurrences);
 					if (weight > 0) {
 						cat = *(++combicurrent);
 						//category index -1 indicates an uncategorised list
 						if (cat >= 0) {
 							//don't output duplicate categories
-							catcurrent = cattop;
-							catfound = false;
-							while (catcurrent != listcategories.end()) {
-								if (catcurrent->cat == cat) {
-									catfound = true;
-									catcurrent->weight += weight;
-									break;
-								}
-								catcurrent++;
-							}
-							if (!catfound) {
+							catcurrent = listcategories.find(cat);
+							if (catcurrent != listcategories.end()) {
+								catcurrent->second.weight += weight * (o.weighted_phrase_mode == 2 ? 1 : lowest_occurrences);
+							} else {
 								currcat = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat);
-								listcategories.push_back(listent(cat,weight,currcat));
+								listcategories[cat] = listent(weight,currcat);
 							}
 						}
 					} else {
@@ -689,6 +658,13 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 					} else {
 						weightedphrase += combisofar;
 					}
+#ifdef DGDEBUG
+					std::cout << "found combi weighted phrase ("<< o.weighted_phrase_mode << "): "
+						<< combisofar << " x" << lowest_occurrences << " (per phrase: "
+						<< weight << ", calculated: "
+						<< (weight * (o.weighted_phrase_mode == 2 ? 1 : lowest_occurrences)) << ")"
+						<< std::endl;
+#endif
 
 					weightedphrase += ")";
 					combisofar = "";
@@ -701,21 +677,18 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 					bannedcategory = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat);
 				}
 			} else {
+				// We had an end marker, but not all the parts so far were matched.
+				// Reset the match flag ready for the next chain, and advance to its first part.
 				allcmatched = true;
 				combicurrent += 4;
+				lowest_occurrences = -1;
 			}
 		} else {
+			// We didn't get an end marker - just an individual part.
+			// If all parts in the current chain have been matched so far, look for this one as well.
 			if (allcmatched) {
-				isfound = false;
 				s1 =(*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(index);
-				foundcurrent = foundtop;
-				while (foundcurrent != foundend) {
-					if (s1 == (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*(foundcurrent++))) {
-						isfound = true;
-						break;
-					}
-				}
-				if (!isfound) {
+				if ((foundcurrent = found.find(s1)) == foundend) {
 					allcmatched = false;
 					combisofar = "";
 				} else {
@@ -723,56 +696,58 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 						combisofar += ", ";
 					}
 					combisofar += s1;
+					// also track lowest number of times any one part occurs in the text
+					// as this will correspond to the number of times the whole chain occurs
+					if ((lowest_occurrences == -1) || (lowest_occurrences > foundcurrent->second.second)) {
+						lowest_occurrences = foundcurrent->second.second;
+					}
 				}
 			}
 		}
+		// Advance to the next part in the current chain
 		combicurrent++;
 	}
 
 	// even if we already found a combi ban, we must still wait; there may be non-combi exceptions to follow
 
 	// now check non-combi phrases
-	foundcurrent = foundtop;
+	foundcurrent = found.begin();
 	while (foundcurrent != foundend) {
 		// check time for current phrase
-		if (not o.lm.l[o.fg[filtergroup]->banned_phrase_list]->checkTimeAt(*foundcurrent)) {
+		if (not o.lm.l[o.fg[filtergroup]->banned_phrase_list]->checkTimeAt(foundcurrent->second.first)) {
 #ifdef DGDEBUG
 			std::cout << "Ignoring phrase based on time limits: "
-				<< (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent) << ", "
-				<< (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(*foundcurrent) << std::endl;
+				<< foundcurrent->first << ", "
+				<< (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(foundcurrent->second.first) << std::endl;
 #endif
 			foundcurrent++;
 			continue;
 		}
 		// 0=banned, 1=weighted, -1=exception, 2=combi, 3=weightedcombi
-		type = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getTypeAt(*foundcurrent);
+		type = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getTypeAt(foundcurrent->second.first);
 		if (type == 0) {
 			// if we already found a combi ban, we don't need to know this stuff
 			if (!bannedcombi) {
 				isItNaughty = true;
-				bannedphrase = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent);
-				bannedcategory = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(*foundcurrent, &cat);
+				bannedphrase = foundcurrent->first;
+				bannedcategory = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(foundcurrent->second.first, &cat);
 			}
 		}
 		else if (type == 1) {
-			weight = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getWeightAt(*foundcurrent);
+			// found a weighted phrase - either add one lot of its score, or one lot for every occurrence, depending on phrase filtering mode
+			weight = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getWeightAt(foundcurrent->second.first) * (o.weighted_phrase_mode == 2 ? 1 : foundcurrent->second.second);
 			weighting += weight;
 			if (weight > 0) {
-				currcat = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(*foundcurrent, &cat);
+				currcat = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(foundcurrent->second.first, &cat);
 				if (cat >= 0) {
 					//don't output duplicate categories
-					catcurrent = cattop;
-					catfound = false;
-					while (catcurrent != listcategories.end()) {
-						if (catcurrent->cat == cat) {
-							catfound = true;
-							catcurrent->weight += weight;
-							break;
-						}
-						catcurrent++;
+					catcurrent = listcategories.find(cat);
+					if (catcurrent != listcategories.end()) {
+						// add one or N times the weight to this category's score
+						catcurrent->second.weight += weight * (o.weighted_phrase_mode == 2 ? 1 : foundcurrent->second.second);
+					} else {
+						listcategories[cat] = listent(weight,currcat);
 					}
-					if (!catfound)
-						listcategories.push_back(listent(cat,weight,currcat));
 				}
 			}
 
@@ -784,11 +759,13 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 					weightedphrase += "-";
 				}
 
-				weightedphrase += (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent);
+				weightedphrase += foundcurrent->first;
 			}
 #ifdef DGDEBUG
-			std::cout << "found weighted phrase ("<< o.weighted_phrase_mode << "):"
-				<< (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent) << std::endl;
+			std::cout << "found weighted phrase ("<< o.weighted_phrase_mode << "): "
+				<< foundcurrent->first << " x" << foundcurrent->second.second << " (per phrase: "
+				<< o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getWeightAt(foundcurrent->second.first)
+				<< ", calculated: " << weight << ")" << std::endl;
 #endif
 		}
 		else if (type == -1) {
@@ -796,9 +773,9 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 			isItNaughty = false;
 			whatIsNaughtyLog = o.language_list.getTranslation(604);
 			// Exception phrase found:
-			whatIsNaughtyLog += (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(*foundcurrent);
+			whatIsNaughtyLog += foundcurrent->first;
 			whatIsNaughty = "";
-			whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAt(*foundcurrent, NULL);
+			whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAt(foundcurrent->second.first, NULL);
 			return;  // no point in going further
 		}
 		foundcurrent++;
@@ -858,9 +835,15 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 		bool nonempty = false;
 		bool belowthreshold = false;
 		String categories;
-		std::sort(listcategories.begin(), listcategories.end());
-		std::deque<listent>::iterator k = listcategories.begin();
-		while (k != listcategories.end()) {
+		std::deque<listent> sortable_listcategories;
+		catcurrent = listcategories.begin();
+		while (catcurrent != listcategories.end()) {
+			sortable_listcategories.push_back(catcurrent->second);
+			catcurrent++;
+		}
+		std::sort(sortable_listcategories.begin(), sortable_listcategories.end());
+		std::deque<listent>::iterator k = sortable_listcategories.begin();
+		while (k != sortable_listcategories.end()) {
 			// if category display threshold is in use, apply it
 			if (!belowthreshold && (o.fg[filtergroup]->category_threshold > 0)
 				&& (k->weight < o.fg[filtergroup]->category_threshold))

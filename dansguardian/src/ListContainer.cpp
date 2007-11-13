@@ -36,6 +36,7 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <list>
 
 
 // GLOBALS
@@ -741,29 +742,74 @@ bool ListContainer::createCacheFile()
 	return true;
 }
 
-void ListContainer::makeGraph(bool fqs)
+bool ListContainer::makeGraph(bool fqs)
 {
 	force_quick_search = fqs;
 	if (data_length == 0)
-		return;
+		return true;
 	int i;
+	// Quick search has been forced on - put all items on the "slow" list and be done with it
 	if (force_quick_search) {
 		for (i = 0; i < items; i++) {
-			slowgraph.push_back(i);
+			// Check to see if the item is a duplicate
+			std::string thisphrase = getItemAtInt(i);
+			bool found = false;
+			unsigned int foundindex = 0;
+			for (std::vector<std::pair<std::string, unsigned int> >::iterator j = slowgraph.begin(); j != slowgraph.end(); j++) {
+				if (j->first == thisphrase) {
+					found = true;
+					foundindex = j->second;
+					break;
+				}
+			}
+			if (!found) {
+				// Not a duplicate - store it
+				slowgraph.push_back(std::pair<std::string, unsigned int>(thisphrase, i));
+			} else {
+				// Duplicate - resolve the collision
+				// 
+				// Existing entry must be a combi AND
+				// new entry is not a combi so we overwrite the
+				// existing values as combi values and types are
+				// stored in the combilist
+				// OR
+				// both are weighted phrases and the new phrase is higher weighted
+				// OR
+				// the existing phrase is weighted and the new phrase is banned
+				// OR
+				// new phrase is an exception; exception phrases take precedence
+				if ((itemtype[foundindex] > 9 && itemtype[i] < 10) ||
+					(itemtype[foundindex] == 1 && itemtype[i] == 1 && (weight[i] > weight[foundindex])) ||
+					(itemtype[foundindex] == 1 && itemtype[i] == 0) ||
+					itemtype[i] == -1)
+				{
+					itemtype[foundindex] = itemtype[i];
+					weight[foundindex] = weight[i];
+					categoryindex[foundindex] = categoryindex[i];
+					timelimitindex[foundindex] = timelimitindex[i];
+				}
+			}
 		}
-		return;
+		return true;
 	}
 	std::string s;
 	std::string lasts;
 	graphused = true;
 
 #ifdef DGDEBUG
-	std::cout << "Bytes needed for phrase tree in worst-case scenario: " << (sizeof(int) * ((GRAPHENTRYSIZE * data_length) + ROOTOFFSET)) << std::endl;
+	std::cout << "Bytes needed for phrase tree in worst-case scenario: " << (sizeof(int) * ((GRAPHENTRYSIZE * data_length) + ROOTOFFSET))
+		<< ", starting off with allocation of " <<  (sizeof(int) * ((GRAPHENTRYSIZE * ((data_length / 4) + 1)) + ROOTOFFSET)) << std::endl;
 	prolificroot = false;
 	secondmaxchildnodes = 0;
 #endif
 
-	realgraphdata = (int*) calloc((GRAPHENTRYSIZE * data_length) + ROOTOFFSET, sizeof(int));
+	// Make a conservative guess at how much memory will be needed - call realloc() as necessary to change what is actually taken
+	current_graphdata_size = (GRAPHENTRYSIZE * ((data_length / 4) + 1)) + ROOTOFFSET;
+	realgraphdata = (int*) calloc(current_graphdata_size, sizeof(int));
+	if (realgraphdata == NULL) {
+		syslog(LOG_ERR, "Cannot allocate memory for phrase tree: %s", strerror(errno));
+		return false;
+	}
 	graphitems++;
 	std::deque<unsigned int> sizelist;
 
@@ -784,6 +830,10 @@ void ListContainer::makeGraph(bool fqs)
 #endif
 
 	realgraphdata = (int*) realloc(realgraphdata, sizeof(int) * ((GRAPHENTRYSIZE * graphitems) + ROOTOFFSET));
+	if (realgraphdata == NULL) {
+		syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", strerror(errno));
+		return false;
+	}
 
 	int ml = realgraphdata[2];
 	int branches;
@@ -800,6 +850,7 @@ void ListContainer::makeGraph(bool fqs)
 			realgraphdata[2]--;
 		}
 	}
+	return true;
 }
 
 void ListContainer::graphSizeSort(int l, int r, std::deque<unsigned int> *sizelist)
@@ -887,16 +938,41 @@ void ListContainer::graphCopyNodePhrases(unsigned int pos)
 		graphCopyNodePhrases(graphdata[pos * GRAPHENTRYSIZE + 4 + i]);
 	}
 	bool found = false;
-	int size = slowgraph.size();
+	unsigned int foundindex = 0;
 	unsigned int phrasenumber = graphdata[pos * GRAPHENTRYSIZE + 3];
-	for (i = 0; i < size; i++) {
-		if (slowgraph[i] == phrasenumber) {
+	std::string thisphrase = getItemAtInt(phrasenumber);
+	for (std::vector<std::pair<std::string, unsigned int> >::iterator i = slowgraph.begin(); i != slowgraph.end(); i++) {
+		if (i->first == thisphrase) {
 			found = true;
+			foundindex = i->second;
 			break;
 		}
 	}
 	if (!found) {
-		slowgraph.push_back(phrasenumber);
+		slowgraph.push_back(std::pair<std::string, unsigned int>(thisphrase, phrasenumber));
+	} else {
+		// Duplicate - resolve the collision
+		// 
+		// Existing entry must be a combi AND
+		// new entry is not a combi so we overwrite the
+		// existing values as combi values and types are
+		// stored in the combilist
+		// OR
+		// both are weighted phrases and the new phrase is higher weighted
+		// OR
+		// the existing phrase is weighted and the new phrase is banned
+		// OR
+		// new phrase is an exception; exception phrases take precedence
+		if ((itemtype[foundindex] > 9 && itemtype[phrasenumber] < 10) ||
+			(itemtype[foundindex] == 1 && itemtype[phrasenumber] == 1 && (weight[phrasenumber] > weight[foundindex])) ||
+			(itemtype[foundindex] == 1 && itemtype[phrasenumber] == 0) ||
+			itemtype[phrasenumber] == -1)
+		{
+			itemtype[foundindex] = itemtype[phrasenumber];
+			weight[foundindex] = weight[phrasenumber];
+			categoryindex[foundindex] = categoryindex[phrasenumber];
+			timelimitindex[foundindex] = timelimitindex[phrasenumber];
+		}
 	}
 }
 
@@ -969,30 +1045,40 @@ int ListContainer::bmsearch(char *file, int fl, std::string s)
 // Format of the data is each entry has GRAPHENTRYSIZE int values with format of:
 // [letter][last letter flag][num links][from phrase][link0][link1]...
 
-void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int len)
+void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, unsigned int> >& result, char *doc, int len)
 {
 	int i, j, k;
-	int sl;
-	int ppos;
-	int * graphdata = realgraphdata;
+	std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator existingitem;
 	
 	//do standard quick search on short branches (or everything, if force_quick_search is on)
-	sl = slowgraph.size();
-	for (i = 0; i < sl; i++) {
-		ppos = slowgraph[i];
-		j = bmsearch(doc, len, getItemAtInt(ppos));
+	for (std::vector<std::pair<std::string, unsigned int> >::iterator i = slowgraph.begin(); i != slowgraph.end(); i++) {
+		j = bmsearch(doc, len, i->first);
 		for (k = 0; k < j; k++) {
-			result.push_back(ppos);
+			existingitem = result.find(i->first);
+			if (existingitem == result.end()) {
+				result[i->first] = std::pair<unsigned int, unsigned int>(i->second, 1);
+			} else {
+				existingitem->second.second++;
+			}
 		}
 	}
 	
 	if (force_quick_search || graphitems == 0) {
+#ifdef DGDEBUG
+		std::cout << "Map (quicksearch) start" << std::endl;
+		for (std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator i = result.begin(); i != result.end(); i++) {
+			std::cout << "Map: " << i->first << " " << i->second.second << std::endl;
+		}
+		std::cout << "Map (quicksearch) end" << std::endl;
+#endif
 		return;
 	}
 	
+	int sl;
+	int ppos;
+	int currnode;
+	int * graphdata = realgraphdata;
 	int ml;
-	int *stack = new int[maxchildnodes];
-	int stacksize = 0;
 	unsigned char p;
 	int pos;
 	int depth;
@@ -1004,10 +1090,12 @@ void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int
 		for (j = 4; j < ml; j++) {
 			// grab the endpoint of this link
 			pos = realgraphdata[j];
+			sl = 0;
 
 			// now comes the main graph search!
 			// this is basically a depth-first tree search
 			depth = 0;
+			std::list<char> foundthis;
 			while (true) {
 				// get the address of the link endpoint and the data actually stored at it
 				// note that this only works for GRAPHENTRYSIZE == 64
@@ -1020,25 +1108,34 @@ void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int
 
 				// does the character at this string depth match the relevant character in the node we're currently looking at?
 				if (p == doc[i + depth]) {
-					// it does!
+					// it does! store it in the current tracked phrase
+					foundthis.push_back(p);
 					// is this graph node marked as being the end of a phrase?
 					if (graphdata[ppos + 1] == 1) {
 						// it is, so store the pointer to the matched phrase.
-						result.push_back(graphdata[ppos + 3]);
+						std::string phrase;
+						for (std::list<char>::iterator i = foundthis.begin(); i != foundthis.end(); i++) {
+							phrase += *i;
+						}
+						existingitem = result.find(phrase);
+						if (existingitem == result.end()) {
+							result[phrase] = std::pair<unsigned int, unsigned int>(graphdata[ppos + 3], 1);
+						} else {
+							existingitem->second.second++;
+						}
+#ifdef DGDEBUG
+						std::cout << "Found this phrase: " << phrase << std::endl;
+#endif
 					}
 					// grab this node's number of children
 					sl = graphdata[ppos + 2];
 					if (sl > 0) {
-						// add the node's children (bar the first) to the stack for later examination
-						// and signal that we're moving along the current string by one.
-						depth++;
-						stacksize=0;
-						for (k = 1; k < sl; k++) {
-							stack[stacksize++] = graphdata[ppos + 4 + k];
-						}
+						// this is now the node we're interested in looking at the children of
+						currnode = ppos;
 						// zip straight to the first child of the matched node
 						// (this is the magic that makes it depth first)
 						pos = graphdata[ppos + 4];
+						depth++;
 						continue;
 					}
 					// if we just matched a node that has no children,
@@ -1047,19 +1144,15 @@ void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int
 					else break;
 				}
 
-				if (stacksize > 0) {
-					// if we get here, we have discounted one branch, but
-					// we still have more branches to examine at this level.
-					// but do we ever actually need to backtrack here?
-					// after all, surely a character will only ever match
-					// one node at any given level. so perhaps *only* store
-					// a stack of children from the most recently matched node,
-					// so that this code will never initiate backtracking.
-					// the stack would then be allowed to be reduced to 63,
-					// since we only have max GRAPHENTRYSIZE children on a node, and
-					// we'd set stacksize to 0 before we do any adding, to
-					// effectively clear it beforehand.
-					pos = stack[--stacksize];
+				if ((--sl) > 0) {
+					// if we get here, we have discounted one child, but
+					// we still have more children to examine from the last matched node.
+					// we don't keep more than one current interesting node - no backtracking
+					// is necessary, as there is only ever one occurrence of a given character as
+					// a branch of a given node.  backtracking would therefore never
+					// trigger a match down a different route than has been taken thus far, so
+					// don't bother.
+					pos = graphdata[currnode + 4 + (graphdata[currnode + 2] - sl)];
 					continue;
 				}
 				// if we get here, we've discounted all branches at this depth, and the search is over.
@@ -1067,10 +1160,16 @@ void ListContainer::graphSearch(std::deque<unsigned int>& result, char *doc, int
 			}
 		}
 	}
-	delete[]stack;
+#ifdef DGDEBUG
+	std::cout << "Map start" << std::endl;
+	for (std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator i = result.begin(); i != result.end(); i++) {
+		std::cout << "Map: " << i->first << " " << i->second.second << std::endl;
+	}
+	std::cout << "Map end" << std::endl;
+#endif
 }
 
-void ListContainer::graphAdd(String s, int inx, int item)
+void ListContainer::graphAdd(String s, const int inx, int item)
 {
 	unsigned char p = s.charAt(0);
 	unsigned char c;
@@ -1143,6 +1242,20 @@ void ListContainer::graphAdd(String s, int inx, int item)
 	if (!found) {
 		i = graphitems;
 		graphitems++;
+		// Reallocate memory if we're running out
+		if (current_graphdata_size < ((GRAPHENTRYSIZE * graphitems) + ROOTOFFSET)) {
+			current_graphdata_size = (GRAPHENTRYSIZE * (graphitems + 64)) + ROOTOFFSET;
+			realgraphdata = (int*) realloc(realgraphdata, sizeof(int) * current_graphdata_size);
+			if (realgraphdata == NULL) {
+				syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", strerror(errno));
+				exit(1);
+			}
+			graphdata2 = realgraphdata + ROOTOFFSET;
+			if (inx == 0)
+				graphdata = realgraphdata;
+			else
+				graphdata = realgraphdata + ROOTOFFSET;
+		}
 		numlinks = graphdata[inx * GRAPHENTRYSIZE + 2];
 		if ((inx == 0) ? ((numlinks + 1) > MAXROOTLINKS) : ((numlinks +1) > MAXLINKS)) {
 			syslog(LOG_ERR, "Cannot load phraselists from this many languages/encodings simultaneously. (more than %d links from this node! [1])", (inx == 0) ? MAXROOTLINKS : MAXLINKS);
@@ -1188,6 +1301,20 @@ void ListContainer::graphAdd(String s, int inx, int item)
 			graphdata2[i * GRAPHENTRYSIZE + 4 + numlinks] = i + 1;
 			i++;
 			graphitems++;
+			// Reallocate memory if we're running out
+			if (current_graphdata_size < ((GRAPHENTRYSIZE * graphitems) + ROOTOFFSET)) {
+				current_graphdata_size = (GRAPHENTRYSIZE * (graphitems + 64)) + ROOTOFFSET;
+				realgraphdata = (int*) realloc(realgraphdata, sizeof(int) * current_graphdata_size);
+				if (realgraphdata == NULL) {
+					syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", strerror(errno));
+					exit(1);
+				}
+				graphdata2 = realgraphdata + ROOTOFFSET;
+				if (inx == 0)
+					graphdata = realgraphdata;
+				else
+					graphdata = realgraphdata + ROOTOFFSET;
+			}
 			p = s.charAt(0);
 			graphdata2[i * GRAPHENTRYSIZE] = p;
 			graphdata2[i * GRAPHENTRYSIZE + 3] = item;
@@ -1472,11 +1599,12 @@ bool ListContainer::isCacheFileNewer(const char *filename)
 void ListContainer::increaseMemoryBy(int bytes)
 {
 	if (data_memory > 0) {
-		char *temp = new char[data_memory + bytes];  // replacement store
+		/*char *temp = new char[data_memory + bytes];  // replacement store
 		memcpy(temp, data, data_length);
 		delete[]data;
-		data = temp;
+		data = temp;*/
 		data_memory = data_memory + bytes;
+		data = (char*) realloc(data, data_memory * sizeof(char));
 	} else {
 		delete[]data;
 		data = new char[bytes];

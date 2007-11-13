@@ -29,6 +29,7 @@
 
 #include <vector>
 #include <deque>
+#include <map>
 #include <string>
 #include "String.hpp"
 
@@ -91,7 +92,7 @@ public:
 	void doSort(const bool startsWith);
 
 	bool createCacheFile();
-	void makeGraph(bool fqs);
+	bool makeGraph(bool fqs);
 
 	bool previousUseItem(const char *filename, bool startswith, int filters);
 	bool upToDate();
@@ -99,7 +100,7 @@ public:
 	String getListCategoryAt(int index, int *catindex = NULL);
 	String getListCategoryAtD(int index);
 
-	void graphSearch(std::deque<unsigned int >& result, char *doc, int len);
+	void graphSearch(std::map<std::string, std::pair<unsigned int, unsigned int> >& result, char *doc, int len);
 	
 	bool isNow(int index = -1);
 	bool checkTimeAt(unsigned int index);
@@ -120,6 +121,7 @@ private:
 	// [letter][last letter flag][num links][from phrase][link0][link1]...
 
 	int *realgraphdata;
+	int current_graphdata_size;
 
 #ifdef DGDEBUG
 	bool prolificroot;
@@ -128,7 +130,7 @@ private:
 
 	int maxchildnodes;
 	int graphitems;
-	std::vector<unsigned int > slowgraph;
+	std::vector<std::pair<std::string, unsigned int> > slowgraph;
 	unsigned int data_length;
 	unsigned int data_memory;
 	int items;
@@ -159,7 +161,7 @@ private:
 	void readPhraseListHelper2(String phrase, int type, int weighting, int catindex, int timeindex);
 	bool addToItemListPhrase(char *s, int len, int type, int weighting, bool combi, int catindex, int timeindex);
 	void graphSizeSort(int l, int r, std::deque<unsigned int > *sizelist);
-	void graphAdd(String s, int inx, int item);
+	void graphAdd(String s, const int inx, int item);
 	int graphFindBranches(unsigned int pos);
 	void graphCopyNodePhrases(unsigned int pos);
 	int bmsearch(char *file, int fl, std::string s);
