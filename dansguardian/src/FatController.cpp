@@ -2147,7 +2147,9 @@ int fc_controlit()
 				reloadconfig = true;  // filter groups problem so lets
 				// try and reload entire config instead
 				// if that fails it will bomb out
+				o.lm.garbageCollect();
 			} else {
+				o.lm.garbageCollect();
 				if (o.use_filter_groups_list) {
 					o.filter_groups_list.reset();
 					if (!o.doReadItemList(o.filter_groups_list_location.c_str(),&(o.filter_groups_list),"filtergroupslist",true))
@@ -2163,7 +2165,6 @@ int fc_controlit()
 							reloadconfig = true;  // auth plugs problem
 					}
 					if (!reloadconfig) {
-						o.lm.garbageCollect();
 						hup_allchildren();
 						prefork(o.min_children);
 						gentlereload = false;
