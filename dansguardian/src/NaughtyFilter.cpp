@@ -592,7 +592,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 
 	std::vector<int>::iterator combicurrent = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.begin();
 	std::map<int, listent>::iterator catcurrent;
-	int lowest_occurrences = -1;
+	unsigned int lowest_occurrences = 0;
 
 	while (combicurrent != o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.end()) {
 		// Grab the current combination phrase part
@@ -680,7 +680,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 				// Reset the match flag ready for the next chain, and advance to its first part.
 				allcmatched = true;
 				combicurrent += 4;
-				lowest_occurrences = -1;
+				lowest_occurrences = 0;
 			}
 		} else {
 			// We didn't get an end marker - just an individual part.
@@ -697,7 +697,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 					combisofar += s1;
 					// also track lowest number of times any one part occurs in the text
 					// as this will correspond to the number of times the whole chain occurs
-					if ((lowest_occurrences == -1) || (lowest_occurrences > foundcurrent->second.second)) {
+					if ((lowest_occurrences == 0) || (lowest_occurrences > foundcurrent->second.second)) {
 						lowest_occurrences = foundcurrent->second.second;
 					}
 				}
