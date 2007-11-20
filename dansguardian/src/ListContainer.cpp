@@ -319,7 +319,7 @@ void ListContainer::readPhraseListHelper2(String phrase, int type, int weighting
 }
 
 // for item lists - add phrases to list proper
-bool ListContainer::addToItemListPhrase(char *s, int len, int type, int weighting, bool combi, int catindex, int timeindex)
+bool ListContainer::addToItemListPhrase(const char *s, int len, int type, int weighting, bool combi, int catindex, int timeindex)
 {
 	int i;
 	list.push_back(data_length);
@@ -490,7 +490,7 @@ bool ListContainer::readAnotherItemList(const char *filename, bool startswith, i
 }
 
 // for item lists - is this item in the list?
-bool ListContainer::inList(char *string)
+bool ListContainer::inList(const char *string)
 {
 	if (findInList(string) != NULL) {
 		return true;
@@ -499,7 +499,7 @@ bool ListContainer::inList(char *string)
 }
 
 // for item lists - is an item in the list that ends with this string?
-bool ListContainer::inListEndsWith(char *string)
+bool ListContainer::inListEndsWith(const char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
@@ -521,7 +521,7 @@ bool ListContainer::inListEndsWith(char *string)
 }
 
 // for item lists - is an item in the list that starts with this string?
-bool ListContainer::inListStartsWith(char *string)
+bool ListContainer::inListStartsWith(const char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
@@ -543,7 +543,7 @@ bool ListContainer::inListStartsWith(char *string)
 }
 
 // find pointer to the part of the data array containing this string
-char *ListContainer::findInList(char *string)
+char *ListContainer::findInList(const char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
@@ -571,7 +571,7 @@ char *ListContainer::findInList(char *string)
 }
 
 // find an item in the list which starts with this
-char *ListContainer::findStartsWith(char *string)
+char *ListContainer::findStartsWith(const char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
@@ -593,7 +593,7 @@ char *ListContainer::findStartsWith(char *string)
 	return NULL;
 }
 
-char *ListContainer::findStartsWithPartial(char *string)
+char *ListContainer::findStartsWithPartial(const char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
@@ -620,7 +620,7 @@ char *ListContainer::findStartsWithPartial(char *string)
 	return NULL;
 }
 
-char *ListContainer::findEndsWith(char *string)
+char *ListContainer::findEndsWith(const char *string)
 {
 	if (isNow()) {
 		if (items > 0) {
@@ -755,16 +755,16 @@ bool ListContainer::makeGraph(bool fqs)
 			std::string thisphrase = getItemAtInt(i);
 			bool found = false;
 			unsigned int foundindex = 0;
-			for (std::vector<std::pair<std::string, unsigned int> >::iterator j = slowgraph.begin(); j != slowgraph.end(); j++) {
-				if (j->first == thisphrase) {
+			for (std::vector<unsigned int>::iterator j = slowgraph.begin(); j != slowgraph.end(); j++) {
+				if (getItemAtInt(*j) == thisphrase) {
 					found = true;
-					foundindex = j->second;
+					foundindex = *j;
 					break;
 				}
 			}
 			if (!found) {
 				// Not a duplicate - store it
-				slowgraph.push_back(std::pair<std::string, unsigned int>(thisphrase, i));
+				slowgraph.push_back(i);
 			} else {
 				// Duplicate - resolve the collision
 				// 
@@ -941,15 +941,15 @@ void ListContainer::graphCopyNodePhrases(unsigned int pos)
 	unsigned int foundindex = 0;
 	unsigned int phrasenumber = graphdata[pos * GRAPHENTRYSIZE + 3];
 	std::string thisphrase = getItemAtInt(phrasenumber);
-	for (std::vector<std::pair<std::string, unsigned int> >::iterator i = slowgraph.begin(); i != slowgraph.end(); i++) {
-		if (i->first == thisphrase) {
+	for (std::vector<unsigned int>::iterator i = slowgraph.begin(); i != slowgraph.end(); i++) {
+		if (getItemAtInt(*i) == thisphrase) {
 			found = true;
-			foundindex = i->second;
+			foundindex = *i;
 			break;
 		}
 	}
 	if (!found) {
-		slowgraph.push_back(std::pair<std::string, unsigned int>(thisphrase, phrasenumber));
+		slowgraph.push_back(phrasenumber);
 	} else {
 		// Duplicate - resolve the collision
 		// 
@@ -976,7 +976,7 @@ void ListContainer::graphCopyNodePhrases(unsigned int pos)
 	}
 }
 
-int ListContainer::bmsearch(char *file, int fl, std::string s)
+int ListContainer::bmsearch(char *file, int fl, const std::string& s)
 {
 	int pl = s.length();
 	if (fl < pl)
@@ -1051,12 +1051,13 @@ void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, un
 	std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator existingitem;
 	
 	//do standard quick search on short branches (or everything, if force_quick_search is on)
-	for (std::vector<std::pair<std::string, unsigned int> >::iterator i = slowgraph.begin(); i != slowgraph.end(); i++) {
-		j = bmsearch(doc, len, i->first);
+	for (std::vector<unsigned int>::iterator i = slowgraph.begin(); i != slowgraph.end(); i++) {
+		std::string phrase = getItemAtInt(*i);
+		j = bmsearch(doc, len, phrase);
 		for (k = 0; k < j; k++) {
-			existingitem = result.find(i->first);
+			existingitem = result.find(phrase);
 			if (existingitem == result.end()) {
-				result[i->first] = std::pair<unsigned int, unsigned int>(i->second, 1);
+				result[phrase] = std::pair<unsigned int, unsigned int>(*i, 1);
 			} else {
 				existingitem->second.second++;
 			}
@@ -1465,7 +1466,7 @@ bool ListContainer::readProcessedItemList(const char *filename, bool startswith,
 	return true;
 }
 
-void ListContainer::addToItemList(char *s, int len)
+void ListContainer::addToItemList(const char *s, int len)
 {
 	int i;
 	list.push_back(data_length);

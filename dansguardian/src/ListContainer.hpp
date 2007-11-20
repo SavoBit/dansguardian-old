@@ -69,15 +69,15 @@ public:
 	bool readPhraseList(const char *filename, bool isexception, int catindex = -1, int timeindex = -1);
 	bool readItemList(const char *filename, bool startswith, int filters);
 
-	bool inList(char *string);
-	bool inListEndsWith(char *string);
-	bool inListStartsWith(char *string);
+	bool inList(const char *string);
+	bool inListEndsWith(const char *string);
+	bool inListStartsWith(const char *string);
 
-	char *findInList(char *string);
+	char *findInList(const char *string);
 
-	char *findEndsWith(char *string);
-	char *findStartsWith(char *string);
-	char *findStartsWithPartial(char *string);
+	char *findEndsWith(const char *string);
+	char *findStartsWith(const char *string);
+	char *findStartsWithPartial(const char *string);
 
 
 	int getListLength()
@@ -130,7 +130,7 @@ private:
 
 	int maxchildnodes;
 	int graphitems;
-	std::vector<std::pair<std::string, unsigned int> > slowgraph;
+	std::vector<unsigned int> slowgraph;
 	unsigned int data_length;
 	unsigned int data_memory;
 	int items;
@@ -159,15 +159,15 @@ private:
 
 	void readPhraseListHelper(String line, bool isexception, int catindex, int timeindex);
 	void readPhraseListHelper2(String phrase, int type, int weighting, int catindex, int timeindex);
-	bool addToItemListPhrase(char *s, int len, int type, int weighting, bool combi, int catindex, int timeindex);
+	bool addToItemListPhrase(const char *s, int len, int type, int weighting, bool combi, int catindex, int timeindex);
 	void graphSizeSort(int l, int r, std::deque<unsigned int > *sizelist);
 	void graphAdd(String s, const int inx, int item);
 	int graphFindBranches(unsigned int pos);
 	void graphCopyNodePhrases(unsigned int pos);
-	int bmsearch(char *file, int fl, std::string s);
+	int bmsearch(char *file, int fl, const std::string& s);
 	void quicksort(int (ListContainer::*comparitor)(const char* a, const char* b), int l, int r);
 	bool readProcessedItemList(const char *filename, bool startswith, int filters);
-	void addToItemList(char *s, int len);
+	void addToItemList(const char *s, int len);
 	int greaterThanEWF(const char *a, const char *b);  // full match
 	int greaterThanEW(const char *a, const char *b);  // partial ends with
 	int greaterThanSWF(const char *a, const char *b);  // full match
