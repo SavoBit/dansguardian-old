@@ -334,13 +334,13 @@ int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadcon
 void BaseSocket::writeString(const char *line) throw(exception)
 {
 	int l = strlen(line);
-	if (!writeToSocket((char *) line, l, 0, timeout)) {
+	if (!writeToSocket(line, l, 0, timeout)) {
 		throw runtime_error(string("Can't write to socket: ") + strerror(errno));
 	}
 }
 
 // write data to socket - throws exception on failure, can be told to break on config reloads
-void BaseSocket::writeToSockete(char *buff, int len, unsigned int flags, int timeout, bool honour_reloadconfig) throw(exception)
+void BaseSocket::writeToSockete(const char *buff, int len, unsigned int flags, int timeout, bool honour_reloadconfig) throw(exception)
 {
 	if (!writeToSocket(buff, len, flags, timeout, honour_reloadconfig)) {
 		throw runtime_error(string("Can't write to socket: ") + strerror(errno));
@@ -348,7 +348,7 @@ void BaseSocket::writeToSockete(char *buff, int len, unsigned int flags, int tim
 }
 
 // write data to socket - can be told not to do an initial readyForOutput, and to break on config reloads
-bool BaseSocket::writeToSocket(char *buff, int len, unsigned int flags, int timeout, bool check_first, bool honour_reloadconfig)
+bool BaseSocket::writeToSocket(const char *buff, int len, unsigned int flags, int timeout, bool check_first, bool honour_reloadconfig)
 {
 	int actuallysent = 0;
 	int sent;

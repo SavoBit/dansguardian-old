@@ -221,7 +221,7 @@ void String::hexDecode()
 }
 
 // does this string start with the given text?
-bool String::startsWith(const String s)
+bool String::startsWith(const String& s)
 {
 	if (!strncmp(this->c_str(), s.c_str(), s.length())) {
 		return true;
@@ -230,7 +230,7 @@ bool String::startsWith(const String s)
 }
 
 // does this string end with the given text?
-bool String::endsWith(const String s)
+bool String::endsWith(const String& s)
 {
 	if (s.length() > this->length()) {
 		return false;
@@ -244,7 +244,7 @@ bool String::endsWith(const String s)
 // does this string start with the given text after conversion to lowercase?
 // (pass the search string in in lowercase; only the text being searched
 // is converted)
-bool String::startsWithLower(const String s)
+bool String::startsWithLower(const String& s)
 {
 	for (unsigned int i = 0; i < s.length(); i++) {
 		if (tolower((*this)[i]) != s[i])
@@ -272,7 +272,7 @@ bool String::contains(const char *s)
 }
 
 // grab the part of the string that follows the first occurrence of given text
-String String::after(const char *bs)
+String String::after(const char *bs) const
 {
 	size_type i = this->find(bs);
 	if (i == std::string::npos)
@@ -281,7 +281,7 @@ String String::after(const char *bs)
 }
 
 // grab the part of the string that precedes the first occurrence of given text
-String String::before(const char *bs)
+String String::before(const char *bs) const
 {
 	size_type i = this->find(bs);
 	if (i == std::string::npos)

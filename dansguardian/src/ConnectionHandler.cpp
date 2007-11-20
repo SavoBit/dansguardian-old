@@ -1603,7 +1603,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 #ifdef DGDEBUG
 			std::cout << "Checking for log-only categories" << std::endl;
 #endif
-			char* c = o.fg[filtergroup]->inLogSiteList(where);
+			const char* c = o.fg[filtergroup]->inLogSiteList(where);
 #ifdef DGDEBUG
 			if (c) std::cout << "Found log-only domain category: " << c << std::endl;
 #endif

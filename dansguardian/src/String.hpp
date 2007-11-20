@@ -58,9 +58,9 @@ public:
 	String operator+(const int& i) { return (*this) + String(i); };
 
 	// return c-string
-	char* toCharArray() { return (char*)(this->c_str()); };
+	const char* toCharArray() const { return (this->c_str()); };
 	// return substring of length l from start
-	String subString(int start, int l) { return this->substr(start, l); };
+	String subString(int start, int l) const { return this->substr(start, l); };
 
 	// convert to integer/long integer
 	int toInteger();
@@ -75,12 +75,12 @@ public:
 	void hexDecode();
 
 	// does the string start/end with this text?
-	bool startsWith(const String s);
-	bool endsWith(const String s);
+	bool startsWith(const String& s);
+	bool endsWith(const String& s);
 	// does this string start with the given text after conversion to lowercase?
 	// (pass the search string in in lowercase; only the text being searched
 	// is converted)
-	bool startsWithLower(const String s);
+	bool startsWithLower(const String& s);
 	// return offset of substring s within the string
 	int indexOf(const char *s);
 	// does it contain this text?
@@ -89,9 +89,9 @@ public:
 	unsigned char charAt(int index) { return (*this)[index]; };
 
 	// return string following first occurrence of bs
-	String after(const char *bs);
+	String after(const char *bs) const;
 	// return string preceding first occurrence of bs
-	String before(const char *bs);
+	String before(const char *bs) const;
 	// search & replace
 	void replace(const char *what, const char *with);
 

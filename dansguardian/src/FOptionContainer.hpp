@@ -256,9 +256,9 @@ public:
 	bool isIPHostname(String url);
 
 	// log-only lists - return category
-	char* inLogURLList(String url);
-	char* inLogSiteList(String url);
-	char* inLogRegExpURLList(String url);
+	const char* inLogURLList(String url);
+	const char* inLogSiteList(String url);
+	const char* inLogRegExpURLList(String url);
 	
 	// get HTML template for this group
 	HTMLTemplate *getHTMLTemplate();

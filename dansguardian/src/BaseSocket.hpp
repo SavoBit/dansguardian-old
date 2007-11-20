@@ -79,13 +79,13 @@ public:
 	// write buffer to string - throws exception on error
 	void writeString(const char *line) throw(exception);
 	// write buffer to string - can be told not to do an initial readyForOutput, and told to break on -r
-	bool writeToSocket(char *buff, int len, unsigned int flags, int timeout, bool check_first = true, bool honour_reloadconfig = false);
+	bool writeToSocket(const char *buff, int len, unsigned int flags, int timeout, bool check_first = true, bool honour_reloadconfig = false);
 	// read from socket, returning number of bytes read
 	int readFromSocketn(char *buff, int len, unsigned int flags, int timeout);
 	// read from socket, returning error status - can be told to skip initial checkForInput, and to break on -r
 	int readFromSocket(char *buff, int len, unsigned int flags, int timeout, bool check_first = true, bool honour_reloadconfig = false);
 	// write to socket, throwing exception on error - can be told to break on -r
-	void writeToSockete(char *buff, int len, unsigned int flags, int timeout, bool honour_reloadconfig = false) throw(exception);
+	void writeToSockete(const char *buff, int len, unsigned int flags, int timeout, bool honour_reloadconfig = false) throw(exception);
 
 protected:
 	// socket-wide timeout (is this actually used?)

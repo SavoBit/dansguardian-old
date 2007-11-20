@@ -1145,7 +1145,7 @@ bool FOptionContainer::inExceptionURLList(String url, bool doblanket, bool ip, b
 }
 
 // New log-only site lists
-char* FOptionContainer::inLogURLList(String url)
+const char* FOptionContainer::inLogURLList(String url)
 {
 	if (!log_url_flag)
 		return NULL;
@@ -1155,7 +1155,7 @@ char* FOptionContainer::inLogURLList(String url)
 	return NULL;
 }
 
-char* FOptionContainer::inLogSiteList(String url)
+const char* FOptionContainer::inLogSiteList(String url)
 {
 	if (!log_site_flag)
 		return NULL;
@@ -1165,7 +1165,7 @@ char* FOptionContainer::inLogSiteList(String url)
 	return NULL;
 }
 
-char* FOptionContainer::inLogRegExpURLList(String url) {
+const char* FOptionContainer::inLogRegExpURLList(String url) {
 	if (!log_regexpurl_flag)
 		return NULL;
 	int j = inRegExpURLList(url, log_regexpurl_list_comp, log_regexpurl_list_ref, log_regexpurl_list);
