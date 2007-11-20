@@ -1095,7 +1095,6 @@ void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, un
 			// now comes the main graph search!
 			// this is basically a depth-first tree search
 			depth = 0;
-			std::list<char> foundthis;
 			while (true) {
 				// get the address of the link endpoint and the data actually stored at it
 				// note that this only works for GRAPHENTRYSIZE == 64
@@ -1108,15 +1107,11 @@ void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, un
 
 				// does the character at this string depth match the relevant character in the node we're currently looking at?
 				if (p == doc[i + depth]) {
-					// it does! store it in the current tracked phrase
-					foundthis.push_back(p);
+					// it does!
 					// is this graph node marked as being the end of a phrase?
 					if (graphdata[ppos + 1] == 1) {
 						// it is, so store the pointer to the matched phrase.
-						std::string phrase;
-						for (std::list<char>::iterator i = foundthis.begin(); i != foundthis.end(); i++) {
-							phrase += *i;
-						}
+						std::string phrase = getItemAtInt(graphdata[ppos + 3]);
 						existingitem = result.find(phrase);
 						if (existingitem == result.end()) {
 							result[phrase] = std::pair<unsigned int, unsigned int>(graphdata[ppos + 3], 1);
