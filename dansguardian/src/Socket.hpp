@@ -42,12 +42,12 @@ public:
 	Socket(int newfd, struct sockaddr_in myip, struct sockaddr_in peerip);
 	
 	// connect to given IP & port (following default constructor)
-	int connect(std::string ip, int port);
+	int connect(const std::string& ip, int port);
 	
 	// bind to given port
 	int bind(int port);
 	// bind to given IP & port, for machines with multiple NICs
-	int bind(std::string ip, int port);
+	int bind(const std::string& ip, int port);
 
 	// accept incoming connections & return new Socket
 	Socket* accept();

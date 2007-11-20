@@ -215,7 +215,7 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 	unsigned int sent = 0;
 	if (usepreviews && (objectsize > previewsize)) {
 		try {
-			if (!icapsock.writeToSocket((char*) object, previewsize, 0, o.content_scanner_timeout)) {
+			if (!icapsock.writeToSocket(object, previewsize, 0, o.content_scanner_timeout)) {
 				throw std::runtime_error("standard error");
 			}
 			sent += previewsize;
@@ -249,7 +249,7 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 		}
 	}
 	try {
-		icapsock.writeToSockete((char*) object + sent, objectsize - sent, 0, o.content_scanner_timeout);
+		icapsock.writeToSockete(object + sent, objectsize - sent, 0, o.content_scanner_timeout);
 #ifdef DGDEBUG
 		std::cout << "total sent to icap: " << objectsize << std::endl;
 #endif

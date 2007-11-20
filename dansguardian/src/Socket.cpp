@@ -111,7 +111,7 @@ void Socket::reset()
 }
 
 // connect to given IP & port (following default constructor)
-int Socket::connect(std::string ip, int port)
+int Socket::connect(const std::string &ip, int port)
 {
 	int len = sizeof my_adr;
 	peer_adr.sin_port = htons(port);
@@ -129,7 +129,7 @@ int Socket::bind(int port)
 }
 
 // bind socket to given port & IP
-int Socket::bind(std::string ip, int port)
+int Socket::bind(const std::string &ip, int port)
 {
 	int len = sizeof my_adr;
 	int i = 1;

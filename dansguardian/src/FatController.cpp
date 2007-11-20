@@ -1888,7 +1888,7 @@ int fc_controlit()
 	}
 
 	if (o.max_ips > 0) {
-		if (iplistsock.bind((char*) o.ipipc_filename.c_str())) {	// bind to file
+		if (iplistsock.bind(o.ipipc_filename.c_str())) {	// bind to file
 			if (!is_daemonised) {
 				std::cerr << "Error binding iplistsock server file (try using the SysV to stop DansGuardian then try starting it again or doing an 'rm " << o.ipipc_filename << "')." << std::endl;
 			}

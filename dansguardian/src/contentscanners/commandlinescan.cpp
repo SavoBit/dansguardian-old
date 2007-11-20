@@ -110,11 +110,15 @@ int commandlineinstance::init(void* args)
 
 	// split into an argument array
 	std::list<std::string> temparguments;
-	char* result = strtok(progname.toCharArray()," ");
+	char* tempprogname = new char[progname.length() + 1];
+	tempprogname[progname.length()] = '\0';
+	strncpy(tempprogname, progname.c_str(), progname.length());
+	char* result = strtok(tempprogname," ");
 	while (result) {
 		temparguments.push_back(std::string(result));
 		result = strtok(NULL," ");
 	}
+	delete[] tempprogname;
 	for (int i = 0; i < numarguments; i++)
 		delete arguments[i];
 	delete[] arguments;
@@ -157,7 +161,10 @@ int commandlineinstance::init(void* args)
 	String scleancodes(cv["cleancodes"]);
 	std::list<int> tempinfectedcodes;
 	std::list<int> tempcleancodes;
-	result = strtok(sinfectedcodes.toCharArray(),",");
+	char* tempcodes = new char[sinfectedcodes.length() + 1];
+	tempcodes[sinfectedcodes.length()] = '\0';
+	strncpy(tempcodes, sinfectedcodes.c_str(), sinfectedcodes.length());
+	result = strtok(tempcodes,",");
 #ifdef DGDEBUG
 	std::cout << "Infected file return codes: ";
 #endif
@@ -168,7 +175,11 @@ int commandlineinstance::init(void* args)
 #endif
 		result = strtok(NULL,",");
 	}
-	result = strtok(scleancodes.toCharArray(),",");
+	delete[] tempcodes;
+	tempcodes = new char[scleancodes.length() + 1];
+	tempcodes[scleancodes.length()] = '\0';
+	strncpy(tempcodes, scleancodes.c_str(), scleancodes.length());
+	result = strtok(tempcodes,",");
 #ifdef DGDEBUG
 	std::cout << std::endl << "Clean file return codes: ";
 #endif
@@ -179,6 +190,7 @@ int commandlineinstance::init(void* args)
 #endif
 		result = strtok(NULL,",");
 	}
+	delete[] tempcodes;
 #ifdef DGDEBUG
 	std::cout << std::endl;
 #endif
