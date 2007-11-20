@@ -76,7 +76,7 @@ public:
 	int contentLength();
 	String getContentType();
 	// check received content type against given content type
-	bool isContentType(String t);
+	bool isContentType(const String& t);
 	// check HTTP message code to see if it's an auth required message
 	bool authRequired();
 	// Content-Disposition
@@ -97,14 +97,14 @@ public:
 
 	// detailed value/type checks
 
-	bool malformedURL(String url);
+	bool malformedURL(const String& url);
 	bool isPostUpload(Socket &peersock);
 	String getAuthType();
 	String url();
 
 	// header modifications
 
-	void addXForwardedFor(std::string clientip);
+	void addXForwardedFor(const std::string &clientip);
 	// strip content-encoding, and simultaneously set content-length to newlen
 	void removeEncoding(int newlen);
 	void setContentLength(int newlen);
@@ -116,7 +116,7 @@ public:
 
 	// do URL decoding (%xx) on string
 	// decode everything, or just numbers, letters and -
-	String decode(String s, bool decodeAll = false);
+	String decode(const String &s, bool decodeAll = false);
 
 	// Bypass URL & Cookie funcs
 	
@@ -165,11 +165,11 @@ private:
 	void checkheader(bool allowpersistent);
 
 	// convert %xx back to original character
-	String hexToChar(String n, bool all = false);
+	String hexToChar(const String &n, bool all = false);
 	// base64 decode an individual char
 	int decode1b64(char c);
 	// base64 decode a complete string
-	std::string decodeb64(String line);
+	std::string decodeb64(const String& line);
 
 	// modify supplied accept-encoding header, adding "identity" and stripping unsupported compression types
 	String modifyEncodings(String e);

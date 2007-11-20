@@ -193,7 +193,7 @@ String HTTPHeader::getContentType()
 }
 
 // does the given content type string match our headers?
-bool HTTPHeader::isContentType(String t)
+bool HTTPHeader::isContentType(const String& t)
 {
 	return getContentType().startsWith(t);
 }
@@ -272,7 +272,7 @@ String HTTPHeader::contentEncoding()
 // *
 
 // squid adds this so if more support it it may be useful one day
-void HTTPHeader::addXForwardedFor(std::string clientip)
+void HTTPHeader::addXForwardedFor(const std::string &clientip)
 {
 	std::string line("X-Forwarded-For: " + clientip + "\r");
 	header.push_back(String(line.c_str()));
@@ -545,7 +545,7 @@ bool HTTPHeader::headerRegExp(int filtergroup) {
 // *
 
 // is a URL malformed?
-bool HTTPHeader::malformedURL(String url)
+bool HTTPHeader::malformedURL(const String& url)
 {
 	String host(url.after("://"));
 	if (host.contains("/"))
@@ -1160,7 +1160,7 @@ bool HTTPHeader::isScanBypassURL(String * url, const char *magic, const char *cl
 
 // URL decoding (%xx)
 // uses regex pre-compiled on startup
-String HTTPHeader::decode(String s, bool decodeAll)
+String HTTPHeader::decode(const String &s, bool decodeAll)
 {
 	if (s.length() < 3) {
 		return s;
@@ -1168,7 +1168,7 @@ String HTTPHeader::decode(String s, bool decodeAll)
 #ifdef DGDEBUG
 	std::cout << "decoding url" << std::endl;
 #endif
-	if (!urldecode_re.match(s.toCharArray())) {
+	if (!urldecode_re.match(s.c_str())) {
 		return s;
 	}			// exit if not found
 #ifdef DGDEBUG
@@ -1203,10 +1203,10 @@ String HTTPHeader::decode(String s, bool decodeAll)
 }
 
 // turn %xx back into original character
-String HTTPHeader::hexToChar(String n, bool all)
+String HTTPHeader::hexToChar(const String &n, bool all)
 {
 	if (n.length() < 2) {
-		return n;
+		return String(n);
 	}
 	static char buf[2];
 	unsigned int a, b;
@@ -1223,8 +1223,7 @@ String HTTPHeader::hexToChar(String n, bool all)
 		a -= 48;
 	}
 	else {
-		n = "%" + n;
-		return n;
+		return String("%") + n;
 	}
 	if (b >= 'a' && b <= 'f') {
 		b -= 87;
@@ -1236,23 +1235,20 @@ String HTTPHeader::hexToChar(String n, bool all)
 		b -= 48;
 	}
 	else {
-		n = "%" + n;
-		return n;
+		return String("%") + n;
 	}
 	c = a * 16 + b;
 	if (all || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '-')) {
 		buf[0] = c;
 		buf[1] = '\0';
-		n = buf;
+		return String(buf);
 	} else {
-		n = "%" + n;
-		return n;
+		return String("%") + n;
 	}
-	return n;
 }
 
 // decode a line of base64
-std::string HTTPHeader::decodeb64(String line)
+std::string HTTPHeader::decodeb64(const String& line)
 {				// decode a block of b64 MIME
 	long four = 0;
 	int d;
