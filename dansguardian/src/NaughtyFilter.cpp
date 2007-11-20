@@ -410,7 +410,6 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 	int weighting = 0;
 	int cat;
 	std::string weightedphrase;
-	bool isfound, catfound;
 	
 	// checkme: translate this?
 	String currcat("Embedded URLs");
