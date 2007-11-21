@@ -68,7 +68,7 @@ ListContainer::ListContainer():refcount(1), parent(false), filedate(0), used(fal
 // delete the memory block when the class is destryed
 ListContainer::~ListContainer()
 {
-	delete[]data;
+	free(data);
 	if (graphused) {
 		free(realgraphdata);
 	}
@@ -80,7 +80,7 @@ ListContainer::~ListContainer()
 // for both types of list - clear & reset all values
 void ListContainer::reset()
 {
-	delete[]data;
+	free(data);
 	if (graphused)
 		free(realgraphdata);
 	for (unsigned int i = 0; i < morelists.size(); i++) {
@@ -798,13 +798,13 @@ bool ListContainer::makeGraph(bool fqs)
 
 #ifdef DGDEBUG
 	std::cout << "Bytes needed for phrase tree in worst-case scenario: " << (sizeof(int) * ((GRAPHENTRYSIZE * data_length) + ROOTOFFSET))
-		<< ", starting off with allocation of " <<  (sizeof(int) * ((GRAPHENTRYSIZE * ((data_length / 4) + 1)) + ROOTOFFSET)) << std::endl;
+		<< ", starting off with allocation of " <<  (sizeof(int) * ((GRAPHENTRYSIZE * ((data_length / 3) + 1)) + ROOTOFFSET)) << std::endl;
 	prolificroot = false;
 	secondmaxchildnodes = 0;
 #endif
 
 	// Make a conservative guess at how much memory will be needed - call realloc() as necessary to change what is actually taken
-	current_graphdata_size = (GRAPHENTRYSIZE * ((data_length / 4) + 1)) + ROOTOFFSET;
+	current_graphdata_size = (GRAPHENTRYSIZE * ((data_length / 3) + 1)) + ROOTOFFSET;
 	realgraphdata = (int*) calloc(current_graphdata_size, sizeof(int));
 	if (realgraphdata == NULL) {
 		syslog(LOG_ERR, "Cannot allocate memory for phrase tree: %s", strerror(errno));
@@ -1240,12 +1240,14 @@ void ListContainer::graphAdd(String s, const int inx, int item)
 		graphitems++;
 		// Reallocate memory if we're running out
 		if (current_graphdata_size < ((GRAPHENTRYSIZE * graphitems) + ROOTOFFSET)) {
-			current_graphdata_size = (GRAPHENTRYSIZE * (graphitems + 64)) + ROOTOFFSET;
-			realgraphdata = (int*) realloc(realgraphdata, sizeof(int) * current_graphdata_size);
+			int new_current_graphdata_size = (GRAPHENTRYSIZE * (graphitems + 256)) + ROOTOFFSET;
+			realgraphdata = (int*) realloc(realgraphdata, sizeof(int) * new_current_graphdata_size);
 			if (realgraphdata == NULL) {
 				syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", strerror(errno));
 				exit(1);
 			}
+			memset(realgraphdata + current_graphdata_size, 0, sizeof(int) * (new_current_graphdata_size - current_graphdata_size));
+			current_graphdata_size = new_current_graphdata_size;
 			graphdata2 = realgraphdata + ROOTOFFSET;
 			if (inx == 0)
 				graphdata = realgraphdata;
@@ -1299,12 +1301,14 @@ void ListContainer::graphAdd(String s, const int inx, int item)
 			graphitems++;
 			// Reallocate memory if we're running out
 			if (current_graphdata_size < ((GRAPHENTRYSIZE * graphitems) + ROOTOFFSET)) {
-				current_graphdata_size = (GRAPHENTRYSIZE * (graphitems + 64)) + ROOTOFFSET;
-				realgraphdata = (int*) realloc(realgraphdata, sizeof(int) * current_graphdata_size);
+				int new_current_graphdata_size = (GRAPHENTRYSIZE * (graphitems + 256)) + ROOTOFFSET;
+				realgraphdata = (int*) realloc(realgraphdata, sizeof(int) * new_current_graphdata_size);
 				if (realgraphdata == NULL) {
 					syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", strerror(errno));
 					exit(1);
 				}
+				memset(realgraphdata + current_graphdata_size, 0, sizeof(int) * (new_current_graphdata_size - current_graphdata_size));
+				current_graphdata_size = new_current_graphdata_size;
 				graphdata2 = realgraphdata + ROOTOFFSET;
 				if (inx == 0)
 					graphdata = realgraphdata;
@@ -1599,11 +1603,12 @@ void ListContainer::increaseMemoryBy(int bytes)
 		memcpy(temp, data, data_length);
 		delete[]data;
 		data = temp;*/
+		data = (char*) realloc(data, (data_memory + bytes) * sizeof(char));
+		memset(data + data_memory, 0, bytes * sizeof(char));
 		data_memory = data_memory + bytes;
-		data = (char*) realloc(data, data_memory * sizeof(char));
 	} else {
-		delete[]data;
-		data = new char[bytes];
+		free(data);
+		data = (char*) calloc(bytes, sizeof(char));
 		data_memory = bytes;
 	}
 }

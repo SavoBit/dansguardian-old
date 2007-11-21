@@ -166,6 +166,7 @@ void String::toLower()
 		c[i] = tolower(d[i]);
 	}
 	*this = String(c, l);
+	delete[] c;
 }
 
 void String::toUpper()
@@ -177,6 +178,7 @@ void String::toUpper()
 		c[i] = toupper(d[i]);
 	}
 	*this = String(c, l);
+	delete[] c;
 }
 
 // decode %xx to individual characters (checkme: i'm sure this is duplicated elsewhere...)
