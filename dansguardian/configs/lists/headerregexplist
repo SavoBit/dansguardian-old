@@ -6,3 +6,6 @@
 # of extended regular expressions.
 #
 # Headers are run through replacements line-by-line, not as a single block.
+
+# Windows Live Search cookie replacement - force filtering on
+#"cookie:(.*)&ADLT=(OFF|DEMOTE)"->"Cookie:$1&ADLT=STRICT"
