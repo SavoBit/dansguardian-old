@@ -75,6 +75,7 @@ endif
 PROXYAUTH_SOURCE = authplugins/proxy.cpp
 IDENTAUTH_SOURCE = authplugins/ident.cpp
 IPAUTH_SOURCE = authplugins/ip.cpp
+DIGESTAUTH_SOURCE = authplugins/digest.cpp
 
 if ENABLE_NTLM
 NTLMAUTH_SOURCE = authplugins/ntlm.cpp
@@ -121,4 +122,4 @@ dansguardian_SOURCES = String.cpp String.hpp \
 		       $(DEFAULTDM_SOURCE) $(FANCYDM_SOURCE) \
 		       $(TRICKLEDM_SOURCE) $(PROXYAUTH_SOURCE) \
 		       $(IDENTAUTH_SOURCE) $(IPAUTH_SOURCE) \
-		       $(NTLMAUTH_SOURCE)
+		       $(NTLMAUTH_SOURCE) $(DIGESTAUTH_SOURCE)

@@ -92,6 +92,8 @@ public:
 	// grab the contents of Proxy-Authorization header
 	// returns base64-decoding of the chunk of data after the auth type string
 	std::string getAuthData();
+	// grab raw contents of Proxy-Authorization header, without b64 decode
+	std::string getRawAuthData();
 	// check whether a connection is persistent
 	bool isPersistent() { return ispersistent; };
 

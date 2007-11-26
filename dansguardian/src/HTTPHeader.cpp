@@ -237,6 +237,15 @@ std::string HTTPHeader::getAuthData()
 	return "";
 }
 
+// grab raw contents of Proxy-Authorization header without decoding
+std::string HTTPHeader::getRawAuthData()
+{
+	if (pproxyauthorization != NULL) {
+		return pproxyauthorization->after(" ").after(" ");
+	}
+	return "";
+}
+
 // do we have a non-identity content encoding? this means body is compressed
 bool HTTPHeader::isCompressed()
 {

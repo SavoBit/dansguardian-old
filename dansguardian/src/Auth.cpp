@@ -35,6 +35,7 @@ extern OptionContainer o;
 extern bool is_daemonised;
 
 extern authcreate_t proxycreate;
+extern authcreate_t digestcreate;
 extern authcreate_t identcreate;
 extern authcreate_t ipcreate;
 
@@ -129,6 +130,13 @@ AuthPlugin* auth_plugin_load(const char *pluginConfigPath)
 		std::cout << "Enabling proxy-basic auth plugin" << std::endl;
 #endif
 		return proxycreate(cv);
+	}
+
+	if (plugname == "proxy-digest") {
+#ifdef DGDEBUG
+		std::cout << "Enabling proxy-digest auth plugin" << std::endl;
+#endif
+		return digestcreate(cv);
 	}
 
 	if (plugname == "ident") {

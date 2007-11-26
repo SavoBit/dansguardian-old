@@ -454,6 +454,7 @@ contentscanexceptions = off
 # If you do not use multiple filter groups, you need not specify this option.
 #
 #authplugin = '@DGCONFDIR@/authplugins/proxy-basic.conf'
+#authplugin = '@DGCONFDIR@/authplugins/proxy-digest.conf'
 #@NTLMSUPPORT@authplugin = '@DGCONFDIR@/authplugins/proxy-ntlm.conf'
 #authplugin = '@DGCONFDIR@/authplugins/ident.conf'
 #authplugin = '@DGCONFDIR@/authplugins/ip.conf'
