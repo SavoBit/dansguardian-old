@@ -31,10 +31,10 @@ class DataBuffer
 {
 public:
 	char *data;
-	unsigned int buffer_length;
+	off_t buffer_length;
 	char *compresseddata;
-	unsigned int compressed_buffer_length;
-	unsigned int tempfilesize;
+	off_t compressed_buffer_length;
+	off_t tempfilesize;
 	String tempfilepath;
 	bool dontsendbody;  // used for fancy download manager for example
 	int tempfilefd;
@@ -43,7 +43,7 @@ public:
 	DMPlugin *dm_plugin;
 
 	DataBuffer();
-	DataBuffer(const void* indata, unsigned int length);
+	DataBuffer(const void* indata, off_t length);
 	~DataBuffer();
 
 	int length() { return buffer_length; };
@@ -81,7 +81,7 @@ private:
 #endif
 
 	int timeout;
-	unsigned int bytesalreadysent;
+	off_t bytesalreadysent;
 	bool preservetemp;
 
 	String decompress;

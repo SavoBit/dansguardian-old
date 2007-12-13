@@ -61,7 +61,7 @@ DataBuffer::DataBuffer():data(new char[1]), buffer_length(0), compresseddata(NUL
 	data[0] = '\0';
 }
 
-DataBuffer::DataBuffer(const void* indata, unsigned int length):data(new char[length]), buffer_length(length), compresseddata(NULL), compressed_buffer_length(0),
+DataBuffer::DataBuffer(const void* indata, off_t length):data(new char[length]), buffer_length(length), compresseddata(NULL), compressed_buffer_length(0),
 	tempfilesize(0), dontsendbody(false), tempfilefd(-1), timeout(20), bytesalreadysent(0), preservetemp(false)
 {
 	memcpy(data, indata, length);
@@ -263,7 +263,7 @@ void DataBuffer::out(Socket * sock) throw(exception)
 #ifdef DGDEBUG
 		std::cout << "Sending " << tempfilesize - bytesalreadysent << " bytes from temp file (" << bytesalreadysent << " already sent)" << std::endl;
 #endif
-		unsigned int sent = bytesalreadysent;
+		off_t sent = bytesalreadysent;
 		int rc;
 		lseek(tempfilefd, bytesalreadysent, SEEK_SET);
 		while (sent < tempfilesize) {
@@ -338,7 +338,7 @@ void DataBuffer::zlibinflate(bool header)
 	char *block = new char[newsize];
 	char *temp = NULL;
 	int err;
-	unsigned int bytesgot = 0;
+	off_t bytesgot = 0;
 
 	z_stream d_stream;
 	d_stream.zalloc = (alloc_func) 0;
