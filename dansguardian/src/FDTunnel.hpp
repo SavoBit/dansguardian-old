@@ -38,13 +38,13 @@
 class FDTunnel
 {
 public:
-	int throughput;  // used to log total data from from to to
+	off_t throughput;  // used to log total data from from to to
 	
 	FDTunnel();
 	
 	// tunnel from fdfrom to fdto
 	// return false if throughput larger than target throughput (for post upload size checking)
-	bool tunnel(Socket &sockfrom, Socket &sockto, bool twoway = false, int targetthroughput = -1, bool ignore = false);
+	bool tunnel(Socket &sockfrom, Socket &sockto, bool twoway = false, off_t targetthroughput = -1, bool ignore = false);
 
 	void reset();
 };

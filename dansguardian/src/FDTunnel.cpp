@@ -57,7 +57,7 @@ void FDTunnel::reset()
 
 // tunnel data from fdfrom to fdto (unfiltered)
 // return false if throughput larger than target throughput
-bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targetthroughput, bool ignore)
+bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, off_t targetthroughput, bool ignore)
 {
 	if (targetthroughput == 0) {
 #ifdef DGDEBUG
@@ -69,6 +69,8 @@ bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, int targett
 #ifdef DGDEBUG
 	if (targetthroughput < 0)
 		std::cout << "Tunnelling without known content-length" << std::endl;
+	else
+		std::cout << "Tunnelling with content length " << targetthroughput << std::endl;
 #endif
 	if ((sockfrom.bufflen - sockfrom.buffstart) > 0) {
 #ifdef DGDEBUG
