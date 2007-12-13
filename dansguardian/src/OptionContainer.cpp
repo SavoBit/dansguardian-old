@@ -234,6 +234,8 @@ bool OptionContainer::read(const char *filename, int type)
 			return false;
 		}
 
+		// TODO: Implement a "findoptionO" and a version of
+		// reality check which uses off_t, for large file support?
 		max_upload_size = findoptionI("maxuploadsize");
 		if (!realitycheck(max_upload_size, -1, 0, "maxuploadsize")) {
 			return false;
@@ -679,9 +681,9 @@ bool OptionContainer::inBannedIPList(const std::string *ip, std::string *&host)
 }
 
 
-int OptionContainer::findoptionI(const char *option)
+long int OptionContainer::findoptionI(const char *option)
 {
-	int res = String(findoptionS(option).c_str()).toInteger();
+	long int res = String(findoptionS(option).c_str()).toLong();
 	return res;
 }
 
@@ -752,7 +754,7 @@ std::deque<String > OptionContainer::findoptionM(const char *option)
 	return results;
 }
 
-bool OptionContainer::realitycheck(int l, int minl, int maxl, char *emessage)
+bool OptionContainer::realitycheck(long int l, long int minl, long int maxl, char *emessage)
 {
 	// realitycheck checks an amount for certain expected criteria
 	// so we can spot problems in the conf files easier

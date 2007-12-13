@@ -119,10 +119,10 @@ public:
 
 	std::string daemon_user;
 	std::string daemon_group;
-	int max_upload_size;
-	unsigned int max_content_filter_size;
-	unsigned int max_content_ramcache_scan_size;
-	unsigned int max_content_filecache_scan_size;
+	off_t max_upload_size;
+	off_t max_content_filter_size;
+	off_t max_content_ramcache_scan_size;
+	off_t max_content_filecache_scan_size;
 	bool scan_clean_cache;
 	bool content_scan_exceptions;
 	bool delete_downloaded_temp_files;
@@ -183,9 +183,9 @@ private:
 	bool loadDMPlugins();
 
 	bool precompileregexps();
-	int findoptionI(const char *option);
+	long int findoptionI(const char *option);
 	std::string findoptionS(const char *option);
-	bool realitycheck(int l, int minl, int maxl, char *emessage);
+	bool realitycheck(long int l, long int minl, long int maxl, char *emessage);
 	bool readAnotherFilterGroupConf(const char *filename, const char *groupname, bool &need_html);
 	std::deque<String> findoptionM(const char *option);
 
