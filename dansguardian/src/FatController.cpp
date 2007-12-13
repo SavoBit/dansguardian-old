@@ -867,9 +867,9 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 	//String where, what, how;
 	std::string cr("\n");
    
-	std::string where, what, how, cat, clienthost, from, who, mimetype, useragent;
-	int port = 80, size = 0, isnaughty = 0, isexception = 0, code = 200;
-	int cachehit = 0, wasinfected = 0, wasscanned = 0, naughtiness = 0, filtergroup = 0;
+	std::string where, what, how, cat, clienthost, from, who, mimetype, useragent, ssize, sweight;
+	int port = 80, isnaughty = 0, isexception = 0, code = 200;
+	int cachehit = 0, wasinfected = 0, wasscanned = 0, filtergroup = 0;
 	long tv_sec = 0, tv_usec = 0;
 	int contentmodified = 0, urlmodified = 0, headermodified = 0;
 
@@ -957,7 +957,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 							isnaughty = atoi(logline);
 							break;
 						case 3:
-							naughtiness = atoi(logline);
+							sweight = logline;
 							break;
 						case 4:
 							where = logline;
@@ -993,7 +993,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 							headermodified = atoi(logline);
 							break;
 						case 15:
-							size = atoi(logline);
+							ssize = logline;
 							break;
 						case 16:
 							filtergroup = atoi(logline);
@@ -1087,7 +1087,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 				what = "*HEADERMOD* " + what;
 			}
 
-			std::string builtline, year, month, day, hour, min, sec, when, ssize, sweight, vbody, utime;
+			std::string builtline, year, month, day, hour, min, sec, when, vbody, utime;
 			struct timeval theend;
 
 			// create a string representation of UNIX timestamp if desired
@@ -1135,9 +1135,6 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 					when += " " + utime;
 					
 			}
-
-			sweight = String(naughtiness);
-			ssize = String(size);
 
 			// truncate long log items
 			if (o.max_logitem_length > 0) {
