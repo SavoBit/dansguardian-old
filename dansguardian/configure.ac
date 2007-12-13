@@ -3,7 +3,7 @@
 # 2004,2005 - Daniel Barron
 
 AC_PREREQ(2.57)
-AC_INIT(dansguardian, 2.9.9.2)
+AC_INIT(dansguardian, 2.9.9.3)
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([dgconfig.h])
 
@@ -16,6 +16,8 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+
+AC_LANG(C++)
 
 AC_CACHE_SAVE
 
@@ -316,6 +318,48 @@ fi
 ],
 [ # disable by default
 	AC_MSG_RESULT(no)
+])
+
+# ask user if they want large file support on 32 bit systems
+AC_MSG_CHECKING([for large file support])
+AC_ARG_ENABLE(
+lfs,
+[AC_HELP_STRING([--enable-lfs@<:@=yes@:>@], [Enable large file support on 32 bit systems])],
+[ if test "x$enableval" = "xno"; then
+	AC_MSG_RESULT(no)
+else
+	lfsflags=`getconf LFS_CFLAGS`
+	CXXFLAGS="${CXXFLAGS} $lfsflags"
+	AC_MSG_RESULT(yes)
+fi
+],
+[ # enable by default
+	lfsflags=`getconf LFS_CFLAGS`
+	CXXFLAGS="${CXXFLAGS} $lfsflags"
+	AC_MSG_RESULT(yes)
+])
+
+# determine whether or not "off_t" is simply a typedef of
+# "int", "unsigned int", "long", etc. - if it is, the String
+# class won't compile if its off_t constructor is defined,
+# as that would represent a function redefinition.
+AC_MSG_CHECKING([for type collision with off_t])
+AC_COMPILE_IFELSE(
+[
+ AC_LANG_PROGRAM(
+ [[#include <sys/types.h>]],[[
+ struct Foo{
+ 	void f(const int);
+	void f(const long);
+	void f(const long unsigned);
+	void f(const unsigned int);
+	void f(const off_t);
+ };]])
+],[
+   AC_MSG_RESULT([no])
+],[
+   AC_MSG_RESULT([yes])
+   AC_DEFINE([OFFT_COLLISION],[],[Define if type "off_t" is a typedef of another type for which String already has a constructor])
 ])
 
 # by default, we do not need the content scanner list or config directories, nor the download manager list directory
