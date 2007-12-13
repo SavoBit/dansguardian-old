@@ -50,6 +50,10 @@ public:
 	String(const long unsigned num);
 	String(const unsigned int num);
 # ifndef __OFFT_COLLISION
+	// If large file support is not enabled (and possibly even if it is),
+	// the type of off_t may be a typedef of a type for which we already
+	// have a constructor. In that case, don't define one which takes an
+	// off_t, or we get compiler errors.
 	String(const off_t num);
 # endif
 	// substring constructors
