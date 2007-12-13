@@ -30,7 +30,7 @@
 
 #include <iostream>
 #include <string>
-
+#include <sys/types.h>
 
 // DECLARATIONS
 
@@ -49,6 +49,9 @@ public:
 	String(const long num);
 	String(const long unsigned num);
 	String(const unsigned int num);
+# ifndef __OFFT_COLLISION
+	String(const off_t num);
+# endif
 	// substring constructors
 	String(const char *bs, int len):std::string(bs, len) {};
 	String(const char *bs, int start, int len):std::string(bs+start, len) {};
@@ -65,6 +68,7 @@ public:
 	// convert to integer/long integer
 	int toInteger();
 	long int toLong();
+	off_t toOffset();
 	// return integer from hex string
 	int hexToInteger();
 	// case conversions

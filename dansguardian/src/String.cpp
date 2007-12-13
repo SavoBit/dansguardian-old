@@ -58,6 +58,14 @@ String::String(const long unsigned int num)
 	buf << num << std::ends;
 	*this = buf.str();
 }
+# ifndef __OFFT_COLLISION
+String::String(const off_t num)
+{
+	std::ostrstream buf;
+	buf << num << std::ends;
+	*this = buf.str();
+}
+# endif
 #else
 String::String(const int num)
 {
@@ -105,7 +113,32 @@ String::String(const long unsigned num)
 	*this = data;
 	delete[] data;
 }
+# ifndef __OFFT_COLLISION
+String::String(const off_t num)
+{
+	std::stringstream buf;
+	buf << num << std::ends;
+	int l = buf.str().length();
+	char* data = new char[l+1];
+	buf >> data;
+	*this = data;
+	delete[] data;
+}
+# endif
 #endif
+
+// string-to-off_t conversion
+// This is horrible, horrible code, but the best I can come up with
+// which will work in both 32 and 64-bit file offset modes. :(
+off_t String::toOffset()
+{
+	off_t t;
+	if (sizeof(off_t) == 4)
+		sscanf(this->c_str(), "%d", &t);
+	else if (sizeof(off_t) == 8)
+		sscanf(this->c_str(), "%lld", &t);
+	return t;
+}
 
 // string-to-integer conversion
 int String::toInteger()

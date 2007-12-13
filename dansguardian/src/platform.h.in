@@ -99,4 +99,8 @@
 	#define __SEGV_BACKTRACE
 #endif
 
+#ifdef OFFT_COLLISION
+	#define __OFFT_COLLISION
+#endif
+
 #endif //ifndef __H_PLATFORM
