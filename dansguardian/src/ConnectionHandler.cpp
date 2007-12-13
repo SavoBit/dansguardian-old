@@ -251,7 +251,7 @@ bool ConnectionHandler::gotIPs(std::string ipstr) {
 }
 
 // send a file to the client - used during bypass of blocked downloads
-unsigned int ConnectionHandler::sendFile(Socket * peerconn, String & filename, String & filemime, String & filedis, String &url)
+off_t ConnectionHandler::sendFile(Socket * peerconn, String & filename, String & filemime, String & filedis, String &url)
 {
 	int fd = open(filename.toCharArray(), O_RDONLY);
 	if (fd < 0) {		// file access error
@@ -265,7 +265,7 @@ unsigned int ConnectionHandler::sendFile(Socket * peerconn, String & filename, S
 		return 0;
 	}
 
-	unsigned int filesize = lseek(fd, 0, SEEK_END);
+	off_t filesize = lseek(fd, 0, SEEK_END);
 	lseek(fd, 0, SEEK_SET);
 	String message("HTTP/1.0 200 OK\nContent-Type: " + filemime + "\nContent-Length: " + String(filesize));
 	if (filedis.length() == 0) {
@@ -284,7 +284,7 @@ unsigned int ConnectionHandler::sendFile(Socket * peerconn, String & filename, S
 	}
 
 	// perform the actual sending
-	unsigned int sent = 0;
+	off_t sent = 0;
 	int rc;
 	char *buffer = new char[250000];
 	while (sent < filesize) {
@@ -381,7 +381,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 	std::string exceptionreason;  // to hold the reason for not blocking
 	std::string exceptioncat;
 
-	int docsize = 0;  // to store the size of the returned document for logging
+	off_t docsize = 0;  // to store the size of the returned document for logging
 
 	std::string clientip(ip.toCharArray());  // hold the clients ip
 	delete clienthost;
@@ -1128,7 +1128,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// don't even bother scan testing if the content-length header indicates the file is larger than the maximum size we'll scan
 				// - based on patch supplied by cahya (littlecahya@yahoo.de)
 				// be careful: contentLength is signed, and max_content_filecache_scan_size is unsigned
-				int cl = docheader.contentLength();
+				off_t cl = docheader.contentLength();
 				if (runav) {
 					if (cl == 0)
 						runav = false;
@@ -1555,7 +1555,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 
 // decide whether or not to perform logging, categorise the log entry, and write it.
 void ConnectionHandler::doLog(std::string &who, std::string &from, String &where, unsigned int &port,
-		std::string &what, String &how, int &size, std::string *cat, bool isnaughty,
+		std::string &what, String &how, off_t &size, std::string *cat, bool isnaughty,
 		bool isexception, bool istext, struct timeval *thestart, bool cachehit,
 		int code, std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness, int filtergroup,
 		HTTPHeader* reqheader, HTTPHeader* respheader, bool contentmodified, bool urlmodified, bool headermodified)
@@ -2121,7 +2121,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 
 // do content scanning (AV filtering) and naughty filtering
 void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header, DataBuffer *docbody,
-	Socket *proxysock, Socket *peerconn, int *headersent, bool *pausedtoobig, int *docsize, NaughtyFilter *checkme,
+	Socket *proxysock, Socket *peerconn, int *headersent, bool *pausedtoobig, off_t *docsize, NaughtyFilter *checkme,
 	bool runav, bool wasclean, bool cachehit, int filtergroup, std::deque<bool> *sendtoscanner,
 	std::string *clientuser, std::string *clientip, bool *wasinfected, bool *wasscanned, bool isbypass,
 	String &url, String &domain, bool *scanerror, bool &contentmodified, String *csmessage)
@@ -2150,7 +2150,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 		std::cout << "got body from proxy" << std::endl;
 	}
 #endif
-	unsigned int dblen;
+	off_t dblen;
 	bool isfile = false;
 	if (docbody->tempfilesize > 0) {
 		dblen = docbody->tempfilesize;
@@ -2161,7 +2161,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 	// don't scan zero-length buffers (waste of AV resources, especially with external scanners (ICAP)).
 	// these were encountered browsing opengroup.org, caused by a stats script. (PRA 21/09/2005)
 	// if we wanted to honour a hypothetical min_content_scan_size, we'd do it here.
-	if (((*docsize) = (signed) dblen) == 0) {
+	if (((*docsize) = dblen) == 0) {
 #ifdef DGDEBUG
 		std::cout << "Not scanning zero-length body" << std::endl;
 #endif

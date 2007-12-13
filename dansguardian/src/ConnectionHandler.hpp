@@ -54,7 +54,7 @@ private:
 
 	// write a log entry containing the given data (if required)
 	void doLog(std::string &who, std::string &from, String &where, unsigned int &port,
-		std::string &what, String &how, int &size, std::string *cat, bool isnaughty,
+		std::string &what, String &how, off_t &size, std::string *cat, bool isnaughty,
 		bool isexception, bool istext, struct timeval *thestart, bool cachehit, int code,
 		std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness, int filtergroup,
 		HTTPHeader* reqheader, HTTPHeader* respheader = NULL, bool contentmodified = false,
@@ -84,13 +84,13 @@ private:
 
 	// do content scanning (AV filtering) and naughty filtering
 	void contentFilter(HTTPHeader *docheader, HTTPHeader *header, DataBuffer *docbody, Socket *proxysock,
-		Socket *peerconn, int *headersent, bool *pausedtoobig, int *docsize, NaughtyFilter *checkme, bool runav,
+		Socket *peerconn, int *headersent, bool *pausedtoobig, off_t *docsize, NaughtyFilter *checkme, bool runav,
 		bool wasclean, bool cachehit, int filtergroup, std::deque<bool > *sendtoscanner, std::string *clientuser,
 		std::string *clientip, bool *wasinfected, bool *wasscanned, bool isbypass, String &url, String &domain,
 		bool *scanerror, bool &contentmodified, String *csmessage);
 
 	// send a file to the client - used during bypass of blocked downloads
-	unsigned int sendFile(Socket *peerconn, String & filename, String & filemime, String & filedis, String &url);
+	off_t sendFile(Socket *peerconn, String & filename, String & filemime, String & filedis, String &url);
 };
 
 #endif
