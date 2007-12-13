@@ -31,7 +31,6 @@
 #include <cstdio>
 #include <ctime>
 #include <unistd.h>
-#include "String.hpp"
 #include <iostream>
 #include <fstream>
 #include <sys/stat.h>
