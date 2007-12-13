@@ -60,7 +60,7 @@ private:
 	// - start downloading & hope for the best
 	// - if too large, warn the user, but keep downloading (won't be scanned)
 	// - if larger than upper limit also, kill download.
-	unsigned int upperlimit;
+	off_t upperlimit;
 	
 	// was file too large to be scanned?
 	bool toobig_unscanned;
@@ -70,7 +70,7 @@ private:
 	// format an integer in seconds as hours:minutes:seconds
 	std::string timestring(const int seconds);
 	// format a number of bytes as a number of Gb/Mb/Kb
-	String bytestring(const int bytes);
+	String bytestring(const off_t bytes);
 };
 
 
@@ -95,7 +95,7 @@ int fancydm::init(void* args)
 	DMPlugin::init(args);
 
 	// read in absolute max download limit
-	upperlimit = cv["maxdownloadsize"].toInteger() * 1024;
+	upperlimit = cv["maxdownloadsize"].toOffset() * 1024;
 	if (upperlimit <= o.max_content_filecache_scan_size)
 		upperlimit = 0;
 #ifdef DGDEBUG
@@ -159,10 +159,10 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 
 	int rc;
 
-	unsigned int newsize;
+	off_t newsize;
 	int expectedsize = docheader->contentLength();
-	unsigned int bytessec = 0;
-	unsigned int bytesgot = 0;
+	off_t bytessec = 0;
+	off_t bytesgot = 0;
 	int percentcomplete = 0;
 	unsigned int eta = 0;
 	int timeelapsed = 0;
@@ -195,7 +195,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	bool secondstage = false;
 	
 	// buffer size for streaming downloads
-	unsigned int blocksize = 32768;
+	off_t blocksize = 32768;
 	// set to a sensible minimum
 	if (!wantall && (blocksize > o.max_content_filter_size))
 		blocksize = o.max_content_filter_size;
@@ -505,7 +505,7 @@ std::string fancydm::timestring(const int seconds)
 	return result;
 }
 // format a number of bytes as a number of Gb/Mb/Kb
-String fancydm::bytestring(const int bytes)
+String fancydm::bytestring(const off_t bytes)
 {
 	int b = (int)floor((double)bytes/(1024*1024*1024));
 	if (b > 0)

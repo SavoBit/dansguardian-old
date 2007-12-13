@@ -105,8 +105,8 @@ int trickledm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHe
 
 	int rc = 0;
 	d->bytesalreadysent = 0;
-	unsigned int newsize;
-	unsigned int bytesremaining = docheader->contentLength();
+	off_t newsize;
+	off_t bytesremaining = docheader->contentLength();
 	
 	// if using non-persistent connections, some servers will not report
 	// a content-length. in these situations, just download everything.
@@ -126,7 +126,7 @@ int trickledm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHe
 	gettimeofday(&themdays, NULL);
 
 	// buffer size for streaming downloads
-	unsigned int blocksize = 32768;
+	off_t blocksize = 32768;
 	// set to a sensible minimum
 	if (!wantall && (blocksize > o.max_content_filter_size))
 		blocksize = o.max_content_filter_size;
@@ -152,7 +152,7 @@ int trickledm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHe
 				}
 				if (!swappedtodisk) {
 					// leave a kilobyte "barrier" so the whole file does not get sent before scanning
-					if ((d->buffer_length > 1024) && (d->bytesalreadysent < (unsigned int)(d->buffer_length - 1024))) {
+					if ((d->buffer_length > 1024) && (d->bytesalreadysent < (d->buffer_length - 1024))) {
 #ifdef DGDEBUG
 						std::cout << "trickle delay - sending a byte from the memory buffer" << std::endl;
 #endif

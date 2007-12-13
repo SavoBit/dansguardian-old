@@ -99,8 +99,8 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 //      std::cout << "cvtest:" << cv["dummy"] << std::endl;
 
 	int rc;
-	unsigned int newsize;
-	unsigned int bytesremaining = docheader->contentLength();
+	off_t newsize;
+	off_t bytesremaining = docheader->contentLength();
 	
 	// if using non-persistent connections, some servers will not report
 	// a content-length. in these situations, just download everything.
@@ -120,7 +120,7 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 	gettimeofday(&themdays, NULL);
 
 	// buffer size for streaming downloads
-	unsigned int blocksize = 32768;
+	off_t blocksize = 32768;
 	// set to a sensible minimum
 	if (!wantall && (blocksize > o.max_content_filter_size))
 		blocksize = o.max_content_filter_size;
