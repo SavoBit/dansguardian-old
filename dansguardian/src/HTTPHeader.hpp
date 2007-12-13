@@ -73,7 +73,7 @@ public:
 	String requestType();
 	int returnCode();
 	// get content length - returns -1 if undetermined
-	int contentLength();
+	off_t contentLength();
 	String getContentType();
 	// check received content type against given content type
 	bool isContentType(const String& t);
@@ -155,7 +155,7 @@ private:
 	std::string cachedurl;
 
 	char postdata[15];
-	int postdatalen;
+	off_t postdatalen;
 	bool postdatachopped;
 	bool ispostupload;
 

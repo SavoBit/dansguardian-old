@@ -102,7 +102,7 @@ int HTTPHeader::returnCode()
 }
 
 // grab content length
-int HTTPHeader::contentLength()
+off_t HTTPHeader::contentLength()
 {
 	// code 304 - not modified - no content
 	String temp(header.front().after(" "));
@@ -110,7 +110,7 @@ int HTTPHeader::contentLength()
 		return 0;
 	if (pcontentlength != NULL) {
 		temp = pcontentlength->after(" ");
-		return temp.toInteger();
+		return temp.toOffset();
 	}
 	// no content-length header - we don't know
 	return -1;
@@ -676,7 +676,7 @@ bool HTTPHeader::isPostUpload(Socket &peersock)
 	delete[]postdatablock;
 	return answer;*/
 
-	int cl = contentLength();
+	off_t cl = contentLength();
 	if (((cl > 0) && (cl < 14)) || (getContentType() == "application/x-www-form-urlencoded")) {
 #ifdef DGDEBUG
 		std::cout << "Based on content length/type, is not POST upload!" << std::endl;
@@ -1429,7 +1429,7 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 		std::cout << "Opening tunnel for remainder of POST data" << std::endl;
 #endif
 		FDTunnel fdt;
-		int remaining = contentLength() - postdatalen;
+		off_t remaining = contentLength() - postdatalen;
 		if (remaining < 0)
 			throw runtime_error("No POST data left to send!?");
 		fdt.tunnel(*peersock, *sock, false, remaining, true);
@@ -1440,7 +1440,7 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 void HTTPHeader::discard(Socket *sock)
 {
 	static char fred[4096];
-	int cl = contentLength() - postdatalen;
+	off_t cl = contentLength() - postdatalen;
 	int rc;
 	while (cl > 0) {
 		rc = sock->readFromSocket(fred, ((cl > 4096) ? 4096 : cl), 0, timeout, false);
