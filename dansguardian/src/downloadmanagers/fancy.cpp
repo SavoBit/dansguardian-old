@@ -160,7 +160,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	int rc;
 
 	off_t newsize;
-	int expectedsize = docheader->contentLength();
+	off_t expectedsize = docheader->contentLength();
 	off_t bytessec = 0;
 	off_t bytesgot = 0;
 	int percentcomplete = 0;
