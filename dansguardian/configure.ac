@@ -329,13 +329,21 @@ lfs,
 	AC_MSG_RESULT(no)
 else
 	lfsflags=`getconf LFS_CFLAGS`
+	lfsld=`getconf LFS_LDFLAGS`
+	lfslib=`getconf LFS_LIBS`
 	CXXFLAGS="${CXXFLAGS} $lfsflags"
+	LDFLAGS="${LDFLAGS} $lfsld"
+	LIBS="${LIBS} $lfslib"
 	AC_MSG_RESULT(yes)
 fi
 ],
 [ # enable by default
 	lfsflags=`getconf LFS_CFLAGS`
+	lfsld=`getconf LFS_LDFLAGS`
+	lfslib=`getconf LFS_LIBS`
 	CXXFLAGS="${CXXFLAGS} $lfsflags"
+	LDFLAGS="${LDFLAGS} $lfsld"
+	LIBS="${LIBS} $lfslib"
 	AC_MSG_RESULT(yes)
 ])
 
