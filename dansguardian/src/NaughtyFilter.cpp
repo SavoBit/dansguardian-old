@@ -670,7 +670,8 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 				}
 				else if (type == 0) {	// combination banned
 					bannedcombi = true;
-					combifound = combisofar;
+					combifound += "(" + combisofar + ")";
+					combisofar = "";
 					combicurrent += 2;
 					cat = *(combicurrent);
 					bannedcategory = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat);
