@@ -1079,7 +1079,7 @@ void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, un
 	int currnode;
 	int * graphdata = realgraphdata;
 	int ml;
-	unsigned char p;
+	char p;
 	int pos;
 	int depth;
 	// number of links from root node to first letter of phrase
