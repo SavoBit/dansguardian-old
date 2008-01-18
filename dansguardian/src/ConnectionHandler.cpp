@@ -986,7 +986,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			if (isconnect && !isbypass && !isexception) {
 				if (!authed) {
 #ifdef DGDEBUG
-					std::cout << "CONNECT request response not 200 - doing standard filtering on auth required response" << std::endl;
+					std::cout << "CONNECT: user not authed - doing standard filtering on possible auth required response" << std::endl;
 #endif
 					isconnect = false;
 					// send header to proxy
@@ -999,7 +999,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					wasrequested = true;
 				} else {
 #ifdef DGDEBUG
-					std::cout << "CONNECT request response is 200 - attempting pre-emptive ban" << std::endl;
+					std::cout << "CONNECT: user is authed - attempting pre-emptive ban" << std::endl;
 #endif
 					// if its a connect and we don't do filtering on it now then
 					// it will get tunneled and not filtered.  We can't tunnel later
@@ -1060,6 +1060,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				}
 			}
 #ifdef DGDEBUG
+			// Banning POST requests for unauthed users (when auth is enabled) could potentially prevent users from authenticating.
 			else if (!authed)
 				std::cout << "Skipping POST upload blocking because user is unauthed." << std::endl;
 #endif
@@ -1578,7 +1579,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		return;
 	}
 
-	String data, cr("\n");
+	std::string data, cr("\n");
 
 	if ((isexception && (o.log_exception_hits == 2))
 		|| isnaughty || o.ll == 3 || (o.ll == 2 && istext))
@@ -1687,7 +1688,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		// send data
 		try {
 			ipcsock.setTimeout(10);
-			ipcsock.writeString(data.toCharArray());
+			ipcsock.writeString(data.c_str());
 			ipcsock.close();
 		} catch (exception &e) {
 			syslog(LOG_INFO, "Could not write to logging process: %s", e.what());
