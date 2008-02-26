@@ -140,7 +140,9 @@ String::String(const off_t num)
 // which will work in both 32 and 64-bit file offset modes. :(
 off_t String::toOffset()
 {
-	off_t t;
+	if (this->length() == 0)
+		return 0;
+	off_t t = 0;
 	if (sizeof(off_t) == 4)
 		sscanf(this->c_str(), "%d", &t);
 	else if (sizeof(off_t) == 8)
