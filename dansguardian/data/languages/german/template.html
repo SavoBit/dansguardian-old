@@ -1,22 +1,61 @@
-<HTML><HEAD><TITLE>DansGuardian - Zugriff verweigert</TITLE></HEAD>
-<BODY>
-<CENTER><H2>Zugriff wurde verweigert -USER-</H2>
-<br>Zugriff auf die Seite:<P>
-<strong><a href="-URL-">-URL-</a></strong>
-<P>... wurde verweigert mit folgender Begr&uuml;ndung:<P>
-<strong><font color="#ff0000">-REASONGIVEN-</font></strong>
-<p><table border=1 bgcolor="#FFEE00"><tr><td>Sie sehen diese Fehlermeldung, da die Seite, auf die Sie zugreifen wollten, <br>
-Inhalte enth&auml;lt (oder als solche gekennzeichnete), die als unangebracht erachtet werden.</td></tr></table>
-<P><table border=1 bgcolor="#44dd44"><tr><td>Wenn Sie fragen haben, wenden Sie sich bitte an ihren Netzwerkadministrator.</td></tr></table>
+<html>
 
-<P><font size=-3>Powered by <a href="http://dansguardian.org" target="_blank">DansGuardian</a></font>
-</center>
-</BODY>
-</HTML>
+<head>
+<title>DansGuardian - Zugriff verweigert</title>
+<meta http-equiv="content-type"  content="text/html; charset=utf-8">
+</head>
+
+<body bgcolor=#FFFFFF>
+
+<center>
+<table border=0 cellspacing=0 cellpadding=2 height=540 width=700>
+<tr>
+	<td colspan=2 bgcolor=#FEA700 height=100 align=center>
+	<font face=arial,helvetica size=6>
+	<b>Zugriff verweigert!</b>
+	</td>
+</tr>
+<tr>
+	<td colspan=2 bgcolor=#FFFACD height=30 align=right>
+	<font face=arial,helvetica size=3 color=black>
+	<b>-USER-&nbsp;</b>
+	</td>
+</tr>
+<tr>
+	<td align=center valign=bottom width=150 bgcolor=#B0C4DE>
+	<font face=arial,helvetica size=1 color=black>
+	IHRE FIRMA
+	</td>
+	<td width=550 bgcolor=#FFFFFF align=center valign=center>
+	<font face=arial,helvetica color=black>
+	<font size=4>
+	Der Zugriff auf die Seite
+	<br><br>
+	<a href="-URL-" target="_blank">-URL-</a>
+	<br><br>
+	<font size=3>
+	wurde mit folgender Begründung verweigert:
+	<br><br>
+	<font color=red>
+	<b>-REASONLOGGED-</b>
+	<font color=black>
+	<br><br><br><br>
+	Sie sehen diese Fehlermeldung, weil die von Ihnen gewünschte Seite unangebrachte Inhalte aufweist oder als solche gekennzeichnet ist.
+	<br><br>
+	Bei Fragen oder Beschwerden wenden Sie sich bitte an Ihren Netzwerkadministrator.
+	<br><br><br><br>
+	<font size=1>
+	Powered by <a href="http://www.dansguardian.org" target="_blank">DansGuardian</a>
+	</td>
+</tr>
+</table>
+
+</body>
+
+</html>
+
 <!--
-
-# Translation by Thomas Jarosch
-
+Translated and adapted for Unicode by Peter Vollmar
 The available variables are as follows:
 - URL- gives the URL the user was trying to get to.
 - REASONGIVEN- gives the nice reason (i.e. not quoting the banned phrase).
@@ -26,12 +65,14 @@ The available variables are as follows:
 - FILTERGROUP- gives the group number.
 - BYPASS- gives URL which allows temporary bypass of denied page
 
-
 You need to remove the space between the - and the variable to use them
 in your HTML.  They are there above so extra processing is not required.
 
 More example templates are likely to be found on the DansGuardian web site
 on the Extras page.
 
-Daniel Barron 2002-03-27
+This page was designed by Paul Richards.  (http://www.ridney.com/)
+
+Daniel Barron 2003-09-01
 --!>
+
