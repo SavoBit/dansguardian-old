@@ -158,7 +158,7 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception, int c
 		// just return
 	}
 	filedate = getFileDate(filename);
-	increaseMemoryBy(len + 1);  // Allocate some memory to hold file
+	increaseMemoryBy(len + 2);  // Allocate some memory to hold file
 	ifstream listfile(filename, ios::in);  // open the file for reading
 	if (!listfile.good()) {
 		if (!is_daemonised) {
@@ -383,7 +383,7 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 		return true;  // its blank - perhaps due to webmin editing
 		// just return
 	}
-	increaseMemoryBy(len + 1);  // Allocate some memory to hold file
+	increaseMemoryBy(len + 2);  // Allocate some memory to hold file
 	// The plus one is to cope with files not ending in a new line
 	ifstream listfile(filename, ios::in);
 	if (!listfile.good()) {
@@ -454,7 +454,7 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 			temp = temp.after("ftp://");  // tidy up
 		}
 		if (filters == 1) {	// remove port addresses
-			if (temp.contains(":")) {	// quicker than full regexp
+			if (temp.before("/").contains(":")) {	// quicker than full regexp
 				if (re.match(temp.toCharArray())) {
 					hostname = temp.before(":");
 					url = temp.after("/");
@@ -465,8 +465,8 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 		if (filters != 32) {
 			temp.toLower();  // tidy up - but don't make regex lists lowercase!
 		}
-		addToItemList(temp.toCharArray(), temp.length());  // add to unsorted
-		// list
+		if (temp.length() > 0)
+			addToItemList(temp.toCharArray(), temp.length());  // add to unsorted list
 	}
 	listfile.close();
 	return true;  // sucessful read
