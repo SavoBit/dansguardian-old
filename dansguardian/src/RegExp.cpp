@@ -23,6 +23,7 @@
 // INCLUDES
 
 #include "RegExp.hpp"
+#include <cstring>
 #include <iostream>
 
 // constructor - set defaults

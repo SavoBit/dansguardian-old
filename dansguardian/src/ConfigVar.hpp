@@ -23,6 +23,7 @@
 
 
 // INCLUDES
+#include <cstring>
 #include <map>
 #include "String.hpp"
 
