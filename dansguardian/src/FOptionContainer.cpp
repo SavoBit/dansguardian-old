@@ -597,19 +597,15 @@ bool FOptionContainer::read(const char *filename)
 					return false;
 				}		// mime types
 				banned_mimetype_flag = true;
-			} else {
-#ifdef DGDEBUG
-				std::cout << "Blanket download block enabled; using exception file lists" << std::endl;
-#endif
-				if (!readFile(exception_extension_list_location.c_str(),&exception_extension_list,false,false,"exceptionextensionlist")) {
-					return false;
-				}		// file extensions
-				exception_extension_flag = true;
-				if (!readFile(exception_mimetype_list_location.c_str(),&exception_mimetype_list,false,true,"exceptionmimetypelist")) {
-					return false;
-				}		// mime types
-				exception_mimetype_flag = true;
 			}
+			if (!readFile(exception_extension_list_location.c_str(),&exception_extension_list,false,false,"exceptionextensionlist")) {
+				return false;
+			}		// file extensions
+			exception_extension_flag = true;
+			if (!readFile(exception_mimetype_list_location.c_str(),&exception_mimetype_list,false,true,"exceptionmimetypelist")) {
+				return false;
+			}		// mime types
+			exception_mimetype_flag = true;
 			if (!readFile(exception_file_site_list_location.c_str(),&exception_file_site_list,false,true,"exceptionfilesitelist")) {
 				return false;
 			}		// download site exceptions
