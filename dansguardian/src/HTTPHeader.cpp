@@ -291,7 +291,7 @@ void HTTPHeader::addXForwardedFor(const std::string &clientip)
 void HTTPHeader::setContentLength(int newlen)
 {
 	if (pcontentlength != NULL) {
-		(*pcontentlength) = "Content-Length: " + String(newlen);
+		(*pcontentlength) = "Content-Length: " + String(newlen) + "\r";
 	}
 }
 
@@ -346,7 +346,7 @@ String HTTPHeader::modifyEncodings(String e)
 void HTTPHeader::removeEncoding(int newlen)
 {
 	if (pcontentlength != NULL) {
-		(*pcontentlength) = "Content-Length: " + String(newlen);
+		(*pcontentlength) = "Content-Length: " + String(newlen) + "\r";
 	}
 	// this may all be overkill. since we strip everything out of the outgoing
 	// accept-encoding header that we don't support, we won't be getting anything
@@ -373,7 +373,7 @@ void HTTPHeader::removeEncoding(int newlen)
 			temp.removeWhiteSpace();
 		}
 		if (newheader.length() == 0)*/
-			(*pcontentencoding) = "X-DansGuardian-Removed: Content-Encoding";
+			(*pcontentencoding) = "X-DansGuardian-Removed: Content-Encoding\r";
 /*			else
 			header[i] = "Content-Encoding: "+newheader;
 #ifdef DGDEBUG
@@ -542,7 +542,15 @@ bool HTTPHeader::headerRegExp(int filtergroup) {
 #ifdef DGDEBUG
 		std::cout << "Starting header reg exp replace: " << *i << std::endl;
 #endif
+		bool chop = false;
+		if (i->endsWith("\r"))
+		{
+			i->chop();
+			chop = true;
+		}
 		result |= regExp(*i, o.fg[filtergroup]->header_regexp_list_comp, o.fg[filtergroup]->header_regexp_list_rep);
+		if (chop)
+			i->append("\r");
 	}
 	return result;
 }
