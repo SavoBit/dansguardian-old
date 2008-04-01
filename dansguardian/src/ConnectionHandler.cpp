@@ -1053,7 +1053,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					checkme.whatIsNaughty = o.max_upload_size == 0 ? o.language_list.getTranslation(700) : o.language_list.getTranslation(701);
 					// Web upload is banned.
 					checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
-					checkme.whatIsNaughtyCategories = "Web upload.";
+					checkme.whatIsNaughtyCategories = "Web upload";
 					checkme.isItNaughty = true;
 					ispostblock = true;
 
@@ -1183,49 +1183,35 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				{
 					bool download_exception = false;
 					
-					// If in blanket download block mode, check the exception file site & URL lists. Actually, this is useful outside blanket block mode too...
-					if (o.fg[filtergroup]->inExceptionFileSiteList(urld)) {
+					// Check the exception file site and MIME type lists.
+					mimetype = docheader.getContentType().toCharArray();
+					if (o.fg[filtergroup]->inExceptionFileSiteList(urld))
 						download_exception = true;
+					else {
+						if (o.lm.l[o.fg[filtergroup]->exception_mimetype_list]->findInList(mimetype.c_str()))
+							download_exception = true;
 					}
 
-					// Perform MIME type matching
+					// Perform banned MIME type matching
 					if (!download_exception) {
-						mimetype = docheader.getContentType().toCharArray();
-
-						unsigned int list;
-						// check banned list if in non-blanket mode
-						// check exception list if in blanket mode
-						if (o.fg[filtergroup]->block_downloads)
-							list = (*o.fg[filtergroup]).exception_mimetype_list;
-						else
-							list = (*o.fg[filtergroup]).banned_mimetype_list;
-
-						i = (*o.lm.l[list]).findInList((char *) mimetype.c_str());
-
-						// Did we match? Then ban as necessary.
-						// If downloads are blanket blocked, block unless matched.
-						// If downloads are not blanket blocked, block if matched.
-						if ((i != NULL) && !(o.fg[filtergroup]->block_downloads)) {
-							// matched the banned list
-							checkme.whatIsNaughty = o.language_list.getTranslation(800);
-							// Banned MIME Type:
-							checkme.whatIsNaughty += i;
-							checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
-							checkme.isItNaughty = true;
-							checkme.whatIsNaughtyCategories = "Banned MIME Type.";
-						}
-						else if ((i == NULL) && o.fg[filtergroup]->block_downloads) {
+						// If downloads are blanket blocked, block outright.
+						if (o.fg[filtergroup]->block_downloads) {
 							// did not match the exception list
 							checkme.whatIsNaughty = o.language_list.getTranslation(750);
 							// Blanket file download is active
 							checkme.whatIsNaughty += mimetype;
 							checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
 							checkme.isItNaughty = true;
-							checkme.whatIsNaughtyCategories = "Blanket download block.";
+							checkme.whatIsNaughtyCategories = "Blanket download block";
 						}
-						else if ((i != NULL) && o.fg[filtergroup]->block_downloads) {
-							// matched the exception list
-							download_exception = true;
+						else if ((i = o.lm.l[o.fg[filtergroup]->banned_mimetype_list]->findInList(mimetype.c_str())) != NULL) {
+							// matched the banned list
+							checkme.whatIsNaughty = o.language_list.getTranslation(800);
+							// Banned MIME Type:
+							checkme.whatIsNaughty += i;
+							checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+							checkme.isItNaughty = true;
+							checkme.whatIsNaughtyCategories = "Banned MIME Type";
 						}
 						
 #ifdef DGDEBUG
@@ -1235,20 +1221,16 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 					}
 
-					// Perform extension matching - if not already matched the exception MIME list
+					// Perform extension matching - if not already matched the exception MIME or site lists
 					if (!download_exception) {
 						// Can't ban file extensions of URLs that just redirect
 						String tempurl(urld);
 						String tempdispos(docheader.disposition());
-						bool matched_extension = false;
-						unsigned int list;
-						// check banned list if in non-blanket mode
-						// check exception list if in blanket mode
-						if (o.fg[filtergroup]->block_downloads)
-							list = o.fg[filtergroup]->exception_extension_list;
-						else
-							list = o.fg[filtergroup]->banned_extension_list;
-
+						unsigned int elist, blist;
+						elist = o.fg[filtergroup]->exception_extension_list;
+						blist = o.fg[filtergroup]->banned_extension_list;
+						char* e = NULL;
+						char* b = NULL;
 						if (tempdispos.length() > 1) {
 							// dispos filename must take presidense
 #ifdef DGDEBUG
@@ -1257,24 +1239,26 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							// The function expects a url so we have to
 							// generate a pseudo one.
 							tempdispos = "http://foo.bar/" + tempdispos;
-							if ((i = (*o.fg[filtergroup]).inExtensionList(list, tempdispos)) != NULL) {
-								matched_extension = true;
-							}
+							e = o.fg[filtergroup]->inExtensionList(elist, tempdispos);
+							// Only need to check banned list if not blanket blocking
+							if ((e == NULL) && !(o.fg[filtergroup]->block_downloads))
+								b = o.fg[filtergroup]->inExtensionList(blist, tempdispos);
 						} else {
 							if (!tempurl.contains("?")) {
-								if ((i = (*o.fg[filtergroup]).inExtensionList(list, tempurl)) != NULL) {
-									matched_extension = true;
-								}
+								e = o.fg[filtergroup]->inExtensionList(elist, tempurl);
+								if ((e == NULL) && !(o.fg[filtergroup]->block_downloads))
+									b = o.fg[filtergroup]->inExtensionList(blist, tempurl);
 							}
 							else if (String(mimetype.c_str()).contains("application/")) {
 								while (tempurl.endsWith("?")) {
 									tempurl.chop();
 								}
 								while (tempurl.contains("/")) {	// no slash no url
-									if ((i = (*o.fg[filtergroup]).inExtensionList(list, tempurl)) != NULL) {
-										matched_extension = true;
+									e = o.fg[filtergroup]->inExtensionList(elist, tempurl);
+									if (e != NULL)
 										break;
-									}
+									if (!(o.fg[filtergroup]->block_downloads))
+										b = o.fg[filtergroup]->inExtensionList(blist, tempurl);
 									while (tempurl.contains("/") && !tempurl.endsWith("?")) {
 										tempurl.chop();
 									}
@@ -1283,27 +1267,26 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							}
 						}
 						
-						// Did we match? Then ban as necessary.
-						// If downloads are blanket blocked, block unless matched.
-						// If downloads are not blanket blocked, block if matched.
-						if (!matched_extension && o.fg[filtergroup]->block_downloads) {
+						// If downloads are blanket blocked, block unless matched the exception list.
+						// If downloads are not blanket blocked, block if matched the banned list and not the exception list.
+						if (o.fg[filtergroup]->block_downloads && (e == NULL)) {
 							// did not match the exception list
 							checkme.whatIsNaughty = o.language_list.getTranslation(751);
 							// Blanket file download is active
 							checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
 							checkme.isItNaughty = true;
-							checkme.whatIsNaughtyCategories = "Blanket download block.";
+							checkme.whatIsNaughtyCategories = "Blanket download block";
 						}
-						else if (matched_extension && !(o.fg[filtergroup]->block_downloads)) {
+						else if (!(o.fg[filtergroup]->block_downloads) && (e == NULL) && (b != NULL)) {
 							// matched the banned list
 							checkme.whatIsNaughty = o.language_list.getTranslation(900);
 							// Banned extension:
-							checkme.whatIsNaughty += i;
+							checkme.whatIsNaughty += b;
 							checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
 							checkme.isItNaughty = true;
-							checkme.whatIsNaughtyCategories = "Banned extension.";
+							checkme.whatIsNaughtyCategories = "Banned extension";
 						}
-						else if (matched_extension && (o.fg[filtergroup]->block_downloads)) {
+						else if (e != NULL) {
 							// intention is to match either/or of the MIME & extension lists
 							// so if it gets this far, un-naughty it (may have been naughtied by the MIME type list)
 							checkme.isItNaughty = false;
