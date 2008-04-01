@@ -2152,8 +2152,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 		// it's not inconceivable that we received zlib or gzip encoded content
 		// that is, after decompression, zero length. we need to cater for this.
 		// seen on SW's internal MediaWiki.
-		if (compressed)
-			docheader->removeEncoding(0);
+		docbody->swapbacktocompressed();
 		return;
 	}
 
