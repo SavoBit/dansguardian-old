@@ -671,6 +671,108 @@ bool ListContainer::checkTimeAtD(int index)
 	return isNow(index);
 }
 
+struct lessThanEWF: public std::binary_function<const unsigned int&, const unsigned int&, bool>
+{
+	bool operator()(const unsigned int& aoff, const unsigned int& boff)
+	{
+		const char* a = data + aoff;
+		const char* b = data + boff;
+		int alen = strlen(a);
+		int blen = strlen(b);
+		int apos = alen - 1;
+		int bpos = blen - 1;
+		for (int maxlen = (alen < blen ? alen : blen); maxlen > 0; apos--, bpos--, maxlen--)
+			if (a[apos] > b[bpos])
+				return true;
+			else if (a[apos] < b[bpos])
+				return false;
+		if (alen > blen)
+			return true;
+		else if (alen < blen)
+			return false;
+		return true;  // both equal
+	};
+	char *data;
+};
+
+struct lessThanSWF: public std::binary_function<const unsigned int&, const unsigned int&, bool>
+{
+	bool operator()(const unsigned int& aoff, const unsigned int& boff)
+	{
+		const char* a = data + aoff;
+		const char* b = data + boff;
+		int alen = strlen(a);
+		int blen = strlen(b);
+		int maxlen = alen < blen ? alen : blen;
+		for (int i = 0; i < maxlen; i++)
+			if (a[i] > b[i])
+				return true;
+			else if (a[i] < b[i])
+				return false;
+		if (alen > blen)
+			return true;
+		else if (alen < blen)
+			return false;
+		return true;  // both equal
+	};
+	char *data;
+};
+
+/*struct lessThanEW: public std::binary_function<const unsigned int&, const unsigned int&, bool>
+{
+	bool operator()(const unsigned int& aoff, const unsigned int& boff)
+	{
+		const char* a = data + aoff;
+		const char* b = data + boff;
+		int alen = strlen(a);
+		int blen = strlen(b);
+		int apos = alen - 1;
+		int bpos = blen - 1;
+		for (int maxlen = (alen < blen ? alen : blen); maxlen > 0; apos--, bpos--, maxlen--)
+			if (a[apos] > b[bpos])
+				return true;
+			else if (a[apos] < b[bpos])
+				return false;
+		if (blen > alen)
+			return false;
+		return true;  // both equal
+	};
+	char *data;
+};
+
+struct lessThanSW: public std::binary_function<const unsigned int&, const unsigned int&, bool>
+{
+	bool operator()(const unsigned int& aoff, const unsigned int& boff)
+	{
+		const char* a = data + aoff;
+		const char* b = data + boff;
+		int alen = strlen(a);
+		int blen = strlen(b);
+		int maxlen = alen < blen ? alen : blen;
+		for (int i = 0; i < maxlen; i++)
+			if (a[i] > b[i])
+				return true;
+			else if (a[i] < b[i])
+				return false;
+		
+		// if the URLs didn't match and the one the user is browsing to is longer
+		// than what we just compared against, we need to compare against longer URLs,
+		// but only if the next character is actually part of a folder name rather than a separator.
+		// ('cos if it *is* a separator, it doesn't matter that the overall URL is longer, the
+		// beginning of it matches a banned URL.)
+		if ((alen > blen) && !(a[blen] == '/' || a[blen]=='?' || a[blen]=='&' || a[blen]=='='))
+			return true;
+
+		// if the banned URL is longer than the URL we're checking, the two
+		// can't possibly match.
+		else if (blen > alen)
+			return false;
+
+		return true;  // both equal
+	};
+	char *data;
+};*/
+
 void ListContainer::doSort(const bool startsWith)
 {				// sort by ending of line
 	for (unsigned int i = 0; i < morelists.size(); i++)
@@ -678,9 +780,15 @@ void ListContainer::doSort(const bool startsWith)
 	if (items < 2 || issorted)
 		return;
 	if (startsWith)
-		quicksort(&ListContainer::greaterThanSWF, 0, items - 1);
-	else
-		quicksort(&ListContainer::greaterThanEWF, 0, items - 1);
+	{
+		lessThanSWF lts;
+		lts.data = data;
+		std::sort(list.begin(), list.end(), lts);
+	} else {
+		lessThanEWF lte;
+		lte.data = data;
+		std::sort(list.begin(), list.end(), lte);
+	}
 	isSW = startsWith;
 	issorted = true;
 	return;
@@ -1321,58 +1429,6 @@ void ListContainer::graphAdd(String s, const int inx, int item)
 		}
 		graphdata2[i * GRAPHENTRYSIZE + 1] = 1;
 	}
-}
-
-// quicksort with 3 way partitioning sorted by the end of the line
-void ListContainer::quicksort(int (ListContainer::*comparitor)(const char* a, const char* b), int l, int r)
-{
-	if (r <= l)
-		return;
-	unsigned int e;
-	int k;
-	char *v = data + list[r];
-	int i = l - 1, j = r, p = i, q = r;
-	for (;;) {
-		while ((this->*comparitor)(data + list[++i], v) > 0);
-		while ((this->*comparitor)(v, data + list[--j]) > 0) {
-			if (j == l)
-				break;
-		}
-		if (i >= j)
-			break;
-		e = list[i];
-		list[i] = list[j];
-		list[j] = e;
-		if ((this->*comparitor)(v, data + list[i]) == 0) {
-			p++;
-			e = list[p];
-			list[p] = list[i];
-			list[i] = e;
-		}
-		if ((this->*comparitor)(v, data + list[j]) == 0) {
-			q--;
-			e = list[q];
-			list[q] = list[j];
-			list[j] = e;
-		}
-	}
-	e = list[i];
-	list[i] = list[r];
-	list[r] = e;
-	j = i - 1;
-	i++;
-	for (k = l; k <= p; k++, j--) {
-		e = list[k];
-		list[k] = list[j];
-		list[j] = e;
-	}
-	for (k = r - 1; k >= q; k--, i++) {
-		e = list[k];
-		list[k] = list[i];
-		list[i] = e;
-	}
-	quicksort(comparitor, l, j);
-	quicksort(comparitor, i, r);
 }
 
 bool ListContainer::readProcessedItemList(const char *filename, bool startswith, int filters)

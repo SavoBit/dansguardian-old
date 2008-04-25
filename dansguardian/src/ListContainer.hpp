@@ -165,7 +165,6 @@ private:
 	int graphFindBranches(unsigned int pos);
 	void graphCopyNodePhrases(unsigned int pos);
 	int bmsearch(char *file, int fl, const std::string& s);
-	void quicksort(int (ListContainer::*comparitor)(const char* a, const char* b), int l, int r);
 	bool readProcessedItemList(const char *filename, bool startswith, int filters);
 	void addToItemList(const char *s, int len);
 	int greaterThanEWF(const char *a, const char *b);  // full match
