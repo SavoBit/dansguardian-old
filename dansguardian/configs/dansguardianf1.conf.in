@@ -45,18 +45,18 @@ urlregexplist = '@DGCONFDIR@/lists/urlregexplist'
 # Blanket download blocking
 # If enabled, all files will be blocked, unless they match the
 # exceptionextensionlist or exceptionmimetypelist.
-# These lists do not override any other content filtering or virus scanning.
+# These lists do not override virus scanning.
 # Exception lists defined above override all types of filtering, including
 # the blanket download block.
 # Defaults to disabled.
 # (on | off)
 #
-#blockdownloads = off
-#exceptionextensionlist = '@DGCONFDIR@/lists/exceptionextensionlist'
-#exceptionmimetypelist = '@DGCONFDIR@/lists/exceptionmimetypelist'
+blockdownloads = off
+exceptionextensionlist = '@DGCONFDIR@/lists/exceptionextensionlist'
+exceptionmimetypelist = '@DGCONFDIR@/lists/exceptionmimetypelist'
 #
-# When blanket download blocking is disabled, use the following lists to block
-# specific kinds of file downloads.
+# Use the following lists to block specific kinds of file downloads.
+# The two exception lists above can be used to override these.
 #
 bannedextensionlist = '@DGCONFDIR@/lists/bannedextensionlist'
 bannedmimetypelist = '@DGCONFDIR@/lists/bannedmimetypelist'
