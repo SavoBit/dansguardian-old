@@ -254,21 +254,12 @@ int clamavinstance::init(void* args)
 	// set file, recursion and compression ratio limits for scanning archives
 	root = NULL;
 	limits.maxfiles = cv["maxfiles"].toInteger();
-	if (limits.maxfiles < 1) {
-		limits.maxfiles = 1000;
-	}
 	limits.maxfilesize = o.max_content_filecache_scan_size + 1024 * 1024;
 	limits.maxreclevel = cv["maxreclevel"].toInteger();
-	if (limits.maxreclevel < 1) {
-		limits.maxreclevel = 5;
-	}
-	limits.maxratio = cv["maxratio"].toInteger();
-	if (limits.maxratio < 1) {
-		limits.maxratio = 200;
-	}
+	limits.maxscansize = cv["maxscansize"].toInteger() * 1024;
 #ifdef DGDEBUG
 	std::cerr << "maxfiles: " << limits.maxfiles << " maxfilesize: " << limits.maxfilesize
-		<< " maxreclevel: " << limits.maxreclevel << " maxratio: " << limits.maxratio << std::endl;
+		<< " maxreclevel: " << limits.maxreclevel << " maxscansize: " << limits.maxscansize << std::endl;
 #endif
 
 	// load virus database

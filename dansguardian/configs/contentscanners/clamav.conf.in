@@ -27,14 +27,18 @@ scanbuffmethod = 'file'
 # Defaults to the configured filecachedir.
 #tempdir = '/path/to/tmpfs'
 
-#maxfiles - The maximum number of files inside an archive
-maxfiles = 1000
+#maxfiles - The maximum number of files to scan from a single
+# archive.  Like clamd.conf's MaxFiles.
+maxfiles = 15000
 
-#maxrecursionlevel - The maximum number of archives within archives
-maxreclevel = 5
+#maxreclevel - The maximum recursion level when unpacking archives
+# within archives.  Like clamd.conf's MaxRecursion.
+maxreclevel = 10
 
-#maxratio - maxmimum compression ratio to avoid archive bombs
-maxratio = 200
+#maxscansize - Upper limit on the amount of data that whill be
+# scanned when unpacking an archive, in kilobytes. Like clamd.conf's
+# MaxScanSize.
+maxscansize = 100000
 
 exceptionvirusmimetypelist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusmimetypelist'
 exceptionvirusextensionlist = '@DGCONFDIR@/lists/contentscanners/exceptionvirusextensionlist'
