@@ -41,14 +41,14 @@ extern OptionContainer o;
 
 // structs linking subnets and IP ranges to filter groups
 struct subnetstruct {
-	unsigned long int maskedaddr;
-	unsigned long int mask;
+	uint32_t maskedaddr;
+	uint32_t mask;
 	int group;
 };
 
 struct rangestruct {
-	unsigned long int startaddr;
-	unsigned long int endaddr;
+	uint32_t startaddr;
+	uint32_t endaddr;
 	int group;
 };
 
@@ -56,19 +56,19 @@ struct rangestruct {
 // allowing standard C++ sort to work
 class ip {
 public:
-	ip(unsigned long int a, int g) {
+	ip(uint32_t a, int g) {
 		addr = a;
 		group = g;
 	};
-	unsigned long int addr;
+	uint32_t addr;
 	int group;
 	int operator < (const ip &a) const {
 		return addr < a.addr;
 	};
-	int operator < (const unsigned long int &a) const {
+	int operator < (const uint32_t &a) const {
 		return addr < a;
 	};
-	int operator == (const unsigned long int &a) const {
+	int operator == (const uint32_t &a) const {
 		return a == addr;
 	};
 };
@@ -91,15 +91,15 @@ public:
 	int init(void* args);
 	int quit();
 private:
-	std::deque<ip> iplist;
-	std::deque<subnetstruct> ipsubnetlist;
-	std::deque<rangestruct> iprangelist;
+	std::vector<ip> iplist;
+	std::list<subnetstruct> ipsubnetlist;
+	std::list<rangestruct> iprangelist;
 
 	int readIPMelangeList(const char *filename);
-	int searchList(int a, int s, const unsigned long int &ip);
-	int inList(const unsigned long int &ip);
-	int inSubnet(const unsigned long int &ip);
-	int inRange(const unsigned long int &ip);
+	int searchList(int a, int s, const uint32_t &ip);
+	int inList(const uint32_t &ip);
+	int inSubnet(const uint32_t &ip);
+	int inRange(const uint32_t &ip);
 };
 
 
@@ -144,7 +144,7 @@ int ipinstance::init(void* args) {
 // IP-based filter group determination
 // never actually return NOUSER from this, because we don't actually look in the filtergroupslist.
 // NOUSER stops ConnectionHandler from querying subsequent plugins.
-int ipinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, /*int &fg,*/ std::string &string)
+int ipinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string)
 {
 	// we don't get usernames out of this plugin, just a filter group
 	// for now, use the IP as the username
@@ -165,7 +165,7 @@ int ipinstance::determineGroup(std::string &user, int &fg)
 {
 	struct in_addr sin;
 	inet_aton(user.c_str(), &sin);
-	unsigned long int addr = ntohl(sin.s_addr);
+	uint32_t addr = ntohl(sin.s_addr);
 	// check straight IPs, subnets, and ranges
 	fg = inList(addr);
 	if (fg >= 0) {
@@ -201,7 +201,7 @@ int ipinstance::determineGroup(std::string &user, int &fg)
 //
 
 // search for IP in list & return filter group on success, -1 on failure
-int ipinstance::inList(const unsigned long int &ip) {
+int ipinstance::inList(const uint32_t &ip) {
 	if (iplist.size() > 0) {
 		return searchList(0, iplist.size(), ip);
 	}
@@ -209,7 +209,7 @@ int ipinstance::inList(const unsigned long int &ip) {
 }
 
 // binary search list for given IP & return filter group, or -1 on failure
-int ipinstance::searchList(int a, int s, const unsigned long int &ip) {
+int ipinstance::searchList(int a, int s, const uint32_t &ip) {
 	if (a > s) return -1;
 	int m = (a + s) / 2;
 	if (iplist[m] == ip) return iplist[m].group;
@@ -219,24 +219,20 @@ int ipinstance::searchList(int a, int s, const unsigned long int &ip) {
 }
 
 // search subnet list for given IP & return filter group or -1
-int ipinstance::inSubnet(const unsigned long int &ip) {
-	if (ipsubnetlist.size() > 0) {
-		for(unsigned int i = 0; i < ipsubnetlist.size(); i++) {
-			if (ipsubnetlist[i].maskedaddr == (ip & ipsubnetlist[i].mask)) {
-				return ipsubnetlist[i].group;
-			}
+int ipinstance::inSubnet(const uint32_t &ip) {
+	for(std::list<subnetstruct>::const_iterator i = ipsubnetlist.begin(); i != ipsubnetlist.end(); ++i) {
+		if (i->maskedaddr == (ip & i->mask)) {
+			return i->group;
 		}
 	}
 	return -1;
 }
 
 // search range list for a range containing given IP & return filter group or -1
-int ipinstance::inRange(const unsigned long int &ip) {
-	if (iprangelist.size() > 0) {
-		for(unsigned int i = 0; i < iprangelist.size(); i++) {
-			if ((ip >= iprangelist[i].startaddr) && (ip <= iprangelist[i].endaddr)) {
-				return iprangelist[i].group;
-			}
+int ipinstance::inRange(const uint32_t &ip) {
+	for(std::list<rangestruct>::const_iterator i = iprangelist.begin(); i != iprangelist.end(); ++i) {
+		if ((ip >= i->startaddr) && (ip <= i->endaddr)) {
+			return i->group;
 		}
 	}
 	return -1;
@@ -311,7 +307,7 @@ int ipinstance::readIPMelangeList(const char *filename) {
 		if (matchIP.match(key.toCharArray())) {
 			struct in_addr address;
 			if (inet_aton(key.toCharArray(), &address)) {
-				iplist.push_back(ip((unsigned long int)ntohl(address.s_addr),value.toInteger()-1));
+				iplist.push_back(ip(ntohl(address.s_addr),value.toInteger()-1));
 			}
 		}
 		else if (matchSubnet.match(key.toCharArray())) {
@@ -321,8 +317,8 @@ int ipinstance::readIPMelangeList(const char *filename) {
 			String mask(key.after("/"));
 			if (inet_aton(subnet.toCharArray(), &address) && inet_aton(mask.toCharArray(), &addressmask)) {
 				subnetstruct s;
-				int addr = (unsigned long int)ntohl(address.s_addr);
-				s.mask = (unsigned long int)ntohl(addressmask.s_addr);
+				int addr = ntohl(address.s_addr);
+				s.mask = ntohl(addressmask.s_addr);
 				// pre-mask the address for quick comparison
 				s.maskedaddr = addr & s.mask;
 				s.group = value.toInteger()-1;
@@ -336,8 +332,8 @@ int ipinstance::readIPMelangeList(const char *filename) {
 			String end(key.after("-"));
 			if (inet_aton(start.toCharArray(), &addressstart) && inet_aton(end.toCharArray(), &addressend)) {
 				rangestruct r;
-				r.startaddr = (unsigned long int)ntohl(addressstart.s_addr);
-				r.endaddr = (unsigned long int)ntohl(addressend.s_addr);
+				r.startaddr = ntohl(addressstart.s_addr);
+				r.endaddr = ntohl(addressend.s_addr);
 				r.group = value.toInteger()-1;
 				iprangelist.push_back(r);
 			}
@@ -355,8 +351,6 @@ int ipinstance::readIPMelangeList(const char *filename) {
 	std::cout << "starting sort" << std::endl;
 #endif
 	std::sort(iplist.begin(), iplist.end());
-	/*sortSubnet();
-	sortRange();*/
 #ifdef DGDEBUG
 	std::cout << "sort complete" << std::endl;
 	std::cout << "ip list dump:" << std::endl;
