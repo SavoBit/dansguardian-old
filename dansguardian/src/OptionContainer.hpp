@@ -37,6 +37,7 @@
 #include "ImageContainer.hpp"
 #include "RegExp.hpp"
 #include "Auth.hpp"
+#include "IPList.hpp"
 
 #include <deque>
 
@@ -133,8 +134,8 @@ public:
 
 	HTMLTemplate html_template;
 	ListContainer filter_groups_list;
-	ListContainer exception_ip_list;
-	ListContainer banned_ip_list;
+	IPList exception_ip_list;
+	IPList banned_ip_list;
 	LanguageContainer language_list;
 	ImageContainer banned_image;
 

@@ -105,6 +105,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        DynamicURLList.cpp DynamicURLList.hpp \
 		       DynamicIPList.cpp DynamicIPList.hpp \
                        ImageContainer.cpp ImageContainer.hpp \
+		       IPList.cpp IPList.hpp \
                        OptionContainer.cpp OptionContainer.hpp \
                        FOptionContainer.cpp FOptionContainer.hpp \
                        ListManager.cpp ListManager.hpp \

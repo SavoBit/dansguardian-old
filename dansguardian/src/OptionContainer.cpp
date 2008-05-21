@@ -530,7 +530,7 @@ bool OptionContainer::read(const char *filename, int type)
 
 		filter_groups_list_location = findoptionS("filtergroupslist");
 		std::string banned_ip_list_location(findoptionS("bannediplist"));
-		std::string exceptions_ip_list_location(findoptionS("exceptioniplist"));
+		std::string exception_ip_list_location(findoptionS("exceptioniplist"));
 		group_names_list_location = findoptionS("groupnamesfile");
 		std::string language_list_location(languagepath + "messages");
 		if (reporting_level == 1 || reporting_level == 2) {
@@ -574,12 +574,16 @@ bool OptionContainer::read(const char *filename, int type)
 			use_group_names_list = true;
 		}
 
-		if (!doReadItemList(banned_ip_list_location.c_str(),&banned_ip_list,"bannediplist",true)) {
+		if (!exception_ip_list.readIPMelangeList(exception_ip_list_location.c_str()))
+		{
+			std::cout << "Failed to read exceptioniplist" << std::endl;
 			return false;
-		}		// read banned ip list
-		if (!doReadItemList(exceptions_ip_list_location.c_str(),&exception_ip_list,"exceptioniplist",false)) {
+		}
+		if (!banned_ip_list.readIPMelangeList(banned_ip_list_location.c_str()))
+		{
+			std::cout << "Failed to read bannediplist" << std::endl;
 			return false;
-		}		// ip exceptions
+		}
 
 		if (!language_list.readLanguageList(language_list_location.c_str())) {
 			return false;
@@ -631,53 +635,14 @@ bool OptionContainer::doReadItemList(const char* filename, ListContainer* lc, co
 	return true;
 }
 
-bool OptionContainer::inIPList(const std::string *ip, ListContainer& list, std::string *&host)
-{
-	if ((*ip).length() < 1) {
-		return false;
-	}
-	if (list.inList((char *) (*ip).c_str())) {
-		delete host;
-		host = NULL;
-		return true;
-	}
-	else if (reverse_client_ip_lookups) {
-		std::deque<String > *hostnames = ipToHostname((*ip).c_str());
-		bool result;
-		for (std::deque<String>::iterator i = hostnames->begin(); i != hostnames->end(); i++) {
-			result = list.inList(i->toCharArray());
-			if (result) {
-				// return the matched host name for logging purposes
-				// hey.. since the lookup is the hard part, not the logging,
-				// why not always return a hostname if it wasn't a straight IP
-				// that triggered the match?
-				//if (log_client_hostnames) {
-					delete host;
-					host = new std::string(i->toCharArray());
-#ifdef DGDEBUG
-					std::cout<<"Found hostname: "<<(*host)<<std::endl;
-#endif
-				//}
-				return true;
-			}
-		}
-		if ((log_client_hostnames) && (host == NULL) && (hostnames->size() > 0))
-			host = new std::string(hostnames->front().toCharArray());
-		delete hostnames;
-	}
-	return false;
-}
-
-// checkme: remove these and make inIPList public?
-
 bool OptionContainer::inExceptionIPList(const std::string *ip, std::string *&host)
 {
-	return inIPList(ip, exception_ip_list, host);
+	return exception_ip_list.inList(*ip, host);
 }
 
 bool OptionContainer::inBannedIPList(const std::string *ip, std::string *&host)
 {
-	return inIPList(ip, banned_ip_list, host);
+	return banned_ip_list.inList(*ip, host);
 }
 
 
