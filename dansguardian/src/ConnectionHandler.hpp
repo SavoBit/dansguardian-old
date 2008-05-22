@@ -46,7 +46,7 @@ public:
 	~ConnectionHandler() { delete clienthost; };
 
 	// pass data between proxy and client, filtering as we go.
-	void handleConnection(Socket &peerconn, String &ip, int port);
+	void handleConnection(Socket &peerconn, String &ip);
 
 private:
 	std::string *clienthost;
@@ -57,7 +57,7 @@ private:
 		std::string &what, String &how, off_t &size, std::string *cat, bool isnaughty,
 		bool isexception, bool istext, struct timeval *thestart, bool cachehit, int code,
 		std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness, int filtergroup,
-		HTTPHeader* reqheader, HTTPHeader* respheader = NULL, bool contentmodified = false,
+		HTTPHeader* reqheader, bool contentmodified = false,
 		bool urlmodified = false, bool headermodified = false);
 
 	// perform URL encoding on a string
@@ -68,7 +68,7 @@ private:
 
 	// check the request header is OK (client host/user/IP allowed to browse, site not banned, upload not too big)
 	void requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld, std::string *clientip,
-		std::string *clientuser, int filtergroup, bool *ispostblock, bool &isbanneduser, bool &isbannedip);
+		std::string *clientuser, int filtergroup, bool &isbanneduser, bool &isbannedip);
 
 	// strip the URL down to just the IP/hostname, then do an isIPHostname on the result
 	bool isIPHostnameStrip(String url);
@@ -85,7 +85,7 @@ private:
 	// do content scanning (AV filtering) and naughty filtering
 	void contentFilter(HTTPHeader *docheader, HTTPHeader *header, DataBuffer *docbody, Socket *proxysock,
 		Socket *peerconn, int *headersent, bool *pausedtoobig, off_t *docsize, NaughtyFilter *checkme, bool runav,
-		bool wasclean, bool cachehit, int filtergroup, std::deque<bool > *sendtoscanner, std::string *clientuser,
+		bool wasclean, int filtergroup, std::deque<bool > *sendtoscanner, std::string *clientuser,
 		std::string *clientip, bool *wasinfected, bool *wasscanned, bool isbypass, String &url, String &domain,
 		bool *scanerror, bool &contentmodified, String *csmessage);
 

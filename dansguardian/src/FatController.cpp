@@ -86,7 +86,6 @@ UDSocket iplistsock;
 Socket *peersock(NULL);  // the socket which will contain the connection
 
 String peersockip;  // which will contain the connection ip
-int peersockport;  // port connection originates
 
 
 // DECLARATIONS
@@ -136,8 +135,8 @@ int getfreechild();
 int getchildslot();
 // cull up to this number of non-busy children
 void cullchildren(int num);
-// delete this child from our info lists (pass in child's recorded exit value - currently unused)
-void deletechild(int child_pid, int stat);
+// delete this child from our info lists
+void deletechild(int child_pid);
 // clean up any dead child processes (calls deletechild with exit values)
 void mopup_afterkids();
 
@@ -190,22 +189,11 @@ extern "C"
 		_exit(0);
 	}
 #ifdef __SEGV_BACKTRACE
-	void sig_segv(int signo/*, siginfo_t* info, void* p*/)
+	void sig_segv(int signo)
 	{
 #ifdef DGDEBUG
 		std::cout << "SEGV received." << std::endl;
 #endif
-/*		char* str = "UNKNOWN";
-		switch (info->si_code)
-		{
-#ifdef SEGV_MAPERR
-		case SEGV_MAPERR: str = "SEGV_MAPERR"; break;
-#endif
-#ifdef SEGV_ACCERR
-		case SEGV_ACCERR: str = "SEGV_ACCERR"; break;
-#endif
-		}
-		syslog(LOG_ERR, "Segfault: %s", str);*/
 		// Generate backtrace
 		void *addresses[10];
 		char **strings;
@@ -529,7 +517,7 @@ int handle_connections(UDSocket &pipe)
 			continue;
 		}
 
-		h.handleConnection(*peersock, peersockip, peersockport/*, socknum*/);  // deal with the connection
+		h.handleConnection(*peersock, peersockip);  // deal with the connection
 		delete peersock;
 	}
 	if (!(++cycle) && o.logchildprocs)
@@ -572,10 +560,8 @@ bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
 	}
 
 	// woo! we have a connection. accept it.
-	//socknum = (int)buf;
 	peersock = serversockets[buf]->accept();
 	peersockip = peersock->getPeerIP();
-	peersockport = peersock->getPeerSourcePort();
 
 	try {
 		fd.writeToSockete("K", 1, 0, 10, true);  // need to make parent wait for OK
@@ -615,11 +601,7 @@ void mopup_afterkids()
 		if (pid < 1) {
 			break;
 		}
-		if (WIFEXITED(stat_val)) {	// exited normally
-			deletechild((int) pid, WEXITSTATUS(stat_val));
-		} else {
-			deletechild((int) pid, -1);
-		}
+		deletechild((int) pid);
 	}
 }
 
@@ -727,7 +709,7 @@ bool check_kid_readystatus(int tofind)
 			}
 			catch(exception & e) {
 				kill(childrenpids[f], SIGTERM);
-				deletechild(childrenpids[f], -1);
+				deletechild(childrenpids[f]);
 				tofind--;
 				continue;
 			}
@@ -742,7 +724,7 @@ bool check_kid_readystatus(int tofind)
 				}
 			} else {	// child -> parent communications failure so kill it
 				kill(childrenpids[f], SIGTERM);
-				deletechild(childrenpids[f], -1);
+				deletechild(childrenpids[f]);
 				tofind--;
 			}
 		}
@@ -758,20 +740,14 @@ bool check_kid_readystatus(int tofind)
 }
 
 // remove child from our PID/FD and slot lists
-void deletechild(int child_pid, int stat)
+void deletechild(int child_pid)
 {
 	int i;
 	for (i = 0; i < o.max_children; i++) {
 		if (childrenpids[i] == child_pid) {
 			childrenpids[i] = -1;
 			if (childrenstates[i] == 1) {
-				//if (stat == 2) {
-					busychildren--;
-				/*} else {
-					busychildren--;  // should only happen if kid goes screwy
-					// child calls _exit with return value of handle_connections,
-					// so if it's nonzero, it means there was an error in there somewhere
-				}*/
+				busychildren--;
 			}
 			if (childrenstates[i] != -2) {	// -2 is when its been culled
 				numchildren--;  // so no need to duplicater
@@ -810,7 +786,7 @@ void tellchild_accept(int num, int whichsock)
 		childsockets[num]->writeToSockete((char*)&whichsock, 1, 0, 5, true);
 	} catch(exception & e) {
 		kill(childrenpids[num], SIGTERM);
-		deletechild(childrenpids[num], -1);
+		deletechild(childrenpids[num]);
 		return;
 	}
 
@@ -820,7 +796,7 @@ void tellchild_accept(int num, int whichsock)
 		childsockets[num]->readFromSocket(&buf, 1, 0, 5, false, true);
 	} catch(exception & e) {
 		kill(childrenpids[num], SIGTERM);
-		deletechild(childrenpids[num], -1);
+		deletechild(childrenpids[num]);
 		return;
 	}
 	// no need to check what it actually contains,

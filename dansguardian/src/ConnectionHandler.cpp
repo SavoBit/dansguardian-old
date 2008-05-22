@@ -322,7 +322,7 @@ off_t ConnectionHandler::sendFile(Socket * peerconn, String & filename, String &
 
 // pass data between proxy and client, filtering as we go.
 // this is the only public function of ConnectionHandler - all content blocking/filtering is triggered from calls that live here.
-void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
+void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 {
 	struct timeval thestart;
 	gettimeofday(&thestart, NULL);
@@ -862,7 +862,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 						String rtype(header.requestType());
 						doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, (exceptioncat.length() ? &exceptioncat : NULL), false, isexception,
 							false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
-							mimetype, wasinfected, wasscanned, 0, filtergroup, &header, &docheader);
+							mimetype, wasinfected, wasscanned, 0, filtergroup, &header);
 					}
 				}
 				catch(exception & e) {
@@ -956,7 +956,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 								String rtype(header.requestType());
 								doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, (exceptioncat.length() ? &exceptioncat : NULL),
 									false, isexception, false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
-									mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
+									mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header,
 									// content wasn't modified, but URL was
 									false, true);
 							}
@@ -1006,7 +1006,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					// as its ssl so we can't see the return header etc
 					// So preemptive banning is forced on with ssl unfortunately.
 					// It is unlikely to cause many problems though.
-					requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup, &ispostblock, isbanneduser, isbannedip);
+					requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup, isbanneduser, isbannedip);
 #ifdef DGDEBUG
 					std::cout << "done checking" << std::endl;
 #endif
@@ -1033,7 +1033,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, &checkme.whatIsNaughtyCategories, false,
 						isexception, false, &thestart,
 						cachehit, (wasrequested ? docheader.returnCode() : 200), mimetype, wasinfected,
-						wasscanned, checkme.naughtiness, filtergroup, &header, &docheader, false, urlmodified);
+						wasscanned, checkme.naughtiness, filtergroup, &header, false, urlmodified);
 				}
 				catch(exception & e) {
 				}
@@ -1072,7 +1072,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 			// links not to be requested.
 			if (authed && !isbypass && !isexception && !checkme.isItNaughty) {
 				requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup,
-					&ispostblock, isbanneduser, isbannedip);
+					isbanneduser, isbannedip);
 			}
 
 			if (!checkme.isItNaughty) {
@@ -1300,7 +1300,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				// un-authed users.
 				if (!authed && !isbypass && !isexception && !checkme.isItNaughty && !docheader.authRequired()) {
 					requestChecks(&header, &checkme, &urld, &clientip, &clientuser, filtergroup,
-						&ispostblock, isbanneduser, isbannedip);
+						isbanneduser, isbannedip);
 				}
 
 				// check body from proxy
@@ -1333,7 +1333,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 #endif
 							String csmessage;
 							contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
-								&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
+								&docsize, &checkme, runav, wasclean, filtergroup, &sendtoscanner, &clientuser, &clientip,
 								&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified, &csmessage);
 							if (csmessage.length() > 0) {
 #ifdef DGDEBUG
@@ -1343,7 +1343,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 							}
 						} else {
 							contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
-								&docsize, &checkme, runav, wasclean, cachehit, filtergroup, &sendtoscanner, &clientuser, &clientip,
+								&docsize, &checkme, runav, wasclean, filtergroup, &sendtoscanner, &clientuser, &clientip,
 								&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified, NULL);
 						}
 					}
@@ -1385,7 +1385,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
 					rtype, docsize, &checkme.whatIsNaughtyCategories, true, false, false, &thestart,
 					cachehit, 403, mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup,
-					&header, (wasrequested ? &docheader : NULL), contentmodified, urlmodified, headermodified);
+					&header, contentmodified, urlmodified, headermodified);
 				if (denyAccess(&peerconn, &proxysock, &header, &docheader, &url, &checkme, &clientuser,&clientip, filtergroup, ispostblock, headersent, wasinfected, scanerror))
 				{
 					return;  // not stealth mode
@@ -1423,7 +1423,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
 						rtype, docsize, &checkme.whatIsNaughtyCategories, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
-						wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
+						wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header,
 						contentmodified, urlmodified, headermodified);
 				}
 
@@ -1493,7 +1493,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
 						rtype, docsize, &checkme.whatIsNaughtyCategories, false, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
-						wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
+						wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header,
 						contentmodified, urlmodified, headermodified);
 				}
 			} else if (!ishead /*&& !docheader.isRedirection()*/) {	// was not supposed to be checked
@@ -1507,7 +1507,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, int port)
 				if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
 					rtype, docsize, &checkme.whatIsNaughtyCategories, false, isexception,
 					docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
-					wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header, &docheader,
+					wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header,
 					contentmodified, urlmodified, headermodified);
 			}
 		} // while persist
@@ -1542,7 +1542,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		std::string &what, String &how, off_t &size, std::string *cat, bool isnaughty,
 		bool isexception, bool istext, struct timeval *thestart, bool cachehit,
 		int code, std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness, int filtergroup,
-		HTTPHeader* reqheader, HTTPHeader* respheader, bool contentmodified, bool urlmodified, bool headermodified)
+		HTTPHeader* reqheader, bool contentmodified, bool urlmodified, bool headermodified)
 {
 
 	// don't log if logging disabled entirely, or if it's an ad block and ad logging is disabled,
@@ -1684,7 +1684,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 
 // check the request header is OK (client host/user/IP allowed to browse, site not banned, upload not too big)
 void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld,
-	std::string *clientip, std::string *clientuser, int filtergroup, bool *ispostblock,
+	std::string *clientip, std::string *clientuser, int filtergroup,
 	bool &isbanneduser, bool &isbannedip)
 {
 	if (isbannedip) {
@@ -2106,7 +2106,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 // do content scanning (AV filtering) and naughty filtering
 void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header, DataBuffer *docbody,
 	Socket *proxysock, Socket *peerconn, int *headersent, bool *pausedtoobig, off_t *docsize, NaughtyFilter *checkme,
-	bool runav, bool wasclean, bool cachehit, int filtergroup, std::deque<bool> *sendtoscanner,
+	bool runav, bool wasclean, int filtergroup, std::deque<bool> *sendtoscanner,
 	std::string *clientuser, std::string *clientip, bool *wasinfected, bool *wasscanned, bool isbypass,
 	String &url, String &domain, bool *scanerror, bool &contentmodified, String *csmessage)
 {
