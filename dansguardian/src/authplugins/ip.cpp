@@ -354,22 +354,22 @@ int ipinstance::readIPMelangeList(const char *filename) {
 #ifdef DGDEBUG
 	std::cout << "sort complete" << std::endl;
 	std::cout << "ip list dump:" << std::endl;
-	std::deque<ip>::iterator i = iplist.begin();
+	std::vector<ip>::const_iterator i = iplist.begin();
 	while (i != iplist.end()) {
 		std::cout << "IP: " << i->addr << " Group: " << i->group << std::endl;
-		i++;
+		++i;
 	}
 	std::cout << "subnet list dump:" << std::endl;
-	std::deque<subnetstruct>::iterator j = ipsubnetlist.begin();
+	std::list<subnetstruct>::const_iterator j = ipsubnetlist.begin();
 	while (j != ipsubnetlist.end()) {
 		std::cout << "Masked IP: " << j->maskedaddr << " Mask: " << j->mask << " Group: " << j->group << std::endl;
-		j++;
+		++j;
 	}
 	std::cout << "range list dump:" << std::endl;
-	std::deque<rangestruct>::iterator k = iprangelist.begin();
+	std::list<rangestruct>::const_iterator k = iprangelist.begin();
 	while (k != iprangelist.end()) {
 		std::cout << "Start IP: " << k->startaddr << " End IP: " << k->endaddr << " Group: " << k->group << std::endl;
-		k++;
+		++k;
 	}
 #endif
 	// return either warning or success
