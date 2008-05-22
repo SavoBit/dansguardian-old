@@ -37,7 +37,7 @@
 // DECLARATIONS
 
 // time limit information
-typedef struct TimeLimit {
+struct TimeLimit {
 	unsigned int sthour, stmin, endhour, endmin;
 	String days, timetag;
 };

@@ -431,11 +431,11 @@ void DataBuffer::zlibinflate(bool header)
 }
 
 // Does a regexp search and replace.
-	typedef struct newreplacement
-	{
-		int match;
-		String replacement;
-	};
+struct newreplacement
+{
+	int match;
+	String replacement;
+};
 bool DataBuffer::contentRegExp(int filtergroup)
 {
 
