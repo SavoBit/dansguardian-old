@@ -2,7 +2,7 @@ MAINTAINERCLEANFILES = Makefile.in \
 		       weightedphraselist bannedphraselist exceptionphraselist \
 		       bannedsitelist bannedurllist
 
-DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists
+DGDATADIR = $(DGCONFDIR)/lists
 
 SUBDIRS = phraselists . blacklists authplugins
 

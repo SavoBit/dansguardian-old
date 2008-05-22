@@ -7,21 +7,19 @@ if NEED_CSCONFIGS
 SUBDIRS += contentscanners
 endif
 
-DATATOPDIR = $(sysconfdir)/$(PACKAGE_NAME)
-
 FLISTS = dansguardian.conf dansguardianf1.conf
 
 EXTRA_DIST = dansguardian.conf.in dansguardianf1.conf.in
 
 install-data-local: 
-	$(mkinstalldirs) $(DESTDIR)$(DATATOPDIR) && \
+	$(mkinstalldirs) $(DESTDIR)$(DGCONFDIR) && \
 	for l in $(FLISTS) ; do \
-		echo "$(INSTALL_DATA) $$l $(DESTDIR)$(DATATOPDIR)/$$l"; \
-		$(INSTALL_DATA) $$l $(DESTDIR)$(DATATOPDIR)/$$l; \
+		echo "$(INSTALL_DATA) $$l $(DESTDIR)$(DGCONFDIR)/$$l"; \
+		$(INSTALL_DATA) $$l $(DESTDIR)$(DGCONFDIR)/$$l; \
 	done
 
 uninstall-local:
 	for l in $(FLISTS) ; do \
-		rm -f $(DESTDIR)$(DATATOPDIR)/$$l ; \
+		rm -f $(DESTDIR)$(DGCONFDIR)/$$l ; \
 	done
 

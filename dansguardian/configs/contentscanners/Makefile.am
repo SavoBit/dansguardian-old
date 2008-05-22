@@ -2,7 +2,7 @@ MAINTAINERCLEANFILES = Makefile.in \
 		       clamav.conf clamdscan.conf icapscan.conf \
 		       kavav.conf kavdscan.conf commandlinescan.conf
 
-DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/contentscanners
+DGDATADIR = $(DGCONFDIR)/contentscanners
 
 SUBDIRS = .
 

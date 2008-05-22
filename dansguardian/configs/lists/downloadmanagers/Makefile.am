@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists/downloadmanagers
+DGDATADIR = $(DGCONFDIR)/lists/downloadmanagers
 
 SUBDIRS = .
 

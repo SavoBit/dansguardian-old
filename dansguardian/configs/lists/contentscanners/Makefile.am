@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists/contentscanners
+DGDATADIR = $(DGCONFDIR)/lists/contentscanners
 
 SUBDIRS = .
 

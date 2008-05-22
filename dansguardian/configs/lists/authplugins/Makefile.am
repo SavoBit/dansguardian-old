@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists/authplugins
+DGDATADIR = $(DGCONFDIR)/lists/authplugins
 
 SUBDIRS = .
 

@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES    = Makefile.in
 
-DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists/phraselists
+DGDATADIR = $(DGCONFDIR)/lists/phraselists
 PHRASELISTS = badwords chat drugadvocacy gambling games goodphrases \
 		googlesearches gore illegaldrugs intolerance legaldrugs \
 		malware news nudism peer2peer personals pornography \

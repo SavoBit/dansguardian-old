@@ -1,7 +1,7 @@
 MAINTAINERCLEANFILES = Makefile.in \
 		       default.conf fancy.conf trickle.conf
 
-DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/downloadmanagers
+DGDATADIR = $(DGCONFDIR)/downloadmanagers
 
 SUBDIRS = .
 

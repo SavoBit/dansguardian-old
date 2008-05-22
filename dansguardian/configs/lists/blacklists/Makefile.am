@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES    = Makefile.in
 
-DGDATADIR = $(sysconfdir)/$(PACKAGE_NAME)/lists/blacklists
+DGDATADIR = $(DGCONFDIR)/lists/blacklists
 BLACKLISTS = ads
 
 install-data-local: 
