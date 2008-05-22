@@ -988,7 +988,7 @@ void NaughtyFilter::checkPICSrating(std::string label)
 	}
 }
 
-void NaughtyFilter::checkPICSagainstoption(String s, char *l, int opt, std::string m)
+void NaughtyFilter::checkPICSagainstoption(String s, const char *l, int opt, std::string m)
 {
 	if (s.indexOf(l) != -1) {
 		// if the rating contains the label then:

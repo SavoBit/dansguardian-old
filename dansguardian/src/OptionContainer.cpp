@@ -719,7 +719,7 @@ std::deque<String > OptionContainer::findoptionM(const char *option)
 	return results;
 }
 
-bool OptionContainer::realitycheck(long int l, long int minl, long int maxl, char *emessage)
+bool OptionContainer::realitycheck(long int l, long int minl, long int maxl, const char *emessage)
 {
 	// realitycheck checks an amount for certain expected criteria
 	// so we can spot problems in the conf files easier

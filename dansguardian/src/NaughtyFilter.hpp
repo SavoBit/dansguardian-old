@@ -83,7 +83,7 @@ private:
 	void checkPICSratingICEC(String r);
 	void checkPICSratingSafeNet(String r);
 
-	void checkPICSagainstoption(String s, char *l, int opt, std::string m);
+	void checkPICSagainstoption(String s, const char *l, int opt, std::string m);
 };
 
 #endif

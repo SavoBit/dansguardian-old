@@ -1336,7 +1336,7 @@ std::string FOptionContainer::findoptionS(const char *option)
 	return "";
 }
 
-bool FOptionContainer::realitycheck(int l, int minl, int maxl, char *emessage)
+bool FOptionContainer::realitycheck(int l, int minl, int maxl, const char *emessage)
 {
 	// realitycheck checks a String for certain expected criteria
 	// so we can spot problems in the conf files easier

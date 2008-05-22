@@ -186,7 +186,7 @@ private:
 	bool precompileregexps();
 	long int findoptionI(const char *option);
 	std::string findoptionS(const char *option);
-	bool realitycheck(long int l, long int minl, long int maxl, char *emessage);
+	bool realitycheck(long int l, long int minl, long int maxl, const char *emessage);
 	bool readAnotherFilterGroupConf(const char *filename, const char *groupname, bool &need_html);
 	std::deque<String> findoptionM(const char *option);
 

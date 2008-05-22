@@ -305,7 +305,7 @@ private:
 
 	int findoptionI(const char *option);
 	std::string findoptionS(const char *option);
-	bool realitycheck(int l, int minl, int maxl, char *emessage);
+	bool realitycheck(int l, int minl, int maxl, const char *emessage);
 	int inRegExpURLList(String &url, std::deque<RegExp> &list_comp, std::deque<unsigned int> &list_ref, unsigned int list);
 
 	char *inURLList(String &url, unsigned int list, bool doblanket = false, bool ip = false, bool ssl = false);
