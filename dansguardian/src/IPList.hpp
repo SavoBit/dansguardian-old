@@ -33,7 +33,7 @@
 
 // convenience structs for subnets and IP ranges
 struct ipl_subnetstruct {
-	in_addr_t maskedaddr;
+	uint32_t maskedaddr;
 	uint32_t mask;
 };
 
@@ -50,7 +50,7 @@ class IPList
 		bool inList(const std::string &ipstr, std::string *&host) const;
 		bool readIPMelangeList(const char *filename);
 	private:
-		std::vector<in_addr_t> iplist;
+		std::vector<uint32_t> iplist;
 		std::vector<String> hostlist;
 		std::list<ipl_rangestruct> iprangelist;
 		std::list<ipl_subnetstruct> ipsubnetlist;

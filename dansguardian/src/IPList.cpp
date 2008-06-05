@@ -141,7 +141,8 @@ bool IPList::readIPMelangeList(const char *filename)
 		if (matchIP.match(line.toCharArray())) {
 			struct in_addr address;
 			if (inet_aton(line.toCharArray(), &address)) {
-				iplist.push_back(address.s_addr);
+				uint32_t addr = ntohl(address.s_addr);
+				iplist.push_back(addr);
 			}
 		}
 		else if (matchSubnet.match(line.toCharArray())) {
@@ -185,7 +186,7 @@ bool IPList::readIPMelangeList(const char *filename)
 #ifdef DGDEBUG
 	std::cout << "sort complete" << std::endl;
 	std::cout << "ip list dump:" << std::endl;
-	std::vector<in_addr_t>::iterator i = iplist.begin();
+	std::vector<uint32_t>::iterator i = iplist.begin();
 	while (i != iplist.end()) {
 		std::cout << "IP: " << *i << std::endl;
 		++i;
