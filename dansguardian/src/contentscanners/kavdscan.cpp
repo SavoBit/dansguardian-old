@@ -137,7 +137,7 @@ int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 	try {
 		// read kaspersky kavdscan (AV Enging Server) - format: 2xx greeting
 		rc = stripedsocks.getLine(buff, 4096, o.content_scanner_timeout);
-	} catch(exception & e) {
+	} catch(std::exception & e) {
 	}
 	if (buff[0] != '2') {
 		delete[]buff;
@@ -148,7 +148,7 @@ int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 	try {
 		stripedsocks.writeString(command.toCharArray());
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 		delete[]buff;
 		stripedsocks.close();
 		syslog(LOG_ERR, "%s", "unable to write to kavdscan");
@@ -157,7 +157,7 @@ int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 	try {
 		rc = stripedsocks.getLine(buff, 4096, o.content_scanner_timeout);
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 		delete[]buff;
 		stripedsocks.close();
 		syslog(LOG_ERR, "%s", "Error reading kavdscan socket");
@@ -184,7 +184,7 @@ int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 			try {
 				rc = stripedsocks.getLine(buff, 4096, o.content_scanner_timeout);
 			}
-			catch(exception & e) {
+			catch(std::exception & e) {
 				delete[]buff;
 				stripedsocks.close();
 				syslog(LOG_ERR, "%s", "Error reading kavdscan socket");

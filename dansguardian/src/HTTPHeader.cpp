@@ -1341,7 +1341,7 @@ int HTTPHeader::decode1b64(char c)
 // - this allows us to re-open the proxy connection on pconns if squid's end has
 // timed out but the client's end hasn't. not much use with NTLM, since squid
 // will throw a 407 and restart negotiation, but works well with basic & others.
-void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconnect) throw(exception)
+void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconnect) throw(std::exception)
 {
 	String l;  // for amalgamating to avoid conflict with the Nagel algorithm
 
@@ -1365,10 +1365,10 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 						sock->reset();
 						int rc = sock->connect(o.proxy_ip, o.proxy_port);
 						if (rc)
-							throw exception();
+							throw std::exception();
 						continue;
 					}
-					throw exception();
+					throw std::exception();
 				}
 				// if we got here, we succeeded, so break the reconnect loop
 				break;
@@ -1407,12 +1407,12 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 				sock->reset();
 				int rc = sock->connect(o.proxy_ip, o.proxy_port);
 				if (rc)
-					throw exception();
+					throw std::exception();
 				// include the first line on the retry
 				l = header.front() + "\n" + l;
 				continue;
 			}
-			throw exception();
+			throw std::exception();
 		}
 		// if we got here, we succeeded, so break the reconnect loop
 		break;
@@ -1439,7 +1439,7 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 		FDTunnel fdt;
 		off_t remaining = contentLength() - postdatalen;
 		if (remaining < 0)
-			throw runtime_error("No POST data left to send!?");
+			throw std::runtime_error("No POST data left to send!?");
 		fdt.tunnel(*peersock, *sock, false, remaining, true);
 	}
 }
@@ -1499,7 +1499,7 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 	}
 	header.pop_back();  // remove the final blank line of a header
 	if (header.size() == 0)
-		throw exception();
+		throw std::exception();
 
 	checkheader(allowpersistent);  // sort out a few bits in the header
 }

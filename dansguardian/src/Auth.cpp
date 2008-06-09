@@ -39,7 +39,7 @@ extern authcreate_t digestcreate;
 extern authcreate_t identcreate;
 extern authcreate_t ipcreate;
 
-#ifdef __NTLM
+#ifdef ENABLE_NTLM
 extern authcreate_t ntlmcreate;
 #endif
 
@@ -153,7 +153,7 @@ AuthPlugin* auth_plugin_load(const char *pluginConfigPath)
 		return ipcreate(cv);
 	}
 
-#ifdef __NTLM
+#ifdef ENABLE_NTLM
 	if (plugname == "proxy-ntlm") {
 #ifdef DGDEBUG
 		std::cout << "Enabling proxy-NTLM auth plugin" << std::endl;

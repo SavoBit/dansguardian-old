@@ -32,7 +32,7 @@
 
 extern OptionContainer o;
 
-#ifdef __PCRE
+#ifdef HAVE_PCRE
 extern RegExp absurl_re, relurl_re;
 #endif
 
@@ -434,7 +434,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 	// if a src/href URL starts with a /, append it to the domain; otherwise, append it to the existing URL.
 	// chop off anything after a ?, run through realPath, then put through the URL lists.
 
-#ifdef __PCRE
+#ifdef HAVE_PCRE
 	// if weighted phrases are enabled, and we have been passed a URL and domain, and embedded URL checking is enabled...
 	// then check for embedded URLs!
 	if (url != NULL && o.fg[filtergroup]->embedded_url_weight > 0) {

@@ -54,7 +54,7 @@ public:
 	// gives true if it pauses due to too much data
 	bool in(Socket * sock, Socket * peersock, class HTTPHeader * requestheader, class HTTPHeader * docheader, bool runav, int *headersent);
 	// send body to client
-	void out(Socket * sock) throw(exception);
+	void out(Socket * sock) throw(std::exception);
 
 	void setTimeout(int t) { timeout = t; };
 	void setDecompress(String d) { decompress = d; };
@@ -73,10 +73,10 @@ private:
 	// DM plugins do horrible things to our innards - this is acceptable pending a proper cleanup
 	friend class DMPlugin;
 	friend class dminstance;
-#ifdef __FANCYDM
+#ifdef ENABLE_FANCYDM
 	friend class fancydm;
 #endif
-#ifdef __TRICKLEDM
+#ifdef ENABLE_TRICKLEDM
 	friend class trickledm;
 #endif
 

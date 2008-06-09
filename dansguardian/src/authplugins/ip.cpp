@@ -253,7 +253,7 @@ int ipinstance::readIPMelangeList(const char *filename) {
 
 	// compile regexps for determining whether a list entry is an IP, a subnet (IP + mask), or a range
 	RegExp matchIP, matchSubnet, matchRange;
-#ifdef __PCRE
+#ifdef HAVE_PCRE
 	matchIP.comp("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
 	matchSubnet.comp("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
 	matchRange.comp("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");

@@ -98,22 +98,6 @@ int UDSocket::connect(const char *path)
 #endif
 	strcpy(my_adr.sun_path, path);
 
-	// Note to fix.  This could probably be replaced with a test for
-	// struct sockaddr.sun_len in configure.ac
-	// Daniel Barron - Sun 30th January 2005
-
-/*#ifdef __BSD
-#ifdef SCM_RIGHTS		// 4.3BSD Reno and later
-	my_adr_length = sizeof(my_adr.sun_len) + sizeof(my_adr.sun_family) + strlen(my_adr.sun_path) + 1;
-	my_adr.sun_len = my_adr_length;
-#endif
-#else
-	my_adr_length = sizeof(my_adr.sun_family) + strlen(my_adr.sun_path);
-#endif*/
-
-	// The above broke again on FreeBSD 5.4.
-	// This seems to be the most logical & portable way to do things.
-	// PRA 10-10-2005
 	my_adr_length = offsetof(struct sockaddr_un, sun_path) + strlen(path);
 
 	return ::connect(sck, (struct sockaddr *) &my_adr, my_adr_length);
@@ -125,22 +109,6 @@ int UDSocket::bind(const char *path)
 	unlink(path);
 	strcpy(my_adr.sun_path, path);
 
-	// Note to fix.  This could probably be replaced with a test for
-	// struct sockaddr.sun_len in configure.ac
-	// Daniel Barron - Sun 30th January 2005
-
-/*#ifdef __BSD
-#ifdef SCM_RIGHTS		// 4.3BSD Reno and later
-	my_adr_length = sizeof(my_adr.sun_len) + sizeof(my_adr.sun_family) + strlen(my_adr.sun_path) + 1;
-	my_adr.sun_len = my_adr_length;
-#endif
-#else
-	my_adr_length = sizeof(my_adr.sun_family) + strlen(my_adr.sun_path);
-#endif*/
-
-	// The above broke again on FreeBSD 5.4.
-	// This seems to be the most logical & portable way to do things.
-	// PRA 10-10-2005
 	my_adr_length = offsetof(struct sockaddr_un, sun_path) + strlen(path);
 
 	return ::bind(sck, (struct sockaddr *) &my_adr, my_adr_length);

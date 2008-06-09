@@ -45,7 +45,7 @@ class clamavinstance:public CSPlugin
 {
 public:
 	clamavinstance(ConfigVar & definition):CSPlugin(definition)
-#ifdef __CLAMAV_SHM
+#ifdef HAVE_CLAMAV_SHM
 		, use_shm(false)
 #endif
 		{};
@@ -70,7 +70,7 @@ private:
 	// archive limit options
 	struct cl_limits limits;
 
-#ifdef __CLAMAV_SHM
+#ifdef HAVE_CLAMAV_SHM
 	// use POSIX shared memory
 	bool use_shm;
 #endif
@@ -122,7 +122,7 @@ int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheade
 	int fd;
 	std::string fname;
 
-#ifdef __CLAMAV_SHM
+#ifdef HAVE_CLAMAV_SHM
 	if (use_shm) {
 		// use POSIX shared memory to get the FD
 		fname = tmpnam(NULL);
@@ -136,7 +136,7 @@ int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheade
 		fd = mkstemp(fnamearray);
 		fname = fnamearray;
 		delete[] fnamearray;
-#ifdef __CLAMAV_SHM
+#ifdef HAVE_CLAMAV_SHM
 	}
 #endif
 
@@ -164,7 +164,7 @@ int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheade
 	rc = cl_scandesc(fd, &vn, NULL, root, &limits, CL_SCAN_STDOPT);
 	close(fd);
 
-#ifdef __CLAMAV_SHM
+#ifdef HAVE_CLAMAV_SHM
 	if (use_shm)
 		fd = shm_unlink(fname.c_str());
 	else
@@ -229,7 +229,7 @@ int clamavinstance::init(void* args)
 		if (memdir.length() == 0)
 			memdir = o.download_dir;
 	}
-#ifdef __CLAMAV_SHM
+#ifdef HAVE_CLAMAV_SHM
 	else if (smethod == "shm") {
 		use_shm = true;
 	}

@@ -57,7 +57,7 @@ bool is_daemonised;
 // we want it compiled once, not every time it's used, so do so on startup
 RegExp urldecode_re;
 
-#ifdef __PCRE
+#ifdef HAVE_PCRE
 // regexes used for embedded URL extraction by NaughtyFilter
 RegExp absurl_re, relurl_re;
 #endif
@@ -76,14 +76,14 @@ void read_config(const char *configfile, int type)
 	int rc = open(configfile, 0, O_RDONLY);
 	if (rc < 0) {
 		syslog(LOG_ERR, "Error opening %s", configfile);
-		cerr << "Error opening " << configfile << std::endl;
+		std::cerr << "Error opening " << configfile << std::endl;
 		exit(1);  // could not open conf file for reading, exit with error
 	}
 	close(rc);
 
 	if (!o.read(configfile, type)) {
 		syslog(LOG_ERR, "%s", "Error parsing the dansguardian.conf file or other DansGuardian configuration files");
-		cerr << "Error parsing the dansguardian.conf file or other DansGuardian configuration files" << std::endl;
+		std::cerr << "Error parsing the dansguardian.conf file or other DansGuardian configuration files" << std::endl;
 		exit(1);  // OptionContainer class had an error reading the conf or other files so exit with error
 	}
 }
@@ -343,14 +343,14 @@ int main(int argc, char *argv[])
 		}
 	} else {
 		syslog(LOG_ERR, "Unable to getpwnam() - does the proxy user exist?");
-		cerr << "Unable to getpwnam() - does the proxy user exist?" << std::endl;
-		cerr << "Proxy user looking for is '" << o.daemon_user_name << "'" << std::endl;
+		std::cerr << "Unable to getpwnam() - does the proxy user exist?" << std::endl;
+		std::cerr << "Proxy user looking for is '" << o.daemon_user_name << "'" << std::endl;
 		return 1;  // was unable to lockup the user id from passwd
 		// for some reason, so exit with error
 	}
 
 	if (!o.no_logger && !o.log_syslog) {
-		ofstream logfiletest(o.log_location.c_str(), ios::app);
+		std::ofstream logfiletest(o.log_location.c_str(), std::ios::app);
 		if (logfiletest.fail()) {
 			syslog(LOG_ERR, "Error opening/creating log file. (check ownership and access rights).");
 			std::cout << "Error opening/creating log file. (check ownership and access rights)." << std::endl;
@@ -362,7 +362,7 @@ int main(int argc, char *argv[])
 
 	urldecode_re.comp("%[0-9a-fA-F][0-9a-fA-F]");  // regexp for url decoding
 
-#ifdef __PCRE
+#ifdef HAVE_PCRE
 	// todo: these only work with PCRE enabled (non-greedy matching).
 	// change them, or make them a feature for which you need PCRE?
 	absurl_re.comp("[\"'](http|ftp)://.*?[\"']");  // find absolute URLs in quotes

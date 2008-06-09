@@ -105,7 +105,7 @@ bool OptionContainer::read(const char *filename, int type)
 		std::string linebuffer;
 		String temp;  // for tempory conversion and storage
 		int j;  // counter
-		ifstream conffiles(filename, ios::in);  // dansguardian.conf
+		std::ifstream conffiles(filename, std::ios::in);  // dansguardian.conf
 		if (!conffiles.good()) {
 			if (!is_daemonised) {
 				std::cerr << "error reading: " << filename << std::endl;
@@ -192,7 +192,7 @@ bool OptionContainer::read(const char *filename, int type)
 			soft_restart = false;
 		}
 
-#ifdef __EMAIL
+#ifdef ENABLE_EMAIL
 		// Email notification patch by J. Gauthier
 		mailer = findoptionS("mailer");
 #endif
@@ -547,7 +547,7 @@ bool OptionContainer::read(const char *filename, int type)
 			}
 			if (access_denied_domain.length() < 4) {
 				if (!is_daemonised) {
-					cerr << "accessdeniedaddress setting appears to be wrong." << endl;
+					std::cerr << "accessdeniedaddress setting appears to be wrong." << std::endl;
 				}
 				syslog(LOG_ERR, "%s", "accessdeniedaddress setting appears to be wrong.");
 				return false;
@@ -609,7 +609,7 @@ bool OptionContainer::read(const char *filename, int type)
 		}
 
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 		if (!is_daemonised) {
 			std::cerr << e.what() << std::endl;  // when called the daemon has not
 			// detached so we can do this

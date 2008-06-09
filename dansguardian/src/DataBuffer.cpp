@@ -34,12 +34,7 @@
 #include <fstream>
 #include <sys/time.h>
 #include <queue>
-
-#ifdef __GCCVER3
 #include <istream>
-#else
-#include <istream.h>
-#endif
 
 // DEFINES
 
@@ -248,7 +243,7 @@ bool DataBuffer::in(Socket * sock, Socket * peersock, HTTPHeader * requestheader
 }
 
 // send the request body to the client after having been handled by a DM plugin
-void DataBuffer::out(Socket * sock) throw(exception)
+void DataBuffer::out(Socket * sock) throw(std::exception)
 {
 	if (dontsendbody) {
 #ifdef DGDEBUG
@@ -275,7 +270,7 @@ void DataBuffer::out(Socket * sock) throw(exception)
 #ifdef DGDEBUG
 				std::cout << "error reading temp file so throwing exception" << std::endl;
 #endif
-				throw exception();
+				throw std::exception();
 			}
 			if (rc == 0) {
 #ifdef DGDEBUG
@@ -285,7 +280,7 @@ void DataBuffer::out(Socket * sock) throw(exception)
 			}
 			// as it's cached to disk the buffer must be reasonably big
 			if (!(*sock).writeToSocket(data, rc, 0, timeout)) {
-				throw exception();
+				throw std::exception();
 			}
 			sent += rc;
 #ifdef DGDEBUG
@@ -303,10 +298,10 @@ void DataBuffer::out(Socket * sock) throw(exception)
 		// it's in RAM, so just send it, no streaming from disk
 		if (buffer_length != 0) {
 			if (!(*sock).writeToSocket(data + bytesalreadysent, buffer_length - bytesalreadysent, 0, timeout))
-				throw exception();
+				throw std::exception();
 		} else {
 			if (!sock->writeToSocket("\r\n\r\n", 4, 0, timeout))
-				throw exception();
+				throw std::exception();
 		}
 	}
 }

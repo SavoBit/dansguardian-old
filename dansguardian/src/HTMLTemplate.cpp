@@ -71,7 +71,7 @@ bool HTMLTemplate::readTemplateFile(const char *filename, const char *placeholde
 	unsigned int offset;
 	String result;
 	String line;
-	std::ifstream templatefile(filename, ios::in);  // dansguardian.conf
+	std::ifstream templatefile(filename, std::ios::in);  // dansguardian.conf
 	if (!templatefile.good()) {
 		if (!is_daemonised) {
 			std::cerr << "error reading: " << filename << std::endl;

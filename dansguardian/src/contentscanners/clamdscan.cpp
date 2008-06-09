@@ -143,7 +143,7 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 	}
 	try {
 		stripedsocks.writeString(command.toCharArray());
-	} catch(exception &e) {
+	} catch(std::exception &e) {
 		stripedsocks.close();
 		lastmessage = "Exception whilst writing to ClamD socket: ";
 		lastmessage += e.what();
@@ -154,7 +154,7 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 	int rc;
 	try {
 		rc = stripedsocks.getLine(buff, 4096, o.content_scanner_timeout);
-	} catch(exception & e) {
+	} catch(std::exception & e) {
 		delete[]buff;
 		stripedsocks.close();
 		lastmessage = "Exception whist reading ClamD socket: ";

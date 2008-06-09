@@ -87,11 +87,11 @@ bool ImageContainer::read(const char *filename)
 		mimetype = "image/gif";
 	}
 
-	ifstream imagefile;
-	imagefile.open(filename, ifstream::binary);
-	imagefile.seekg(0, ios::end);
+	std::ifstream imagefile;
+	imagefile.open(filename, std::ifstream::binary);
+	imagefile.seekg(0, std::ios::end);
 	imagelength = imagefile.tellg();
-	imagefile.seekg(0, ios::beg);
+	imagefile.seekg(0, std::ios::beg);
 
 	if (imagelength) {
 		if (image != NULL)

@@ -69,7 +69,7 @@ bool LanguageContainer::readLanguageList(const char *filename)
 	String v;
 	String line;
 	unsigned int k;
-	ifstream languagefile(filename, ios::in);  // open the file for reading
+	std::ifstream languagefile(filename, std::ios::in);  // open the file for reading
 	if (!languagefile.good()) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening messages file (does it exist?): " << filename << std::endl;

@@ -58,7 +58,7 @@ public:
 	bool enable_PICS;
 	bool deep_url_analysis;
 
-#ifdef __EMAIL
+#ifdef ENABLE_EMAIL
 	// Email notification patch by J. Gauthier
 	bool notifyav;
 	bool notifycontent;
@@ -164,7 +164,7 @@ public:
 	std::string imagic;
 	std::string cookie_magic;
 
-#ifdef __EMAIL
+#ifdef ENABLE_EMAIL
 	// Email notification patch by J. Gauthier
 	std::string mailfrom;
 	std::string avadmin;

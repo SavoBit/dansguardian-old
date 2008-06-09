@@ -42,17 +42,11 @@
 #include <fstream>
 #include <sys/time.h>
 #include <sys/poll.h>
-
-#ifdef __SEGV_BACKTRACE
-#include <execinfo.h>
-#endif
-
-#ifdef __GCCVER3
 #include <istream>
 #include <map>
-#else
-#include <istream.h>
-#include <map.h>
+
+#ifdef ENABLE_SEGV_BACKTRACE
+#include <execinfo.h>
 #endif
 
 
@@ -99,7 +93,7 @@ extern "C"
 	void sig_hup(int signo);  // This is so we know if we should re-read our config.
 	void sig_usr1(int signo);  // This is so we know if we should re-read our config but not kill current connections
 	void sig_childterm(int signo);
-#ifdef __SEGV_BACKTRACE
+#ifdef ENABLE_SEGV_BACKTRACE
 	void sig_segv(int signo/*, siginfo_t* info, void* p*/); // Generate a backtrace on segfault
 #endif
 }
@@ -188,7 +182,7 @@ extern "C"
 #endif
 		_exit(0);
 	}
-#ifdef __SEGV_BACKTRACE
+#ifdef ENABLE_SEGV_BACKTRACE
 	void sig_segv(int signo)
 	{
 #ifdef DGDEBUG
@@ -201,7 +195,7 @@ extern "C"
 		strings = backtrace_symbols(addresses,c);
 		printf("backtrace returned: %d\n", c);
 		for (int i = 0; i < c; i++) {
-			syslog(LOG_ERR, "%d: %X ", i, (int)addresses[i]);
+			syslog(LOG_ERR, "%d: %zX ", i, (size_t)addresses[i]);
 			syslog(LOG_ERR, "%s", strings[i]);
 		}
 		// Kill off the current process
@@ -290,7 +284,7 @@ void flush_urlcache()
 	try {
 		fipcsock.writeString(request.toCharArray());  // throws on err
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception flushing url cache" << std::endl;
 		std::cerr << e.what() << std::endl;
@@ -474,7 +468,7 @@ int send_readystatus(UDSocket &pipe)
 			return -1;
 		}
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 		return -1;
 	}
 	return 0;
@@ -542,7 +536,7 @@ bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
 	try {
 		rc = fd.readFromSocket(&buf, 1, 0, 360, true, true);  // blocks for a few mins
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 		// whoop! we received a SIGHUP. we should reload our configuration - and no, we didn't get an FD.
 
 		reloadconfig = true;
@@ -567,7 +561,7 @@ bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
 		fd.writeToSockete("K", 1, 0, 10, true);  // need to make parent wait for OK
 		// so effectively providing a lock
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 		if (o.logconerror)
 			syslog(LOG_ERR, "Error telling parent we accepted: %s", e.what());
 		peersock->close();
@@ -634,7 +628,7 @@ void addchild(int pos, int fd, pid_t child_pid)
 void cullchildren(int num)
 {
 #ifdef DGDEBUG
-	cout << "culling childs:" << num << endl;
+	std::cout << "culling childs:" << num << std::endl;
 #endif
 	int i;
 	int count = 0;
@@ -658,7 +652,7 @@ void cullchildren(int num)
 void kill_allchildren()
 {
 #ifdef DGDEBUG
-	cout << "killing all childs:" << endl;
+	std::cout << "killing all childs:" << std::endl;
 #endif
 	for (int i = o.max_children - 1; i >= 0; i--) {
 		if (childrenstates[i] >= 0) {
@@ -676,7 +670,7 @@ void kill_allchildren()
 void hup_allchildren()
 {
 #ifdef DGDEBUG
-	cout << "huping all childs:" << endl;
+	std::cout << "huping all childs:" << std::endl;
 #endif
 	for (int i = o.max_children - 1; i >= 0; i--) {
 		if (childrenstates[i] >= 0) {
@@ -707,7 +701,7 @@ bool check_kid_readystatus(int tofind)
 			try {
 				rc = childsockets[f]->getLine(buf, 4, 100, true);
 			}
-			catch(exception & e) {
+			catch(std::exception & e) {
 				kill(childrenpids[f], SIGTERM);
 				deletechild(childrenpids[f]);
 				tofind--;
@@ -784,7 +778,7 @@ void tellchild_accept(int num, int whichsock)
 	// include server socket number in message
 	try {
 		childsockets[num]->writeToSockete((char*)&whichsock, 1, 0, 5, true);
-	} catch(exception & e) {
+	} catch(std::exception & e) {
 		kill(childrenpids[num], SIGTERM);
 		deletechild(childrenpids[num]);
 		return;
@@ -794,7 +788,7 @@ void tellchild_accept(int num, int whichsock)
 	char buf;
 	try {
 		childsockets[num]->readFromSocket(&buf, 1, 0, 5, false, true);
-	} catch(exception & e) {
+	} catch(std::exception & e) {
 		kill(childrenpids[num], SIGTERM);
 		deletechild(childrenpids[num]);
 		return;
@@ -831,11 +825,11 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 	UDSocket* ipcpeersock;  // the socket which will contain the ipc connection
 	int rc, ipcsockfd;
 
-#ifdef __EMAIL
+#ifdef ENABLE_EMAIL
 	// Email notification patch by J. Gauthier
-	map<string,int> violation_map;
-	map<string,int> timestamp_map;   
-	map<string,string> vbody_map;
+	std::map<std::string, int> violation_map;
+	std::map<std::string, int> timestamp_map;   
+	std::map<std::string, std::string> vbody_map;
 
 	int curv_tmp, stamp_tmp, byuser;
 #endif
@@ -849,9 +843,9 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 	long tv_sec = 0, tv_usec = 0;
 	int contentmodified = 0, urlmodified = 0, headermodified = 0;
 
-	ofstream* logfile = NULL;
+	std::ofstream* logfile = NULL;
 	if (!logsyslog) {
-		logfile = new ofstream(log_location.c_str(), ios::app);
+		logfile = new std::ofstream(log_location.c_str(), std::ios::app);
 		if (logfile->fail()) {
 			syslog(LOG_ERR, "Error opening/creating log file.");
 #ifdef DGDEBUG
@@ -999,7 +993,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 					}
 					delete[]logline;
 				}
-				catch(exception & e) {
+				catch(std::exception & e) {
 					delete ipcpeersock;
 					if (logconerror)
 						syslog(LOG_ERR, "Error reading ipc. (Ignorable)");
@@ -1213,7 +1207,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 #endif
 			delete ipcpeersock;  // close the connection
 
-#ifdef __EMAIL
+#ifdef ENABLE_EMAIL
 			// do the notification work here, but fork for speed
 			if (o.fg[filtergroup]->use_smtp==true) {
 
@@ -1474,7 +1468,7 @@ int url_list_listener(bool logconerror)
 			try {
 				rc = ipcpeersock->getLine(logline, 32000, 3, true);  // throws on err
 			}
-			catch(exception & e) {
+			catch(std::exception & e) {
 				delete ipcpeersock;  // close the connection
 				if (logconerror) {
 #ifdef DGDEBUG
@@ -1515,7 +1509,7 @@ int url_list_listener(bool logconerror)
 			try {
 				ipcpeersock->writeToSockete(&reply, 1, 0, 6);
 			}
-			catch(exception & e) {
+			catch(std::exception & e) {
 				delete ipcpeersock;  // close the connection
 				if (logconerror) {
 					syslog(LOG_ERR, "%s", "Error writing url ipc. (Ignorable)");
@@ -1640,7 +1634,7 @@ int ip_list_listener(std::string stat_location, bool logconerror) {
 			}
 			try {
 				rc = ipcpeersock->getLine(inbuff, 16, 3);  // throws on err
-			} catch (exception& e) {
+			} catch (std::exception& e) {
 				delete ipcpeersock;
 				if (logconerror) {
 #ifdef DGDEBUG
@@ -1662,7 +1656,7 @@ int ip_list_listener(std::string stat_location, bool logconerror) {
 				reply = 'N';
 			try {
 				ipcpeersock->writeToSockete(&reply, 1, 0, 6);
-			} catch (exception& e) {
+			} catch (std::exception& e) {
 				delete ipcpeersock;
 				if (logconerror) {
 #ifdef DGDEBUG
@@ -2024,7 +2018,7 @@ int fc_controlit()
 		return (1);
 	}
 
-#ifdef __SEGV_BACKTRACE
+#ifdef ENABLE_SEGV_BACKTRACE
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &sig_segv;
 	if (sigaction(SIGSEGV, &sa, NULL)) {
@@ -2113,7 +2107,7 @@ int fc_controlit()
 		// OR, we need to exit to reread config
 		if (gentlereload) {
 #ifdef DGDEBUG
-			cout << "gentle reload activated" << endl;
+			std::cout << "gentle reload activated" << std::endl;
 #endif
 			o.deleteFilterGroups();
 			if (!o.readFilterGroupConf()) {

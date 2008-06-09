@@ -29,7 +29,7 @@
 
 #include <sys/types.h>		// needed for size_t used in regex.h
 
-#ifdef __PCRE
+#ifdef HAVE_PCRE
 #include <pcreposix.h>
 #else
 #include <regex.h>
@@ -37,10 +37,6 @@
 
 #include <string>
 #include <deque>
-
-#ifdef __GCCVER3
-using namespace std;
-#endif
 
 
 // DECLARATIONS

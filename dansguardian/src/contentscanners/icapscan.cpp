@@ -180,7 +180,7 @@ int icapinstance::init(void* args)
 			}
 		}
 		icapsock.close();
-	} catch(exception& e) {
+	} catch(std::exception& e) {
 		if (!is_daemonised)
 			std::cerr << "ICAP server did not respond to OPTIONS request: " << e.what() << std::endl;
 		syslog(LOG_ERR, "ICAP server did not respond to OPTIONS request: %s", e.what());
@@ -232,7 +232,7 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 			char objectsizehex[32];
 			snprintf(objectsizehex, sizeof(objectsizehex), "%x\r\n", objectsize-previewsize);
 			icapsock.writeString(objectsizehex);
-		} catch (exception& e) {
+		} catch (std::exception& e) {
 #ifdef DGDEBUG
 			std::cerr << "Exception sending message preview to ICAP: " << e.what() << std::endl;
 #endif
@@ -257,7 +257,7 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 #ifdef DGDEBUG
 		std::cout << "memory was sent to icap" << std::endl;
 #endif
-	} catch(exception & e) {
+	} catch(std::exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception sending memory file to ICAP: " << e.what() << std::endl;
 #endif
@@ -346,7 +346,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 			char objectsizehex[32];
 			snprintf(objectsizehex, sizeof(objectsizehex), "%x\r\n", filesize-previewsize);
 			icapsock.writeString(objectsizehex);
-		} catch (exception& e) {
+		} catch (std::exception& e) {
 #ifdef DGDEBUG
 			std::cerr << "Exception sending message preview to ICAP: " << e.what() << std::endl;
 #endif
@@ -399,7 +399,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 		std::cout << "file was sent to icap" << std::endl;
 #endif
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception sending file to ICAP: " << e.what() << std::endl;
 #endif
@@ -468,7 +468,7 @@ bool icapinstance::doHeaders(Socket & icapsock, HTTPHeader *reqheader, HTTPHeade
 		icapsock.writeString(httpresponseheader.toCharArray());
 		icapsock.writeString(objectsizehex);
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception sending headers to ICAP: " << e.what() << std::endl;
 #endif
@@ -619,7 +619,7 @@ int icapinstance::doScan(Socket & icapsock, HTTPHeader * docheader, const char* 
 		}
 		delete[]data;
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception getting reply from ICAP: " << e.what() << std::endl;
 #endif

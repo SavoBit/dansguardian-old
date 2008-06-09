@@ -52,7 +52,7 @@ RegExp::RegExp(const RegExp & r)
 	wascompiled = r.wascompiled;
 	searchstring = r.searchstring;
 	if (wascompiled == true) {
-#ifdef __PCRE
+#ifdef HAVE_PCRE
 		if (regcomp(&reg, searchstring.c_str(), REG_ICASE | REG_EXTENDED | REG_DOTALL) != 0 ) {
 #else
 		if (regcomp(&reg, searchstring.c_str(), REG_ICASE | REG_EXTENDED) != 0 ) {
@@ -126,7 +126,7 @@ bool RegExp::comp(const char *exp)
 #ifdef DGDEBUG
 	std::cout << "Compiling " << exp << std::endl;
 #endif
-#ifdef __PCRE
+#ifdef HAVE_PCRE
 #ifdef DGDEBUG
 	std::cout << "...with PCRE " << std::endl;
 #endif

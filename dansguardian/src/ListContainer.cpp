@@ -159,7 +159,7 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception, int c
 	}
 	filedate = getFileDate(filename);
 	increaseMemoryBy(len + 2);  // Allocate some memory to hold file
-	ifstream listfile(filename, ios::in);  // open the file for reading
+	std::ifstream listfile(filename, std::ios::in);  // open the file for reading
 	if (!listfile.good()) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening file (does it exist?): " << filename << std::endl;
@@ -385,7 +385,7 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 	}
 	increaseMemoryBy(len + 2);  // Allocate some memory to hold file
 	// The plus one is to cope with files not ending in a new line
-	ifstream listfile(filename, ios::in);
+	std::ifstream listfile(filename, std::ios::in);
 	if (!listfile.good()) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening: " << filename << std::endl;
@@ -811,7 +811,7 @@ bool ListContainer::createCacheFile()
 #ifdef DGDEBUG
 	std::cout << "creating processed file:" << f << std::endl;
 #endif
-	ofstream listfile(f.toCharArray(), ios::out);
+	std::ofstream listfile(f.toCharArray(), std::ios::out);
 	if (listfile.fail()) {
 		if (!is_daemonised) {
 			std::cerr << "Error creating cache file. Do you have write access to this area: \"" << f << "\"?" << std::endl;
@@ -1454,7 +1454,7 @@ bool ListContainer::readProcessedItemList(const char *filename, bool startswith,
 		return false;
 	}
 	increaseMemoryBy(len + 2);
-	ifstream listfile(filename, ios::in);
+	std::ifstream listfile(filename, std::ios::in);
 	if (!listfile.good()) {
 		if (!is_daemonised) {
 			std::cerr << "Error opening: " << filename << std::endl;

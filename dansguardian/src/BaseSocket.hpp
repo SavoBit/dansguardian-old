@@ -33,10 +33,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#ifdef __GCCVER3
-using namespace std;
-#endif
-
 int selectEINTR(int numfds, fd_set * readfds, fd_set * writefds, fd_set * exceptfds, struct timeval *timeout, bool honour_reloadconfig = false);
 
 class BaseSocket
@@ -67,25 +63,25 @@ public:
 	// non-blocking check for input data
 	bool checkForInput();
 	// blocking check for data, can be told to break on signal triggered config reloads (-r)
-	void checkForInput(int timeout, bool honour_reloadconfig = false) throw(exception);
+	void checkForInput(int timeout, bool honour_reloadconfig = false) throw(std::exception);
 	// non-blocking check for writable socket
 	bool readyForOutput();
 	// blocking check, can break on config reloads
-	void readyForOutput(int timeout, bool honour_reloadconfig = false) throw(exception);
+	void readyForOutput(int timeout, bool honour_reloadconfig = false) throw(std::exception);
 	
 	// get a line from the socket - can break on config reloads
-	int getLine(char *buff, int size, int timeout, bool honour_reloadconfig = false, bool *chopped = NULL) throw(exception);
+	int getLine(char *buff, int size, int timeout, bool honour_reloadconfig = false, bool *chopped = NULL) throw(std::exception);
 	
-	// write buffer to string - throws exception on error
-	void writeString(const char *line) throw(exception);
+	// write buffer to string - throws std::exception on error
+	void writeString(const char *line) throw(std::exception);
 	// write buffer to string - can be told not to do an initial readyForOutput, and told to break on -r
 	bool writeToSocket(const char *buff, int len, unsigned int flags, int timeout, bool check_first = true, bool honour_reloadconfig = false);
 	// read from socket, returning number of bytes read
 	int readFromSocketn(char *buff, int len, unsigned int flags, int timeout);
 	// read from socket, returning error status - can be told to skip initial checkForInput, and to break on -r
 	int readFromSocket(char *buff, int len, unsigned int flags, int timeout, bool check_first = true, bool honour_reloadconfig = false);
-	// write to socket, throwing exception on error - can be told to break on -r
-	void writeToSockete(const char *buff, int len, unsigned int flags, int timeout, bool honour_reloadconfig = false) throw(exception);
+	// write to socket, throwing std::exception on error - can be told to break on -r
+	void writeToSockete(const char *buff, int len, unsigned int flags, int timeout, bool honour_reloadconfig = false) throw(std::exception);
 
 protected:
 	// socket-wide timeout (is this actually used?)

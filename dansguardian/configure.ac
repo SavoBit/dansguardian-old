@@ -124,40 +124,6 @@ AC_MSG_CHECKING(build os)
 AC_CANONICAL_BUILD
 AC_MSG_RESULT($build_os)
 
-dnl Darwin bits are needed as early versions don't define _BSD_SOCKLEN_T_ and
-dnl a slightly different version of accept().
-dnl The BSD bits are due to using a slightly different connect() but
-dnl they could probably be replaced with a test for struct sockaddr_un.sun_len
-dnl instead.
-
-AC_MSG_CHECKING(for OS tweaks needed)
-case $build_os in
-  darwin*)
-    AC_DEFINE(HAVE_DARWIN, 1, [Define if might need tweaks for Darwin versions])
-    AC_DEFINE(HAVE_BSD, 1, [Define if might need tweaks for xBSD versions])
-    AC_MSG_RESULT(yes)
-  ;;
-  hp-ux*)
-    AC_DEFINE(HAVE_BSD, 1, [Define if might need tweaks for xBSD versions])
-    AC_MSG_RESULT(yes)
-  ;;
-  openbsd*)
-    AC_DEFINE(HAVE_BSD, 1, [Define if might need tweaks for xBSD versions])
-    AC_MSG_RESULT(yes)
-  ;;
-  freebsd*)
-    AC_DEFINE(HAVE_BSD, 1, [Define if might need tweaks for xBSD versions])
-    AC_MSG_RESULT(yes)
-  ;;
-  netbsd*)
-    AC_DEFINE(HAVE_BSD, 1, [Define if might need tweaks for xBSD versions])
-    AC_MSG_RESULT(yes)
-  ;;
-  *)
-    AC_MSG_RESULT(no)
-  ;;
-esac
-
 AC_MSG_CHECKING(for debug option)
 AC_ARG_WITH(dgdebug,
 [AC_HELP_STRING([--with-dgdebug@<:@=off@:>@], [switch on debug build mode])],
@@ -166,7 +132,7 @@ AC_ARG_WITH(dgdebug,
 else
   AC_MSG_RESULT(yes)
   dgdebug=${withval}
-  AC_DEFINE(HAVE_DGDEBUG, 1, [Define to enable debug build mode])
+  AC_DEFINE(DGDEBUG, 1, [Define to enable debug build mode])
 fi], [
   # disable by default
   AC_MSG_RESULT(no)
@@ -748,7 +714,6 @@ AC_CONFIG_FILES([Makefile
 		configs/lists/authplugins/Makefile
 		configs/lists/downloadmanagers/Makefile
                 src/Makefile
-                src/platform.h
 		])
 
 AC_OUTPUT

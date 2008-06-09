@@ -105,7 +105,7 @@ int identinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, st
 	char buff[8192];
 	try {
 		iq.getLine(buff, 8192, 5);
-	} catch(exception & e) {
+	} catch(std::exception & e) {
 		return -2;
 	}
 	String temp;

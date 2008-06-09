@@ -206,7 +206,7 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 			block = new char[newsize];
 			try {
 				sock->checkForInput(d->timeout);
-			} catch(exception & e) {
+			} catch(std::exception & e) {
 				break;
 			}
 			// improved more efficient socket read which uses the buffer better
@@ -234,7 +234,7 @@ int dminstance::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPH
 			try {
 				sock->checkForInput(d->timeout);
 			}
-			catch(exception & e) {
+			catch(std::exception & e) {
 				break;
 			}
 			rc = d->bufferReadFromSocket(sock, d->data,

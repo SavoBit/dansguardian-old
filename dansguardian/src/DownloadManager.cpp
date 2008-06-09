@@ -44,11 +44,11 @@ extern dmcreate_t defaultdmcreate;
 
 // find the class factory functions for any DM plugins we've been configured to build
 
-#ifdef __FANCYDM
+#ifdef ENABLE_FANCYDM
 extern dmcreate_t fancydmcreate;
 #endif
 
-#ifdef __TRICKLEDM
+#ifdef ENABLE_TRICKLEDM
 extern dmcreate_t trickledmcreate;
 #endif
 
@@ -238,7 +238,7 @@ DMPlugin* dm_plugin_load(const char *pluginConfigPath)
 		return defaultdmcreate(cv);
 	}
 	
-#ifdef __FANCYDM
+#ifdef ENABLE_FANCYDM
 	if (plugname == "fancy") {
 #ifdef DGDEBUG
 		std::cout << "Enabling fancy DM plugin" << std::endl;
@@ -247,7 +247,7 @@ DMPlugin* dm_plugin_load(const char *pluginConfigPath)
 	}
 #endif
 
-#ifdef __TRICKLEDM
+#ifdef ENABLE_TRICKLEDM
 	if (plugname == "trickle") {
 #ifdef DGDEBUG
 		std::cout << "Enabling trickle DM plugin" << std::endl;

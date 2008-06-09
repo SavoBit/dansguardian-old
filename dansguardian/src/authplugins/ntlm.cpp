@@ -220,11 +220,11 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 		static char username2[256];
 		char* inptr = username;
 		char* outptr = username2;
-		int l,o;
+		size_t l,o;
 
 		// copy the NTLM message into the union's buffer, simultaneously filling in the struct
 		if ((message.length() > sizeof(ntlm_auth)) || (message.length() < offsetof(ntlm_auth, payload))) {
-			syslog(LOG_ERR, "NTLM - Invalid message of length %d, message was: %s", message.length(), message.c_str());
+			syslog(LOG_ERR, "NTLM - Invalid message of length %zd, message was: %s", message.length(), message.c_str());
 #ifdef DGDEBUG
 			std::cerr << "NTLM - Invalid message of length " << message.length() << ", message was: " << message << std::endl;
 #endif
@@ -239,7 +239,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 			l = SSWAP(a->user.len);
 			o = WSWAP(a->user.offset);
 
-			if ((l > 0) && (o >= 0) && (o + l) <= (int)sizeof(a->payload) && (l <= 254)) {
+			if ((l > 0) && (o >= 0) && (o + l) <= sizeof(a->payload) && (l <= 254)) {
 				// everything is in range
 				// note offsets are from start of packet - not the start of the payload area
 				memcpy((void *)username, (const void *)&(auth.buf[o]),l);
@@ -256,8 +256,8 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 						iconv_close(ic);
 						return -2;
 					}
-					int l2 = 256;
-					local_iconv_adaptor(iconv, ic, &inptr, (size_t*)&l, &outptr, (size_t*)&l2);
+					size_t l2 = 256;
+					local_iconv_adaptor(iconv, ic, &inptr, &l, &outptr, &l2);
 					iconv_close(ic);
 					username2[256 - l2] = '\0';
 #ifdef DGDEBUG

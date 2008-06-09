@@ -113,7 +113,7 @@ public:
 	bool log_user_agent;
 	bool soft_restart;
 
-#ifdef __EMAIL
+#ifdef ENABLE_EMAIL
 	// Email notification patch by J. Gauthier
 	std::string mailer;   
 #endif

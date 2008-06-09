@@ -40,12 +40,7 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-
-#ifdef __GCCVER3
 #include <istream>
-#else
-#include <istream.h>
-#endif
 
 
 // GLOBALS
@@ -85,7 +80,7 @@ bool wasClean(String &url, const int fg)
 	try {
 		ipcsock.writeString(myurl.c_str());  // throws on err
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception writing to url cache" << std::endl;
 		std::cerr << e.what() << std::endl;
@@ -97,7 +92,7 @@ bool wasClean(String &url, const int fg)
 	try {
 		ipcsock.readFromSocket(&reply, 1, 0, 6);  // throws on err
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception reading from url cache" << std::endl;
 		std::cerr << e.what() << std::endl;
@@ -133,7 +128,7 @@ void addToClean(String &url, const int fg)
 	try {
 		ipcsock.writeString(myurl.c_str());  // throws on err
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception adding to url cache" << std::endl;
 		std::cerr << e.what() << std::endl;
@@ -238,7 +233,7 @@ bool ConnectionHandler::gotIPs(std::string ipstr) {
 		ipcsock.writeToSockete(ipstr.c_str(), ipstr.length(), 0, 6);
 		ipcsock.readFromSocket(&reply, 1, 0, 6);  // throws on err
 	}
-	catch (exception& e) {
+	catch (std::exception& e) {
 #ifdef DGDEBUG
 		std::cerr << "Exception with IP cache" << std::endl;
 		std::cerr << e.what() << std::endl;
@@ -278,7 +273,7 @@ off_t ConnectionHandler::sendFile(Socket * peerconn, String & filename, String &
 	try {
 		peerconn->writeString(message.toCharArray());
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 		close(fd);
 		return 0;
 	}
@@ -297,7 +292,7 @@ off_t ConnectionHandler::sendFile(Socket * peerconn, String & filename, String &
 			std::cout << "error reading send file so throwing exception" << std::endl;
 #endif
 			delete[]buffer;
-			throw exception();
+			throw std::exception();
 		}
 		if (rc == 0) {
 #ifdef DGDEBUG
@@ -308,7 +303,7 @@ off_t ConnectionHandler::sendFile(Socket * peerconn, String & filename, String &
 		// as it's cached to disk the buffer must be reasonably big
 		if (!peerconn->writeToSocket(buffer, rc, 0, 100)) {
 			delete[]buffer;
-			throw exception();
+			throw std::exception();
 		}
 		sent += rc;
 #ifdef DGDEBUG
@@ -443,7 +438,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				header.reset();
 				try {
 					header.in(&peerconn, true, true);  // get header from client, allowing persistency and breaking on reloadconfig
-				} catch (exception &e) {
+				} catch (std::exception &e) {
 #ifdef DGDEBUG
 					std::cout << "Persistent connection closed" << std::endl;
 #endif
@@ -668,7 +663,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					// The requested URL is malformed.
 					peerconn.writeString("</BODY></HTML>\n");
 				}
-				catch(exception & e) {
+				catch(std::exception & e) {
 				}
 				proxysock.close();  // close connection to proxy
 				break;
@@ -771,7 +766,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 						unlink(tempfilename.toCharArray());
 					}
 				}
-				catch(exception & e) {
+				catch(std::exception & e) {
 				}
 				proxysock.close();  // close connection to proxy
 				break;
@@ -865,7 +860,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 							mimetype, wasinfected, wasscanned, 0, filtergroup, &header);
 					}
 				}
-				catch(exception & e) {
+				catch(std::exception & e) {
 				}
 				if (persist)
 					continue;
@@ -961,7 +956,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 									false, true);
 							}
 						}
-						catch(exception & e) {
+						catch(std::exception & e) {
 						}
 						if (persist)
 							continue;
@@ -1035,7 +1030,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 						cachehit, (wasrequested ? docheader.returnCode() : 200), mimetype, wasinfected,
 						wasscanned, checkme.naughtiness, filtergroup, &header, false, urlmodified);
 				}
-				catch(exception & e) {
+				catch(std::exception & e) {
 				}
 				if (persist)
 					continue;
@@ -1512,7 +1507,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			}
 		} // while persist
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "connection handler caught an exception: " << e.what() << std::endl;
 #endif
@@ -1531,7 +1526,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 		char buff[2];
 		peerconn.readFromSocket(buff, 2, 0, 5);
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 		return;
 	}
 	return;
@@ -1673,7 +1668,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 			ipcsock.setTimeout(10);
 			ipcsock.writeString(data.c_str());
 			ipcsock.close();
-		} catch (exception &e) {
+		} catch (std::exception &e) {
 			syslog(LOG_INFO, "Could not write to logging process: %s", e.what());
 #ifdef DGDEBUG
 			std::cout << "Could not write to logging process: " << e.what() << std::endl;
@@ -1878,7 +1873,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				try {	// writestring throws exception on error/timeout
 					(*peerconn).writeString(writestring.toCharArray());
 				}
-				catch(exception & e) {
+				catch(std::exception & e) {
 				}
 			} else {
 				// we're dealing with a non-SSL'ed request, and have the option of using the custom banned image/page directly
@@ -1925,7 +1920,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 						writestring += "</A></FONT></CENTER></BODY></HTML>\n";
 						try { // writestring throws exception on error/timeout
 							(*peerconn).writeString(writestring.toCharArray());
-						} catch (exception& e) {}
+						} catch (std::exception& e) {}
 					}
 					
 					// Mod by Ernest W Lessenger Mon 2nd February 2004
@@ -2086,7 +2081,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 			(*checkme).isItNaughty = false;  // dont block
 		}
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 	}
 	
 	// we blocked the request, so flush the client connection & close the proxy connection.
@@ -2094,7 +2089,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		try {
 			(*peerconn).readyForOutput(10);  //as best a flush as I can
 		}
-		catch(exception & e) {
+		catch(std::exception & e) {
 		}
 		(*proxysock).close();  // close connection to proxy
 		// we said no to the request, so return true, indicating exit the connhandler

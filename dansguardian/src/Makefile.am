@@ -1,8 +1,3 @@
-# Please don't delete platform.h.in. it's not very nice.
-MAINTAINERCLEANFILES = Makefile.in #platform.h.in
-
-EXTRA_DIST = platform.h.in
-
 clean_SUBDIRS= . downloadmanagers contentscanners authplugins
 
 # A MASSIVE thank you to Lawrence Manning for pointing out the
@@ -13,14 +8,6 @@ clean_SUBDIRS= . downloadmanagers contentscanners authplugins
 # Unfortunately, since it was never made to work on anything
 # other than Linux, libtool support has been removed in favour
 # of configure-time options (at DB's request).
-
-AM_CXXFLAGS = -fexceptions
-
-DGCONFFILE = @DGCONFFILE@
-DGLOGLOCATION = @DGLOGLOCATION@
-DGPIDDIR = @DGPIDDIR@
-DGPROXYUSER = @DGPROXYUSER@ 
-DGPROXYGROUP = @DGPROXYGROUP@
 
 if HAVE_CLAMAV
 CLAMAV_SOURCE = contentscanners/clamav.cpp
@@ -85,6 +72,13 @@ endif
 
 sbin_PROGRAMS = dansguardian 
 
+dansguardian_CPPFLAGS = -D__CONFFILE='"$(DGCONFFILE)"' \
+			-D__LOGLOCATION='"$(DGLOGLOCATION)/"' \
+			-D__PIDDIR='"$(DGPIDDIR)"' \
+			-D__PROXYUSER='"$(DGPROXYUSER)"' \
+			-D__PROXYGROUP='"$(DGPROXYGROUP)"' \
+			-D__CONFDIR='"$(DGCONFDIR)"' \
+			$(AM_CPPFLAGS)
 dansguardian_SOURCES = String.cpp String.hpp \
                        FDTunnel.cpp FDTunnel.hpp \
                        ConnectionHandler.cpp ConnectionHandler.hpp \

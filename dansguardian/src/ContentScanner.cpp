@@ -40,27 +40,27 @@ extern OptionContainer o;
 
 // find the class factory functions for the CS plugins we've been configured to build
 
-#ifdef __CLAMD
+#ifdef ENABLE_CLAMD
 extern cscreate_t clamdcreate;
 #endif
 
-#ifdef __CLAMAV
+#ifdef HAVE_CLAMAV
 extern cscreate_t clamavcreate;
 #endif
 
-#ifdef __ICAP
+#ifdef ENABLE_ICAP
 extern cscreate_t icapcreate;
 #endif
 
-#ifdef __KAVAV
+#ifdef HAVE_KAVCLIENT
 extern cscreate_t kavavcreate;
 #endif
 
-#ifdef __KAVD
+#ifdef ENABLE_KAVD
 extern cscreate_t kavdcreate;
 #endif
 
-#ifdef __COMMANDLINE
+#ifdef ENABLE_COMMANDLINE
 extern cscreate_t commandlinecreate;
 #endif
 
@@ -337,7 +337,7 @@ CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 		return NULL;
 	}
 
-#ifdef __CLAMD
+#ifdef ENABLE_CLAMD
 	if (plugname == "clamdscan") {
 #ifdef DGDEBUG
 		std::cout << "Enabling ClamDscan CS plugin" << std::endl;
@@ -346,7 +346,7 @@ CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 	}
 #endif
 
-#ifdef __CLAMAV
+#ifdef HAVE_CLAMAV
 	if (plugname == "clamav") {
 #ifdef DGDEBUG
 		std::cout << "Enabling ClamAV CS plugin" << std::endl;
@@ -355,7 +355,7 @@ CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 	}
 #endif
 
-#ifdef __KAVAV
+#ifdef HAVE_KAVCLIENT
 	if (plugname == "kavav") {
 #ifdef DGDEBUG
 		std::cout << "Enabling KAVClient CS plugin" << std::endl;
@@ -364,7 +364,7 @@ CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 	}
 #endif
 
-#ifdef __KAVD
+#ifdef ENABLE_KAVD
 	if (plugname == "kavdscan") {
 #ifdef DGDEBUG
 		std::cout << "Enabling KAVDscan CS plugin" << std::endl;
@@ -373,7 +373,7 @@ CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 	}
 #endif
 
-#ifdef __ICAP
+#ifdef ENABLE_ICAP
 	if (plugname == "icapscan") {
 #ifdef DGDEBUG
 		std::cout << "Enabling ICAPscan CS plugin" << std::endl;
@@ -382,7 +382,7 @@ CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 	}
 #endif
 
-#ifdef __COMMANDLINE
+#ifdef ENABLE_COMMANDLINE
 	if (plugname == "commandlinescan") {
 #ifdef DGDEBUG
 		std::cout << "Enabling command-line CS plugin" << std::endl;

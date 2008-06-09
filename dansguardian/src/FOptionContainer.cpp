@@ -203,7 +203,7 @@ bool FOptionContainer::read(const char *filename)
 		std::string linebuffer;
 		String temp;  // for tempory conversion and storage
 		int j;  // counter
-		ifstream conffiles(filename, ios::in);  // dansguardianfN.conf
+		std::ifstream conffiles(filename, std::ios::in);  // dansguardianfN.conf
 		if (!conffiles.good()) {
 			if (!is_daemonised) {
 				std::cerr << "Error reading: " << filename << std::endl;
@@ -247,7 +247,7 @@ bool FOptionContainer::read(const char *filename)
 			disable_content_scan = false;
 		}
 
-#ifdef __EMAIL
+#ifdef ENABLE_EMAIL
 		// Email notification patch by J. Gauthier
 		if (findoptionS("usesmtp") == "on") {
 			use_smtp = true;
@@ -432,7 +432,7 @@ bool FOptionContainer::read(const char *filename)
 
 			if (enable_PICS) {
 				linebuffer = findoptionS("picsfile");
-				ifstream picsfiles(linebuffer.c_str(), ios::in);  // pics file
+				std::ifstream picsfiles(linebuffer.c_str(), std::ios::in);  // pics file
 				if (!picsfiles.good()) {
 					if (!is_daemonised) {
 						std::cerr << "Error reading PICS file: " << linebuffer << std::endl;
@@ -766,7 +766,7 @@ bool FOptionContainer::read(const char *filename)
 			}
 		}
 	}
-	catch(exception & e) {
+	catch(std::exception & e) {
 		if (!is_daemonised) {
 			std::cerr << e.what() << std::endl;  // when called the daemon has not
 			// detached so we can do this
