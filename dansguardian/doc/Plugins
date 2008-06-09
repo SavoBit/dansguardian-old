@@ -51,8 +51,7 @@ Optional compilation of plugins
 ===============================
 
 If you want compilation of your plugin to be controllable by a configure argument, you will have to understand a thing or two about autotools. You will notice inside src/Makefile.am and configs/<type>/Makefile.am that the addition of source files to targets is bounded by "ENABLE_*" conditionals, and that entries in src/ContentScanner.cpp and friends are bounded by #ifdefs. These flags are set (or not set, if disabled) by calls to AM_CONDITIONAL and AC_DEFINE within configure.ac - it is recommended that you examine existing option tests in that file to see how this is typically done.
-	New #defines also require an entry in src/platform.h.in; see that file for examples as to how the AC_DEFINE'd symbols are mapped to the actual symbols used in tests in the source. I am unsure as to how this paradigm compares to other autotools projects, but it is what has evolved in this case, and works.
-	Run autogen.sh after modifying platform.h.in or configure.ac, then configure, make, make install.
+	Run autogen.sh after modifying configure.ac, then configure, make, make install.
 
 
 Building multiple third-party plugins
