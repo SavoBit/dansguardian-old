@@ -89,19 +89,13 @@ fi
 AC_CACHE_SAVE
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_HEADER_STDBOOL
-AC_C_CONST
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
-AC_HEADER_TIME
-AC_STRUCT_TM
-AC_C_VOLATILE
+AC_TYPE_OFF_T
+AC_TYPE_UID_T
 
 # Checks for library functions.
 AC_FUNC_FORK
-AC_FUNC_MEMCMP
-AC_FUNC_SELECT_ARGTYPES
-AC_FUNC_STAT
 AC_CHECK_FUNCS([dup2 gettimeofday memset select])
 AC_CHECK_FUNCS([strerror strstr strtol])
 AC_CHECK_FUNCS([setuid setgid umask seteuid setreuid setlocale])
