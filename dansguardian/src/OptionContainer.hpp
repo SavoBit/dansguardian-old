@@ -24,8 +24,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include "DownloadManager.hpp"
 #include "ContentScanner.hpp"
 #include "String.hpp"

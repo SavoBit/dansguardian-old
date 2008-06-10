@@ -24,6 +24,9 @@
 
 
 // INCLUDES
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
 
 #include "../DownloadManager.hpp"
 #include "../OptionContainer.hpp"

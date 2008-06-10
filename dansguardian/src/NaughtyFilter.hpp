@@ -23,8 +23,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include "String.hpp"
 #include "OptionContainer.hpp"
 #include "DataBuffer.hpp"

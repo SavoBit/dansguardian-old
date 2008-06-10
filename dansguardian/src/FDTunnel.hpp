@@ -27,8 +27,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include "Socket.hpp"
 
 

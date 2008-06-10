@@ -30,8 +30,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include <deque>
 
 #include "String.hpp"

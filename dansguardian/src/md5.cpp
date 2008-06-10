@@ -24,8 +24,9 @@
 // on mulitple platforms.  Then again on Sat 29th January 2005 to work with
 // autotools.
 
-
-#include "platform.h"
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
 
 #include <sys/types.h>
 

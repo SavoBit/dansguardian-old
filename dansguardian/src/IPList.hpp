@@ -24,8 +24,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include <list>
 
 

@@ -20,6 +20,9 @@
 
 // INCLUDES
 
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
 #include "NaughtyFilter.hpp"
 #include "RegExp.hpp"
 #include "ListContainer.hpp"

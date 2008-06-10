@@ -26,8 +26,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include "Plugin.hpp"
 #include "ConfigVar.hpp"
 #include "HTTPHeader.hpp"

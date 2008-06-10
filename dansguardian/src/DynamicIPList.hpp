@@ -21,10 +21,6 @@
 #ifndef __HPP_DYNAMICIPLIST
 #define __HPP_DYNAMICIPLIST
 
-// INCLUDES
-
-#include "platform.h"
-
 
 // DECLARATIONS
 

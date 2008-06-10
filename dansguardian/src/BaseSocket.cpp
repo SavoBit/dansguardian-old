@@ -19,7 +19,9 @@
 
 // INCLUDES
 
-#include "BaseSocket.hpp"
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
 
 #include <csignal>
 #include <fcntl.h>
@@ -29,10 +31,13 @@
 #include <unistd.h>
 #include <stdexcept>
 #include <syslog.h>
+#include <sys/select.h>
 
 #ifdef DGDEBUG
 #include <iostream>
 #endif
+
+#include "BaseSocket.hpp"
 
 // GLOBALS
 extern bool reloadconfig;

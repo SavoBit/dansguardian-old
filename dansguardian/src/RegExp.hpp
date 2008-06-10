@@ -25,8 +25,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include <sys/types.h>		// needed for size_t used in regex.h
 
 #ifdef HAVE_PCRE

@@ -20,8 +20,9 @@
 
 // INCLUDES
 
-#include "platform.h"
-
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
 #include "FatController.hpp"
 #include "SysV.hpp"
 
@@ -36,6 +37,8 @@
 #include <fstream>
 #include <fcntl.h>
 #include <locale.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #ifdef __BENCHMARK
 #include <sys/times.h>

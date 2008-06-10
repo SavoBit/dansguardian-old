@@ -26,8 +26,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include <iostream>
 #include <string>
 #include <sys/types.h>

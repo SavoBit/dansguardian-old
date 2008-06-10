@@ -25,8 +25,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include <unistd.h>
 #include <cerrno>
 

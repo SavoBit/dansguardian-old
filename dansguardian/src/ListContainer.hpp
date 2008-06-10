@@ -25,8 +25,6 @@
 
 // INLCUDES
 
-#include "platform.h"
-
 #include <vector>
 #include <deque>
 #include <map>

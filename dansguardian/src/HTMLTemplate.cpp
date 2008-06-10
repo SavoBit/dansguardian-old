@@ -22,8 +22,9 @@
 
 // INCLUDES
 
-#include "platform.h"
-
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
 #include "HTMLTemplate.hpp"
 #include "RegExp.hpp"
 #include "String.hpp"

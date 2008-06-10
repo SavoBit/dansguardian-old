@@ -21,6 +21,9 @@
 //		Integrate properly with build system; make plugin work; test.
 
 // INCLUDES
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
 
 #include "../ContentScanner.hpp"
 #include "../OptionContainer.hpp"

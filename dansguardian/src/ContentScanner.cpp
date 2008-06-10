@@ -19,8 +19,9 @@
 
 
 // INCLUDES
-#include "platform.h"
-
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
 #include "ContentScanner.hpp"
 #include "ConfigVar.hpp"
 #include "OptionContainer.hpp"

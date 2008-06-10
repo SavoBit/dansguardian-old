@@ -23,8 +23,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include "BaseSocket.hpp"
 
 

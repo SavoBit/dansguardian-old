@@ -26,8 +26,6 @@
 
 // INCLUDES
 
-#include "platform.h"
-
 #include "String.hpp"
 #include "HTMLTemplate.hpp"
 #include "ListContainer.hpp"

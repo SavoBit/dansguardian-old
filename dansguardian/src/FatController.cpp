@@ -20,16 +20,9 @@
 
 // INCLUDES
 
-#include "platform.h"
-
-#include "FatController.hpp"
-#include "ConnectionHandler.hpp"
-#include "DynamicURLList.hpp"
-#include "DynamicIPList.hpp"
-#include "String.hpp"
-#include "SocketArray.hpp"
-#include "UDSocket.hpp"
-#include "SysV.hpp"
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
 
 #include <syslog.h>
 #include <csignal>
@@ -44,10 +37,22 @@
 #include <sys/poll.h>
 #include <istream>
 #include <map>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/select.h>
 
 #ifdef ENABLE_SEGV_BACKTRACE
 #include <execinfo.h>
 #endif
+
+#include "FatController.hpp"
+#include "ConnectionHandler.hpp"
+#include "DynamicURLList.hpp"
+#include "DynamicIPList.hpp"
+#include "String.hpp"
+#include "SocketArray.hpp"
+#include "UDSocket.hpp"
+#include "SysV.hpp"
 
 
 // GLOBALS

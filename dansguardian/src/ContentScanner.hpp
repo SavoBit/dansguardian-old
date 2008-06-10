@@ -22,8 +22,6 @@
 
 
 // INCLUDES
-#include "platform.h"
-
 #include "String.hpp"
 #include "ConfigVar.hpp"
 #include "DataBuffer.hpp"

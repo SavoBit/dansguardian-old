@@ -27,9 +27,9 @@
 
 // INCLUDES
 
-#include "platform.h"
-
-#include "FDTunnel.hpp"
+#ifdef HAVE_CONFIG_H
+	#include "dgconfig.h"
+#endif
 
 #include <sys/time.h>
 #include <unistd.h>
@@ -37,10 +37,13 @@
 #include <sys/socket.h>
 #include <string.h>
 #include <algorithm>
+#include <sys/select.h>
 
 #ifdef DGDEBUG
 #include <iostream>
 #endif
+
+#include "FDTunnel.hpp"
 
 
 // IMPLEMENTATION
