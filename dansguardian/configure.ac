@@ -102,10 +102,9 @@ AC_FUNC_FORK
 AC_FUNC_MEMCMP
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_STAT
-AC_FUNC_MALLOC
 AC_CHECK_FUNCS([dup2 gettimeofday memset select])
 AC_CHECK_FUNCS([strerror strstr strtol])
-AC_CHECK_FUNCS([setuid setgid umask seteuid setreuid setlocale strdup])
+AC_CHECK_FUNCS([setuid setgid umask seteuid setreuid setlocale])
 AC_SEARCH_LIBS([floor], [m])
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([socket], [socket], [], [
@@ -225,31 +224,8 @@ fi
 ]
 )
 if test "x$pcre" = "xtrue"; then
-	AC_CHECK_PROG(
-		      PCRE,
-		      pcre-config,
-		      yes,
-		      no
-	)
-	if ! test $PCRE = "yes"; then
-		AC_MSG_ERROR([pcre-config not found!])
-	fi
-	PCRE_LIBS=`pcre-config --libs-posix`
-	PCRE_PREFIX=`pcre-config --prefix`
-
-	LIBS="${PCRE_LIBS} ${LIBS}"
-	CPPFLAGS="${CPPFLAGS} -I${PCRE_PREFIX}/include"
-
-	AC_MSG_CHECKING([for REG_DOTALL in pcreposix.h])
-	AC_LANG_PUSH(C)
-	AC_COMPILE_IFELSE([
-#include "${PCRE_PREFIX}/include/pcreposix.h"
-#ifndef REG_DOTALL
-	a syntax error
-#endif
-		], AC_MSG_RESULT(yes), AC_MSG_FAILURE([pcreposix.h does not define REG_DOTALL. Do you have PCRE version 6.0 or above?]))
-	AC_LANG_POP(C)
-
+	PKG_PROG_PKG_CONFIG
+	PKG_CHECK_MODULES([PCRE],[libpcre >= 6.0])
 	AC_DEFINE([HAVE_PCRE],[],[Define to enable PCRE support])
 
 else
