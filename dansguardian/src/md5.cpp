@@ -40,22 +40,6 @@
 
 #include "md5.hpp"
 
-// endianness detection.
-// use system endian.h if it exists; otherwise, hope that WORDS_BIGENDIAN
-// is correctly defined/undefined.
-
-#ifdef HAVE_ENDIAN_H
-# include <endian.h>
-#else
-# ifdef HAVE_SYS_ENDIAN_H
-#  include <sys/endian.h>
-# else
-#  ifdef HAVE_MACHINE_ENDIAN_H
-#   include <machine/endian.h>
-#  endif
-# endif
-#endif
-
 #ifndef WORDS_BIGENDIAN
 # ifdef __BYTE_ORDER
 #  if __BYTE_ORDER == __BIG_ENDIAN

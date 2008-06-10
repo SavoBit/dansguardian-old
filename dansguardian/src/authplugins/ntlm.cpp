@@ -28,18 +28,6 @@
 
 #include <iconv.h>
 
-#ifdef HAVE_ENDIAN_H
-# include <endian.h>
-#else
-# ifdef HAVE_SYS_ENDIAN_H
-#  include <sys/endian.h>
-# else
-#  ifdef HAVE_MACHINE_ENDIAN_H
-#   include <machine/endian.h>
-#  endif
-# endif
-#endif
-
 
 // DEFINES
 
@@ -58,18 +46,6 @@ extern OptionContainer o;
 # ifndef bswap32
 #  define bswap32(x) (((((u_int32_t)x) & 0xff000000) >> 24) | ((((u_int32_t)x) & 0x00ff0000) >>  8) | \
 	((((u_int32_t)x) & 0x0000ff00) <<  8) | ((((u_int32_t)x) & 0x000000ff) << 24))
-# endif
-#endif
-
-#ifndef WORDS_BIGENDIAN
-# ifdef __BYTE_ORDER
-#  if __BYTE_ORDER == __BIG_ENDIAN
-#   define WORDS_BIGENDIAN 1
-#  endif
-# else
-#  if _BYTE_ORDER == _BIG_ENDIAN
-#   define WORDS_BIGENDIAN 1
-#  endif
 # endif
 #endif
 

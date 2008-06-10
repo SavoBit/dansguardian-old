@@ -5,20 +5,7 @@
 	#include "dgconfig.h"
 #endif
 
-#ifdef HAVE_SYS_WAIT_H
-	#include <sys/wait.h>
-#else
-	#ifdef HAVE_WAIT_H
-		#include <wait.h>
-	#else
-		#error "You have no sys/wait.h and no wait.h"
-	#endif
-#endif
-
-#ifdef HAVE_SYS_SELECT_H
-	#include <sys/select.h>
-#else
-	#error "You have no sys/select.h"
-#endif
+#include <sys/wait.h>
+#include <sys/select.h>
 
 #endif //ifndef __H_PLATFORM

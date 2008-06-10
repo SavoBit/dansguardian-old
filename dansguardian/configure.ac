@@ -5,7 +5,7 @@
 AC_PREREQ(2.57)
 AC_INIT(dansguardian, 2.9.9.6)
 AM_INIT_AUTOMAKE
-AM_CONFIG_HEADER([dgconfig.h])
+AC_CONFIG_HEADERS([dgconfig.h])
 
 AC_CACHE_LOAD
 
@@ -22,29 +22,14 @@ AC_LANG(C++)
 AC_CACHE_SAVE
 
 # Checks for header files.
-AC_HEADER_STDC
-AC_HEADER_SYS_WAIT
-AC_HEADER_DIRENT
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netdb.h netinet/in.h stdlib.h])
 AC_CHECK_HEADERS([string.h sys/socket.h sys/time.h syslog.h unistd.h locale.h])
 AC_CHECK_HEADERS([sys/types.h sys/un.h sys/poll.h sys/resource.h])
-AC_CHECK_HEADERS([pwd.h grp.h wait.h])
+AC_CHECK_HEADERS([pwd.h grp.h])
 AC_CHECK_HEADERS([byteswap.h])
 
-# check for endian.h
-AC_CHECK_HEADER([endian.h],
-  [AC_DEFINE(HAVE_ENDIAN_H, [], [Define if endian.h exists])],
-  [AC_CHECK_HEADER([sys/endian.h],
-    [AC_DEFINE(HAVE_SYS_ENDIAN_H, [], [Define if sys/endian.h exists])],
-    [AC_CHECK_HEADER([machine/endian.h],
-      [AC_DEFINE(HAVE_MACHINE_ENDIAN_H, [], [Define if machine/endian.h exists])],
-      # hmm... no endian.h. try this instead.
-      [AC_MSG_WARN([no endian.h found! (or sys/endian.h, or machine/endian.h)])
-      AC_C_BIGENDIAN()]
-    )]
-  )]
-)
-  
+# Check system endianness
+AC_C_BIGENDIAN
 
 # check for zlib
 AC_MSG_CHECKING(if zlib should be statically linked)
