@@ -206,7 +206,7 @@ if test "x$pcre" = "xtrue"; then
 	PKG_PROG_PKG_CONFIG
 	PKG_CHECK_MODULES([PCRE],[libpcre >= 6.0])
 	AC_DEFINE([HAVE_PCRE],[],[Define to enable PCRE support])
-
+	PCRE_LIBS="-lpcreposix ${PCRE_LIBS}"
 else
 	AC_CHECK_FUNCS([regcomp])
 fi
