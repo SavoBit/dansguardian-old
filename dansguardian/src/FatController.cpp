@@ -2174,7 +2174,7 @@ int fc_controlit()
 		tofind = rc;
 		if (rc > 0) {
 			for (i = o.max_children; i < fds; i++) {
-				if ((pids[i].revents & POLLIN) > 0) {
+				if (pids[i].revents) {
 					tofind--;
 				}
 			}
@@ -2197,11 +2197,6 @@ int fc_controlit()
 
 		if (rc > 0) {
 			for (i = o.max_children; i < fds; i++) {
-				if ((pids[i].revents & (POLLERR | POLLHUP | POLLNVAL)) > 0) {
-					ttg = true;
-					syslog(LOG_ERR, "Error with main listening socket.  Exiting.");
-					continue;
-				}
 				if ((pids[i].revents & POLLIN) > 0) {
 					// socket ready to accept() a connection
 					failurecount = 0;  // something is clearly working so reset count
@@ -2230,7 +2225,14 @@ int fc_controlit()
 						usleep(1000);
 					}
 				}
+				else if (pids[i].revents) {
+					ttg = true;
+					syslog(LOG_ERR, "Error with main listening socket.  Exiting.");
+					break;
+				}
 			}
+			if (ttg)
+				break;
 		}
 
 		if (freechildren < o.minspare_children && !preforked && numchildren < o.max_children) {
@@ -2249,17 +2251,12 @@ int fc_controlit()
 		}
 		if (freechildren > o.maxspare_children) {
 			time(&tnow);
-			if ((tnow - tmaxspare) > (2 * 60)) {	// 2 * 60
+			if ((tnow - tmaxspare) > (2 * 60)) {
 				if (o.logchildprocs)
 					syslog(LOG_ERR, "More than %d free children - Killing %d process(es)", o.maxspare_children, freechildren - o.maxspare_children);
 				cullchildren(freechildren - o.maxspare_children);
 			}
 		}
-
-		// yield CPU for a while. this loop does not explicitly sleep other
-		// than when polling FDs; when connections are coming in at a rate of
-		// knots, it effectively turns into a busy loop. this should help.
-		//usleep(1000);
 	}
 	cullchildren(numchildren);  // remove the fork pool of spare children
 	for (int i = 0; i < o.max_children; i++) {
