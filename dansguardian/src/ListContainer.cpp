@@ -437,9 +437,20 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 			continue;
 		}
 
-		if (temp.contains("#")) {
-			temp = temp.before("#");  // tidy up
+		// Strip off comments that don't necessarily start at the beginning of a line
+		// - but not regular expression comments
+		std::string::size_type commentstart = 1;
+		while ((commentstart = temp.find_first_of('#', commentstart)) != std::string::npos)
+		{
+			// Don't treat "(?#...)" as a DG comment - it's a regex comment
+			if (temp[commentstart - 1] != '?')
+			{
+				temp = temp.substr(0, commentstart);
+				break;
+			}
+			++commentstart;
 		}
+
 		temp.removeWhiteSpace();  // tidy up and make it handle CRLF files
 		if (temp.startsWith(".Include<")) {	// see if we have another list
 			inc = temp.after(".Include<");  // to include
