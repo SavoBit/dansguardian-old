@@ -395,7 +395,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 #ifdef DGDEBUG
 		std::cout << "Checking smart content" << std::endl;
 #endif
-		checkphrase(bodynohtml, j);
+		checkphrase(bodynohtml, j - 1);
 
 		// second time round the case loop (if there is a second time),
 		// do preserve case (exotic encodings)
