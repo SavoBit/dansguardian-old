@@ -743,11 +743,18 @@ void deletechild(int child_pid)
 	for (i = 0; i < o.max_children; i++) {
 		if (childrenpids[i] == child_pid) {
 			childrenpids[i] = -1;
+			// Delete a busy child
 			if (childrenstates[i] == 1) {
 				busychildren--;
 			}
-			if (childrenstates[i] != -2) {	// -2 is when its been culled
-				numchildren--;  // so no need to duplicater
+			// Delete a child which isn't "ready" yet
+			if (childrenstates[i] == 4) {
+				busychildren--;
+				waitingfor--;
+			}
+			// Common code for any non-"culled" child
+			if (childrenstates[i] != -2) {
+				numchildren--;
 				delete childsockets[i];
 				childsockets[i] = NULL;
 				pids[i].fd = -1;
@@ -2095,7 +2102,6 @@ int fc_controlit()
 		syslog(LOG_ERR, "%s", "Error creating initial fork pool - exiting...");
 	}
 
-	bool preforked = true;
 	int tofind;
 	reloadconfig = false;
 
@@ -2179,9 +2185,7 @@ int fc_controlit()
 		}
 
 		if (tofind > 0) {
-			if (check_kid_readystatus(tofind)) {
-				preforked = false;  // we are no longer waiting last prefork
-			}
+			check_kid_readystatus(tofind);
 		}
 
 		freechildren = numchildren - busychildren;
@@ -2199,7 +2203,7 @@ int fc_controlit()
 					// socket ready to accept() a connection
 					failurecount = 0;  // something is clearly working so reset count
 					if (freechildren < 1 && numchildren < o.max_children) {
-						if (!preforked) {
+						if (waitingfor == 0) {
 							int num = o.prefork_children;
 							if ((o.max_children - numchildren) < num)
 								num = o.max_children - numchildren;
@@ -2210,7 +2214,6 @@ int fc_controlit()
 								syslog(LOG_ERR, "Error forking %d extra process(es).", num);
 								failurecount++;
 							}
-							preforked = true;
 						} else
 							usleep(1000);
 						continue;
@@ -2234,11 +2237,10 @@ int fc_controlit()
 				break;
 		}
 
-		if (freechildren < o.minspare_children && !preforked && numchildren < o.max_children) {
+		if (freechildren < o.minspare_children && (waitingfor == 0) && numchildren < o.max_children) {
 			if (o.logchildprocs)
 				syslog(LOG_ERR, "Fewer than %d free children - Spawning %d process(es)", o.minspare_children, o.prefork_children);
 			rc = prefork(o.prefork_children);
-			preforked = true;
 			if (rc < 0) {
 				syslog(LOG_ERR, "Error forking preforkchildren extra processes.");
 				failurecount++;
