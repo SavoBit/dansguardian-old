@@ -124,7 +124,7 @@ int handle_connections(UDSocket &pipe);
 // tell a non-busy child process to accept the incoming connection
 void tellchild_accept(int num, int whichsock);
 // child process accept()s connection from server socket
-bool getsock_fromparent(UDSocket &fd/*, int &socknum*/);
+bool getsock_fromparent(UDSocket &fd);
 
 // add known info about a child to our info lists
 void addchild(int pos, int fd, pid_t child_pid);
@@ -502,9 +502,7 @@ int handle_connections(UDSocket &pipe)
 			toldparentready = true;
 		}
 
-		//int socknum;
-
-		if (!getsock_fromparent(pipe/*, socknum*/)) {	// blocks waiting for a few mins
+		if (!getsock_fromparent(pipe)) {	// blocks waiting for a few mins
 			continue;
 		}
 		toldparentready = false;
@@ -533,7 +531,7 @@ int handle_connections(UDSocket &pipe)
 }
 
 // the parent process recieves connections - children receive notifications of this over their socketpair, and accept() them for handling
-bool getsock_fromparent(UDSocket &fd/*, int &socknum*/)
+bool getsock_fromparent(UDSocket &fd)
 {
 	String message;
 	char buf;
@@ -2213,7 +2211,8 @@ int fc_controlit()
 								failurecount++;
 							}
 							preforked = true;
-						}
+						} else
+							usleep(1000);
 						continue;
 					}
 					if (freechildren > 0) {
