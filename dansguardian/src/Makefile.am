@@ -110,7 +110,6 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        ConfigVar.cpp ConfigVar.hpp \
                        ContentScanner.cpp ContentScanner.hpp \
 		       SocketArray.cpp SocketArray.hpp \
-                       platform.h \
                        dansguardian.cpp \
 		       Plugin.hpp \
 		       $(CLAMAV_SOURCE) $(ICAPSCAN_SOURCE) \
