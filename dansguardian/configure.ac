@@ -184,6 +184,8 @@ fi], [
 AC_FINALIZE_VAR(DGLOGLOCATION,"$logdir")
 AC_SUBST(DGLOGLOCATION)
 
+PKG_PROG_PKG_CONFIG
+
 # asking user if they want PCRE support
 AC_MSG_CHECKING(for PCRE support)
 AC_ARG_ENABLE(
@@ -203,7 +205,6 @@ fi
 ]
 )
 if test "x$pcre" = "xtrue"; then
-	PKG_PROG_PKG_CONFIG
 	PKG_CHECK_MODULES([PCRE],[libpcre >= 6.0])
 	AC_DEFINE([HAVE_PCRE],[],[Define to enable PCRE support])
 	PCRE_LIBS="-lpcreposix ${PCRE_LIBS}"
@@ -308,21 +309,7 @@ clamav,
 	CLAMAVSHM="!! Not supported on this platform !!"
 else
 	AC_MSG_RESULT(yes)
-	AC_CHECK_PROG(
-		      CLAMAV,
-		      clamav-config,
-		      yes,
-		      no
-	)
-	if ! test $CLAMAV = "yes"; then
-		AC_MSG_ERROR([libClamAV support enabled, but clamav-config not found!])
-	fi
-	CLAMAV_LIBS=`clamav-config --libs`
-	CLAMAV_PREFIX=`clamav-config --prefix`
-
-	LIBS="${CLAMAV_LIBS} -lclamav ${LIBS}"
-	dnl LIBS="-L${CLAMAV_PREFIX}/lib -lclamav ${LIBS}"
-	CPPFLAGS="${CPPFLAGS} -I${CLAMAV_PREFIX}/include"
+	PKG_CHECK_MODULES([CLAMAV],[libclamav >= 4])
 
 	AC_DEFINE([HAVE_CLAMAV],[],[Define to enable ClamAV content scanner])
 	
