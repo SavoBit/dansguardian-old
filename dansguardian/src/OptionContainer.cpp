@@ -148,20 +148,20 @@ bool OptionContainer::read(const char *filename, int type)
 
 			if ((pid_filename = findoptionS("pidfilename")) == "") {
 				pid_filename = __PIDDIR;
-				pid_filename += "dansguardian.pid";
+				pid_filename += "/dansguardian.pid";
 			}
 
 			if (findoptionS("logsyslog") == "on") {
 				log_syslog = true;
 			} else 	if ((log_location = findoptionS("loglocation")) == "") {
 				log_location = __LOGLOCATION;
-				log_location += "access.log";
+				log_location += "/access.log";
 				log_syslog = false;
 			}
 
 			if ((stat_location = findoptionS("statlocation")) == "") {
 				stat_location = __LOGLOCATION;
-				stat_location += "stats";
+				stat_location += "/stats";
 			}
 
 			if (type == 0) {
