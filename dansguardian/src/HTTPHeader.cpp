@@ -864,6 +864,13 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		String newurl(ourl.before("/") + "//" + host + port + "/" + ourl.after("//").after("/"));
 		setURL(newurl);
 	}
+	// If there is no content-type header, assume it's text/html so that things don't get through
+	// without being phrase filtered - this seems to be the assumption web browsers make.
+	if (!outgoing && pcontenttype == NULL)
+	{
+		header.push_back("Content-Type: text/html\r");
+		pcontenttype = &(header.back());
+	}
 }
 
 // A request may be in the form:
