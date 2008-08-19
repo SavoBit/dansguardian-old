@@ -1359,10 +1359,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				// add to cache if: wasn't already there, wasn't naughty, was text,
 				// was virus scanned and scan_clean_cache is enabled, was a GET request,
 				// and response was not a set of auth required headers (we haven't checked
-				// the actual content, just the proxy's auth error page!)
+				// the actual content, just the proxy's auth error page!).
+				// also don't add "not modified" responses to the cache - if someone adds
+				// an entry and does a soft restart, we don't want the site to end up in
+				// the clean cache because someone who's already been to it hits refresh.
 				if (!wasclean && !checkme.isItNaughty
 					&& (docheader.isContentType("text") || (runav && o.scan_clean_cache))
-					&& header.requestType() == "GET" && !docheader.authRequired())
+					&& header.requestType() == "GET" && !docheader.authRequired()
+					&& docheader.returnCode() != 304)
 				{
 					addToClean(urld, filtergroup);
 				}
