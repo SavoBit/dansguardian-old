@@ -135,7 +135,7 @@ int ListManager::newItemList(const char *filename, bool startswith, int filters,
 	// find an empty list slot, create a new listcontainer, and load the list
 	int free = findNULL();
 	if (free > -1) {
-		l[(unsigned) free] = new ListContainer;
+		l[free] = new ListContainer;
 	} else {
 #ifdef DGDEBUG
 		std::cout << "pushing back for new list" << std::endl;
@@ -143,13 +143,13 @@ int ListManager::newItemList(const char *filename, bool startswith, int filters,
 		l.push_back(new ListContainer);
 		free = l.size() - 1;
 	}
-	(*l[(unsigned) free]).parent = parent;
-	if (!(*l[(unsigned) free]).readItemList(filename, startswith, filters)) {
-		delete l[(unsigned) free];
+	(*l[free]).parent = parent;
+	if (!(*l[free]).readItemList(filename, startswith, filters)) {
+		delete l[free];
 		l[free] = NULL;
 		return -1;
 	}
-	return (unsigned) free;
+	return free;
 }
 
 // create a new phrase list. check dates on top-level list files to see if a reload is necessary.
