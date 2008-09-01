@@ -1451,7 +1451,7 @@ bool ListContainer::readProcessedItemList(const char *filename, bool startswith,
 	std::cout << "reading processed file:" << filename << std::endl;
 #endif
 	int len = getFileLength(filename);
-	int slen, i;
+	int slen;
 	if (len < 0) {
 		if (!is_daemonised) {
 			std::cerr << "Error reading file: " << filename << std::endl;
@@ -1525,10 +1525,9 @@ bool ListContainer::readProcessedItemList(const char *filename, bool startswith,
 		slen = linebuffer.length();
 		if (slen < 3)
 			continue;
-		i = slen - 1;
 		list.push_back(data_length);
 		lengthlist.push_back(slen);
-		for (; i >= 0; i--) {
+		for (int i = 0; i < slen; i++) {
 			data[data_length + i] = linebuffer[i];
 		}
 		data[data_length + slen] = 0;
@@ -1541,10 +1540,9 @@ bool ListContainer::readProcessedItemList(const char *filename, bool startswith,
 
 void ListContainer::addToItemList(const char *s, int len)
 {
-	int i;
 	list.push_back(data_length);
 	lengthlist.push_back(len);
-	for (i = 0; i < len; i++) {
+	for (int i = 0; i < len; i++) {
 		data[data_length + i] = s[i];
 	}
 	data[data_length + len] = 0;
@@ -1668,13 +1666,9 @@ bool ListContainer::isCacheFileNewer(const char *filename)
 void ListContainer::increaseMemoryBy(int bytes)
 {
 	if (data_memory > 0) {
-		/*char *temp = new char[data_memory + bytes];  // replacement store
-		memcpy(temp, data, data_length);
-		delete[]data;
-		data = temp;*/
 		data = (char*) realloc(data, (data_memory + bytes) * sizeof(char));
 		memset(data + data_memory, 0, bytes * sizeof(char));
-		data_memory = data_memory + bytes;
+		data_memory += bytes;
 	} else {
 		free(data);
 		data = (char*) calloc(bytes, sizeof(char));
