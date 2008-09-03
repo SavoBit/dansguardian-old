@@ -946,7 +946,7 @@ char *FOptionContainer::testBlanketBlock(unsigned int list, bool ip, bool ssl) {
 	} else if (o.lm.l[list]->blanketssl_ip_block and ssl and ip) {
 		return (char*)o.language_list.getTranslation(507);
 	}
-	for (std::vector<unsigned int>::iterator i = o.lm.l[list]->morelists.begin(); i != o.lm.l[list]->morelists.end(); i++) {
+	for (std::vector<int>::iterator i = o.lm.l[list]->morelists.begin(); i != o.lm.l[list]->morelists.end(); i++) {
 		char *r = testBlanketBlock(*i, ip, ssl);
 		if (r) {
 			return r;

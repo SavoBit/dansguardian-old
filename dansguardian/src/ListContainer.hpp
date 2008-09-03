@@ -57,7 +57,7 @@ public:
 	String sourcefile;  // used for non-phrase lists only
 	String category;
 	String lastcategory;
-	std::vector<unsigned int> morelists;  // has to be non private as reg exp compiler needs to access these
+	std::vector<int> morelists;  // has to be non private as reg exp compiler needs to access these
 
 	ListContainer();
 	~ListContainer();
@@ -129,14 +129,14 @@ private:
 	int maxchildnodes;
 	int graphitems;
 	std::vector<unsigned int> slowgraph;
-	unsigned int data_length;
-	unsigned int data_memory;
-	int items;
+	size_t data_length;
+	size_t data_memory;
+	long int items;
 	bool isSW;
 	bool issorted;
 	bool graphused;
-	std::vector<unsigned int > list;
-	std::vector<unsigned int > lengthlist;
+	std::vector<size_t > list;
+	std::vector<size_t > lengthlist;
 	std::vector<int > weight;
 	std::vector<int > itemtype;  // 0=banned, 1=weighted, -1=exception
 	bool force_quick_search;
@@ -157,23 +157,23 @@ private:
 
 	void readPhraseListHelper(String line, bool isexception, int catindex, int timeindex);
 	void readPhraseListHelper2(String phrase, int type, int weighting, int catindex, int timeindex);
-	bool addToItemListPhrase(const char *s, int len, int type, int weighting, bool combi, int catindex, int timeindex);
-	void graphSizeSort(int l, int r, std::deque<unsigned int > *sizelist);
+	bool addToItemListPhrase(const char *s, size_t len, int type, int weighting, bool combi, int catindex, int timeindex);
+	void graphSizeSort(int l, int r, std::deque<size_t > *sizelist);
 	void graphAdd(String s, const int inx, int item);
 	int graphFindBranches(unsigned int pos);
 	void graphCopyNodePhrases(unsigned int pos);
 	int bmsearch(char *file, int fl, const std::string& s);
 	bool readProcessedItemList(const char *filename, bool startswith, int filters);
-	void addToItemList(const char *s, int len);
+	void addToItemList(const char *s, size_t len);
 	int greaterThanEWF(const char *a, const char *b);  // full match
 	int greaterThanEW(const char *a, const char *b);  // partial ends with
 	int greaterThanSWF(const char *a, const char *b);  // full match
 	int greaterThanSW(const char *a, const char *b);  // partial starts with
 	int search(int (ListContainer::*comparitor)(const char* a, const char* b), int a, int s, const char *p);
 	bool isCacheFileNewer(const char *string);
-	int getFileLength(const char *filename);
+	size_t getFileLength(const char *filename);
 	int getFileDate(const char *filename);
-	void increaseMemoryBy(int bytes);
+	void increaseMemoryBy(size_t bytes);
 	//categorised & time-limited lists support
 	bool readTimeTag(String * tag, TimeLimit& tl);
 	int getCategoryIndex(String * lcat);
