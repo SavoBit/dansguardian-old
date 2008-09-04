@@ -99,7 +99,7 @@ public:
 	// return string preceding first occurrence of bs
 	String before(const char *bs) const;
 	// search & replace
-	void replace(const char *what, const char *with);
+	void replaceall(const char *what, const char *with);
 
 	// remove character from end/beginning
 	void chop();

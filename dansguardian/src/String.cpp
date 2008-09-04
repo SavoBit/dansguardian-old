@@ -141,6 +141,20 @@ String::String(const off_t num)
 # endif
 #endif
 
+void String::replaceall(const char *what, const char *with)
+{
+	std::string::size_type pos = 0;
+	size_t whatlen = strlen(what);
+	size_t withlen = strlen(with);
+	while ((pos = this->find(what, pos)) != std::string::npos)
+	{
+		// replace charactrs in original string
+		this->replace(pos, whatlen, with);
+		// increment search position
+		pos += withlen;
+	}
+}
+
 // string-to-off_t conversion
 // This is horrible, horrible code, but the best I can come up with
 // which will work in both 32 and 64-bit file offset modes. :(

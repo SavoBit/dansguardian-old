@@ -108,6 +108,15 @@ bool HTMLTemplate::readTemplateFile(const char *filename, const char *placeholde
 	return true;
 }
 
+// encode quotes and angle brackets using URL encoding to prevent XSS in the block page
+void makeURLSafe(String &url)
+{
+	url.replaceall("'", "%27");
+	url.replaceall("\"", "%22");
+	url.replaceall("<", "%3C");
+	url.replaceall(">", "%3E");
+}
+
 // fill in placeholders with the given information and send the resulting page to the client
 // only useful if you used the default set of placeholders
 void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::string &logreason, std::string &categories,
@@ -119,16 +128,28 @@ void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::str
 	String line;
 	bool newline;
 	unsigned int sz = html.size() - 1;  // the last line can have no thingy. erm... carriage return?
+	String safeurl(*url);  // Take a copy of the URL so we can encode it to stop XSS
+	bool safe = false;
 	for (unsigned int i = 0; i < sz; i++) {
 		// preserve newlines from original file
 		newline = false;
 		line = html[i];
 		// look for placeholders (split onto their own line by readTemplateFile) and replace them
 		if (line == "-URL-") {
-			line = *url;
+			if (!safe)
+			{
+				makeURLSafe(safeurl);
+				safe = true;
+			}
+			line = safeurl;
 		}
 		else if (line == "-SHORTURL-") {
-			line = *url;
+			if (!safe)
+			{
+				makeURLSafe(safeurl);
+				safe = true;
+			}
+			line = safeurl;
 			if (line.length() > 41) {
 			    line = line.subString(0, 40);
 			    line += "...";
