@@ -173,23 +173,23 @@ String HTTPHeader::userAgent()
 String HTTPHeader::getContentType()
 {
 	if (pcontenttype != NULL) {
-		int j;
-		unsigned char c;
 		String mimetype(pcontenttype->after(" "));
-		j = 0;
-		while (j < (signed) mimetype.length()) {
+		if (mimetype.length() < 1)
+			return "-";
+		
+		unsigned char c;
+		size_t j = 0;
+		while (j < mimetype.length()) {
 			c = mimetype[j];
 			if (c == ' ' || c == ';' || c < 32) {	// remove the
 				mimetype = mimetype.subString(0, j);
 				// extra info not needed
 				j = 0;
 			}
-			j++;
+			++j;
 		}
+		
 		mimetype.toLower();
-		if (mimetype.length() < 1) {
-			return "-";
-		}
 		return mimetype;
 	}
 	return "-";
@@ -863,13 +863,6 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		host.chop();
 		String newurl(ourl.before("/") + "//" + host + port + "/" + ourl.after("//").after("/"));
 		setURL(newurl);
-	}
-	// If there is no content-type header, assume it's text/html so that things don't get through
-	// without being phrase filtered - this seems to be the assumption web browsers make.
-	if (!outgoing && pcontenttype == NULL)
-	{
-		header.push_back("Content-Type: text/html\r");
-		pcontenttype = &(header.back());
 	}
 }
 
