@@ -750,9 +750,18 @@ void HTTPHeader::checkheader(bool allowpersistent)
 #ifdef DGDEBUG
 			std::cout << "CheckHeader: HTTP/1.1, so assuming persistency" << std::endl;
 #endif
-			waspersistent = true;
-			ispersistent = true;
+			// Do not allow persistent connections on CONNECT requests - the browser thinks it has a tunnel
+			// directly to the external server, not a connection to the proxy, so it won't be re-used in the
+			// manner expected by DG and will result in waiting for time-outs.  Bug identified by Jason Deasi.
+			if ((*i)[0] == 'C') {
+				allowpersistent = false;
+			} else {
+				waspersistent = true;
+				ispersistent = true;
+			}
+
 			first = false;
+
 			// force HTTP/1.0 - we don't support chunked transfer encoding, possibly amongst other things
 			(*i) = i->before(" HTTP/") + " HTTP/1.0\r";
 		}
