@@ -48,7 +48,7 @@ print qq|<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
    "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 	<head>
-		<title>DansGuardian 2.9 FAQ</title>
+		<title>DansGuardian 2.10 FAQ</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<style type="text/css">
 			p {

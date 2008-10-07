@@ -3,7 +3,7 @@ Q. Do I have to use Squid? Can other software be used as the parent proxy?
 A. In theory you can use any old HTTP proxy, however DG is only regularly tested with Squid.
 
 
-Q. Is the content (anti-virus) scanning support in DansGuardian 2.9 and above related to the "DansGuardian Anti-Virus Plugin" (DGAV) project?
+Q. Is the content (anti-virus) scanning support in DansGuardian 2.10 and above related to the "DansGuardian Anti-Virus Plugin" (DGAV) project?
 
 A. There are certain common elements, such as the naming of some of the virus scanning plugins and configuration options, but code itself has not been taken from the project, primarily for legal reasons (both projects are released under the GPL, but code contributed to anything other than DansGuardian itself has different ownership). With regards to the 2.8 series, DGAV is certainly viewed as a friendly fork.
 

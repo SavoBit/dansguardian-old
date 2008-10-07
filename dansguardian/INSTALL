@@ -1,7 +1,11 @@
 HOW TO BUILD:
-------------
-As of DansGuardian 2.9, the distribution uses gnu autotools.
-The Makefiles are auto generated with the "configure" script.
+-------------
+As of DansGuardian 2.9, the distribution uses GNU autotools for building.
+Most users should therefore follow the standard
+"./configure; make; make install" process common to UNIX packages.  If for any
+reason you need to modify configure.ac or one of the Makefile.am files, use
+autoreconf or the supplied autogen.sh script to regenerate the configure script
+and Makefile.in files.
 
 Please read the sections below for your OS for the most widely used
 configuration options.
@@ -34,9 +38,8 @@ installed. The "--with-libiconv" configure option enables linking with
 an external iconv library. Charsets UTF-16LE and UTF-8 must be supported.
 
 For the library-based ClamAV scanner (not applicable to the ClamD scanner),
-the "clamav-config" program must be available in your PATH during build
-configuration. Note that libclamav is commonly dynamically linked against
-zlib; this may break --enable-static-zlib.
+note that libclamav is commonly dynamically linked against zlib; this may break
+"--enable-static-zlib".
 
 
 1.        Run the configure (./configure --help) script with
@@ -48,27 +51,28 @@ zlib; this may break --enable-static-zlib.
         want to change some options.  Please read down for
         suggested options for your platform.
 
-3.        "make"** will now build DansGuardian. (or gmake)
+3.        "make"** or "gmake" will now build DansGuardian.
 
 4.        "make install" will create the directory structure and install
         all the files in the chosen paths.  For a more efficient
-        install try "make install-strip" which will save disk space
-        by making the binarys smaller by removing unused code.
-        
-5.        "make clean" will remove the now un-needed binaries etc.
+        install, try "make install-strip" which will strip symbol
+	information to the DG binary smaller.
+
+5.        "make clean" will remove the now un-needed object files etc.
 
 6.        See the section later called ADDITIONAL SCRIPTS to add
-        log rotation, cgi denied script, startup scripts etc.
+        log rotation, optional CGI block page, startup scripts etc.
 
 
-** You can often use "make -j 2" or "make -j 5" to compile faster
-   especially on multiple cpu computers.
+** You can often use "make -j 2" or "make -j 5" to compile DG faster,
+   especially on multiple CPU computers.  As a general rule of thumb,
+   use the number of CPUs/cores plus one.
    With Solaris and others you may need "gmake" instead of "make".
    
 
 
 OPTIONS:
--------
+--------
 You may change with the configure options:
   prefix           (architecture-independent files root path eg /usr/local)
   datadir          (where shared files and example scripts get placed)
@@ -119,7 +123,7 @@ Otherwise follow the FreeBSD instructions which are likely to work.
 
 
 MACOSX:
-------
+-------
 
 *** Note in order to do any compiling in OS X you need to install ***
 *   the Developer Tools - an additional pkg called BSDSDK.pkg.      *
@@ -144,11 +148,9 @@ You might consider changing the location of the log files to
 log rotation script.  Alternatively stick with the default
 (/var/log/dansguardian/) and read newsyslog(8).
 
-Note:  You will need to run 'make installx', not 'make install'.
-
 
 NETBSD:
-------
+-------
 
 A standard configure script that should work, provided you have installed
 NetBSD and the associated programs in their default locations.
@@ -165,7 +167,7 @@ Be sure that /usr/sbin/ is in your PATH before make install (for chown).
 
 
 FREEBSD:
--------
+--------
 A standard configure script that should work, provided you have installed
 FreeBSD and the associated programs in their default locations.
 
@@ -178,7 +180,7 @@ provided log rotation script.  Alternatively stick with the default
 
 
 OPENBSD:
--------
+--------
 A standard configure script that should work, provided you have installed
 OpenBSD and the associated programs in their default locations.
 
@@ -187,112 +189,12 @@ OpenBSD and the associated programs in their default locations.
         --mandir=/usr/share/man \
         --sysconfdir=/etc
 
-
-
-REDHAT 6.x 7.x 8.x Fedora Core 1,2,3:
---------------------------------
-        
-    ./configure  --localstatedir=/var \
-      --prefix=/usr \
-      --exec-prefix=/usr \
-      --sysconfdir=/etc
-
-
-
-MANDRAKE 7.2:
-------------
-Here is a configure example for Mandrake 7.2:
-        
-    ./configure  --localstatedir=/var \
-      --sysconfdir=/etc \
-      --prefix=/usr \
-      --exec-prefix=/usr
-
-
-
-MANDRAKE 8/8.1:
---------------
-
-Here is a configure example for Mandrake 8 + 8.1:
-        
-    ./configure  --localstatedir=/var \
-      --sysconfdir=/etc \
-      --prefix=/usr \
-      --exec-prefix=/usr
-
-The system user 'squid' might be also appropriate rather than 'nobody'
-when configuring your systems "runas" option.
-
-
-
-SuSE 7.2:
---------
-Here is a configure example for SuSE 7.2:
-        
-    ./configure  --localstatedir=/var \
-      --sysconfdir=/etc \
-      --with-proxygroup=nogroup
-
-
-
-SuSE 7.3:
---------
-Here is a configure example for SuSE 7.3:
-
-    ./configure  --localstatedir=/var \
-      --sysconfdir=/etc \
-      --with-proxygroup=nogroup
-        
-
-
-SuSE 8.1:
---------
-Here is a configure example for SuSE 8.1:
-        
-    ./configure  --localstatedir=/var \
-      --sysconfdir=/etc \
-      --with-proxygroup=nogroup
-
-
-
-Debian 2.2:
------------
-Here is a configure example for Debian 2.2, it is much like Suse 7.3:
-        
-    ./configure  --localstatedir=/var \
-      --prefix=/usr \
-      --sysconfdir=/etc \
-      --with-proxygroup=nogroup \
-      --mandir=/usr/local/man/
-
-You may need to do a 'mkdir /var/lock/subsys'.
-
-
-
-Debian 3.0 (Woody):
------------
-It is suggested to install the current debian binary version first:
-
-     apt-get install dansguardian
-
-OR compile:
-
-    ./configure  --localstatedir=/var \
-      --prefix=/usr \
-      --exec-prefix=/usr \
-      --sysconfdir=/etc \
-      --with-proxygroup=dansguardian \
-      --with-proxyuser=dansguardian \
-
-You will need to add the user dansguardian first.
-
-
 SOLARIS:
--------
+--------
 
 Only Solaris 8 (7/01 and beyond) and Solaris 9 has been tested.
 DansGuardian requires the GNU version of make (gmake), and GCC version
-2.95.3  (3.01 will *not* work).
+3.01 will *not* work; use 2.95.3 or a more recent version.
 
 Both gmake and GCC 2.95.3 are included with the OS on the "Companion CD",
 and are usually installed in /opt/sfw/bin.  To ensure these are in your
@@ -317,7 +219,7 @@ To configure and compile, do:
 
 
 HOW TO CONFIGURE:
-----------------
+-----------------
 
 Edit the dansguardian.conf, dansguardianf1.conf and other files.
 The files are commented well.
@@ -326,10 +228,10 @@ The files are commented well.
 
 
 ADDITIONAL SCRIPTS:
-------------------
+-------------------
 
 In /usr/local/share/dansguardian/scripts (or wherever you configured
-it to be you will find at least the following files:
+it to be) you will find at least the following files:
 bsd-init - a BSD style startup script to be put in your rc.d
 solaris-init - a Solaris style startup script to be put in your rc.d
 systemv-init - a Linux style startup script to be put in your rc.d
@@ -361,7 +263,7 @@ DansGuardian.
 
 
 HOW TO RUN:
-----------
+-----------
 
 You can start it by just running the binary.  You can stop it by
 appending a ' -q' to the end, thus: 'dansguardian -q'.  Or you can use
@@ -370,7 +272,7 @@ the SysV(-like) script provided.
 
 
 HOW TO GET HELP:
----------------
+----------------
 http://dansguardian.org/
 
 Here is the first place to start for getting support.  There is a mailing
@@ -381,8 +283,8 @@ mailing list.
 
 
 
-HOT TO COMPILE STATICALLY WITH ZLIB: (Provided by Ernest W. Lessenger)
------------------------------------
+HOW TO COMPILE STATICALLY WITH ZLIB: (Provided by Ernest W. Lessenger)
+------------------------------------
 
 Note: these instructions might be now out of date due to changes in
 the DansGuardian build process. Instead of editing the Makefile (step 3

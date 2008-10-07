@@ -2,7 +2,7 @@
    "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 	<head>
-		<title>DansGuardian 2.9 FAQ</title>
+		<title>DansGuardian 2.10 FAQ</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<style type="text/css">
 			p {
@@ -19,7 +19,7 @@
 		<h1>Contents</h1>
 		<ol id="top">
 			<li><a href="#q1">Do I have to use Squid? Can other software be used as the parent proxy?</a></li>
-			<li><a href="#q2">Is the content (anti-virus) scanning support in DansGuardian 2.9 and above related to the &quot;DansGuardian Anti-Virus Plugin&quot; (DGAV) project?</a></li>
+			<li><a href="#q2">Is the content (anti-virus) scanning support in DansGuardian 2.10 and above related to the &quot;DansGuardian Anti-Virus Plugin&quot; (DGAV) project?</a></li>
 			<li><a href="#q3">How do I set up virus scanning?</a></li>
 			<li><a href="#q4">Can the clamdscan plugin use a remote instance of ClamD?</a></li>
 			<li><a href="#q5">Why do downloads take a long time to start when using virus scanning?</a></li>
@@ -53,7 +53,7 @@
 		<h1>FAQ</h1>
 		<p id="q1" style="margin-top: 2em;"><a href="#top">^</a> <b>1.</b> <i>Do I have to use Squid? Can other software be used as the parent proxy?</i></p>
 		<p>In theory you can use any old HTTP proxy, however DG is only regularly tested with Squid.</p>
-		<p id="q2" style="margin-top: 2em;"><a href="#top">^</a> <b>2.</b> <i>Is the content (anti-virus) scanning support in DansGuardian 2.9 and above related to the &quot;DansGuardian Anti-Virus Plugin&quot; (DGAV) project?</i></p>
+		<p id="q2" style="margin-top: 2em;"><a href="#top">^</a> <b>2.</b> <i>Is the content (anti-virus) scanning support in DansGuardian 2.10 and above related to the &quot;DansGuardian Anti-Virus Plugin&quot; (DGAV) project?</i></p>
 		<p>There are certain common elements, such as the naming of some of the virus scanning plugins and configuration options, but code itself has not been taken from the project, primarily for legal reasons (both projects are released under the GPL, but code contributed to anything other than DansGuardian itself has different ownership). With regards to the 2.8 series, DGAV is certainly viewed as a friendly fork.</p>
 		<p id="q3" style="margin-top: 2em;"><a href="#top">^</a> <b>3.</b> <i>How do I set up virus scanning?</i></p>
 		<p>Make sure DG is built with at least one content scanning plugin enabled (&quot;--enable-clamd&quot;, &quot;--enable-kavd&quot;, &quot;--enable-icap&quot;, &quot;--enable-commandline&quot; or &quot;--enable-clamav&quot;). After compilation and installation, uncomment the relevant &quot;contentscanner&quot; line in dansguardian.conf to enable loading the plugin. Also take a look in the plugin's own configuration file, the path of which is in the &quot;contentscanner&quot; option, and perform any necessary customisations - for example, settings the &quot;clamdudsfile&quot; option in clamdscan.conf.</p><p class='q'>	For new installations, the &quot;clamdscan&quot; plugin is recommended; this requires you to have ClamD running on the same machine as DG, but is flexible (using ClamD's own configuration file for extra control) and simple to set up.</p>
