@@ -617,6 +617,7 @@ bool HTTPHeader::malformedURL(const String& url)
 	// This includes IPs encoded as a single decimal number,
 	// fully or partly hex encoded, and octal encoded
 	bool first = true;
+	bool obfuscation = false;
 	if (host.endsWith("."))
 		host.chop();
 	do {
@@ -626,18 +627,24 @@ bool HTTPHeader::malformedURL(const String& url)
 		String hostpart(host);
 		if (host.contains("."))
 			hostpart = hostpart.before(".");
-		// Fairly simple rule - convert string to int, then back again.
-		// If the two match up, then there's no attempt at hex or octal
-		// IP obfuscation going on.
-		int part = hostpart.toInteger();
-		String numpart(part);
-		if (numpart != hostpart)
-			return true;
+		// If any part of the host starts with a letter, any letter,
+		// then we must have a hostname rather than an IP (obscured
+		// or otherwise).  TLDs never start with a number.
+		if ((hostpart[0] >= 'a' && hostpart[0] <= 'z') || (hostpart[0] >= 'A' && hostpart[0] <= 'Z'))
+			return false;
+		// If any part of the host begins with 0, it may be hex or octal
+		if ((hostpart[0] == '0') && (hostpart.length() > 1))
+		{
+			obfuscation = true;
+			continue;
+		}
 		// Also check range, for decimal obfuscation.
+		int part = hostpart.toInteger();
 		if ((part < 0) || (part > 255))
-			return true;
+			obfuscation = true;
 	} while (host.contains("."));
-	return false;
+	// If we have any obfuscated parts, and haven't proven it's a hostname, it's invalid.
+	return obfuscation;
 }
 
 // is this a POST request encapsulating a file upload?
@@ -746,7 +753,7 @@ void HTTPHeader::checkheader(bool allowpersistent)
 	bool first = true;
 	for (std::deque<String>::iterator i = header.begin(); i != header.end(); i++) {	// check each line in the headers
 		// HTTP 1.1 is persistent by default
-		if (first && (i->after(" HTTP/").startsWith("1.1"))) {
+		if (first && (i->after("HTTP/").startsWith("1.1"))) {
 #ifdef DGDEBUG
 			std::cout << "CheckHeader: HTTP/1.1, so assuming persistency" << std::endl;
 #endif
@@ -763,7 +770,8 @@ void HTTPHeader::checkheader(bool allowpersistent)
 			first = false;
 
 			// force HTTP/1.0 - we don't support chunked transfer encoding, possibly amongst other things
-			(*i) = i->before(" HTTP/") + " HTTP/1.0\r";
+			if (outgoing)
+				(*i) = i->before(" HTTP/") + " HTTP/1.0\r";
 		}
 		// index headers - try to perform the checks in the order the average browser sends the headers.
 		// also only do the necessary checks for the header type (sent/received).
@@ -811,11 +819,13 @@ void HTTPHeader::checkheader(bool allowpersistent)
 				} else {
 					ispersistent = true;
 				}
-			}
+			} else {
 #ifdef DGDEBUG
-			else
 				std::cout << "CheckHeader: P-C says close" << std::endl;
 #endif
+				ispersistent = false;
+				waspersistent = false;
+			}
 			pproxyconnection = &(*i);
 		}
 		else if (outgoing && (pxforwardedfor == NULL) && i->startsWithLower("x-forwarded-for:")) {
