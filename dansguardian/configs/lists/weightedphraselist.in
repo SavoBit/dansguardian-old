@@ -43,6 +43,7 @@
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general_danish>
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general_dutch>
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general_malay>
+.Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general_polish>
 .Include<@DGCONFDIR@/lists/phraselists/goodphrases/weighted_general_portuguese>
 
 #Pornography
@@ -56,9 +57,10 @@
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_japanese> #ALPHA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_malay> #BETA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_norwegian> #BETA#
+.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_polish>
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_portuguese>
-.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_spanish> #ALPHA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_russian> #BETA#
+.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_spanish> #ALPHA#
 .Include<@DGCONFDIR@/lists/phraselists/nudism/weighted>
 
 #Bad Words - swearing
