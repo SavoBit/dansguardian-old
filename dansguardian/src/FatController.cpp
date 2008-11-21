@@ -209,37 +209,6 @@ extern "C"
 #endif
 }
 
-// this is used by dansguardian.cpp, to, yep, test connection to the proxy
-// If report is true we log the problem.  report as false allows the caller
-// to test multiple times with no error
-bool fc_testproxy(std::string proxyip, int proxyport, bool report)
-{
-	int sck_inet, conn;
-	Socket sock;
-	sck_inet = sock.getFD();
-	if (sck_inet == -1) {
-		if (report) {
-			if (!is_daemonised) {
-				std::cerr << "Error creating socket to test proxy connection" << std::endl;
-			}
-			syslog(LOG_ERR, "%s", "Error creating socket to test proxy connection");
-		}
-		return false;
-	}
-	conn = sock.connect(proxyip, proxyport);  // hmmm, I wonder what this do
-	if (conn) {
-		if (report) {
-			if (!is_daemonised) {
-				std::cerr << "Error connecting to parent proxy" << std::endl;
-			}
-			syslog(LOG_ERR, "%s", "Error connecting to parent proxy");
-		}
-		return false;
-	}
-	sock.close();
-	return true;  // it worked!
-}
-
 // completely drop our privs - i.e. setuid, not just seteuid
 bool drop_priv_completely()
 {
