@@ -302,18 +302,29 @@ void HTTPHeader::setContentLength(int newlen)
 void HTTPHeader::makePersistent(bool persist)
 {
 	if (persist) {
+		// Only make persistent if it originally was, but now isn't.
+		// The intention isn't to change browser behaviour, just to
+		// un-do any connection downgrading which DG may have performed
+		// earlier.
 		if (waspersistent && !ispersistent) {
 			if (pproxyconnection != NULL) {
 				(*pproxyconnection) = pproxyconnection->before(":") + ": Keep-Alive\r";
-				ispersistent = true;
+			} else {
+				header.push_back(String("Proxy-Connection: Keep-Alive\r"));
+				pproxyconnection = &(header.back());
 			}
+			ispersistent = true;
 		}
 	} else {
+		// Only downgrade to non-persistent if it isn't currently persistent.
 		if (ispersistent) {
 			if (pproxyconnection != NULL) {
 				(*pproxyconnection) = pproxyconnection->before(":") + ": Close\r";
-				ispersistent = false;
+			} else {
+				header.push_back(String("Proxy-Connection: Close\r"));
+				pproxyconnection = &(header.back());
 			}
+			ispersistent = false;
 		}
 	}
 }
@@ -753,18 +764,23 @@ void HTTPHeader::checkheader(bool allowpersistent)
 	bool first = true;
 	for (std::deque<String>::iterator i = header.begin(); i != header.end(); i++) {	// check each line in the headers
 		// HTTP 1.1 is persistent by default
-		if (first && (i->after("HTTP/").startsWith("1.1"))) {
+		if (first) {
+			if (i->after("HTTP/").startsWith("1.1")) {
 #ifdef DGDEBUG
-			std::cout << "CheckHeader: HTTP/1.1, so assuming persistency" << std::endl;
+				std::cout << "CheckHeader: HTTP/1.1, so assuming persistency" << std::endl;
 #endif
+				waspersistent = true;
+				ispersistent = true;
+			}
+
 			// Do not allow persistent connections on CONNECT requests - the browser thinks it has a tunnel
 			// directly to the external server, not a connection to the proxy, so it won't be re-used in the
 			// manner expected by DG and will result in waiting for time-outs.  Bug identified by Jason Deasi.
 			if ((*i)[0] == 'C') {
+#ifdef DGDEBUG
+				std::cout << "CheckHeader: CONNECT request; disallowing persistency" << std::endl;
+#endif
 				allowpersistent = false;
-			} else {
-				waspersistent = true;
-				ispersistent = true;
 			}
 
 			first = false;
