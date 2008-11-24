@@ -1352,14 +1352,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			}
 
 			if (o.url_cache_number > 0) {
-				// add to cache if: wasn't already there, wasn't naughty, was text,
+				// add to cache if: wasn't already there, wasn't naughty, wasn't allowed by bypass/soft block, was text,
 				// was virus scanned and scan_clean_cache is enabled, was a GET request,
 				// and response was not a set of auth required headers (we haven't checked
 				// the actual content, just the proxy's auth error page!).
 				// also don't add "not modified" responses to the cache - if someone adds
 				// an entry and does a soft restart, we don't want the site to end up in
 				// the clean cache because someone who's already been to it hits refresh.
-				if (!wasclean && !checkme.isItNaughty
+				if (!wasclean && !checkme.isItNaughty && !isbypass
 					&& (docheader.isContentType("text") || (runav && o.scan_clean_cache))
 					&& (header.requestType() == "GET") && (docheader.returnCode() == 200))
 				{
