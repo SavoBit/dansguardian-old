@@ -81,7 +81,7 @@ bool IPList::inList(const std::string &ipstr, std::string *&host) const
 			hostnames.reset(new std::deque<String>);
 			hostnames->push_back(*host);
 		}
-		for (std::deque<String>::const_iterator i = hostnames->begin(); i != hostnames->end(); ++i) 
+		for (std::deque<String>::iterator i = hostnames->begin(); i != hostnames->end(); ++i) 
 		{
 			if (std::binary_search(hostlist.begin(), hostlist.end(), *i))
 			{
