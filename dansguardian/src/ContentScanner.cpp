@@ -26,6 +26,7 @@
 #include "ConfigVar.hpp"
 #include "OptionContainer.hpp"
 
+#include <cstdlib>
 #include <iostream>
 #include <unistd.h>
 #include <sys/types.h>

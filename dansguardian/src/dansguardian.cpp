@@ -26,6 +26,7 @@
 #include "FatController.hpp"
 #include "SysV.hpp"
 
+#include <cstdlib>
 #include <iostream>
 #include <cstdio>
 #include <ctime>

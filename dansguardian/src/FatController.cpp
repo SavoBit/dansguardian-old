@@ -24,6 +24,7 @@
 	#include "dgconfig.h"
 #endif
 
+#include <cstdlib>
 #include <syslog.h>
 #include <csignal>
 #include <ctime>

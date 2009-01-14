@@ -29,6 +29,7 @@
 #include "FOptionContainer.hpp"
 #include "OptionContainer.hpp"
 
+#include <cstdlib>
 #include <syslog.h>
 #include <iostream>
 #include <fstream>
