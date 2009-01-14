@@ -67,29 +67,7 @@ std::deque<String> * ipToHostname(const char *ip)
 
 FOptionContainer::~FOptionContainer()
 {
-	if (banned_phrase_flag) o.lm.deRefList(banned_phrase_list);
-	if (exception_site_flag) o.lm.deRefList(exception_site_list);
-	if (exception_url_flag) o.lm.deRefList(exception_url_list);
-	if (banned_extension_flag) o.lm.deRefList(banned_extension_list);
-	if (banned_mimetype_flag) o.lm.deRefList(banned_mimetype_list);
-	if (banned_site_flag) o.lm.deRefList(banned_site_list);
-	if (banned_url_flag) o.lm.deRefList(banned_url_list);
-	if (grey_site_flag) o.lm.deRefList(grey_site_list);
-	if (grey_url_flag) o.lm.deRefList(grey_url_list);
-	if (banned_regexpurl_flag) o.lm.deRefList(banned_regexpurl_list);
-	if (exception_regexpurl_flag) o.lm.deRefList(exception_regexpurl_list);
-	if (banned_regexpheader_flag) o.lm.deRefList(banned_regexpheader_list);
-	if (content_regexp_flag) o.lm.deRefList(content_regexp_list);
-	if (url_regexp_flag) o.lm.deRefList(url_regexp_list);
-	if (header_regexp_flag) o.lm.deRefList(header_regexp_list);
-	if (exception_extension_flag) o.lm.deRefList(exception_extension_list);
-	if (exception_mimetype_flag) o.lm.deRefList(exception_mimetype_list);
-	if (exception_file_site_flag) o.lm.deRefList(exception_file_site_list);
-	if (exception_file_url_flag) o.lm.deRefList(exception_file_url_list);
-	if (log_site_flag) o.lm.deRefList(log_site_list);
-	if (log_url_flag) o.lm.deRefList(log_url_list);
-	if (log_regexpurl_flag) o.lm.deRefList(log_regexpurl_list);
-	delete banned_page;
+	reset();
 }
 
 void FOptionContainer::reset()

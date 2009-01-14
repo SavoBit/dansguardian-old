@@ -70,13 +70,7 @@ ListContainer::ListContainer():refcount(1), parent(false), filedate(0), used(fal
 // delete the memory block when the class is destryed
 ListContainer::~ListContainer()
 {
-	free(data);
-	if (graphused) {
-		free(realgraphdata);
-	}
-	for (unsigned int i = 0; i < morelists.size(); i++) {
-		o.lm.deRefList(morelists[i]);
-	}
+	reset();
 }
 
 // for both types of list - clear & reset all values
