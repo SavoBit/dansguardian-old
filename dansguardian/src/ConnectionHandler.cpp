@@ -982,9 +982,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			if (isconnect && !isbypass && !isexception) {
 				if (!authed) {
 #ifdef DGDEBUG
-					std::cout << "CONNECT: user not authed - doing standard filtering on possible auth required response" << std::endl;
+					std::cout << "CONNECT: user not authed - getting response to see if it's auth required" << std::endl;
 #endif
-					isconnect = false;
 					// send header to proxy
 					proxysock.readyForOutput(10);
 					header.out(NULL, &proxysock, __DGHEADER_SENDALL, true);
@@ -993,9 +992,17 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					docheader.in(&proxysock, persist);
 					persist = docheader.isPersistent();
 					wasrequested = true;
-				} else {
+					if (docheader.returnCode() != 200)
+					{
 #ifdef DGDEBUG
-					std::cout << "CONNECT: user is authed - attempting pre-emptive ban" << std::endl;
+						std::cout << "CONNECT: user not authed - doing standard filtering on auth required response" << std::endl;
+#endif
+						isconnect = false;
+					}
+				}
+				if (isconnect) {
+#ifdef DGDEBUG
+					std::cout << "CONNECT: user is authed/auth not required - attempting pre-emptive ban" << std::endl;
 #endif
 					// if its a connect and we don't do filtering on it now then
 					// it will get tunneled and not filtered.  We can't tunnel later
