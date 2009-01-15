@@ -30,10 +30,6 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <netdb.h>		// for gethostby
-#include <netinet/in.h>		// for address structures
-#include <arpa/inet.h>		// for inet_aton()
-#include <sys/socket.h>
 #include <syslog.h>
 
 #include <unistd.h>		// checkme: remove?
