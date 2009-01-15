@@ -367,10 +367,10 @@ void String::lop()
 // remove leading & trailing whitespace
 void String::removeWhiteSpace()
 {
-	size_type start = this->find_first_not_of(" \r\n");
+	size_type start = this->find_first_not_of(" \t\r\n");
 	if (start == std::string::npos)
 		start = 0;
-	size_type end = this->find_last_not_of(" \r\n");
+	size_type end = this->find_last_not_of(" \t\r\n");
 	if (end == std::string::npos)
 		end = this->length() - 1;
 	*this = this->substr(start, (end - start)+1);
