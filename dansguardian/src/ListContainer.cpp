@@ -1044,16 +1044,16 @@ void ListContainer::graphCopyNodePhrases(unsigned int pos)
 	}
 }
 
-int ListContainer::bmsearch(char *file, int fl, const std::string& s)
+int ListContainer::bmsearch(char *file, off_t fl, const std::string& s)
 {
-	int pl = s.length();
+	off_t pl = s.length();
 	if (fl < pl)
 		return 0;  // reality checking
 	if (pl > 126)
 		return 0;  // reality checking
 
 	// must match all
-	int j, l;  // counters
+	off_t j, l;  // counters
 	int p;  // to hold precalcuated value for speed
 	bool match;  // flag
 	int qsBc[256];  // Quick Search Boyer Moore shift table (256 alphabet)
@@ -1113,10 +1113,10 @@ int ListContainer::bmsearch(char *file, int fl, const std::string& s)
 // Format of the data is each entry has GRAPHENTRYSIZE int values with format of:
 // [letter][last letter flag][num links][from phrase][link0][link1]...
 
-void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, unsigned int> >& result, char *doc, int len)
+void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, int> >& result, char *doc, off_t len)
 {
-	int i, j, k;
-	std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator existingitem;
+	off_t i, j, k;
+	std::map<std::string, std::pair<unsigned int, int> >::iterator existingitem;
 	
 	//do standard quick search on short branches (or everything, if force_quick_search is on)
 	for (std::vector<unsigned int>::iterator i = slowgraph.begin(); i != slowgraph.end(); i++) {
@@ -1125,7 +1125,7 @@ void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, un
 		for (k = 0; k < j; k++) {
 			existingitem = result.find(phrase);
 			if (existingitem == result.end()) {
-				result[phrase] = std::pair<unsigned int, unsigned int>(*i, 1);
+				result[phrase] = std::pair<unsigned int, int>(*i, 1);
 			} else {
 				existingitem->second.second++;
 			}
@@ -1135,7 +1135,7 @@ void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, un
 	if (force_quick_search || graphitems == 0) {
 #ifdef DGDEBUG
 		std::cout << "Map (quicksearch) start" << std::endl;
-		for (std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator i = result.begin(); i != result.end(); i++) {
+		for (std::map<std::string, std::pair<unsigned int, int> >::iterator i = result.begin(); i != result.end(); i++) {
 			std::cout << "Map: " << i->first << " " << i->second.second << std::endl;
 		}
 		std::cout << "Map (quicksearch) end" << std::endl;
@@ -1143,14 +1143,14 @@ void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, un
 		return;
 	}
 	
-	int sl;
-	int ppos;
-	int currnode;
+	off_t sl;
+	off_t ppos;
+	off_t currnode;
 	int * graphdata = realgraphdata;
-	int ml;
+	off_t ml;
 	char p;
-	int pos;
-	int depth;
+	off_t pos;
+	off_t depth;
 	// number of links from root node to first letter of phrase
 	ml = graphdata[2] + 4;
 	// iterate over entire document
@@ -1183,7 +1183,7 @@ void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, un
 						std::string phrase = getItemAtInt(graphdata[ppos + 3]);
 						existingitem = result.find(phrase);
 						if (existingitem == result.end()) {
-							result[phrase] = std::pair<unsigned int, unsigned int>(graphdata[ppos + 3], 1);
+							result[phrase] = std::pair<unsigned int, int>(graphdata[ppos + 3], 1);
 						} else {
 							existingitem->second.second++;
 						}
@@ -1226,7 +1226,7 @@ void ListContainer::graphSearch(std::map<std::string, std::pair<unsigned int, un
 	}
 #ifdef DGDEBUG
 	std::cout << "Map start" << std::endl;
-	for (std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator i = result.begin(); i != result.end(); i++) {
+	for (std::map<std::string, std::pair<unsigned int, int> >::iterator i = result.begin(); i != result.end(); i++) {
 		std::cout << "Map: " << i->first << " " << i->second.second << std::endl;
 	}
 	std::cout << "Map end" << std::endl;
@@ -1645,7 +1645,12 @@ time_t getFileDate(const char *filename)
 	struct stat status;
 	int rc = stat(filename, &status);
 	if (rc != 0)
-		throw std::runtime_error(strerror(errno));
+	{
+		if (errno == ENOENT)
+			return 0;
+		else
+			throw std::runtime_error(strerror(errno));
+	}
 	return status.st_mtime;
 }
 

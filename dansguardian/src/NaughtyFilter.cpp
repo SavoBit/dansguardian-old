@@ -85,7 +85,7 @@ void NaughtyFilter::reset()
 void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 {
 	// original data
-	int rawbodylen = (*body).buffer_length;
+	off_t rawbodylen = (*body).buffer_length;
 	char *rawbody = (*body).data;
 	
 	// check PICS now - not dependent on case, hex decoding, etc.
@@ -103,7 +103,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 		return;
 	
 	// hex-decoded data (not case converted)
-	int hexdecodedlen = rawbodylen;
+	off_t hexdecodedlen = rawbodylen;
 	char *hexdecoded = rawbody;
 
 	unsigned char c;
@@ -124,8 +124,8 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 		char *ptr;  // pointer required by strtol
 
 		// make a copy of the escaped document char by char
-		int i = 0;
-		int j = 0;
+		off_t i = 0;
+		off_t j = 0;
 		while (i < rawbodylen - 3) {  // we lose 3 bytes but what the hell..
 			c1 = rawbody[i];
 			c2 = rawbody[i + 1];
@@ -179,7 +179,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 		std::cout << "Preserve case: " << preserve_case << std::endl;
 #endif
 
-		int i, j;
+		off_t i, j;
 #ifdef DGDEBUG
 		if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2 || o.phrase_filter_mode == 3)
 			std::cout << "Raw content needed" << std::endl;
@@ -222,7 +222,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 #endif
 			bool addit = false;  // flag if we should copy this char to filtered version
 			bool needcheck = false;  // flag if we actually find anything worth filtering
-			int bodymetalen;
+			off_t bodymetalen;
 		
 			// find </head> or <body> as end of search range
 			char* endhead = strstr(bodylc, "</head");
@@ -370,7 +370,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 		bool addit;  // flag if we should copy this char to filtered version
 		j = 1;
 		bodynohtml[0] = 32;  // * for this
-		for (int i = 0; i < hexdecodedlen; i++) {
+		for (off_t i = 0; i < hexdecodedlen; i++) {
 			addit = true;
 			c = bodylc[i];
 			if (c == '<') {
@@ -408,7 +408,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 }
 
 // check the phrase lists
-void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
+void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain)
 {
 	int weighting = 0;
 	int cat;
@@ -581,12 +581,12 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 
 	// this line here searches for phrases contained in the list - the rest of the code is all sorting
 	// through it to find the categories, weightings, types etc. of what has actually been found.
-	std::map<std::string, std::pair<unsigned int, unsigned int> > found;
+	std::map<std::string, std::pair<unsigned int, int> > found;
 	(*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).graphSearch(found, file, l);
 
 	// cache reusable iterators
-	std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator foundend = found.end();
-	std::map<std::string, std::pair<unsigned int, unsigned int> >::iterator foundcurrent;
+	std::map<std::string, std::pair<unsigned int, int> >::iterator foundend = found.end();
+	std::map<std::string, std::pair<unsigned int, int> >::iterator foundcurrent;
 
 	// look for combinations first
 	//if banned must wait for exception later
@@ -595,7 +595,7 @@ void NaughtyFilter::checkphrase(char *file, int l, String *url, String *domain)
 
 	std::vector<int>::iterator combicurrent = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.begin();
 	std::map<int, listent>::iterator catcurrent;
-	unsigned int lowest_occurrences = 0;
+	int lowest_occurrences = 0;
 
 	while (combicurrent != o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.end()) {
 		// Grab the current combination phrase part

@@ -64,7 +64,7 @@ private:
 	// (this is made optional in this manner because it's pointless
 	// trying to look for links etc. in "smart" filtering mode, i.e.
 	// after HTML has been removed.)
-	void checkphrase(char *file, int l, String *url = NULL, String *domain = NULL);
+	void checkphrase(char *file, off_t l, String *url = NULL, String *domain = NULL);
 	
 	// check PICS ratings
 	void checkPICS(char *file);

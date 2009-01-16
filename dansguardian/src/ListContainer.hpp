@@ -101,7 +101,7 @@ public:
 	String getListCategoryAt(int index, int *catindex = NULL);
 	String getListCategoryAtD(int index);
 
-	void graphSearch(std::map<std::string, std::pair<unsigned int, unsigned int> >& result, char *doc, int len);
+	void graphSearch(std::map<std::string, std::pair<unsigned int, int> >& result, char *doc, off_t len);
 	
 	bool isNow(int index = -1);
 	bool checkTimeAt(unsigned int index);
@@ -165,7 +165,7 @@ private:
 	void graphAdd(String s, const int inx, int item);
 	int graphFindBranches(unsigned int pos);
 	void graphCopyNodePhrases(unsigned int pos);
-	int bmsearch(char *file, int fl, const std::string& s);
+	int bmsearch(char *file, off_t fl, const std::string& s);
 	bool readProcessedItemList(const char *filename, bool startswith, int filters);
 	void addToItemList(const char *s, size_t len);
 	int greaterThanEWF(const char *a, const char *b);  // full match
