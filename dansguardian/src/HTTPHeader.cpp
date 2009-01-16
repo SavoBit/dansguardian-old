@@ -164,7 +164,10 @@ String HTTPHeader::disposition()
 String HTTPHeader::userAgent()
 {
 	if (puseragent != NULL) {
-		return puseragent->after(" ");
+		// chop off '/r'
+		String result(puseragent->after(" "));
+		result.resize(result.length() - 1);
+		return result;
 	}
 	return "";
 }
