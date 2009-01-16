@@ -94,25 +94,6 @@ void ListManager::garbageCollect()
 	}
 }
 
-// get the modification date of the given file in seconds
-int ListManager::getFileDate(const char *filename)
-{
-	struct stat status;
-	int rc = stat(filename, &status);
-	if (rc != 0) {
-		return -1;
-	}
-	struct tm *tmnow = localtime(&status.st_mtime);
-
-	int date = (tmnow->tm_year - 100) * 31536000;
-	date += tmnow->tm_mon * 2628000;
-	date += tmnow->tm_mday * 86400;
-	date += tmnow->tm_hour * 3600;
-	date += tmnow->tm_min * 60;
-	date += tmnow->tm_sec;
-	return date;  // a nice int rather than a horrid struct
-}
-
 // load the given list, or increase refcount on list if it's already been loaded.
 int ListManager::newItemList(const char *filename, bool startswith, int filters, bool parent)
 {
@@ -157,9 +138,9 @@ int ListManager::newItemList(const char *filename, bool startswith, int filters,
 // pass in exception, banned, and weighted phrase lists all at once.
 int ListManager::newPhraseList(const char *exception, const char *banned, const char *weighted)
 {
-	int bannedpfiledate = getFileDate(banned);
-	int exceptionpfiledate = getFileDate(exception);
-	int weightedpfiledate = getFileDate(weighted);
+	time_t bannedpfiledate = getFileDate(banned);
+	time_t exceptionpfiledate = getFileDate(exception);
+	time_t weightedpfiledate = getFileDate(weighted);
 	for (unsigned int i = 0; i < l.size(); i++) {
 		if (l[i] == NULL) {
 			continue;

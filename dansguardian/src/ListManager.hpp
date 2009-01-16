@@ -56,9 +56,6 @@ public:
 private:
 	// find an empty slot in our collection of listcontainters
 	int findNULL();
-	
-	// find file modification date
-	int getFileDate(const char *filename);
 };
 
 #endif

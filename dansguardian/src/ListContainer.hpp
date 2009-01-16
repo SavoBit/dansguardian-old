@@ -40,20 +40,23 @@ struct TimeLimit {
 	String days, timetag;
 };
 
+time_t getFileDate(const char *filename);
+size_t getFileLength(const char *filename);
+
 class ListContainer
 {
 public:
 	std::vector<int> combilist;
 	int refcount;
 	bool parent;
-	int filedate;
+	time_t filedate;
 	bool used;
 	String bannedpfile;
 	String exceptionpfile;
 	String weightedpfile;
-	int bannedpfiledate;
-	int exceptionpfiledate;
-	int weightedpfiledate;
+	time_t bannedpfiledate;
+	time_t exceptionpfiledate;
+	time_t weightedpfiledate;
 	String sourcefile;  // used for non-phrase lists only
 	String category;
 	String lastcategory;
@@ -171,8 +174,6 @@ private:
 	int greaterThanSW(const char *a, const char *b);  // partial starts with
 	int search(int (ListContainer::*comparitor)(const char* a, const char* b), int a, int s, const char *p);
 	bool isCacheFileNewer(const char *string);
-	size_t getFileLength(const char *filename);
-	int getFileDate(const char *filename);
 	void increaseMemoryBy(size_t bytes);
 	//categorised & time-limited lists support
 	bool readTimeTag(String * tag, TimeLimit& tl);

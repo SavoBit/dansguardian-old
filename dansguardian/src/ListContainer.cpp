@@ -356,7 +356,6 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 #ifdef DGDEBUG
 	std::cout << filename << std::endl;
 #endif
-	filedate = getFileDate(filename);
 	if (isCacheFileNewer(filename)) {	// see if cached .process file
 		linebuffer = filename;  //         is available and up to date
 		linebuffer += ".processed";
@@ -366,11 +365,13 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 			if (!readProcessedItemList(linebuffer.c_str(), startswith, filters)) {	// read cached
 				return false;
 			}
+			filedate = getFileDate(linebuffer.c_str());
 			issorted = true;  // don't bother sorting cached file
 			return true;
 
 		}
 	}
+	filedate = getFileDate(filename);
 	size_t len = 0;
 	try {
 		len = getFileLength(filename);
@@ -1630,7 +1631,7 @@ void ListContainer::increaseMemoryBy(size_t bytes)
 	}
 }
 
-size_t ListContainer::getFileLength(const char *filename)
+size_t getFileLength(const char *filename)
 {
 	struct stat status;
 	int rc = stat(filename, &status);
@@ -1639,22 +1640,13 @@ size_t ListContainer::getFileLength(const char *filename)
 	return status.st_size;
 }
 
-int ListContainer::getFileDate(const char *filename)
+time_t getFileDate(const char *filename)
 {
 	struct stat status;
 	int rc = stat(filename, &status);
-	if (rc != 0) {
-		return -1;
-	}
-	struct tm *tmnow = localtime(&status.st_mtime);
-
-	int date = (tmnow->tm_year - 100) * 31536000;
-	date += tmnow->tm_mon * 2628000;
-	date += tmnow->tm_mday * 86400;
-	date += tmnow->tm_hour * 3600;
-	date += tmnow->tm_min * 60;
-	date += tmnow->tm_sec;
-	return date;  // a nice int rather than a horrid struct
+	if (rc != 0)
+		throw std::runtime_error(strerror(errno));
+	return status.st_mtime;
 }
 
 bool ListContainer::upToDate()
@@ -1662,6 +1654,13 @@ bool ListContainer::upToDate()
 	if (getFileDate(sourcefile.toCharArray()) > filedate) {
 		return false;
 	}
+
+	String cachefile(sourcefile);
+	cachefile += ".processed";
+	if (getFileDate(cachefile.toCharArray()) > filedate) {
+		return false;
+	}
+
 	for (unsigned int i = 0; i < morelists.size(); i++) {
 		if (!(*o.lm.l[morelists[i]]).upToDate()) {
 			return false;
