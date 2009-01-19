@@ -101,7 +101,6 @@ bool OptionContainer::read(const char *filename, int type)
 	try {
 		std::string linebuffer;
 		String temp;  // for tempory conversion and storage
-		int j;  // counter
 		std::ifstream conffiles(filename, std::ios::in);  // dansguardian.conf
 		if (!conffiles.good()) {
 			if (!is_daemonised) {
@@ -114,9 +113,6 @@ bool OptionContainer::read(const char *filename, int type)
 			getline(conffiles, linebuffer);
 			if (!conffiles.eof() && linebuffer.length() != 0) {
 				if (linebuffer[0] != '#') {	// i.e. not commented out
-					for (j = 0; j < (signed) linebuffer.length(); j++) {
-						linebuffer[j] = tolower(linebuffer[j]);
-					}
 					temp = (char *) linebuffer.c_str();
 					if (temp.contains("#")) {
 						temp = temp.before("#");
