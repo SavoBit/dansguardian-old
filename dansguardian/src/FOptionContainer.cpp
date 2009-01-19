@@ -184,7 +184,6 @@ bool FOptionContainer::read(const char *filename)
 	try {			// all sorts of exceptions could occur reading conf files
 		std::string linebuffer;
 		String temp;  // for tempory conversion and storage
-		int j;  // counter
 		std::ifstream conffiles(filename, std::ios::in);  // dansguardianfN.conf
 		if (!conffiles.good()) {
 			if (!is_daemonised) {
@@ -197,9 +196,6 @@ bool FOptionContainer::read(const char *filename)
 			getline(conffiles, linebuffer);
 			if (!conffiles.eof() && linebuffer.length() != 0) {
 				if (linebuffer[0] != '#') {	// i.e. not commented out
-					for (j = 0; j < (signed) linebuffer.length(); j++) {
-						linebuffer[j] = tolower(linebuffer[j]);
-					}
 					temp = (char *) linebuffer.c_str();
 					if (temp.contains("#")) {
 						temp = temp.before("#");
