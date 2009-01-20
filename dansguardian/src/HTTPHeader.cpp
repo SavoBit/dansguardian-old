@@ -1054,13 +1054,15 @@ String HTTPHeader::getCookie(const char *cookie)
 }
 
 // add cookie with given name & value to outgoing headers
-void HTTPHeader::setCookie(const char *cookie, const char *value)
+void HTTPHeader::setCookie(const char *cookie, const char *domain, const char *value)
 {
 	String line("Set-Cookie: ");
 	line += cookie;
 	line += "=";
 	line += value;
-	line += "; path=/\r";
+	line += "; path=/; domain=.";
+	line += domain;
+	line += "\r";
 	header.push_back(line);
 #ifdef DGDEBUG
 	std::cout << "Setting cookie:" << line << std::endl;
@@ -1069,16 +1071,30 @@ void HTTPHeader::setCookie(const char *cookie, const char *value)
 }
 
 // is this a temporary filter bypass cookie?
-bool HTTPHeader::isBypassCookie(String * url, const char *magic, const char *clientip)
+bool HTTPHeader::isBypassCookie(String url, const char *magic, const char *clientip)
 {
 	String cookie(getCookie("GBYPASS"));
+	if (!cookie.length()) {
+#ifdef DGDEBUG
+		std::cout << "No bypass cookie" << std::endl;
+#endif
+		return false;
+	}
 	String cookiehash(cookie.subString(0, 32));
 	String cookietime(cookie.after(cookiehash.toCharArray()));
 	String mymagic(magic);
 	mymagic += clientip;
 	mymagic += cookietime;
-	String hashed((*url).md5(mymagic.toCharArray()));
-	if (hashed != cookiehash) {
+	bool matched = false;
+	while(url.contains(".")) {
+		String hashed(url.md5(mymagic.toCharArray()));
+		if (hashed == cookiehash) {
+			matched = true;
+			break;
+		}
+		url = url.after(".");
+	}
+	if (not matched) {
 #ifdef DGDEBUG
 		std::cout << "Cookie GBYPASS not match" << std::endl;
 #endif

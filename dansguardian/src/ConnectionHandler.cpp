@@ -719,15 +719,16 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 						exceptionreason = o.language_list.getTranslation(606);
 					}
 				}
-				else if (((*o.fg[filtergroup]).bypass_mode != 0)
-					&& header.isBypassCookie(&urldomain, (*o.fg[filtergroup]).cookie_magic.c_str(), clientip.c_str()))
-				{
+				else if ((*o.fg[filtergroup]).bypass_mode != 0) {
+					if (header.isBypassCookie(urldomain, (*o.fg[filtergroup]).cookie_magic.c_str(), clientip.c_str()))
+					{
 #ifdef DGDEBUG
-					std::cout << "Bypass cookie match" << std::endl;
+						std::cout << "Bypass cookie match" << std::endl;
 #endif
-					iscookiebypass = true;
-					isbypass = true;
-					exceptionreason = o.language_list.getTranslation(607);
+						iscookiebypass = true;
+						isbypass = true;
+						exceptionreason = o.language_list.getTranslation(607);
+					}
 				}
 #ifdef DGDEBUG
 				std::cout << "Finished bypass checks." << std::endl;
@@ -1107,7 +1108,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #ifdef DGDEBUG
 					std::cout<<"Setting GBYPASS cookie; bypasstimestamp = "<<bypasstimestamp<<std::endl;
 #endif
-					docheader.setCookie("GBYPASS", hashedCookie(&urldomain, filtergroup, &clientip, bypasstimestamp).toCharArray());
+					String ud(urldomain);
+					if (ud.startsWith("www.")) {
+						ud = ud.after("www.");
+					}
+					docheader.setCookie("GBYPASS", ud.toCharArray(), hashedCookie(&ud, filtergroup, &clientip, bypasstimestamp).toCharArray());
 					// redirect user to URL with GBYPASS parameter no longer appended
 					docheader.header[0] = "HTTP/1.0 302 Redirect";
 					String loc("Location: ");

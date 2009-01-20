@@ -125,12 +125,12 @@ public:
 	// is this a scan bypass URL? (download previously scanned file)
 	bool isScanBypassURL(String *url, const char *magic, const char *clientip);
 	// is this a temporary filter bypass cookie?
-	bool isBypassCookie(String *url, const char *magic, const char *clientip);
+	bool isBypassCookie(String url, const char *magic, const char *clientip);
 	// chop GBYPASS/GSPYBASS off URLs (must know it's there to begin with)
 	void chopBypass(String url, bool infectionbypass);
 	void chopScanBypass(String url);
 	// add cookie to outgoing headers with given name & value
-	void setCookie(const char *cookie, const char *value);
+	void setCookie(const char *cookie, const char *domain, const char *value);
 	
 	HTTPHeader():dirty(true) { reset(); };
 
