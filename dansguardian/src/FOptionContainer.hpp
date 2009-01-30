@@ -52,6 +52,7 @@ public:
 	int group_mode;
 	int embedded_url_weight;
 	int naughtyness_limit;
+	int searchterm_limit;
 	bool createlistcachefiles;
 	bool enable_PICS;
 	bool deep_url_analysis;
@@ -194,7 +195,7 @@ public:
 	unsigned int log_site_list;
 	unsigned int log_url_list;
 	unsigned int log_regexpurl_list;
-   
+
 	// regex match lists
 	std::deque<RegExp> banned_regexpurl_list_comp;
 	std::deque<String> banned_regexpurl_list_source;
@@ -225,9 +226,18 @@ public:
 	// access denied address & domain - if they override the defaults
 	std::string access_denied_address;
 	String access_denied_domain;
+	
+	// search term blocking
+	unsigned int searchengine_regexp_list;
+	unsigned int searchterm_list;
+	bool searchterm_flag;
+	std::deque<RegExp> searchengine_regexp_list_comp;
+	std::deque<String> searchengine_regexp_list_source;
+	std::deque<unsigned int> searchengine_regexp_list_ref;
+	bool extractSearchTerms(String url, String &terms);
 
 	FOptionContainer():
-		block_downloads(false), banned_page(NULL),
+		block_downloads(false), searchterm_flag(false), banned_page(NULL),
 		banned_phrase_flag(false), exception_site_flag(false), exception_url_flag(false),
 		banned_extension_flag(false), banned_mimetype_flag(false), banned_site_flag(false),
 		banned_url_flag(false), grey_site_flag(false), grey_url_flag(false),
@@ -235,7 +245,8 @@ public:
 		content_regexp_flag(false), url_regexp_flag(false), header_regexp_flag(false),
 		exception_extension_flag(false), exception_mimetype_flag(false),
 		exception_file_site_flag(false), exception_file_url_flag(false),
-		log_site_flag(false), log_url_flag(false), log_regexpurl_flag(false) {};
+		log_site_flag(false), log_url_flag(false), log_regexpurl_flag(false),
+		searchengine_regexp_flag(false) {};
 	~FOptionContainer();
 	bool read(const char *filename);
 	void reset();
@@ -287,12 +298,16 @@ private:
 	bool log_site_flag;
 	bool log_url_flag;
 	bool log_regexpurl_flag;
+
+	// search term blocking
+	bool searchengine_regexp_flag;
+	
 	std::deque<int> banned_phrase_list_index;
 
 	std::deque<std::string > conffile;
 
 	bool precompileregexps();
-	bool readbplfile(const char *banned, const char *exception, const char *weighted);
+	bool readbplfile(const char *banned, const char *exception, const char *weighted, unsigned int &list);
 	bool readFile(const char *filename, unsigned int* whichlist, bool sortsw, bool cache, const char *listname);
 	bool readRegExMatchFile(const char *filename, const char *listname, unsigned int& listref,
 		std::deque<RegExp> &list_comp, std::deque<String> &list_source, std::deque<unsigned int> &list_ref);

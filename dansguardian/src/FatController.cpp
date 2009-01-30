@@ -817,7 +817,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 	//String where, what, how;
 	std::string cr("\n");
    
-	std::string where, what, how, cat, clienthost, from, who, mimetype, useragent, ssize, sweight;
+	std::string where, what, how, cat, clienthost, from, who, mimetype, useragent, ssize, sweight, params;
 	int port = 80, isnaughty = 0, isexception = 0, code = 200;
 	int cachehit = 0, wasinfected = 0, wasscanned = 0, filtergroup = 0;
 	long tv_sec = 0, tv_usec = 0;
@@ -883,7 +883,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 			// read in the various parts of the log string
 			bool error = false;
 			int itemcount = 0;
-			while(itemcount < (o.log_user_agent ? 24 : 23)) {
+			while(itemcount < 25) {
 				try {
 				    	char *logline = new char[8192];
 					rc = ipcpeersock->getLine(logline, 8192, 3, true);  // throws on err
@@ -969,6 +969,8 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 						case 23:
 							useragent = logline;
 							break;
+						case 24:
+							params = logline;
 						}
 					}
 					delete[]logline;
@@ -1120,7 +1122,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 				builtline = when +"\t"+ who + "\t" + from + "\t" + where + "\t" + what + "\t" + how
 					+ "\t" + ssize + "\t" + sweight + "\t" + cat +  "\t" + stringgroup + "\t"
 					+ stringcode + "\t" + mimetype + "\t" + clienthost + "\t" + o.fg[filtergroup]->name
-					+ "\t" + (o.log_user_agent ? useragent : "-");
+					+ "\t" + useragent + "\t" + params;
 				break;
 			case 3:
 				{
@@ -1162,20 +1164,20 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 					}*/
 
 					builtline = utime + " " + duration + " " + ( (clienthost.length() > 0) ? clienthost : from) + " " + hitmiss + " " + ssize + " "
-						+ how + " " + where + " " + who + " " + hier + " " + mimetype ;
+						+ how + " " + where + " " + who + " " + hier + " " + mimetype;
 					break;
 				}
 			case 2:
 				builtline = "\"" + when  +"\",\""+ who + "\",\"" + from + "\",\"" + where + "\",\"" + what + "\",\""
 					+ how + "\",\"" + ssize + "\",\"" + sweight + "\",\"" + cat +  "\",\"" + stringgroup + "\",\""
 					+ stringcode + "\",\"" + mimetype + "\",\"" + clienthost + "\",\"" + o.fg[filtergroup]->name + "\",\""
-					+ (o.log_user_agent ? useragent : "-") + "\"";
+					+ useragent + "\",\"" + params + "\"";
 				break;
 			default:
 				builtline = when +" "+ who + " " + from + " " + where + " " + what + " "
 					+ how + " " + ssize + " " + sweight + " " + cat +  " " + stringgroup + " "
 					+ stringcode + " " + mimetype + " " + clienthost + " " + o.fg[filtergroup]->name + " "
-					+ (o.log_user_agent ? useragent : "-");
+					+ useragent + " " + params;
 			}
 
 			if (!logsyslog)

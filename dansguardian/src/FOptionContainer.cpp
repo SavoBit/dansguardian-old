@@ -74,6 +74,7 @@ FOptionContainer::~FOptionContainer()
 void FOptionContainer::reset()
 {
 	if (banned_phrase_flag) o.lm.deRefList(banned_phrase_list);
+	if (searchterm_flag) o.lm.deRefList(searchterm_list);
 	if (exception_site_flag) o.lm.deRefList(exception_site_list);
 	if (exception_url_flag) o.lm.deRefList(exception_url_list);
 	if (banned_extension_flag) o.lm.deRefList(banned_extension_list);
@@ -95,7 +96,10 @@ void FOptionContainer::reset()
 	if (log_site_flag) o.lm.deRefList(log_site_list);
 	if (log_url_flag) o.lm.deRefList(log_url_list);
 	if (log_regexpurl_flag) o.lm.deRefList(log_regexpurl_list);
+	if (searchengine_regexp_flag) o.lm.deRefList(searchengine_regexp_flag);
+
 	banned_phrase_flag = false;
+	searchterm_flag = false;
 	exception_site_flag = false;
 	exception_url_flag = false;
 	banned_extension_flag = false;
@@ -117,9 +121,14 @@ void FOptionContainer::reset()
 	log_site_flag = false;
 	log_url_flag = false;
 	log_regexpurl_flag = false;
+	searchengine_regexp_flag = false;
+	
 	block_downloads = false;
+	
 	banned_phrase_list_index.clear();
+	
 	conffile.clear();
+	
 	content_regexp_list_comp.clear();
 	content_regexp_list_rep.clear();
 	url_regexp_list_comp.clear();
@@ -138,6 +147,10 @@ void FOptionContainer::reset()
 	log_regexpurl_list_comp.clear();
 	log_regexpurl_list_source.clear();
 	log_regexpurl_list_ref.clear();
+	searchengine_regexp_list_comp.clear();
+	searchengine_regexp_list_source.clear();
+	searchengine_regexp_list_ref.clear();
+	
 	delete banned_page;
 	banned_page = NULL;
 }
@@ -447,6 +460,7 @@ bool FOptionContainer::read(const char *filename)
 			if (!realitycheck(naughtyness_limit, 1, 0, "naughtynesslimit")) {
 				return false;
 			}
+
 			std::string exception_phrase_list_location(findoptionS("exceptionphraselist"));
 			std::string weighted_phrase_list_location(findoptionS("weightedphraselist"));
 			std::string banned_phrase_list_location(findoptionS("bannedphraselist"));
@@ -471,6 +485,9 @@ bool FOptionContainer::read(const char *filename)
 			std::string log_url_list_location(findoptionS("logurllist"));
 			std::string log_site_list_location(findoptionS("logsitelist"));
 			std::string log_regexpurl_list_location(findoptionS("logregexpurllist"));
+
+			// search term blocking
+			std::string searchengine_regexp_list_location(findoptionS("searchengineregexplist"));
 
 			if (enable_PICS) {
 				pics_rsac_nudity = findoptionI("RSACnudity");
@@ -593,7 +610,10 @@ bool FOptionContainer::read(const char *filename)
 			}		// download site exceptions
 			exception_file_url_flag = true;
 
-			if (!readbplfile(banned_phrase_list_location.c_str(), exception_phrase_list_location.c_str(), weighted_phrase_list_location.c_str())) {
+			if (!readbplfile(banned_phrase_list_location.c_str(),
+				exception_phrase_list_location.c_str(),
+				weighted_phrase_list_location.c_str(), banned_phrase_list))
+			{
 				return false;
 			}		// read banned, exception, weighted phrase list
 			banned_phrase_flag = true;
@@ -642,6 +662,43 @@ bool FOptionContainer::read(const char *filename)
 #ifdef DGDEBUG
 				std::cout << "Enabled log-only RegExp URL list" << std::endl;
 #endif
+			}
+
+			// search term blocking
+			if (searchengine_regexp_list_location.length() && readRegExMatchFile(searchengine_regexp_list_location.c_str(), "searchengineregexplist", searchengine_regexp_list,
+				searchengine_regexp_list_comp, searchengine_regexp_list_source, searchengine_regexp_list_ref))
+			{
+				searchengine_regexp_flag = true;
+#ifdef DGDEBUG
+				std::cout << "Enabled search term extraction RegExp list" << std::endl;
+#endif
+				searchterm_limit = findoptionI("searchtermlimit");
+				if (!realitycheck(searchterm_limit, 0, 0, "searchtermlimit")) {
+					return false;
+				}
+
+				// Optionally override the normal phrase lists for search term blocking.
+				// We need all three lists to build a phrase tree, so fail if we encounter
+				// anything other than all three enabled/disabled simultaneously.
+				if (searchterm_limit > 0)
+				{
+					std::string exception_searchterm_list_location(findoptionS("exceptionsearchtermlist"));
+					std::string weighted_searchterm_list_location(findoptionS("weightedsearchtermlist"));
+					std::string banned_searchterm_list_location(findoptionS("bannedsearchtermlist"));
+					if (!(exception_searchterm_list_location.length() == 0 &&
+						weighted_searchterm_list_location.length() == 0 &&
+						banned_searchterm_list_location.length() == 0))
+					{
+						// At least one is enabled - try to load all three.
+						if (!readbplfile(banned_searchterm_list_location.c_str(),
+							exception_searchterm_list_location.c_str(),
+							weighted_searchterm_list_location.c_str(), searchterm_list))
+						{
+							return false;
+						}
+						searchterm_flag = true;
+					}
+				}
 			}
 
 			if (!readRegExMatchFile(banned_regexpurl_list_location.c_str(),"bannedregexpurllist",banned_regexpurl_list,
@@ -754,7 +811,7 @@ bool FOptionContainer::read(const char *filename)
 	return true;
 }
 
-bool FOptionContainer::readbplfile(const char *banned, const char *exception, const char *weighted)
+bool FOptionContainer::readbplfile(const char *banned, const char *exception, const char *weighted, unsigned int &list)
 {
 
 	int res = o.lm.newPhraseList(exception, banned, weighted);
@@ -765,12 +822,11 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 		syslog(LOG_ERR, "%s", "Error opening phraselists");
 		return false;
 	}
-	banned_phrase_list = res;
-	if (!(*o.lm.l[banned_phrase_list]).used) {
+	if (!(*o.lm.l[res]).used) {
 #ifdef DGDEBUG
 		std::cout << "Reading new phrase lists" << std::endl;
 #endif
-		bool result = (*o.lm.l[banned_phrase_list]).readPhraseList(exception, true);
+		bool result = (*o.lm.l[res]).readPhraseList(exception, true);
 		if (!result) {
 			if (!is_daemonised) {
 				std::cerr << "Error opening exceptionphraselist" << std::endl;
@@ -779,7 +835,7 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 			return false;
 		}
 
-		result = (*o.lm.l[banned_phrase_list]).readPhraseList(banned, false);
+		result = (*o.lm.l[res]).readPhraseList(banned, false);
 		if (!result) {
 			if (!is_daemonised) {
 				std::cerr << "Error opening bannedphraselist" << std::endl;
@@ -791,7 +847,7 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 #ifdef DGDEBUG
 			std::cout << "Reading weighted phrase list" << std::endl;
 #endif
-			result = (*o.lm.l[banned_phrase_list]).readPhraseList(weighted, false);
+			result = (*o.lm.l[res]).readPhraseList(weighted, false);
 			if (!result) {
 				if (!is_daemonised) {
 					std::cerr << "Error opening weightedphraselist" << std::endl;
@@ -800,11 +856,12 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 				return false;
 			}
 		}
-		if (!(*o.lm.l[banned_phrase_list]).makeGraph(force_quick_search))
+		if (!(*o.lm.l[res]).makeGraph(force_quick_search))
 			return false;
 
-		(*o.lm.l[banned_phrase_list]).used = true;
+		(*o.lm.l[res]).used = true;
 	}
+	list = res;
 	return true;
 }
 
@@ -1161,6 +1218,57 @@ char *FOptionContainer::inExtensionList(unsigned int list, String url)
 		return NULL;
 	}
 	return (*o.lm.l[list]).findEndsWith(url.toCharArray());
+}
+
+// search term blocking
+// is this URL recognised by the search engine regexp list?  if so, return extracted search terms
+bool FOptionContainer::extractSearchTerms(String url, String &terms)
+{
+	if (!searchengine_regexp_flag)
+		return false;
+
+	url.removeWhiteSpace();
+	url.removePTP();
+
+#ifdef DGDEBUG
+	std::cout << "extractSearchTerms: " << url << std::endl;
+#endif
+	unsigned int i = 0;
+	// iterate over all regexes in the compiled list.  if the source list is enabled
+	// at the current time, test to see if the regex itself matches the URL.
+	for (std::deque<RegExp>::iterator j = searchengine_regexp_list_comp.begin(); j != searchengine_regexp_list_comp.end(); j++) {
+		if (o.lm.l[searchengine_regexp_list_ref[i]]->isNow()) {
+			j->match(url.toCharArray());
+			if (j->matched()) {
+				// return the first submatch.
+				// if there are no submatches, the regex isn't suitable for
+				// actually extracting search terms; treat this as an error.
+				// match 1 is the whole string matched by the regex - we need
+				// at least 2 matches for there to have been a submatch.
+				if (j->numberOfMatches() < 2) {
+#ifdef DGDEBUG
+					std::cout << "extractSearchTerms: matched a regex with no submatches: " << searchengine_regexp_list_source[i] << std::endl;
+#endif
+					syslog(LOG_ERR, "extractSearchTerms: no submatches in regex! (%s)", searchengine_regexp_list_source[i].toCharArray());
+					return false;
+				}
+				terms = j->result(1);
+				// change '+' to ' ' then hex decode (remove URL parameter encoding)
+				terms.replaceall("+", " ");
+				terms.hexDecode();
+				// also replace any characters which could potentially screw up logging
+				terms.replaceall("\t", " ");
+				terms.replaceall(",", " ");
+				terms.replaceall(";", " ");
+#ifdef DGDEBUG
+				std::cout << "extractSearchTerms: matched something: " << searchengine_regexp_list_source[i] << ", " << terms << std::endl;
+#endif
+				return true;
+			}
+		}
+		++i;
+	}
+	return false;
 }
 
 // is this line of the headers in the banned regexp header list?

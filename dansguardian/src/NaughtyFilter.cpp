@@ -65,7 +65,7 @@ public:
 
 // constructor - set up defaults
 NaughtyFilter::NaughtyFilter()
-:	isItNaughty(false), isException(false), usedisplaycats(false), filtergroup(0), naughtiness(0)
+:	isItNaughty(false), isException(false), usedisplaycats(false), naughtiness(0)
 {
 }
 
@@ -73,7 +73,6 @@ void NaughtyFilter::reset()
 {
 	isItNaughty = false;
 	isException = false;
-	filtergroup = 0;
 	whatIsNaughty = "";
 	whatIsNaughtyLog = "";
 	whatIsNaughtyCategories = "";
@@ -82,19 +81,22 @@ void NaughtyFilter::reset()
 }
 
 // check the given document body for banned, weighted, and exception phrases (and PICS, and regexes, &c.)
-void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
+// also used for scanning search terms, which causes various features - PICS, META/TITLE extraction, etc. - to be disabled
+void NaughtyFilter::checkme(const char *rawbody, off_t rawbodylen, const String *url,
+	const String *domain, unsigned int filtergroup, unsigned int phraselist, int limit, bool searchterms)
 {
-	// original data
-	off_t rawbodylen = (*body).buffer_length;
-	char *rawbody = (*body).data;
-	
+#ifdef DGDEBUG
+	if (searchterms)
+		std::cout << "Content flagged as search terms - disabling PICS, hex decoding, META/TITLE extraction & HTML removal" << std::endl;
+#endif
+
 	// check PICS now - not dependent on case, hex decoding, etc.
 	// as only sites which play by the rules will self-rate
-	if ((*o.fg[filtergroup]).enable_PICS) {
+	if (!searchterms && (*o.fg[filtergroup]).enable_PICS) {
 #ifdef DGDEBUG
 		std::cout << "PICS is enabled" << std::endl;
 #endif
-		checkPICS(rawbody);
+		checkPICS(rawbody, filtergroup);
 		if (isItNaughty)
 			return;  // Well there is no point in continuing is there?
 	}
@@ -104,18 +106,19 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 	
 	// hex-decoded data (not case converted)
 	off_t hexdecodedlen = rawbodylen;
-	char *hexdecoded = rawbody;
+	const char *hexdecoded = rawbody;
 
 	unsigned char c;
 
 	// Hex decode content if desired
 	// Do this now, as it's not especially case-sensitive,
 	// and the case alteration should modify case post-decoding
-	if (o.hex_decode_content) {  // Mod suggested by AFN Tue 8th April 2003
+	// Search terms are already hex decoded, as they need to be to strip URL decoding
+	if (!searchterms && o.hex_decode_content) {  // Mod suggested by AFN Tue 8th April 2003
 #ifdef DGDEBUG
 		std::cout << "Hex decoding is enabled" << std::endl;
 #endif
-		hexdecoded = new char[rawbodylen + 128 + 1];
+		char *hexdecoded_buf = new char[rawbodylen + 128 + 1];
 		unsigned char c1;
 		unsigned char c2;
 		unsigned char c3;
@@ -141,15 +144,16 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 				c = c1;
 				i++;
 			}
-			hexdecoded[j] = c;
+			hexdecoded_buf[j] = c;
 			j++;
 		}
 		// copy any remaining bytes
 		while (i < rawbodylen) {
-			hexdecoded[j++] = rawbody[i++];
+			hexdecoded_buf[j++] = rawbody[i++];
 		} 
-		hexdecoded[j] = '\0';
+		hexdecoded_buf[j] = '\0';
 		hexdecodedlen = j;
+		hexdecoded = hexdecoded_buf;
 	}
 
 	// scan twice, with & without case conversion (if desired) - aids support for exotic char encodings
@@ -170,8 +174,9 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 	char* bodylc = new char[hexdecodedlen + 128];
 	
 	// Store for the tag-stripped data
+	// Don't bother tag stripping search terms
 	char* bodynohtml = NULL;
-	if (o.phrase_filter_mode == 1 || o.phrase_filter_mode == 2)
+	if (!searchterms && (o.phrase_filter_mode == 1 || o.phrase_filter_mode == 2))
 		bodynohtml = new char[hexdecodedlen + 128 + 1];
 	
 	for (int loop = 0; loop < (o.preserve_case == 2 ? 2 : 1); loop++) {
@@ -181,7 +186,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 
 		off_t i, j;
 #ifdef DGDEBUG
-		if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2 || o.phrase_filter_mode == 3)
+		if (searchterms || o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2 || o.phrase_filter_mode == 3)
 			std::cout << "Raw content needed" << std::endl;
 #endif
 		// use the one that's been hex decoded, but not stripped
@@ -216,7 +221,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 
 		// filter meta tags & title only
 		// based on idea from Nicolas Peyrussie
-		if(o.phrase_filter_mode == 3) {
+		if(!searchterms && (o.phrase_filter_mode == 3)) {
 #ifdef DGDEBUG
 			std::cout << "Filtering META/title" << std::endl;
 #endif
@@ -321,7 +326,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 				std::cout << bodymeta << std::endl;
 #endif
 				bodymetalen = j;
-				checkphrase(bodymeta, bodymetalen);
+				checkphrase(bodymeta, bodymetalen, NULL, NULL, filtergroup, phraselist, limit, searchterms);
 			}
 #ifdef DGDEBUG
 			else
@@ -337,12 +342,12 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 			return;
 		}
 
-		if (o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2) {
+		if (searchterms || o.phrase_filter_mode == 0 || o.phrase_filter_mode == 2) {
 #ifdef DGDEBUG
 			std::cout << "Checking raw content" << std::endl;
 #endif
 			// check unstripped content
-			checkphrase(bodylc, hexdecodedlen, &url, &domain);
+			checkphrase(bodylc, hexdecodedlen, url, domain, filtergroup, phraselist, limit, searchterms);
 			if (isItNaughty || isException) {
 				delete[]bodylc;
 				delete[] bodynohtml;
@@ -352,7 +357,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 			}
 		}
 
-		if (o.phrase_filter_mode == 0) {
+		if (searchterms || o.phrase_filter_mode == 0) {
 			delete[]bodylc;
 			delete[] bodynohtml;
 			if (hexdecoded != rawbody)
@@ -395,7 +400,7 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 #ifdef DGDEBUG
 		std::cout << "Checking smart content" << std::endl;
 #endif
-		checkphrase(bodynohtml, j - 1);
+		checkphrase(bodynohtml, j - 1, NULL, NULL, filtergroup, phraselist, limit, searchterms);
 
 		// second time round the case loop (if there is a second time),
 		// do preserve case (exotic encodings)
@@ -408,7 +413,8 @@ void NaughtyFilter::checkme(DataBuffer *body, String &url, String &domain)
 }
 
 // check the phrase lists
-void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain)
+void NaughtyFilter::checkphrase(char *file, off_t filelen, const String *url, const String *domain,
+	unsigned int filtergroup, unsigned int phraselist, int limit, bool searchterms)
 {
 	int weighting = 0;
 	int cat;
@@ -582,7 +588,7 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 	// this line here searches for phrases contained in the list - the rest of the code is all sorting
 	// through it to find the categories, weightings, types etc. of what has actually been found.
 	std::map<std::string, std::pair<unsigned int, int> > found;
-	(*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).graphSearch(found, file, l);
+	o.lm.l[phraselist]->graphSearch(found, file, filelen);
 
 	// cache reusable iterators
 	std::map<std::string, std::pair<unsigned int, int> >::iterator foundend = found.end();
@@ -593,11 +599,11 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 	std::string combifound;
 	std::string combisofar;
 
-	std::vector<int>::iterator combicurrent = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.begin();
+	std::vector<int>::iterator combicurrent = o.lm.l[phraselist]->combilist.begin();
 	std::map<int, listent>::iterator catcurrent;
 	int lowest_occurrences = 0;
 
-	while (combicurrent != o.lm.l[o.fg[filtergroup]->banned_phrase_list]->combilist.end()) {
+	while (combicurrent != o.lm.l[phraselist]->combilist.end()) {
 		// Grab the current combination phrase part
 		index = *combicurrent;
 		// Do stuff if what we have is an end marker (end of one list of parts)
@@ -607,13 +613,13 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 				type = *(++combicurrent);
 				// check this time limit against the list of time limits
 				time = *(++combicurrent);
-				if (not (o.lm.l[o.fg[filtergroup]->banned_phrase_list]->checkTimeAtD(time))) {
+				if (not (o.lm.l[phraselist]->checkTimeAtD(time))) {
 					// nope - so don't take any notice of it
 #ifdef DGDEBUG
 					combicurrent++;
 					cat = (*++combicurrent);
 					std::cout << "Ignoring combi phrase based on time limits: " << combisofar << "; "
-						<< o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat) << std::endl;
+						<< o.lm.l[phraselist]->getListCategoryAtD(cat) << std::endl;
 #else
 					combicurrent += 2;
 #endif
@@ -622,13 +628,14 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 				else if (type == -1) {	// combination exception
 					isItNaughty = false;
 					isException = true;
-					whatIsNaughtyLog = o.language_list.getTranslation(605);
 					// Combination exception phrase found:
+					// Combination exception search term found:
+					whatIsNaughtyLog = o.language_list.getTranslation(searchterms ? 456 : 605);
 					whatIsNaughtyLog += combisofar;
 					whatIsNaughty = "";
 					++combicurrent;
 					cat = *(++combicurrent);
-					whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat);
+					whatIsNaughtyCategories = o.lm.l[phraselist]->getListCategoryAtD(cat);
 					return;
 				}
 				else if (type == 1) {	// combination weighting
@@ -643,7 +650,7 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 							if (catcurrent != listcategories.end()) {
 								catcurrent->second.weight += weight * (o.weighted_phrase_mode == 2 ? 1 : lowest_occurrences);
 							} else {
-								currcat = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat);
+								currcat = o.lm.l[phraselist]->getListCategoryAtD(cat);
 								listcategories[cat] = listent(weight,currcat);
 							}
 						}
@@ -677,7 +684,7 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 					combisofar = "";
 					combicurrent += 2;
 					cat = *(combicurrent);
-					bannedcategory = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAtD(cat);
+					bannedcategory = o.lm.l[phraselist]->getListCategoryAtD(cat);
 				}
 			} else {
 				// We had an end marker, but not all the parts so far were matched.
@@ -690,7 +697,7 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 			// We didn't get an end marker - just an individual part.
 			// If all parts in the current chain have been matched so far, look for this one as well.
 			if (allcmatched) {
-				s1 =(*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getItemAtInt(index);
+				s1 =o.lm.l[phraselist]->getItemAtInt(index);
 				if ((foundcurrent = found.find(s1)) == foundend) {
 					allcmatched = false;
 					combisofar = "";
@@ -717,31 +724,31 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 	foundcurrent = found.begin();
 	while (foundcurrent != foundend) {
 		// check time for current phrase
-		if (not o.lm.l[o.fg[filtergroup]->banned_phrase_list]->checkTimeAt(foundcurrent->second.first)) {
+		if (not o.lm.l[phraselist]->checkTimeAt(foundcurrent->second.first)) {
 #ifdef DGDEBUG
 			std::cout << "Ignoring phrase based on time limits: "
 				<< foundcurrent->first << ", "
-				<< (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(foundcurrent->second.first) << std::endl;
+				<< o.lm.l[phraselist]->getListCategoryAt(foundcurrent->second.first) << std::endl;
 #endif
 			foundcurrent++;
 			continue;
 		}
 		// 0=banned, 1=weighted, -1=exception, 2=combi, 3=weightedcombi
-		type = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getTypeAt(foundcurrent->second.first);
+		type = o.lm.l[phraselist]->getTypeAt(foundcurrent->second.first);
 		if (type == 0) {
 			// if we already found a combi ban, we don't need to know this stuff
 			if (!bannedcombi) {
 				isItNaughty = true;
 				bannedphrase = foundcurrent->first;
-				bannedcategory = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(foundcurrent->second.first, &cat);
+				bannedcategory = o.lm.l[phraselist]->getListCategoryAt(foundcurrent->second.first, &cat);
 			}
 		}
 		else if (type == 1) {
 			// found a weighted phrase - either add one lot of its score, or one lot for every occurrence, depending on phrase filtering mode
-			weight = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getWeightAt(foundcurrent->second.first) * (o.weighted_phrase_mode == 2 ? 1 : foundcurrent->second.second);
+			weight = o.lm.l[phraselist]->getWeightAt(foundcurrent->second.first) * (o.weighted_phrase_mode == 2 ? 1 : foundcurrent->second.second);
 			weighting += weight;
 			if (weight > 0) {
-				currcat = (*o.lm.l[(*o.fg[filtergroup]).banned_phrase_list]).getListCategoryAt(foundcurrent->second.first, &cat);
+				currcat = o.lm.l[phraselist]->getListCategoryAt(foundcurrent->second.first, &cat);
 				if (cat >= 0) {
 					//don't output duplicate categories
 					catcurrent = listcategories.find(cat);
@@ -767,18 +774,19 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 #ifdef DGDEBUG
 			std::cout << "found weighted phrase ("<< o.weighted_phrase_mode << "): "
 				<< foundcurrent->first << " x" << foundcurrent->second.second << " (per phrase: "
-				<< o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getWeightAt(foundcurrent->second.first)
+				<< o.lm.l[phraselist]->getWeightAt(foundcurrent->second.first)
 				<< ", calculated: " << weight << ")" << std::endl;
 #endif
 		}
 		else if (type == -1) {
 			isException = true;
 			isItNaughty = false;
-			whatIsNaughtyLog = o.language_list.getTranslation(604);
 			// Exception phrase found:
+			// Exception search term found:
+			whatIsNaughtyLog = o.language_list.getTranslation(searchterms ? 457 : 604);
 			whatIsNaughtyLog += foundcurrent->first;
 			whatIsNaughty = "";
-			whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_phrase_list]->getListCategoryAt(foundcurrent->second.first, NULL);
+			whatIsNaughtyCategories = o.lm.l[phraselist]->getListCategoryAt(foundcurrent->second.first, NULL);
 			return;  // no point in going further
 		}
 		foundcurrent++;
@@ -801,30 +809,35 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 
 	if (bannedcombi) {
 		isItNaughty = true;
-		whatIsNaughtyLog = o.language_list.getTranslation(400);
 		// Banned combination phrase found:
+		// Banned combination search term found:
+		whatIsNaughtyLog = o.language_list.getTranslation(searchterms ? 452: 400);
 		whatIsNaughtyLog += combifound;
-		whatIsNaughty = o.language_list.getTranslation(401);
 		// Banned combination phrase found.
+		// Banned combination search term found.
+		whatIsNaughty = o.language_list.getTranslation(searchterms ? 453 : 401);
 		whatIsNaughtyCategories = bannedcategory.toCharArray();
 		return;
 	}
 
 	if (isItNaughty) {
-		whatIsNaughtyLog = o.language_list.getTranslation(300);
-		// Banned Phrase found:
+		// Banned phrase found:
+		// Banned search term found:
+		whatIsNaughtyLog = o.language_list.getTranslation(searchterms ? 450 : 300);
 		whatIsNaughtyLog += bannedphrase;
-		whatIsNaughty = o.language_list.getTranslation(301);
 		// Banned phrase found.
+		// Banned search term found.
+		whatIsNaughty = o.language_list.getTranslation(searchterms ? 451 : 301);
 		whatIsNaughtyCategories = bannedcategory.toCharArray();
 		return;
 	}
 
-	if (weighting > (*o.fg[filtergroup]).naughtyness_limit) {
+	if (weighting > limit) {
 		isItNaughty = true;
-		whatIsNaughtyLog = o.language_list.getTranslation(402);
 		// Weighted phrase limit of
-		whatIsNaughtyLog += String((*o.fg[filtergroup]).naughtyness_limit).toCharArray();
+		// Weighted search term limit of
+		whatIsNaughtyLog = o.language_list.getTranslation(searchterms ? 454 : 402);
+		whatIsNaughtyLog += String(limit).toCharArray();
 		whatIsNaughtyLog += " : ";
 		whatIsNaughtyLog += String(weighting).toCharArray();
 		if (o.show_weighted_found) {
@@ -832,8 +845,9 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 			whatIsNaughtyLog += weightedphrase;
 			whatIsNaughtyLog += ")";
 		}
-		whatIsNaughty = o.language_list.getTranslation(403);
 		// Weighted phrase limit exceeded.
+		// Weighted search term limit exceeded.
+		whatIsNaughty = o.language_list.getTranslation(searchterms ? 455 : 403);
 		// Generate category list, sorted with highest scoring first.
 		bool nonempty = false;
 		bool belowthreshold = false;
@@ -894,20 +908,20 @@ void NaughtyFilter::checkphrase(char *file, off_t l, String *url, String *domain
 // check the document's PICS rating
 // when checkPICS is called we assume checkphrase has made the document lower case.
 // data must also have been NULL terminated.
-void NaughtyFilter::checkPICS(char *file)
+void NaughtyFilter::checkPICS(const char *file, unsigned int filtergroup)
 {
 	(*o.fg[filtergroup]).pics1.match(file);
 	if (!(*o.fg[filtergroup]).pics1.matched()) {
 		return;
 	}			// exit if not found
 	for (int i = 0; i < (*o.fg[filtergroup]).pics1.numberOfMatches(); i++) {
-		checkPICSrating((*o.fg[filtergroup]).pics1.result(i));  // pass on result for further
+		checkPICSrating((*o.fg[filtergroup]).pics1.result(i), filtergroup);  // pass on result for further
 		// tests
 	}
 }
 
 // the meat of the process 
-void NaughtyFilter::checkPICSrating(std::string label)
+void NaughtyFilter::checkPICSrating(std::string label, unsigned int filtergroup)
 {
 	(*o.fg[filtergroup]).pics2.match(label.c_str());
 	if (!(*o.fg[filtergroup]).pics2.matched()) {
@@ -933,55 +947,55 @@ void NaughtyFilter::checkPICSrating(std::string label)
 		}
 
 		if (service.contains("safesurf")) {
-			checkPICSratingSafeSurf(r);
+			checkPICSratingSafeSurf(r, filtergroup);
 			if (isItNaughty) {
 				return;
 			}
 		}
 		if (service.contains("evaluweb")) {
-			checkPICSratingevaluWEB(r);
+			checkPICSratingevaluWEB(r, filtergroup);
 			if (isItNaughty) {
 				return;
 			}
 		}
 		if (service.contains("microsys")) {
-			checkPICSratingCyberNOT(r);
+			checkPICSratingCyberNOT(r, filtergroup);
 			if (isItNaughty) {
 				return;
 			}
 		}
 		if (service.contains("icra")) {
-			checkPICSratingICRA(r);
+			checkPICSratingICRA(r, filtergroup);
 			if (isItNaughty) {
 				return;
 			}
 		}
 		if (service.contains("rsac")) {
-			checkPICSratingRSAC(r);
+			checkPICSratingRSAC(r, filtergroup);
 			if (isItNaughty) {
 				return;
 			}
 		}
 		if (service.contains("weburbia")) {
-			checkPICSratingWeburbia(r);
+			checkPICSratingWeburbia(r, filtergroup);
 			if (isItNaughty) {
 				return;
 			}
 		}
 		if (service.contains("vancouver")) {
-			checkPICSratingVancouver(r);
+			checkPICSratingVancouver(r, filtergroup);
 			if (isItNaughty) {
 				return;
 			}
 		}
 		if (service.contains("icec")) {
-			checkPICSratingICEC(r);
+			checkPICSratingICEC(r, filtergroup);
 			if (isItNaughty) {
 				return;
 			}
 		}
 		if (service.contains("safenet")) {
-			checkPICSratingSafeNet(r);
+			checkPICSratingSafeNet(r, filtergroup);
 			if (isItNaughty) {
 				return;
 			}
@@ -1018,17 +1032,17 @@ void NaughtyFilter::checkPICSagainstoption(String s, const char *l, int opt, std
 }
 
 // The next few functions are flippin' obvious so no explanation...
-void NaughtyFilter::checkPICSratingevaluWEB(String r)
+void NaughtyFilter::checkPICSratingevaluWEB(String r, unsigned int filtergroup)
 {
 	checkPICSagainstoption(r, "rating ", (*o.fg[filtergroup]).pics_evaluweb_rating, "evaluWEB age range");
 }
 
-void NaughtyFilter::checkPICSratingWeburbia(String r)
+void NaughtyFilter::checkPICSratingWeburbia(String r, unsigned int filtergroup)
 {
 	checkPICSagainstoption(r, "s ", (*o.fg[filtergroup]).pics_weburbia_rating, "Weburbia rating");
 }
 
-void NaughtyFilter::checkPICSratingCyberNOT(String r)
+void NaughtyFilter::checkPICSratingCyberNOT(String r, unsigned int filtergroup)
 {
 	checkPICSagainstoption(r, "sex ", (*o.fg[filtergroup]).pics_cybernot_sex, "CyberNOT sex rating");
 	if (isItNaughty) {
@@ -1038,12 +1052,12 @@ void NaughtyFilter::checkPICSratingCyberNOT(String r)
 }
 
 // Korean PICS
-void NaughtyFilter::checkPICSratingICEC(String r) {
+void NaughtyFilter::checkPICSratingICEC(String r, unsigned int filtergroup) {
     checkPICSagainstoption(r, "y ", (*o.fg[filtergroup]).pics_icec_rating, "ICEC rating");
 }
 
 // Korean PICS
-void NaughtyFilter::checkPICSratingSafeNet(String r) {
+void NaughtyFilter::checkPICSratingSafeNet(String r, unsigned int filtergroup) {
 	checkPICSagainstoption(r, "n ", (*o.fg[filtergroup]).pics_safenet_nudity, "SafeNet nudity");
 	if (isItNaughty) {return;}
 	checkPICSagainstoption(r, "s ", (*o.fg[filtergroup]).pics_safenet_sex, "SafeNet sex");
@@ -1057,7 +1071,7 @@ void NaughtyFilter::checkPICSratingSafeNet(String r) {
 	checkPICSagainstoption(r, "h ", (*o.fg[filtergroup]).pics_safenet_alcoholtobacco, "SafeNet alcohol tobacco");
 }
 
-void NaughtyFilter::checkPICSratingRSAC(String r)
+void NaughtyFilter::checkPICSratingRSAC(String r, unsigned int filtergroup)
 {
 	checkPICSagainstoption(r, "v ", (*o.fg[filtergroup]).pics_rsac_violence, "RSAC violence");
 	if (isItNaughty) {
@@ -1074,7 +1088,7 @@ void NaughtyFilter::checkPICSratingRSAC(String r)
 	checkPICSagainstoption(r, "l ", (*o.fg[filtergroup]).pics_rsac_language, "RSAC language");
 }
 
-void NaughtyFilter::checkPICSratingVancouver(String r)
+void NaughtyFilter::checkPICSratingVancouver(String r, unsigned int filtergroup)
 {
 	checkPICSagainstoption(r, "MC ", (*o.fg[filtergroup]).pics_vancouver_multiculturalism, "Vancouvermulticulturalism");
 	checkPICSagainstoption(r, "Edu ", (*o.fg[filtergroup]).pics_vancouver_educationalcontent, "Vancouvereducationalcontent");
@@ -1089,7 +1103,7 @@ void NaughtyFilter::checkPICSratingVancouver(String r)
 	checkPICSagainstoption(r, "Gam ", (*o.fg[filtergroup]).pics_vancouver_gambling, "Vancouvergambling");
 }
 
-void NaughtyFilter::checkPICSratingSafeSurf(String r)
+void NaughtyFilter::checkPICSratingSafeSurf(String r, unsigned int filtergroup)
 {
 	checkPICSagainstoption(r, "000 ", (*o.fg[filtergroup]).pics_safesurf_agerange, "Safesurf age range");
 	if (isItNaughty) {
@@ -1137,7 +1151,7 @@ void NaughtyFilter::checkPICSratingSafeSurf(String r)
 	}
 }
 
-void NaughtyFilter::checkPICSratingICRA(String r)
+void NaughtyFilter::checkPICSratingICRA(String r, unsigned int filtergroup)
 {
 	checkPICSagainstoption(r, "la ", (*o.fg[filtergroup]).pics_icra_languagesexual, "ICRA languagesexual");
 	if (isItNaughty) {

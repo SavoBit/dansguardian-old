@@ -87,7 +87,7 @@ exceptionfileurllist = '@DGCONFDIR@/lists/exceptionfileurllist'
 headerregexplist = '@DGCONFDIR@/lists/headerregexplist'
 bannedregexpheaderlist = '@DGCONFDIR@/lists/bannedregexpheaderlist'
 
-# Naughtyness limit
+# Naughtiness limit
 # This the limit over which the page will be blocked.  Each weighted phrase is given
 # a value either positive or negative and the values added up.  Phrases to do with
 # good subjects will have negative values, and bad subjects will have positive
@@ -95,6 +95,42 @@ bannedregexpheaderlist = '@DGCONFDIR@/lists/bannedregexpheaderlist'
 # As a guide:
 # 50 is for young children,  100 for old children,  160 for young adults.
 naughtynesslimit = 50
+
+# Search term blocking
+# Search terms can be extracted from search URLs and filtered using the
+# bannedphraselist, weightedphraselist and exceptionphraselist, with a separate
+# threshold for blocking than that used for normal page content.
+# To do this, the first two options below must be enabled.
+#
+# Search engine regular expression list
+# List of regular expressions for matching search engine URLs.  It is assumed
+# that the search terms themselves will be contained within the first submatch
+# of each expression.
+#searchengineregexplist = '@DGCONFDIR@/lists/searchengineregexplist'
+#
+# Search term limit
+# The limit over which requests will be blocked for containing search terms
+# which match the weightedphraselist.  This should usually be lower than the
+# 'naughtynesslimit' value above, because the amount of text being filtered
+# is only a few words, rather than a whole page.
+# This option must be uncommented if searchengineregexplist is uncommented.
+# A value of 0 here indicates that search terms should be extracted,
+# for logging/reporting purposes, but no filtering should be performed
+# on the resulting text.
+#searchtermlimit = 30
+#
+# Search term lists
+# If the three lines below are uncommented, search term blocking will use
+# the banned, weighted & exception phrases from these lists, instead of using
+# the same phrase lists as for page content.  This is optional but recommended,
+# as weights for individual phrases in the "normal" lists may not be
+# appropriate for blocking when those phrases appear in a much smaller block
+# of text.
+# Please note that all or none of the below should be uncommented, not a
+# mixture.
+#bannedsearchtermlist = '@DGCONFDIR@/lists/bannedsearchtermlist'
+#weightedsearchtermlist = '@DGCONFDIR@/lists/weightedsearchtermlist'
+#exceptionsearchtermlist = '@DGCONFDIR@/lists/exceptionsearchtermlist'
 
 # Category display threshold
 # This option only applies to pages blocked by weighted phrase filtering.

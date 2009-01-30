@@ -25,7 +25,6 @@
 
 #include "String.hpp"
 #include "OptionContainer.hpp"
-#include "DataBuffer.hpp"
 
 
 // DECLARATIONS
@@ -41,8 +40,6 @@ public:
 	// (related to category list thresholding)
 	bool usedisplaycats;
 
-	int filtergroup;
-	
 	// the reason for banning, what to say about it in the logs, and the
 	// categories under which banning has taken place
 	std::string whatIsNaughty;
@@ -52,7 +49,8 @@ public:
 
 	NaughtyFilter();
 	void reset();
-	void checkme(DataBuffer * body, String &url, String &domain);
+	void checkme(const char *rawbody, off_t rawbodylen, const String *url, const String *domain,
+		unsigned int filtergroup, unsigned int phraselist, int limit, bool searchterms = false);
 	
 	// highest positive (or lowest negative) weighting out of
 	// both phrase filtering passes (smart/raw)
@@ -63,23 +61,24 @@ private:
 	// pass in both URL & domain to activate embedded URL checking
 	// (this is made optional in this manner because it's pointless
 	// trying to look for links etc. in "smart" filtering mode, i.e.
-	// after HTML has been removed.)
-	void checkphrase(char *file, off_t l, String *url = NULL, String *domain = NULL);
+	// after HTML has been removed, and in search terms.)
+	void checkphrase(char *file, off_t filelen, const String *url, const String *domain,
+		unsigned int filtergroup, unsigned int phraselist, int limit, bool searchterms);
 	
 	// check PICS ratings
-	void checkPICS(char *file);
-	void checkPICSrating(std::string label);
-	void checkPICSratingSafeSurf(String r);
-	void checkPICSratingevaluWEB(String r);
-	void checkPICSratingCyberNOT(String r);
-	void checkPICSratingRSAC(String r);
-	void checkPICSratingICRA(String r);
-	void checkPICSratingWeburbia(String r);
-	void checkPICSratingVancouver(String r);
+	void checkPICS(const char *file, unsigned int filtergroup);
+	void checkPICSrating(std::string label, unsigned int filtergroup);
+	void checkPICSratingSafeSurf(String r, unsigned int filtergroup);
+	void checkPICSratingevaluWEB(String r, unsigned int filtergroup);
+	void checkPICSratingCyberNOT(String r, unsigned int filtergroup);
+	void checkPICSratingRSAC(String r, unsigned int filtergroup);
+	void checkPICSratingICRA(String r, unsigned int filtergroup);
+	void checkPICSratingWeburbia(String r, unsigned int filtergroup);
+	void checkPICSratingVancouver(String r, unsigned int filtergroup);
 
 	// new Korean stuff
-	void checkPICSratingICEC(String r);
-	void checkPICSratingSafeNet(String r);
+	void checkPICSratingICEC(String r, unsigned int filtergroup);
+	void checkPICSratingSafeNet(String r, unsigned int filtergroup);
 
 	void checkPICSagainstoption(String s, const char *l, int opt, std::string m);
 };

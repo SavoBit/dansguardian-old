@@ -51,6 +51,7 @@ public:
 private:
 	std::string *clienthost;
 	bool matchedip;
+	std::string urlparams;
 
 	// write a log entry containing the given data (if required)
 	void doLog(std::string &who, std::string &from, String &where, unsigned int &port,
@@ -67,7 +68,7 @@ private:
 	bool gotIPs(std::string ipstr);
 
 	// check the request header is OK (client host/user/IP allowed to browse, site not banned, upload not too big)
-	void requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld, std::string *clientip,
+	void requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld, String *url, std::string *clientip,
 		std::string *clientuser, int filtergroup, bool &isbanneduser, bool &isbannedip);
 
 	// strip the URL down to just the IP/hostname, then do an isIPHostname on the result

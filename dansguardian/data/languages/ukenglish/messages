@@ -8,13 +8,22 @@
 
 "200","The requested URL is malformed."
 
-"300","Banned Phrase found: "
+"300","Banned phrase found: "
 "301","Banned phrase found."
 
 "400","Banned combination phrase found: "
 "401","Banned combination phrase found."
 "402","Weighted phrase limit of "
 "403","Weighted phrase limit exceeded."
+
+"450","Banned search term term found: "
+"451","Banned search term found."
+"452","Banned combination search term found: "
+"453","Banned combination search term found."
+"454","Weighted search term limit of "
+"455","Weighted search term limit exceeded."
+"456","Exception combination search term found: "
+"457","Exception search term found: "
 
 "500","Banned site: "
 "501","Banned URL: "
