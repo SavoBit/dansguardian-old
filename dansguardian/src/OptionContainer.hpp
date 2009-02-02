@@ -50,7 +50,6 @@ public:
 	int log_exception_hits;
 	bool non_standard_delimiter;
 	int log_file_format;
-	int weighted_phrase_mode;
 	bool show_weighted_found;
 	bool forwarded_for;
 	bool createlistcachefiles;
@@ -175,6 +174,7 @@ private:
 	std::deque<std::string> conffile;
 	String conffilename;
 	int reporting_level;
+	int weighted_phrase_mode;
 
 	std::string html_template_location;
 	std::string group_names_list_location;

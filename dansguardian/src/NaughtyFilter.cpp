@@ -101,8 +101,13 @@ void NaughtyFilter::checkme(const char *rawbody, off_t rawbodylen, const String 
 			return;  // Well there is no point in continuing is there?
 	}
 	
-	if (o.weighted_phrase_mode == 0)
+	if (o.fg[filtergroup]->weighted_phrase_mode == 0)
+	{
+#ifdef DGDEBUG
+		std::cout << "Weighted phrase mode 0 - not going any further." << std::endl;
+#endif
 		return;
+	}
 	
 	// hex-decoded data (not case converted)
 	off_t hexdecodedlen = rawbodylen;
@@ -477,7 +482,7 @@ void NaughtyFilter::checkphrase(char *file, off_t filelen, const String *url, co
 					// we actually want these cleanups do be done before passing to inBanned*/inException* - this would
 					// speed up ConnectionHandler a bit too.
 					founditem = found.find(j);
-					if ((o.weighted_phrase_mode == 2) && (founditem != found.end())) {
+					if ((o.fg[filtergroup]->weighted_phrase_mode == 2) && (founditem != found.end())) {
 						founditem->second++;
 					} else {
 						// add the site to the found phrases list
@@ -547,7 +552,7 @@ void NaughtyFilter::checkphrase(char *file, off_t filelen, const String *url, co
 					// we actually want these cleanups do be done before passing to inBanned*/inException* - this would
 					// speed up ConnectionHandler a bit too.
 					founditem = found.find(j);
-					if ((o.weighted_phrase_mode == 2) && (founditem != found.end())) {
+					if ((o.fg[filtergroup]->weighted_phrase_mode == 2) && (founditem != found.end())) {
 						founditem->second++;
 					} else {
 						// add the site to the found phrases list
@@ -640,7 +645,7 @@ void NaughtyFilter::checkphrase(char *file, off_t filelen, const String *url, co
 				}
 				else if (type == 1) {	// combination weighting
 					weight = *(++combicurrent);
-					weighting += weight * (o.weighted_phrase_mode == 2 ? 1 : lowest_occurrences);
+					weighting += weight * (o.fg[filtergroup]->weighted_phrase_mode == 2 ? 1 : lowest_occurrences);
 					if (weight > 0) {
 						cat = *(++combicurrent);
 						//category index -1 indicates an uncategorised list
@@ -648,7 +653,7 @@ void NaughtyFilter::checkphrase(char *file, off_t filelen, const String *url, co
 							//don't output duplicate categories
 							catcurrent = listcategories.find(cat);
 							if (catcurrent != listcategories.end()) {
-								catcurrent->second.weight += weight * (o.weighted_phrase_mode == 2 ? 1 : lowest_occurrences);
+								catcurrent->second.weight += weight * (o.fg[filtergroup]->weighted_phrase_mode == 2 ? 1 : lowest_occurrences);
 							} else {
 								currcat = o.lm.l[phraselist]->getListCategoryAtD(cat);
 								listcategories[cat] = listent(weight,currcat);
@@ -668,10 +673,10 @@ void NaughtyFilter::checkphrase(char *file, off_t filelen, const String *url, co
 						weightedphrase += combisofar;
 					}
 #ifdef DGDEBUG
-					std::cout << "found combi weighted phrase ("<< o.weighted_phrase_mode << "): "
+					std::cout << "found combi weighted phrase ("<< o.fg[filtergroup]->weighted_phrase_mode << "): "
 						<< combisofar << " x" << lowest_occurrences << " (per phrase: "
 						<< weight << ", calculated: "
-						<< (weight * (o.weighted_phrase_mode == 2 ? 1 : lowest_occurrences)) << ")"
+						<< (weight * (o.fg[filtergroup]->weighted_phrase_mode == 2 ? 1 : lowest_occurrences)) << ")"
 						<< std::endl;
 #endif
 
@@ -745,7 +750,7 @@ void NaughtyFilter::checkphrase(char *file, off_t filelen, const String *url, co
 		}
 		else if (type == 1) {
 			// found a weighted phrase - either add one lot of its score, or one lot for every occurrence, depending on phrase filtering mode
-			weight = o.lm.l[phraselist]->getWeightAt(foundcurrent->second.first) * (o.weighted_phrase_mode == 2 ? 1 : foundcurrent->second.second);
+			weight = o.lm.l[phraselist]->getWeightAt(foundcurrent->second.first) * (o.fg[filtergroup]->weighted_phrase_mode == 2 ? 1 : foundcurrent->second.second);
 			weighting += weight;
 			if (weight > 0) {
 				currcat = o.lm.l[phraselist]->getListCategoryAt(foundcurrent->second.first, &cat);
@@ -754,7 +759,7 @@ void NaughtyFilter::checkphrase(char *file, off_t filelen, const String *url, co
 					catcurrent = listcategories.find(cat);
 					if (catcurrent != listcategories.end()) {
 						// add one or N times the weight to this category's score
-						catcurrent->second.weight += weight * (o.weighted_phrase_mode == 2 ? 1 : foundcurrent->second.second);
+						catcurrent->second.weight += weight * (o.fg[filtergroup]->weighted_phrase_mode == 2 ? 1 : foundcurrent->second.second);
 					} else {
 						listcategories[cat] = listent(weight,currcat);
 					}
@@ -772,7 +777,7 @@ void NaughtyFilter::checkphrase(char *file, off_t filelen, const String *url, co
 				weightedphrase += foundcurrent->first;
 			}
 #ifdef DGDEBUG
-			std::cout << "found weighted phrase ("<< o.weighted_phrase_mode << "): "
+			std::cout << "found weighted phrase ("<< o.fg[filtergroup]->weighted_phrase_mode << "): "
 				<< foundcurrent->first << " x" << foundcurrent->second.second << " (per phrase: "
 				<< o.lm.l[phraselist]->getWeightAt(foundcurrent->second.first)
 				<< ", calculated: " << weight << ")" << std::endl;

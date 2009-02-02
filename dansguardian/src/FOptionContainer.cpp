@@ -456,9 +456,15 @@ bool FOptionContainer::read(const char *filename)
 #endif
 			}
 
-			naughtyness_limit = findoptionI("naughtynesslimit");
-			if (!realitycheck(naughtyness_limit, 1, 0, "naughtynesslimit")) {
-				return false;
+			// Support weighted phrase mode per group
+			if (findoptionS("weightedphrasemode").length() > 0)
+			{
+				weighted_phrase_mode = findoptionI("weightedphrasemode");
+				if (!realitycheck(weighted_phrase_mode, 0, 3, "weightedphrasemode"))
+					return false;
+				naughtyness_limit = findoptionI("naughtynesslimit");
+				if (!realitycheck(naughtyness_limit, 1, 0, "naughtynesslimit"))
+					return false;
 			}
 
 			std::string exception_phrase_list_location(findoptionS("exceptionphraselist"));
@@ -610,13 +616,17 @@ bool FOptionContainer::read(const char *filename)
 			}		// download site exceptions
 			exception_file_url_flag = true;
 
-			if (!readbplfile(banned_phrase_list_location.c_str(),
-				exception_phrase_list_location.c_str(),
-				weighted_phrase_list_location.c_str(), banned_phrase_list))
+			if (weighted_phrase_mode > 0)
 			{
-				return false;
-			}		// read banned, exception, weighted phrase list
-			banned_phrase_flag = true;
+				if (!readbplfile(banned_phrase_list_location.c_str(),
+					exception_phrase_list_location.c_str(),
+					weighted_phrase_list_location.c_str(), banned_phrase_list))
+				{
+					return false;
+				}		// read banned, exception, weighted phrase list
+				banned_phrase_flag = true;
+			}
+			
 			if (!readFile(exceptions_site_list_location.c_str(),&exception_site_list,false,true,"exceptionsitelist")) {
 				return false;
 			}		// site exceptions
@@ -672,31 +682,34 @@ bool FOptionContainer::read(const char *filename)
 #ifdef DGDEBUG
 				std::cout << "Enabled search term extraction RegExp list" << std::endl;
 #endif
-				searchterm_limit = findoptionI("searchtermlimit");
-				if (!realitycheck(searchterm_limit, 0, 0, "searchtermlimit")) {
-					return false;
-				}
-
-				// Optionally override the normal phrase lists for search term blocking.
-				// We need all three lists to build a phrase tree, so fail if we encounter
-				// anything other than all three enabled/disabled simultaneously.
-				if (searchterm_limit > 0)
+				if (weighted_phrase_mode > 0)
 				{
-					std::string exception_searchterm_list_location(findoptionS("exceptionsearchtermlist"));
-					std::string weighted_searchterm_list_location(findoptionS("weightedsearchtermlist"));
-					std::string banned_searchterm_list_location(findoptionS("bannedsearchtermlist"));
-					if (!(exception_searchterm_list_location.length() == 0 &&
-						weighted_searchterm_list_location.length() == 0 &&
-						banned_searchterm_list_location.length() == 0))
+					searchterm_limit = findoptionI("searchtermlimit");
+					if (!realitycheck(searchterm_limit, 0, 0, "searchtermlimit")) {
+						return false;
+					}
+
+					// Optionally override the normal phrase lists for search term blocking.
+					// We need all three lists to build a phrase tree, so fail if we encounter
+					// anything other than all three enabled/disabled simultaneously.
+					if (searchterm_limit > 0)
 					{
-						// At least one is enabled - try to load all three.
-						if (!readbplfile(banned_searchterm_list_location.c_str(),
-							exception_searchterm_list_location.c_str(),
-							weighted_searchterm_list_location.c_str(), searchterm_list))
+						std::string exception_searchterm_list_location(findoptionS("exceptionsearchtermlist"));
+						std::string weighted_searchterm_list_location(findoptionS("weightedsearchtermlist"));
+						std::string banned_searchterm_list_location(findoptionS("bannedsearchtermlist"));
+						if (!(exception_searchterm_list_location.length() == 0 &&
+							weighted_searchterm_list_location.length() == 0 &&
+							banned_searchterm_list_location.length() == 0))
 						{
-							return false;
+							// At least one is enabled - try to load all three.
+							if (!readbplfile(banned_searchterm_list_location.c_str(),
+								exception_searchterm_list_location.c_str(),
+								weighted_searchterm_list_location.c_str(), searchterm_list))
+							{
+								return false;
+							}
+							searchterm_flag = true;
 						}
-						searchterm_flag = true;
 					}
 				}
 			}
@@ -843,18 +856,13 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 			syslog(LOG_ERR, "%s", "Error opening bannedphraselist");
 			return false;
 		}
-		if (weighted_phrase_mode > 0) {	// if zero wpl is deactivated
-#ifdef DGDEBUG
-			std::cout << "Reading weighted phrase list" << std::endl;
-#endif
-			result = (*o.lm.l[res]).readPhraseList(weighted, false);
-			if (!result) {
-				if (!is_daemonised) {
-					std::cerr << "Error opening weightedphraselist" << std::endl;
-				}
-				syslog(LOG_ERR, "%s", "Error opening weightedphraselist");
-				return false;
+		result = (*o.lm.l[res]).readPhraseList(weighted, false);
+		if (!result) {
+			if (!is_daemonised) {
+				std::cerr << "Error opening weightedphraselist" << std::endl;
 			}
+			syslog(LOG_ERR, "%s", "Error opening weightedphraselist");
+			return false;
 		}
 		if (!(*o.lm.l[res]).makeGraph(force_quick_search))
 			return false;
