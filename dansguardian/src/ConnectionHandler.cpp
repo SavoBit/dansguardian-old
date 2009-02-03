@@ -1736,6 +1736,12 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 			// search terms are URL parameter type "0"
 			urlparams.append("0=").append(terms).append(";");
 			if (o.fg[filtergroup]->searchterm_limit > 0) {
+				// Add spaces at beginning and end of block before filtering, so
+				// that the quick & dirty trick of putting spaces around words
+				// (Scunthorpe problem) can still be used, bearing in mind the block
+				// of text here is usually very small.
+				terms.insert(terms.begin(),' ');
+				terms.append(" ");
 				checkme->checkme(terms.c_str(), terms.length(), NULL, NULL, filtergroup,
 					(o.fg[filtergroup]->searchterm_flag ? o.fg[filtergroup]->searchterm_list : o.fg[filtergroup]->banned_phrase_list),
 					o.fg[filtergroup]->searchterm_limit, true);
