@@ -2007,7 +2007,7 @@ int fc_controlit()
 
 #ifdef ENABLE_SEGV_BACKTRACE
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = &sig_segv;
+	sa.sa_sigaction = &sig_segv;
 	sa.sa_flags = SA_SIGINFO;
 	if (sigaction(SIGSEGV, &sa, NULL)) {
 		syslog(LOG_ERR, "Error registering SIGSEGV handler");
