@@ -44,6 +44,7 @@
 
 #ifdef ENABLE_SEGV_BACKTRACE
 #include <execinfo.h>
+#include <ucontext.h>
 #endif
 
 #include "FatController.hpp"
@@ -100,7 +101,7 @@ extern "C"
 	void sig_usr1(int signo);  // This is so we know if we should re-read our config but not kill current connections
 	void sig_childterm(int signo);
 #ifdef ENABLE_SEGV_BACKTRACE
-	void sig_segv(int signo/*, siginfo_t* info, void* p*/); // Generate a backtrace on segfault
+	void sig_segv(int signo, siginfo_t *info, void *secret); // Generate a backtrace on segfault
 #endif
 }
 
@@ -189,18 +190,22 @@ extern "C"
 		_exit(0);
 	}
 #ifdef ENABLE_SEGV_BACKTRACE
-	void sig_segv(int signo)
+	void sig_segv(int signo, siginfo_t *info, void *secret)
 	{
 #ifdef DGDEBUG
 		std::cout << "SEGV received." << std::endl;
 #endif
+		// Extract "real" info about first stack frame
+		ucontext_t *uc = (ucontext_t *) secret;
+		syslog(LOG_ERR, "SEGV received: address %p, EIP %p", info->si_addr, uc->uc_mcontext.gregs[REG_EIP]);
 		// Generate backtrace
 		void *addresses[10];
 		char **strings;
 		int c = backtrace(addresses, 10);
 		strings = backtrace_symbols(addresses,c);
 		printf("backtrace returned: %d\n", c);
-		for (int i = 0; i < c; i++) {
+		// Skip first stack frame - it points to this signal handler
+		for (int i = 1; i < c; i++) {
 			syslog(LOG_ERR, "%d: %zX ", i, (size_t)addresses[i]);
 			syslog(LOG_ERR, "%s", strings[i]);
 		}
@@ -2003,6 +2008,7 @@ int fc_controlit()
 #ifdef ENABLE_SEGV_BACKTRACE
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &sig_segv;
+	sa.sa_flags = SA_SIGINFO;
 	if (sigaction(SIGSEGV, &sa, NULL)) {
 		syslog(LOG_ERR, "Error registering SIGSEGV handler");
 		return 1;
