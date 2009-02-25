@@ -810,6 +810,10 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		else if (outgoing && (phost == NULL) && i->startsWithLower("host:")) {
 			phost = &(*i);
 		}
+		// don't allow through multiple host headers
+		else if (outgoing && (phost != NULL) && i->startsWithLower("host:")) {
+			i->assign("X-DG-IgnoreMe: removed multiple host headers\r");
+		}
 		else if (outgoing && (puseragent == NULL) && i->startsWithLower("user-agent:")) {
 			puseragent = &(*i);
 		}
