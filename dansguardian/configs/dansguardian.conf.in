@@ -93,6 +93,12 @@ proxyip = 127.0.0.1
 # the port DansGuardian connects to proxy on
 proxyport = 3128
 
+# Whether to retrieve the original destination IP in transparent proxy
+# setups and check it against the domain pulled from the HTTP headers.
+# See http://www.kb.cert.org/vuls/id/435052
+# on (default) | off
+@ORIGIPSUPPORT@originalip = on
+
 # accessdeniedaddress is the address of your web server to which the cgi
 # dansguardian reporting script was copied. Only used in reporting levels 1 and 2.
 #

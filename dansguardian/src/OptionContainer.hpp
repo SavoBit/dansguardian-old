@@ -71,6 +71,9 @@ public:
 	int proxy_port;
 	std::string proxy_ip;
 	std::deque<String> filter_ip;
+#ifdef ENABLE_ORIG_IP
+	bool get_orig_ip;
+#endif
 	int ll;
 	int max_children;
 	int min_children;

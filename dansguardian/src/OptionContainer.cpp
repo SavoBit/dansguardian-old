@@ -371,6 +371,14 @@ bool OptionContainer::read(const char *filename, int type)
 			return false;
 		}
 
+#ifdef ENABLE_ORIG_IP
+		if (findoptionS("originalip") == "off") {
+			get_orig_ip = false;
+		} else {
+			get_orig_ip = true;
+		}
+#endif
+
 		ll = findoptionI("loglevel");
 		if (!realitycheck(ll, 0, 3, "loglevel")) {
 			return false;
