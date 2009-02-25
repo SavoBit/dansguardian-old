@@ -43,6 +43,11 @@
 #include <sys/stat.h>
 #include <istream>
 
+#ifdef ENABLE_ORIG_IP
+#include <linux/types.h>
+#include <linux/netfilter_ipv4.h>
+#endif
+
 
 // GLOBALS
 extern OptionContainer o;
@@ -660,8 +665,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				urldomain = url.after("//");
 			}
 
-			if (header.malformedURL(url)) {
-				// checks for bad URLs to prevent security hole
+			// checks for bad URLs to prevent security holes/domain obfuscation.
+			if (header.malformedURL(url))
+			{
 				try {	// writestring throws exception on error/timeout
 					peerconn.writeString("HTTP/1.0 400 Bad Request\nContent-Type: text/html\n\n<HTML><HEAD><TITLE>DansGuardian - 400 Bad Request</TITLE></HEAD><BODY><H1>DansGuardian - 400 Bad Request</H1> ");
 					peerconn.writeString(o.language_list.getTranslation(200));
@@ -692,6 +698,92 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			if (o.forwarded_for) {
 				header.addXForwardedFor(clientip);  // add squid-like entry
 			}
+
+#ifdef ENABLE_ORIG_IP
+			// if working in transparent mode and grabbing of original IP addresses is
+			// enabled, does the original IP address match one of those that the host
+			// we are going to resolves to?
+			// Resolves http://www.kb.cert.org/vuls/id/435052
+			if (o.get_orig_ip)
+			{
+				// XXX This will currently only work on Linux/Netfilter.
+				sockaddr_in origaddr;
+				socklen_t origaddrlen(sizeof(sockaddr_in));
+				// Note: we assume that for non-redirected connections, this getsockopt call will
+				// return the proxy server's IP, and not -1.  Hence, comparing the result with
+				// the return value of Socket::getLocalIP() should tell us that the client didn't
+				// connect transparently, and we can assume they aren't vulnerable.
+				if (getsockopt(peerconn.getFD(), SOL_IP, SO_ORIGINAL_DST, &origaddr, &origaddrlen) < 0)
+				{
+					syslog(LOG_ERR, "Failed to get client's original destination IP: %s", strerror(errno));
+					proxysock.close();
+					break;
+				}
+				std::string orig_dest_ip(inet_ntoa(origaddr.sin_addr));
+				if (orig_dest_ip == peerconn.getLocalIP())
+				{
+					// The destination IP before redirection is the same as the IP the
+					// client has actually been connected to - they aren't connecting transparently.
+#ifdef DGDEBUG
+					std::cout << "SO_ORIGINAL_DST and getLocalIP are equal; client not connected transparently" << std::endl;
+#endif
+				}
+				else
+				{
+					// Look up domain from request URL, and check orig IP against resolved IPs
+					addrinfo hints;
+					memset(&hints, 0, sizeof(hints));
+					hints.ai_family = AF_INET;
+					hints.ai_socktype = SOCK_STREAM;
+					hints.ai_protocol = IPPROTO_TCP;
+					addrinfo *results;
+					int result = getaddrinfo(urldomain.c_str(), NULL, &hints, &results);
+					if (result)
+					{
+						freeaddrinfo(results);
+						syslog(LOG_ERR, "Cannot resolve hostname for host header checks: %s", gai_strerror(errno));
+						proxysock.close();
+						break;
+					}
+					addrinfo *current = results;
+					bool matched = false;
+					while (current != NULL)
+					{
+						if (orig_dest_ip == inet_ntoa(((sockaddr_in*)(current->ai_addr))->sin_addr))
+						{
+#ifdef DGDEBUG
+							std::cout << urldomain << " matched to original destination of " << orig_dest_ip << std::endl;
+#endif
+							matched = true;
+							break;
+						}
+						current = current->ai_next;
+					}
+					freeaddrinfo(results);
+					if (!matched)
+					{
+						// Host header/URL said one thing, but the original destination IP said another.
+						// This is exactly the vulnerability we want to prevent.
+#ifdef DGDEBUG
+						std::cout << urldomain << " DID NOT MATCH original destination of " << orig_dest_ip << std::endl;
+#endif
+						syslog(LOG_ERR, "Destination host of %s did not match the original destination IP of %s", urldomain.c_str(), orig_dest_ip.c_str());
+						try {
+							// writestring throws exception on error/timeout
+							peerconn.writeString("HTTP/1.0 400 Bad Request\nContent-Type: text/html\n\n<HTML><HEAD><TITLE>DansGuardian - 400 Bad Request</TITLE></HEAD><BODY><H1>DansGuardian - 400 Bad Request</H1> ");
+							peerconn.writeString(o.language_list.getTranslation(200));
+							// The requested URL is malformed.
+							peerconn.writeString("</BODY></HTML>\n");
+						}
+						catch(std::exception & e) {
+						}
+						// close connection to proxy
+						proxysock.close();
+						break;
+					}
+				}
+			}
+#endif
 
 			if (header.isScanBypassURL(&url, (*o.fg[filtergroup]).magic.c_str(), clientip.c_str())) {
 #ifdef DGDEBUG
