@@ -100,7 +100,7 @@ public:
 	bool malformedURL(const String& url);
 	bool isPostUpload(Socket &peersock);
 	String getAuthType();
-	String url();
+	String url(bool withport = false);
 
 	// header modifications
 

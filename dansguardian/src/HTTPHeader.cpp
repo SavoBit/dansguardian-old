@@ -403,7 +403,8 @@ void HTTPHeader::removeEncoding(int newlen)
 // setURL Code originally from from Ton Gorter 2004
 void HTTPHeader::setURL(String &url) {
 	String hostname;
-	int port = 80;
+	bool https = (url.before("://") == "https");
+	int port = (https ? 443 : 80);
 
 	if (!url.after("://").contains("/")) {
 		url += "/";
@@ -415,7 +416,7 @@ void HTTPHeader::setURL(String &url) {
 	if (hostname.contains(":")) {
 		port = hostname.after(":").toInteger();
 		if (port == 0 || port > 65535) {
-			port = 80;
+			port = (https ? 443 : 80);
 		}
 		hostname = hostname.before(":");  // chop off the port bit
 	}
@@ -423,7 +424,11 @@ void HTTPHeader::setURL(String &url) {
 #ifdef DGDEBUG
 	std::cout << "setURL: header.front() changed from: " << header.front() << std::endl;
 #endif
-	header.front() = header.front().before(" ") + " " + url + " " + header.front().after(" ").after(" ");
+	if (!https)
+		header.front() = header.front().before(" ") + " " + url + " " + header.front().after(" ").after(" ");
+	else
+		// Should take form of "CONNECT example.com:443 HTTP/1.0" for SSL
+		header.front() = header.front().before(" ") + " " + hostname + ":" + String(port) + " " + header.front().after(" ").after(" ");
 #ifdef DGDEBUG
 	std::cout << " to: " << header.front() << std::endl;
 #endif
@@ -432,7 +437,13 @@ void HTTPHeader::setURL(String &url) {
 #ifdef DGDEBUG
 		std::cout << "setURL: header[] line changed from: " << (*phost) << std::endl;
 #endif
-		(*phost) = String("Host: ") + hostname; (*phost) += ":"; (*phost) += port; (*phost) += "\r";
+		(*phost) = String("Host: ") + hostname;
+		if (port != (https ? 443 : 80))
+		{
+			(*phost) += ":";
+			(*phost) += String(port);
+		}
+		(*phost) += "\r";
 #ifdef DGDEBUG
 		std::cout << " to " << (*phost) << std::endl;
 #endif
@@ -441,7 +452,7 @@ void HTTPHeader::setURL(String &url) {
 #ifdef DGDEBUG
 		std::cout << "setURL: header[] line changed from: " << (*pport) << std::endl;
 #endif
-		(*pport) = String("Port: ") + port + "\r";
+		(*pport) = String("Port: ") + String(port) + "\r";
 #ifdef DGDEBUG
 		std::cout << " to " << (*pport) << std::endl;
 #endif
@@ -590,6 +601,8 @@ bool HTTPHeader::malformedURL(const String& url)
 #endif
 		return true;
 	}
+	if (host.contains(":"))
+		host = host.before(":");
 	if (host.contains("..") || host.endsWith(".")) {
 #ifdef DGDEBUG
 		std::cout << "double dots in domain name" << std::endl;
@@ -878,28 +891,10 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		header.push_back("Proxy-Connection: Keep-Alive\r");
 		pproxyconnection = &(header.back());
 	}
-	// Change the URL to contain no ending dots, for the sake of
-	// not having to tweak the domain and URL matching code -
-	// otherwise, all we've done is introduced a very simple way
-	// to get around the filter...
-	// Could conceivably cause problems in situations where the
-	// ending dot is absolutely necessary, but these must be
-	// incredibly rare in the wild, surely?
-	String ourl(header[0].after(" ").before(" "));
-	String host(ourl.after("://"));
-	if (host.contains("/"))
-		host = host.before("/");
-	String port;
-	if (host.contains(":")) {
-		port = ":" + host.after(":");
-		host = host.before(":");
-	}
-	if (host.endsWith(".")) {
-#ifdef DGDEBUG
-		std::cout << "ending dot in domain name - stripping..." << std::endl;
-#endif
-		host.chop();
-		String newurl(ourl.before("/") + "//" + host + port + "/" + ourl.after("//").after("/"));
+	// Normalise request headers (fix host, port, first line of header, etc. to all be consistent)
+	if (outgoing)
+	{
+		String newurl(url(true));
 		setURL(newurl);
 	}
 }
@@ -914,11 +909,15 @@ void HTTPHeader::checkheader(bool allowpersistent)
 //  CONNECT foo.bar:443  HTTP/1.1
 // So we need to handle all 3
 
-String HTTPHeader::url()
+String HTTPHeader::url(bool withport)
 {
-	if (cachedurl.length() > 0)
+	// Version of URL *with* port is not cached,
+	// as vast majority of our code doesn't like
+	// port numbers in URLs.
+	if (cachedurl.length() > 0 && !withport)
 		return cachedurl;
-	port = 0;
+	port = 80;
+	bool https = false;
 	String hostname;
 	String answer(header.front().after(" "));
 	answer.removeMultiChar(' ');
@@ -928,30 +927,37 @@ String HTTPHeader::url()
 		answer = answer.before(" http/");  // just in case!
 	}
 	if (requestType() == "CONNECT") {
+		https = true;
+		port = 443;
 		if (!answer.startsWith("https://")) {
 			answer = "https://" + answer;
 		}
+	}
+	if (pport != NULL) {
+		port = pport->after(" ").toInteger();
+		if (port == 0 || port > 65535)
+			port = (https ? 443 : 80);
 	}
 	if (answer.length()) {
 		if (answer[0] == '/') {	// must be the latter above
 			if (phost != NULL) {
 				hostname = phost->after(" ");
-				if (hostname.contains(":")) {
-					hostname = hostname.before(":");  // chop off the port bit but it should never be there
+				hostname.removeWhiteSpace();
+				if (hostname.contains(":"))
+				{
+					port = hostname.after(":").toInteger();
+					if (port == 0 || port > 65535) {
+						port = (https ? 443 : 80);
+					}
+					hostname = hostname.before(":");
 				}
-				hostname.removeWhiteSpace();  // remove rubbish like
-				// ^M and blanks
+				while (hostname.endsWith("."))
+					hostname.chop();
+				if (withport && (port != (https ? 443 : 80)))
+					hostname += ":" + String(port);
 				hostname = "http://" + hostname;
 				answer = hostname + answer;
 			}
-			if (pport != NULL) {
-				port = pport->after(" ").toInteger();
-				if (port == 0 || port > 65535) {
-					port = 80;
-				}
-			}
-			if (port == 0)
-				port = 80;
 			// Squid doesn't like requests in this format. Work around the fact.
 			header.front() = requestType() + " " + answer + " HTTP/" + header.front().after(" HTTP/");
 		} else {	// must be in the form GET http://foo.bar:80/ HTML/1.0
@@ -972,10 +978,14 @@ String HTTPHeader::url()
 			if (hostname.contains(":")) {
 				port = hostname.after(":").toInteger();
 				if (port == 0 || port > 65535) {
-					port = 80;
+					port = (https ? 443 : 80);
 				}
 				hostname = hostname.before(":");  // chop off the port bit
 			}
+			while (hostname.endsWith("."))
+				hostname.chop();
+			if (withport && (port != (https ? 443 : 80)))
+				hostname += ":" + String(port);
 			answer = protocol + "://" + hostname + url;
 		}
 	}
@@ -985,7 +995,10 @@ String HTTPHeader::url()
 #ifdef DGDEBUG
 	std::cout << "from header url:" << answer << std::endl;
 #endif
-	cachedurl = answer.toCharArray();
+	// Don't include port numbers in the URL in the cached version.
+	// Most of the code only copes with URLs *without* port specifiers.
+	if (!withport)
+		cachedurl = answer.toCharArray();
 	return answer;
 }
 
