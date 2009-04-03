@@ -1741,12 +1741,12 @@ bool ListContainer::readTimeTag(String * tag, TimeLimit& tl)
 // included lists don't have their own ListContainer, so time limits are stored differently.
 bool ListContainer::isNow(int index)
 {
+	if (!istimelimited) {
+		return true;
+	}
 	TimeLimit& tl = listtimelimit;
 	if (index > -1) {
 		tl = timelimits[index];
-	}
-	if (!istimelimited) {
-		return true;
 	}
 	time_t tnow;  // to hold the result from time()
 	struct tm *tmnow;  // to hold the result from localtime()
