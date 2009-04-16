@@ -196,14 +196,22 @@ extern "C"
 #endif
 		// Extract "real" info about first stack frame
 		ucontext_t *uc = (ucontext_t *) secret;
+#ifdef REG_EIP
 		syslog(LOG_ERR, "SEGV received: memory address %p, EIP %p", info->si_addr, (void *)(uc->uc_mcontext.gregs[REG_EIP]));
+#else
+		syslog(LOG_ERR, "SEGV received: memory address %p, RIP %p", info->si_addr, (void *)(uc->uc_mcontext.gregs[REG_RIP]));
+#endif
 		// Generate backtrace
 		void *addresses[10];
 		char **strings;
 		int c = backtrace(addresses, 10);
 		// Overwrite call to sigaction with caller's address
 		// to give a more useful backtrace
+#ifdef REG_EIP
 		addresses[1] = (void *)(uc->uc_mcontext.gregs[REG_EIP]);
+#else
+		addresses[1] = (void *)(uc->uc_mcontext.gregs[REG_RIP]);
+#endif
 		strings = backtrace_symbols(addresses,c);
 		printf("backtrace returned: %d\n", c);
 		// Skip first stack frame - it points to this signal handler
