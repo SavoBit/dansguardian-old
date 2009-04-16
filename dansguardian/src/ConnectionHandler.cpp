@@ -1210,7 +1210,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					// redirect user to URL with GBYPASS parameter no longer appended
 					docheader.header[0] = "HTTP/1.0 302 Redirect";
 					String loc("Location: ");
-					loc += header.url();
+					loc += header.url(true);
 					docheader.header.push_back(loc);
 					docheader.setContentLength(0);
 					docheader.makePersistent(false);
@@ -2086,8 +2086,9 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 						// only going to be happening if the unsafe trickle
 						// buffer method is used and we want the download to be
 						// broken we don't mind too much
+						String fullurl = header->url(true);
 						o.fg[filtergroup]->getHTMLTemplate()->display(peerconn,
-							url, (*checkme).whatIsNaughty, (*checkme).whatIsNaughtyLog,
+							&fullurl, (*checkme).whatIsNaughty, (*checkme).whatIsNaughtyLog,
 							// grab either the full category list or the thresholded list
 							(checkme->usedisplaycats ? checkme->whatIsNaughtyDisplayCategories : checkme->whatIsNaughtyCategories),
 							clientuser, clientip, clienthost, filtergroup, hashed);
