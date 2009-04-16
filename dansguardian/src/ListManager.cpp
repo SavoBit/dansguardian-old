@@ -105,6 +105,12 @@ int ListManager::newItemList(const char *filename, bool startswith, int filters,
 			// this upToDate check also checks all .Included files
 			if ((*l[i]).upToDate()) {
 				(*l[i]).refcount++;
+				// need to also increment ref counts on child lists -
+				// they are up to date, and would be re-used if we were to go
+				// down and call newItemList for all .Include statements in
+				// the parent, but that never happends if we're reusing stuff.
+				for (size_t j = 0; j < l[i]->morelists.size(); ++j)
+					l[l[i]->morelists[j]]->refcount++;
 #ifdef DGDEBUG
 				std::cout << "Using previous item: " << i << " " << filename << std::endl;
 				std::cout << "refcount: " << l[i]->refcount << std::endl;
