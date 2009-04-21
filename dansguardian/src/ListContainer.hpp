@@ -67,7 +67,7 @@ public:
 
 	void reset();
 
-	bool readPhraseList(const char *filename, bool isexception, int catindex = -1, int timeindex = -1);
+	bool readPhraseList(const char *filename, bool isexception, int catindex = -1, int timeindex = -1, bool incref = true);
 	bool readItemList(const char *filename, bool startswith, int filters);
 
 	bool inList(const char *string);

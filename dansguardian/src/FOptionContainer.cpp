@@ -96,7 +96,7 @@ void FOptionContainer::reset()
 	if (log_site_flag) o.lm.deRefList(log_site_list);
 	if (log_url_flag) o.lm.deRefList(log_url_list);
 	if (log_regexpurl_flag) o.lm.deRefList(log_regexpurl_list);
-	if (searchengine_regexp_flag) o.lm.deRefList(searchengine_regexp_flag);
+	if (searchengine_regexp_flag) o.lm.deRefList(searchengine_regexp_list);
 
 	banned_phrase_flag = false;
 	searchterm_flag = false;
@@ -848,7 +848,7 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 			return false;
 		}
 
-		result = (*o.lm.l[res]).readPhraseList(banned, false);
+		result = (*o.lm.l[res]).readPhraseList(banned, false, -1, -1, false);
 		if (!result) {
 			if (!is_daemonised) {
 				std::cerr << "Error opening bannedphraselist" << std::endl;
@@ -856,7 +856,7 @@ bool FOptionContainer::readbplfile(const char *banned, const char *exception, co
 			syslog(LOG_ERR, "%s", "Error opening bannedphraselist");
 			return false;
 		}
-		result = (*o.lm.l[res]).readPhraseList(weighted, false);
+		result = (*o.lm.l[res]).readPhraseList(weighted, false, -1, -1, false);
 		if (!result) {
 			if (!is_daemonised) {
 				std::cerr << "Error opening weightedphraselist" << std::endl;

@@ -59,7 +59,7 @@ extern OptionContainer o;
 // IMPLEMENTATION
 
 // Constructor - set default values
-ListContainer::ListContainer():refcount(1), parent(false), filedate(0), used(false), bannedpfiledate(0), exceptionpfiledate(0), weightedpfiledate(0),
+ListContainer::ListContainer():refcount(0), parent(false), filedate(0), used(false), bannedpfiledate(0), exceptionpfiledate(0), weightedpfiledate(0),
 	blanketblock(false), blanket_ip_block(false), blanketsslblock(false), blanketssl_ip_block(false),
 	sourceisexception(false), sourcestartswith(false), sourcefilters(0), data(NULL), realgraphdata(NULL), maxchildnodes(0), graphitems(0),
 	data_length(0), data_memory(0), items(0), isSW(false), issorted(false), graphused(false), force_quick_search(false),
@@ -79,8 +79,20 @@ void ListContainer::reset()
 	free(data);
 	if (graphused)
 		free(realgraphdata);
-	for (unsigned int i = 0; i < morelists.size(); i++) {
-		o.lm.deRefList(morelists[i]);
+	// dereference this and included lists
+	// - but not if the reason we're being
+	// deleted is due to deletion (this will
+	// only happen due to list garbage
+	// collection, at which point the list
+	// ref should already be zero)
+	if (refcount > 0)
+	{
+		--refcount;
+#if DGDEBUG
+		std::cout << "de-reffing " << sourcefile << " due to manual list reset, refcount: " << refcount << std::endl;
+#endif
+		for (size_t i = 0; i < morelists.size(); ++i)
+			o.lm.deRefList(morelists[i]);
 	}
 	data = NULL;
 	realgraphdata = NULL;
@@ -134,8 +146,12 @@ bool ListContainer::previousUseItem(const char *filename, bool startswith, int f
 
 // for phrase lists - read in the given file, which may be an exception list
 // inherit category and time limits from parent
-bool ListContainer::readPhraseList(const char *filename, bool isexception, int catindex, int timeindex)
+bool ListContainer::readPhraseList(const char *filename, bool isexception, int catindex, int timeindex, bool incref)
 {
+	// only increment refcount on first read, not read of included files
+	// (includes get amalgamated, unlike item lists)
+	if (incref)
+		++refcount;
 	sourcefile = filename;
 	sourceisexception = isexception;
 	std::string linebuffer;  // a string line buffer ;)
@@ -186,7 +202,7 @@ bool ListContainer::readPhraseList(const char *filename, bool isexception, int c
 			else if (line.startsWith(".")) {
 				temp = line.after(".include<").before(">");
 				if (temp.length() > 0) {
-					if (!readPhraseList(temp.toCharArray(), isexception, catindex, timeindex)) {
+					if (!readPhraseList(temp.toCharArray(), isexception, catindex, timeindex, false)) {
 						listfile.close();
 						return false;
 					}
@@ -343,6 +359,7 @@ bool ListContainer::addToItemListPhrase(const char *s, size_t len, int type, int
 // for item lists - read item list from file. checkme - what is startswith? is it used? what is filters?
 bool ListContainer::readItemList(const char *filename, bool startswith, int filters)
 {
+	++refcount;
 #ifdef DGDEBUG
 	if (filters != 32)
 		std::cout << "Converting to lowercase" << std::endl;

@@ -48,22 +48,6 @@ ListManager::~ListManager()
 	}
 }
 
-// reduce the reference count on the given list identifier
-void ListManager::deRefList(unsigned int item)
-{
-#ifdef DGDEBUG
-	std::cout << "de-reffing: " << item << std::endl;
-#endif
-
-	if ((item + 1) > l.size()) {
-		return;  // should only happen if when a list was generated
-		// there was a problem so the list ref is bad
-	}
-	if (l[item] != NULL) {
-		(*l[item]).refcount--;
-	}
-}
-
 // find an unused list in our collection of lists
 int ListManager::findNULL()
 {
@@ -94,27 +78,40 @@ void ListManager::garbageCollect()
 	}
 }
 
+void ListManager::deRefList(size_t i)
+{
+	l[i]->refcount--;
+#ifdef DGDEBUG
+	std::cout << "de-referencing list ref: " << i << ", refcount: " << l[i]->refcount << " (" << l[i]->sourcefile << ")" << std::endl;
+#endif
+	for (size_t j = 0; j < l[i]->morelists.size(); ++j)
+		deRefList(l[i]->morelists[j]);
+}
+
+void ListManager::refList(size_t i)
+{
+	l[i]->refcount++;
+#ifdef DGDEBUG
+	std::cout << "referencing list ref: " << i << ", refcount: " << l[i]->refcount << " (" << l[i]->sourcefile << ")" << std::endl;
+#endif
+	for (size_t j = 0; j < l[i]->morelists.size(); ++j)
+		refList(l[i]->morelists[j]);
+}
+
 // load the given list, or increase refcount on list if it's already been loaded.
 int ListManager::newItemList(const char *filename, bool startswith, int filters, bool parent)
 {
-	for (unsigned int i = 0; i < l.size(); i++) {
+	for (size_t i = 0; i < l.size(); i++) {
 		if (l[i] == NULL) {
 			continue;
 		}
 		if ((*l[i]).previousUseItem(filename, startswith, filters)) {
 			// this upToDate check also checks all .Included files
 			if ((*l[i]).upToDate()) {
-				(*l[i]).refcount++;
-				// need to also increment ref counts on child lists -
-				// they are up to date, and would be re-used if we were to go
-				// down and call newItemList for all .Include statements in
-				// the parent, but that never happends if we're reusing stuff.
-				for (size_t j = 0; j < l[i]->morelists.size(); ++j)
-					l[l[i]->morelists[j]]->refcount++;
 #ifdef DGDEBUG
 				std::cout << "Using previous item: " << i << " " << filename << std::endl;
-				std::cout << "refcount: " << l[i]->refcount << std::endl;
 #endif
+				refList(i);
 				return i;
 			}
 		}
@@ -147,7 +144,7 @@ int ListManager::newPhraseList(const char *exception, const char *banned, const 
 	time_t bannedpfiledate = getFileDate(banned);
 	time_t exceptionpfiledate = getFileDate(exception);
 	time_t weightedpfiledate = getFileDate(weighted);
-	for (unsigned int i = 0; i < l.size(); i++) {
+	for (size_t i = 0; i < l.size(); i++) {
 		if (l[i] == NULL) {
 			continue;
 		}
@@ -160,11 +157,10 @@ int ListManager::newPhraseList(const char *exception, const char *banned, const 
 				//so when phrases read in in list container it needs to store
 				//all the file names and if a single one has changed needs a
 				//complete regenerate
-				(*l[i]).refcount++;
 #ifdef DGDEBUG
 				std::cout << "Using previous phrase: " << exception << " - " << banned << " - " << weighted << std::endl;
-				std::cout << "refcount: " << l[i]->refcount << std::endl;
 #endif
+				refList(i);
 				return i;
 			}
 		}

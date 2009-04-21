@@ -48,14 +48,16 @@ public:
 	// does not call readPhraseList. (checkme: why?)
 	int newPhraseList(const char *exception, const char *banned, const char *weighted);
 	
-	// reduce the reference count on a list
-	void deRefList(unsigned int item);
+	void deRefList(size_t item);
+	
 	// delete lists with refcount zero
 	void garbageCollect();
 
 private:
 	// find an empty slot in our collection of listcontainters
 	int findNULL();
+	
+	void refList(size_t item);
 };
 
 #endif
