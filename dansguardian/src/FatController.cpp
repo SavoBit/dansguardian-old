@@ -729,11 +729,14 @@ void deletechild(int child_pid)
 		if (childrenpids[i] == child_pid) {
 			childrenpids[i] = -1;
 			// Delete a busy child
-			if (childrenstates[i] > 1)
+			if (childrenstates[i] == 1)
 				busychildren--;
 			// Delete a child which isn't "ready" yet
 			if (childrenstates[i] == 4)
+			{
+				busychildren--;
 				waitingfor--;
+			}
 			// Common code for any non-"culled" child
 			if (childrenstates[i] != -2) {
 				numchildren--;
