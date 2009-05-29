@@ -92,6 +92,7 @@ public:
 	bool use_filter_groups_list;
 	bool use_group_names_list;
 	bool auth_needs_proxy_query;
+	bool prefer_cached_lists;
 
 	std::string languagepath;
 	std::string filter_groups_list_location;
@@ -102,6 +103,15 @@ public:
 	std::string urlipc_filename;
 	std::string ipipc_filename;
 	std::string pid_filename;
+
+	// Hardware/organisation/etc. IDs
+	std::string logid_1;
+	std::string logid_2;
+
+#ifdef SG_LOGFORMAT
+	// Product ID
+	std::string prod_id;
+#endif
 
 	bool no_daemon;
 	bool no_logger;

@@ -408,6 +408,20 @@ bool OptionContainer::read(const char *filename, int type)
 			log_user_agent = false;
 		}
 
+		logid_1.assign(findoptionS("logid1"));
+		if (logid_1.empty())
+			logid_1.assign("-");
+		logid_2.assign(findoptionS("logid2"));
+		if (logid_2.empty())
+			logid_2.assign("-");
+
+#ifdef SG_LOGFORMAT
+		prod_id.assign(findoptionS("productid"));
+		if (prod_id.empty())
+			// SG '08
+			prod_id.assign("2");
+#endif
+
 		if (findoptionS("showweightedfound") == "on") {
 			show_weighted_found = true;
 		} else {
@@ -574,6 +588,11 @@ bool OptionContainer::read(const char *filename, int type)
 		} else {
 			use_group_names_list = true;
 		}
+
+		if (findoptionS("prefercachedlists") == "on")
+			prefer_cached_lists = true;
+		else
+			prefer_cached_lists = false;
 
 		if (!exception_ip_list.readIPMelangeList(exception_ip_list_location.c_str()))
 		{

@@ -373,20 +373,21 @@ bool ListContainer::readItemList(const char *filename, bool startswith, int filt
 #ifdef DGDEBUG
 	std::cout << filename << std::endl;
 #endif
-	if (isCacheFileNewer(filename)) {	// see if cached .process file
-		linebuffer = filename;  //         is available and up to date
+	// see if cached .process file is available and up to date,
+	// or prefercachedlists has been turned on (SG)
+	struct stat s;
+	if ((o.prefer_cached_lists && stat(std::string(linebuffer).append(".processed").c_str(), &s) == 0)
+		|| isCacheFileNewer(filename))
+	{
+		linebuffer = filename;
 		linebuffer += ".processed";
 
-		if (getFileLength(linebuffer.c_str()) >= 4000) {
-			// don't bother with small files
-			if (!readProcessedItemList(linebuffer.c_str(), startswith, filters)) {	// read cached
-				return false;
-			}
-			filedate = getFileDate(linebuffer.c_str());
-			issorted = true;  // don't bother sorting cached file
-			return true;
-
-		}
+		// read cached
+		if (!readProcessedItemList(linebuffer.c_str(), startswith, filters))
+			return false;
+		filedate = getFileDate(linebuffer.c_str());
+		issorted = true;  // don't bother sorting cached file
+		return true;
 	}
 	filedate = getFileDate(filename);
 	size_t len = 0;
