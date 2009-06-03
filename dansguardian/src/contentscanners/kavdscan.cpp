@@ -25,6 +25,8 @@
 	#include "dgconfig.h"
 #endif
 
+#include "../String.hpp"
+
 #include "../ContentScanner.hpp"
 #include "../UDSocket.hpp"
 #include "../OptionContainer.hpp"
@@ -50,7 +52,7 @@ class kavdinstance:public CSPlugin
 public:
 	kavdinstance(ConfigVar & definition):CSPlugin(definition) {};
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *filename);
+		const char *ip, const char *filename, NaughtyFilter * checkme);
 
 	int init(void* args);
 
@@ -100,7 +102,7 @@ int kavdinstance::init(void* args)
 // a file name to scan.  So we save the memory to disk and pass that.
 // Then delete the temp file.
 int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-	const char *ip, const char *filename)
+	const char *ip, const char *filename, NaughtyFilter * checkme)
 {
 	lastvirusname = lastmessage = "";
 	// mkstemp seems to only set owner permissions, so our AV daemon won't be
@@ -201,7 +203,9 @@ int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 		std::cout << "lastvirusname: " << lastvirusname << std::endl;
 		delete[]buff;
 		stripedsocks.close();
+		
 		// format: 322 nastyvirus blah
+		blockFile(NULL,NULL,checkme);
 		return DGCS_INFECTED;
 	}
 	delete[]buff;

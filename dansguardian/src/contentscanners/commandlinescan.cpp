@@ -23,6 +23,8 @@
 	#include "dgconfig.h"
 #endif
 
+#include "../String.hpp"
+
 #include "../ContentScanner.hpp"
 #include "../UDSocket.hpp"
 #include "../OptionContainer.hpp"
@@ -53,7 +55,7 @@ public:
 		submatch(0), arguments(NULL), numarguments(0), infectedcodes(NULL), numinfectedcodes(0),
 		cleancodes(NULL), numcleancodes(0), defaultresult(-1) {};
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *filename);
+		const char *ip, const char *filename, NaughtyFilter * checkme);
 
 	int init(void* args);
 
@@ -246,7 +248,7 @@ int commandlineinstance::init(void* args)
 // a file name to scan.  So we save the memory to disk and pass that.
 // Then delete the temp file.
 int commandlineinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-	const char *ip, const char *filename)
+	const char *ip, const char *filename, NaughtyFilter * checkme)
 {
 	// create socket pairs for child (scanner) process's stdout & stderr
 	int scannerstdout[2];
@@ -335,6 +337,7 @@ int commandlineinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * doche
 		virusregexp.match(result.c_str());
 		if (virusregexp.matched()) {
 			lastvirusname = virusregexp.result(submatch);
+			blockFile(NULL,NULL,checkme);
 			return DGCS_INFECTED;
 		}
 	}
@@ -348,15 +351,19 @@ int commandlineinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * doche
 
 	if (infectedcodes) {
 		for (int i = 0; i < numinfectedcodes; i++) {
-			if (returncode == infectedcodes[i])
+			if (returncode == infectedcodes[i]){
+				blockFile(NULL,NULL,checkme);
 				return DGCS_INFECTED;
+			}
 		}
 	}
 
 	if (defaultresult == 1)
 		return DGCS_CLEAN;
-	else if (defaultresult == 0)
+	else if (defaultresult == 0){
+		blockFile(NULL,NULL,checkme);
 		return DGCS_INFECTED;
+	}
 
 	return DGCS_SCANERROR;
 }

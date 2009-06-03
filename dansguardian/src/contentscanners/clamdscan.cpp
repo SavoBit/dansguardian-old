@@ -23,6 +23,8 @@
 	#include "dgconfig.h"
 #endif
 
+#include "../String.hpp"
+
 #include "../ContentScanner.hpp"
 #include "../UDSocket.hpp"
 #include "../OptionContainer.hpp"
@@ -51,7 +53,7 @@ public:
 	// we are not replacing scanTest or scanMemory
 	// but for scanFile and the default scanMemory to work, we need a working scanFile implementation
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *filename);
+		const char *ip, const char *filename, NaughtyFilter * checkme);
 
 	int init(void* args);
 
@@ -107,7 +109,7 @@ int clamdinstance::init(void* args)
 // there is no capability to scan memory with clamdscan as we pass it
 // a file name to scan.  So we save the memory to disk and pass that.
 // Then delete the temp file.
-int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename)
+int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename, NaughtyFilter * checkme)
 {
 	lastmessage = lastvirusname = "";
 	// mkstemp seems to only set owner permissions, so our AV daemon won't be
@@ -189,8 +191,12 @@ int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 			std::cerr << "clamdscan: detected an ArchiveBlockMax \"virus\"; logging warning only" << std::endl;
 #endif
 			lastmessage = "Archive not fully scanned: "+lastvirusname;
+			
+			
 			return DGCS_WARNING;
 		}
+		
+		blockFile(NULL,NULL,checkme);
 		return DGCS_INFECTED;
 	}
 	// must be clean

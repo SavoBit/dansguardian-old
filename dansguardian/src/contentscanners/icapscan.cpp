@@ -26,6 +26,8 @@
 	#include "dgconfig.h"
 #endif
 
+#include "../String.hpp"
+
 #include "../ContentScanner.hpp"
 #include "../OptionContainer.hpp"
 
@@ -60,9 +62,9 @@ public:
 		supportsXIF(false), needsBody(false) {};
 
 	int scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *object, unsigned int objectsize);
+		const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme);
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *filename);
+		const char *ip, const char *filename, NaughtyFilter * checkme);
 
 	int init(void* args);
 
@@ -83,7 +85,7 @@ private:
 	// Send ICAP request headers to server
 	bool doHeaders(Socket & icapsock, HTTPHeader *reqheader, HTTPHeader *respheader, unsigned int objectsize);
 	// Check data returned from ICAP server and return one of our standard return codes
-	int doScan(Socket & icapsock, HTTPHeader * docheader, const char* object, unsigned int objectsize);
+	int doScan(Socket & icapsock, HTTPHeader * docheader, const char* object, unsigned int objectsize, NaughtyFilter * checkme);
 };
 
 
@@ -200,7 +202,7 @@ int icapinstance::init(void* args)
 
 // send memory buffer to ICAP server for scanning
 int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-	const char *ip, const char *object, unsigned int objectsize)
+	const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme)
 {
 	lastvirusname = lastmessage = "";
 
@@ -223,12 +225,12 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 			}
 			sent += previewsize;
 			icapsock.writeString("\r\n0\r\n\r\n");
-			int rc = doScan(icapsock, docheader, object, objectsize);
+			int rc = doScan(icapsock, docheader, object, objectsize, checkme);
 			if (rc != ICAP_CONTINUE)
 				return rc;
 			// some servers send "continue" immediately followed by another response
 			if (icapsock.checkForInput()) {
-				int rc = doScan(icapsock, docheader, object, objectsize);
+				int rc = doScan(icapsock, docheader, object, objectsize, checkme);
 				if (rc != ICAP_NODATA)
 					return rc;
 			}
@@ -241,7 +243,7 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 #endif
 			// this *might* just be an early response & closed connection
 			if (icapsock.checkForInput()) {
-				int rc = doScan(icapsock, docheader, object, objectsize);
+				int rc = doScan(icapsock, docheader, object, objectsize, checkme);
 				if (rc != ICAP_NODATA)
 					return rc;
 			}
@@ -266,7 +268,7 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 #endif
 		// this *might* just be an early response & closed connection
 		if (icapsock.checkForInput()) {
-			int rc = doScan(icapsock, docheader, object, objectsize);
+			int rc = doScan(icapsock, docheader, object, objectsize, checkme);
 			if (rc != ICAP_NODATA)
 				return rc;
 		}
@@ -276,11 +278,11 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 		return DGCS_SCANERROR;
 	}
 
-	return doScan(icapsock, docheader, object, objectsize);
+	return doScan(icapsock, docheader, object, objectsize, checkme);
 }
 
 // send file contents for scanning
-int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename)
+int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename, NaughtyFilter * checkme)
 {
 	lastmessage = lastvirusname = "";
 	int filefd = open(filename, O_RDONLY);
@@ -331,7 +333,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 				sent += rc;
 			}
 			icapsock.writeString("\r\n0\r\n\r\n");
-			int rc = doScan(icapsock, docheader, object, objectsize);
+			int rc = doScan(icapsock, docheader, object, objectsize, checkme);
 			if (rc != ICAP_CONTINUE) {
 				delete[] data;
 				close(filefd);
@@ -339,7 +341,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 			}
 			// some servers send "continue" immediately followed by another response
 			if (icapsock.checkForInput()) {
-				int rc = doScan(icapsock, docheader, object, objectsize);
+				int rc = doScan(icapsock, docheader, object, objectsize, checkme);
 				if (rc != ICAP_NODATA) {
 					delete[] data;
 					close(filefd);
@@ -360,7 +362,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 			close(filefd);
 			// this *might* just be an early response & closed connection
 			if (icapsock.checkForInput()) {
-				int rc = doScan(icapsock, docheader, object, objectsize);
+				int rc = doScan(icapsock, docheader, object, objectsize, checkme);
 				if (rc != ICAP_NODATA)
 					return rc;
 			}
@@ -412,7 +414,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 		close(filefd);
 		// this *might* just be an early response & closed connection
 		if (icapsock.checkForInput()) {
-			int rc = doScan(icapsock, docheader, object, objectsize);
+			int rc = doScan(icapsock, docheader, object, objectsize, checkme);
 			if (rc != ICAP_NODATA)
 				return rc;
 		}
@@ -420,7 +422,7 @@ int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, c
 	}
 	close(filefd);
 	delete[] data;
-	return doScan(icapsock, docheader, object, objectsize);
+	return doScan(icapsock, docheader, object, objectsize, checkme);
 }
 
 // send ICAP request headers, returning success or failure
@@ -483,7 +485,7 @@ bool icapinstance::doHeaders(Socket & icapsock, HTTPHeader *reqheader, HTTPHeade
 }
 
 // check data received from ICAP server and interpret as virus name & return value
-int icapinstance::doScan(Socket & icapsock, HTTPHeader * docheader, const char* object, unsigned int objectsize)
+int icapinstance::doScan(Socket & icapsock, HTTPHeader * docheader, const char* object, unsigned int objectsize, NaughtyFilter * checkme)
 {
 	char *data = new char[8192];
 	try {
@@ -537,6 +539,8 @@ int icapinstance::doScan(Socket & icapsock, HTTPHeader * docheader, const char* 
 #endif
 					lastvirusname = line.after("Threat=").before(";");
 					delete[]data;
+					
+					blockFile(NULL,NULL,checkme);
 					return DGCS_INFECTED;
 				}
 			}
@@ -558,6 +562,8 @@ int icapinstance::doScan(Socket & icapsock, HTTPHeader * docheader, const char* 
 #endif
 					delete[] data;
 					lastvirusname = "Unknown";
+
+					blockFile(NULL,NULL,checkme);
 					return DGCS_INFECTED;
 				}
 				// ok - headers were identical, so look at encapsulated body
@@ -591,6 +597,8 @@ int icapinstance::doScan(Socket & icapsock, HTTPHeader * docheader, const char* 
 #endif
 					delete[] data;
 					lastvirusname = "Unknown";
+
+					blockFile(NULL,NULL,checkme);
 					return DGCS_INFECTED;
 				}
 			}
@@ -601,6 +609,8 @@ int icapinstance::doScan(Socket & icapsock, HTTPHeader * docheader, const char* 
 #endif
 			delete[] data;
 			lastvirusname = "Unknown";
+
+			blockFile(NULL,NULL,checkme);
 			return DGCS_INFECTED;
 		}
 		else if (returncode == "404") {

@@ -19,9 +19,13 @@
 
 
 // INCLUDES
+#include <string>
+
 #ifdef HAVE_CONFIG_H
 	#include "dgconfig.h"
 #endif
+#include "String.hpp"
+#include "NaughtyFilter.hpp"
 #include "ContentScanner.hpp"
 #include "ConfigVar.hpp"
 #include "OptionContainer.hpp"
@@ -138,7 +142,7 @@ int CSPlugin::writeMemoryTempFile(const char *object, unsigned int objectsize, S
 
 // default implementation of scanMemory, which defers to scanFile.
 int CSPlugin::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-	const char *ip, const char *object, unsigned int objectsize)
+	const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme)
 {
 	// there is no capability to scan memory with some AV as we pass it
 	// a file name to scan.  So we save the memory to disk and pass that.
@@ -151,7 +155,7 @@ int CSPlugin::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, con
 		syslog(LOG_ERR, "%s", "Error creating/writing temp file for scanMemory.");
 		return DGCS_SCANERROR;
 	}
-	int rc = scanFile(requestheader, docheader, user, filtergroup, ip, tempfilepath.toCharArray());
+	int rc = scanFile(requestheader, docheader, user, filtergroup, ip, tempfilepath.toCharArray(), checkme);
 #ifndef DGDEBUG
 	unlink(tempfilepath.toCharArray());  // delete temp file
 #endif
@@ -315,6 +319,38 @@ int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const
 #endif
 
 	return DGCS_NEEDSCAN;
+}
+
+//set the blocking information 
+void CSPlugin::blockFile(std::string * _category,std::string * _message, NaughtyFilter * checkme)
+{
+	std::string category;
+	std::string message;
+	
+	if (_category == NULL) {
+		category = "Content scanning";
+	}
+	else {
+		category = *_category;
+	}
+	if (_message == NULL) {
+		message = lastvirusname.toCharArray();
+	}
+	else{
+		message = *_message;
+	}
+	
+	
+	checkme->whatIsNaughty = o.language_list.getTranslation(1100);
+	if (message.length() > 0) {
+		checkme->whatIsNaughty += " ";
+		checkme->whatIsNaughty += message.c_str();
+	}
+	
+	checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
+	checkme->whatIsNaughtyCategories = category.c_str();
+	checkme->isItNaughty = true;
+	checkme->isException = false;
 }
 
 // take in a configuration file, find the CSPlugin class associated with the plugname variable, and return an instance

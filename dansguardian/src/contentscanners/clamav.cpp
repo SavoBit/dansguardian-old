@@ -23,6 +23,8 @@
 	#include "dgconfig.h"
 #endif
 
+#include "../String.hpp"
+
 #include "../ContentScanner.hpp"
 #include "../OptionContainer.hpp"
 
@@ -55,9 +57,9 @@ public:
 
 	// we are replacing the inherited scanMemory as it has support for it
 	int scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *object, unsigned int objectsize);
+		const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme);
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *filename);
+		const char *ip, const char *filename, NaughtyFilter * checkme);
 
 	// could be useful, but doesn't yet do anything - see comments on implementation
 	//int scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip);
@@ -82,7 +84,7 @@ private:
 	std::string memdir;
 
 	// convert clamav return value to standard return value
-	int doRC(int rc, const char *vn);
+	int doRC(int rc, const char *vn, NaughtyFilter * checkme);
 };
 
 
@@ -118,7 +120,7 @@ int clamavinstance::quit()
 // and scheduled for removal. instead, use shm_open to create an "in memory" file, and use cl_scandesc.
 // !!! this may not prove to be very portable !!!
 int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user,
-	int filtergroup, const char *ip, const char *object, unsigned int objectsize)
+	int filtergroup, const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme)
 {
 	lastmessage = lastvirusname = "";
 	const char *vn = NULL;
@@ -181,26 +183,28 @@ int clamavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheade
 		syslog(LOG_ERR, "ClamAV plugin error during unlink: %s", strerror(errno));
 		return DGCS_SCANERROR;
 	}
-	return doRC(rc, vn);
+	return doRC(rc, vn, checkme);
 }
 
 // scan given filename
-int clamavinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename)
+int clamavinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename, NaughtyFilter * checkme)
 {
 	lastmessage = lastvirusname = "";
 	const char *vn = NULL;
 	int rc = cl_scanfile(filename, &vn, NULL, root, &limits, CL_SCAN_STDOPT );
-	return doRC(rc, vn);
+	return doRC(rc, vn, checkme);
 }
 
 // convert libclamav return values into our own standard return values
-int clamavinstance::doRC(int rc, const char *vn)
+int clamavinstance::doRC(int rc, const char *vn, NaughtyFilter * checkme)
 {
 	if (rc == CL_VIRUS) {
 		lastvirusname = vn;
 #ifdef DGDEBUG
 		std::cerr << "INFECTED! with: " << lastvirusname << std::endl;
 #endif
+
+		blockFile(NULL,NULL,checkme);
 		return DGCS_INFECTED;
 	}
 	else if (rc != CL_CLEAN) {

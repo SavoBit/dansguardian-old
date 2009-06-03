@@ -23,6 +23,8 @@
 #ifdef HAVE_CONFIG_H
 	#include "dgconfig.h"
 #endif
+#include "String.hpp"
+#include "OptionContainer.hpp"
 #include "NaughtyFilter.hpp"
 #include "RegExp.hpp"
 #include "ListContainer.hpp"

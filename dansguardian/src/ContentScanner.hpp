@@ -22,6 +22,7 @@
 
 
 // INCLUDES
+#include "NaughtyFilter.hpp"
 #include "String.hpp"
 #include "ConfigVar.hpp"
 #include "DataBuffer.hpp"
@@ -30,7 +31,6 @@
 #include "ListContainer.hpp"
 #include "FDFuncs.hpp"
 #include "Plugin.hpp"
-
 #include <stdexcept>
 
 
@@ -48,7 +48,8 @@
 #define DGCS_SCANERROR -1
 #define DGCS_INFECTED 1
 //#define DGCS_CURED 2  // not used
-#define DGCS_MAX 4 // use values above this for custom return codes
+#define DGCS_BLOCKED 4
+#define DGCS_MAX 5 // use values above this for custom return codes
 
 
 // DECLARATIONS
@@ -75,8 +76,8 @@ public:
 	virtual int scanTest(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip);
 	// scanning functions themselves
 	virtual int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip,
-		const char *object, unsigned int objectsize);
-	virtual int scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* filename) = 0;
+		const char *object, unsigned int objectsize, NaughtyFilter * checkme);
+	virtual int scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* filename, NaughtyFilter * checkme) = 0;
 
 	virtual String getLastMessage() {return lastmessage;};
 	virtual String getLastVirusName() {return lastvirusname;};
@@ -93,8 +94,9 @@ private:
 	ListContainer exceptionvirusurllist;
 
 protected:
+	void blockFile(std::string * _category,std::string * _message, NaughtyFilter * checkme);
+
 	// the following are unlikely to need to be overridden
-	
 	// read in scan exception lists
 	virtual bool readStandardLists();
 	// make & write to temp files, primarily for plugins with no direct memory scanning capability (e.g. clamdscan)

@@ -25,6 +25,8 @@
 	#include "dgconfig.h"
 #endif
 
+#include "../String.hpp"
+
 #include "../ContentScanner.hpp"
 #include "../OptionContainer.hpp"
 
@@ -49,9 +51,9 @@ public:
 	kavavinstance(ConfigVar & definition):CSPlugin(definition) {};
 
 	int scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *object, unsigned int objectsize);
+		const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme);
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *filename);
+		const char *ip, const char *filename, NaughtyFilter * checkme);
 
 	int init(void* args);
 	int quit();
@@ -61,7 +63,7 @@ private:
 	kav_ctx kavcon;
 	
 	// convert KAV return value into standard return value
-	int doRC(int rc);
+	int doRC(int rc, NaughtyFilter * checkme);
 };
 
 
@@ -87,7 +89,7 @@ int kavavinstance::quit()
 
 // scan file & memory
 int kavavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-	const char *ip, const char *object, unsigned int objectsize)
+	const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme)
 {
 	lastvirusname = lastmessage = "";
 	if (kav_check_mem(kavcon, object, objectsize) != 0) {
@@ -95,10 +97,10 @@ int kavavinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader
 		return DGCS_SCANERROR;
 	}
 	lastvirusname = kav_result_get_report(kavcon);
-	return doRC(kav_result_get_status(kavcon));
+	return doRC(kav_result_get_status(kavcon), checkme);
 }
 
-int kavavinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename)
+int kavavinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename, NaughtyFilter * checkme)
 {
 	lastvirusname = lastmessage = "";
 	if (kav_check_file(kavcon, filename) != 0) {
@@ -106,7 +108,7 @@ int kavavinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, 
 		return DGCS_SCANERROR;
 	}
 	lastvirusname = kav_result_get_report(kavcon);
-	return doRC(kav_result_get_status(kavcon));
+	return doRC(kav_result_get_status(kavcon), checkme);
 }
 
 // initialise plugin
@@ -141,7 +143,7 @@ int kavavinstance::init(void* args)
 }
 
 // convert KAV return value into standard return value
-int kavavinstance::doRC(int rc)
+int kavavinstance::doRC(int rc, NaughtyFilter * checkme)
 {
 	switch (rc) {
 	case KAV_STATUS_CLEAN:
@@ -157,6 +159,7 @@ int kavavinstance::doRC(int rc)
 #ifdef DGDEBUG
 		std::cerr << "INFECTED!" << std::endl;
 #endif
+		blockFile(NULL,NULL,checkme);
 		return DGCS_INFECTED;
 	default:
 #ifdef DGDEBUG

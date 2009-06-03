@@ -2303,7 +2303,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 #ifdef DGDEBUG
 						std::cout << "Running scanFile" << std::endl;
 #endif
-						csrc = ((CSPlugin*)(*i))->scanFile(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->tempfilepath.toCharArray());
+						csrc = ((CSPlugin*)(*i))->scanFile(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->tempfilepath.toCharArray(), checkme);
 						if ((csrc != DGCS_CLEAN) && (csrc != DGCS_WARNING)) {
 							unlink(docbody->tempfilepath.toCharArray());
 							// delete infected (or unscanned due to error) file straight away
@@ -2312,25 +2312,27 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 #ifdef DGDEBUG
 						std::cout << "Running scanMemory" << std::endl;
 #endif
-						csrc = ((CSPlugin*)(*i))->scanMemory(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->data, docbody->buffer_length);
+						csrc = ((CSPlugin*)(*i))->scanMemory(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->data, docbody->buffer_length, checkme);
 					}
 #ifdef DGDEBUG
 					std::cerr << "AV scan " << k << " returned: " << csrc << std::endl;
 #endif
-					if (csrc < 0) {
-						syslog(LOG_ERR, "scanFile/Memory returned error: %d", csrc);
-						//TODO: have proper error checking/reporting here?
-						//at the very least, integrate with the translation system.
-						checkme->whatIsNaughty = "WARNING: Could not perform virus scan!";
-						checkme->whatIsNaughtyLog = ((CSPlugin*)(*i))->getLastMessage().toCharArray();
-						checkme->whatIsNaughtyCategories = "Content scanning";
-						checkme->isItNaughty = true;
-						checkme->isException = false;
-						(*wasinfected) = true;
-						(*scanerror) = true;
+					if (csrc == DGCS_WARNING) {
+						// Scanner returned a warning. File wasn't infected, but wasn't scanned properly, either.
+						(*wasscanned) = false;
+						(*scanerror) = false;
+#ifdef DGDEBUG
+						std::cout << ((CSPlugin*)(*i))->getLastMessage() << std::endl;
+#endif
+						(*csmessage) = ((CSPlugin*)(*i))->getLastMessage();
+					}
+					else if(csrc == DGCS_BLOCKED) {
+						(*wasscanned) = true;
+						(*scanerror) = false;
 						break;
 					}
-					else if (csrc == DGCS_INFECTED) {
+					else if(csrc == DGCS_INFECTED) {
+						/* TODO move into plugins
 						checkme->whatIsNaughty = o.language_list.getTranslation(1100);
 						String virname(((CSPlugin*)(*i))->getLastVirusName());
 
@@ -2342,21 +2344,29 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 						checkme->whatIsNaughtyCategories = "Content scanning";
 						checkme->isItNaughty = true;
 						checkme->isException = false;
+						*/
 						(*wasinfected) = true;
 						(*scanerror) = false;
 						break;
 					}
-					else if (csrc == DGCS_WARNING) {
-						// Scanner returned a warning. File wasn't infected, but wasn't scanned properly, either.
-						(*wasscanned) = false;
-						(*scanerror) = false;
-#ifdef DGDEBUG
-						std::cout << ((CSPlugin*)(*i))->getLastMessage() << std::endl;
-#endif
-						(*csmessage) = ((CSPlugin*)(*i))->getLastMessage();
-					}
+					//if its not clean / we errored then treat it as infected
 					else if (csrc != DGCS_CLEAN) {
-						syslog(LOG_ERR, "Unknown return code from content scanner: %d", csrc);
+						if  (csrc < 0){
+							syslog(LOG_ERR, "Unknown return code from content scanner: %d", csrc);
+						}
+						else{
+							syslog(LOG_ERR, "scanFile/Memory returned error: %d", csrc);
+						}
+						//TODO: have proper error checking/reporting here?
+						//at the very least, integrate with the translation system.
+						checkme->whatIsNaughty = "WARNING: Could not perform content scan!";
+						checkme->whatIsNaughtyLog = ((CSPlugin*)(*i))->getLastMessage().toCharArray();
+						checkme->whatIsNaughtyCategories = "Content scanning";
+						checkme->isItNaughty = true;
+						checkme->isException = false;
+						(*wasinfected) = true;
+						(*scanerror) = true;
+						break;
 					}
 				}
 				j++;
