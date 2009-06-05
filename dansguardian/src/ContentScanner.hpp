@@ -63,10 +63,6 @@ typedef CSPlugin* cscreate_t(ConfigVar &);
 class CSPlugin: public Plugin
 {
 public:
-	ConfigVar cv;
-	String lastmessage;
-	String lastvirusname;
-
 	//constructor with CS plugin configuration passed in
 	CSPlugin(ConfigVar &definition);
 
@@ -74,13 +70,14 @@ public:
 	
 	// test whether a given request should be scanned or not, based on sent & received headers
 	virtual int scanTest(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip);
+
 	// scanning functions themselves
 	virtual int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip,
 		const char *object, unsigned int objectsize, NaughtyFilter * checkme);
 	virtual int scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* filename, NaughtyFilter * checkme) = 0;
 
-	virtual String getLastMessage() {return lastmessage;};
-	virtual String getLastVirusName() {return lastvirusname;};
+	const String &getLastMessage() {return lastmessage;};
+	const String &getLastVirusName() {return lastvirusname;};
 
 	// start, restart and stop the plugin
 	virtual int init(void* args);
@@ -94,14 +91,17 @@ private:
 	ListContainer exceptionvirusurllist;
 
 protected:
+	ConfigVar cv;
+	String lastmessage;
+	String lastvirusname;
+
 	void blockFile(std::string * _category,std::string * _message, NaughtyFilter * checkme);
 
-	// the following are unlikely to need to be overridden
 	// read in scan exception lists
-	virtual bool readStandardLists();
+	bool readStandardLists();
 	// make & write to temp files, primarily for plugins with no direct memory scanning capability (e.g. clamdscan)
-	virtual int makeTempFile(String *filename);
-	virtual int writeMemoryTempFile(const char *object, unsigned int objectsize, String *filename);
+	int makeTempFile(String *filename);
+	int writeMemoryTempFile(const char *object, unsigned int objectsize, String *filename);
 };
 
 // Return an instance of the plugin defined in the given configuration file
