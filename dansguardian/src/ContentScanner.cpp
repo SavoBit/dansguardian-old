@@ -50,16 +50,8 @@ extern OptionContainer o;
 extern cscreate_t clamdcreate;
 #endif
 
-#ifdef HAVE_CLAMAV
-extern cscreate_t clamavcreate;
-#endif
-
 #ifdef ENABLE_ICAP
 extern cscreate_t icapcreate;
-#endif
-
-#ifdef HAVE_KAVCLIENT
-extern cscreate_t kavavcreate;
 #endif
 
 #ifdef ENABLE_KAVD
@@ -381,24 +373,6 @@ CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 		std::cout << "Enabling ClamDscan CS plugin" << std::endl;
 #endif
 		return clamdcreate(cv);
-	}
-#endif
-
-#ifdef HAVE_CLAMAV
-	if (plugname == "clamav") {
-#ifdef DGDEBUG
-		std::cout << "Enabling ClamAV CS plugin" << std::endl;
-#endif
-		return clamavcreate(cv);
-	}
-#endif
-
-#ifdef HAVE_KAVCLIENT
-	if (plugname == "kavav") {
-#ifdef DGDEBUG
-		std::cout << "Enabling KAVClient CS plugin" << std::endl;
-#endif
-		return kavavcreate(cv);
 	}
 #endif
 

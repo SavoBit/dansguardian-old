@@ -321,54 +321,6 @@ cslists=false
 csconfigs=false
 dmlists=false
 
-# asking user if they want clamav support
-AC_MSG_CHECKING(for libclamav support)
-AC_ARG_ENABLE(
-clamav,
-[AC_HELP_STRING([--enable-clamav@<:@=no@:>@], [Enable support for the libClamAV content scanner. Please note that the ClamD-compatible scanner is always built, and is preferable to this plugin for most usage scenarios.])],
-[ if test "x$enableval" = "xno"; then
-	clamav=false
-	AC_MSG_RESULT(no)
-	CLAMAVSUPPORT="!! Not compiled !! "
-	CLAMAVSHM="!! Not supported on this platform !!"
-else
-	AC_MSG_RESULT(yes)
-	PKG_CHECK_MODULES([CLAMAV],[libclamav >= 4])
-
-	AC_DEFINE([HAVE_CLAMAV],[],[Define to enable ClamAV content scanner])
-	
-	# check for shm_open (& shm_unlink)
-	AC_CHECK_HEADERS([sys/mman.h])
-	AC_CHECK_FUNCS([shm_open])
-	if test "x$ac_cv_func_shm_open" = "xno"; then
-		AC_CHECK_LIB(rt, shm_open, [
-			AC_MSG_RESULT(yes)
-			AC_DEFINE([HAVE_CLAMAV_SHM],[],[Define to enable POSIX Shared Memory support in ClamAV content scanner])
-			LIBS="-lrt ${LIBS}"
-			CLAMAVSHM=""
-		], [
-			AC_MSG_RESULT(no)
-			CLAMAVSHM="!! Not supported on this platform !!"
-		])
-	fi
-
-	clamav=true
-	cslists=true
-	csconfigs=true
-	CLAMAVSUPPORT=""
-fi
-],
-[ #disable by default
- 	clamav=false
-	AC_MSG_RESULT(no)
-	CLAMAVSUPPORT="!! Not compiled !! "
-	CLAMAVSHM="!! Not supported on this platform !!"
-]
-)
-AM_CONDITIONAL(HAVE_CLAMAV, test "x$clamav" = "xtrue")
-AC_SUBST(CLAMAVSUPPORT)
-AC_SUBST(CLAMAVSHM)
-
 # asking user if they want clamd support
 AC_MSG_CHECKING(for clamd support)
 AC_ARG_ENABLE(
@@ -446,13 +398,6 @@ fi],
 )
 AM_CONDITIONAL(ENABLE_KAVD, test "x$kavd" = "xtrue")
 AC_SUBST(KAVDSUPPORT)
-
-dnl detecting kaspersky antivirus client
-#KAV_PATH_KAVCLIENT
-#AM_CONDITIONAL(HAVE_KAVCLIENT, test "x$kavclient_found" = "xyes")
-#kav stuff is not finished Wed 09th February 2005 - DB
-KAVAVSUPPORT="!! Unimplemented !! "
-AC_SUBST(KAVAVSUPPORT)
 
 # asking user if they want command-line content scanner support
 AC_MSG_CHECKING(for command-line content scanner support)
@@ -669,10 +614,8 @@ AC_CONFIG_FILES([Makefile
 	        configs/downloadmanagers/fancy.conf
 	        configs/downloadmanagers/trickle.conf
 	        configs/contentscanners/Makefile
-	        configs/contentscanners/clamav.conf
 	        configs/contentscanners/clamdscan.conf
 	        configs/contentscanners/icapscan.conf
-	        configs/contentscanners/kavav.conf
 	        configs/contentscanners/kavdscan.conf
 	        configs/contentscanners/commandlinescan.conf
 		configs/authplugins/Makefile

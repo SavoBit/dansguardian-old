@@ -431,9 +431,7 @@ downloadmanager = '@DGCONFDIR@/downloadmanagers/default.conf'
 # Some of the scanner(s) require 3rd party software and libraries eg clamav.
 # See the individual plugin conf file for more options (if any).
 #
-#@CLAMAVSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/clamav.conf'
 #@CLAMDSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/clamdscan.conf'
-#@KAVAVSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/kavav.conf'
 #@KAVDSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/kavdscan.conf'
 #@ICAPSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/icapscan.conf'
 #@COMMANDLINESUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/commandlinescan.conf'

@@ -10,7 +10,7 @@ A. There are certain common elements, such as the naming of some of the virus sc
 
 Q. How do I set up virus scanning?
 
-A. Make sure DG is built with at least one content scanning plugin enabled ("--enable-clamd", "--enable-kavd", "--enable-icap", "--enable-commandline" or "--enable-clamav"). After compilation and installation, uncomment the relevant "contentscanner" line in dansguardian.conf to enable loading the plugin. Also take a look in the plugin's own configuration file, the path of which is in the "contentscanner" option, and perform any necessary customisations - for example, settings the "clamdudsfile" option in clamdscan.conf.
+A. Make sure DG is built with at least one content scanning plugin enabled ("--enable-clamd", "--enable-kavd", "--enable-icap", or "--enable-commandline"). After compilation and installation, uncomment the relevant "contentscanner" line in dansguardian.conf to enable loading the plugin. Also take a look in the plugin's own configuration file, the path of which is in the "contentscanner" option, and perform any necessary customisations - for example, settings the "clamdudsfile" option in clamdscan.conf.
 	For new installations, the "clamdscan" plugin is recommended; this requires you to have ClamD running on the same machine as DG, but is flexible (using ClamD's own configuration file for extra control) and simple to set up.
 
 
@@ -36,11 +36,14 @@ Q. Is there any way to send partial files to clients whilst a file is being viru
 A. If you have HTTP clients that don't work even with the "default" download manager, or really, really want to give end users the impression that files are downloading, then build and enable the "trickle" plugin. This slowly sends parts of not-yet-scanned files to clients, which enables them to report download progress (although reported progress will be slower than the actual download), and only lets the transfer complete for clean files. Note that there is some debate as whether or not this is entirely safe, as some malware is incredibly small, and some files can be processed before they are completely downloaded, e.g. progressive JPEGs. This explains the decision not to enable this mode by default.
 
 
-Q. There appear to be 3 content scanning plugins that invoke ClamAV ("clamdscan", "clamav" and "commandlinescan"). What is the difference, and which should I be using?
+Q. There appear to be 2 content scanning plugins that invoke ClamAV ("clamdscan" and "commandlinescan"). What is the difference, and which should I be using?
 
-A. The "clamdscan" scanner saves all content to disk, and passes filenames to an instance of ClamD. By contrast, the "clamav" scanner actually links with the ClamAV libraries directly, and can scan content having either saved it to file, or to POSIX shared memory (direct scanning of memory buffers has been removed, as the functionality is problematic and considered deprecated by the ClamAV team).
-	The recommended plugin is "clamdscan", as "clamav" does not provide any control over the options passed to the ClamAV libraries, and will not detect updates to virus signature files. Provided you have somewhere to run ClamD, DG can access ClamD's UNIX socket, and ClamD can access DG's "filecachedir", there is no reason not to use it.
-	"commandlinescan" should not be used to invoke ClamAV - it *will* be slower than the other two plugins. The default configuration file is purely intended as an example.
+A. The "clamdscan" scanner saves all content to disk, and passes filenames to an instance of ClamD.  The example configuration for "commandlinescan" achieves the same thing, but does so by invoking an external command-line utility instead of communicating with ClamD directly.  This method should not be used to invoke ClamD - it *will* be slower than the "clamdscan" plugin, and is purely intended as an example of how to use "commandlinescan".
+
+
+Q. What happened to the "clamav" content scanning plugin?
+
+A. It has been removed.  This plugin used the ClamAV library directly, as opposed to the "clamdscan" plugin's usage of a running instance of ClamD.  However, it was awkward to maintain, provided no performance benefit (since the data still had to be saved to disk before scanning), didn't give full control over ClamAV's options, and generally served only to confuse people.
 
 
 Q. How do I know whether or not something was virus scanned? OR: I have my AV software set to ignore some file types, but DG is claiming the files have been scanned.

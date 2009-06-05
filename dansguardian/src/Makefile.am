@@ -9,18 +9,6 @@ clean_SUBDIRS= . downloadmanagers contentscanners authplugins
 # other than Linux, libtool support has been removed in favour
 # of configure-time options (at DB's request).
 
-if HAVE_CLAMAV
-CLAMAV_SOURCE = contentscanners/clamav.cpp
-else
-CLAMAV_SOURCE =
-endif
-
-#if HAVE_KAVCLIENT
-#KAVAV_SOURCES = contentscanners/kavav.cpp
-#else
-#KAVAV_SOURCES =
-#endif
-
 if ENABLE_CLAMD
 CLAMDSCAN_SOURCE = contentscanners/clamdscan.cpp
 else
@@ -72,8 +60,8 @@ endif
 
 sbin_PROGRAMS = dansguardian 
 
-dansguardian_CXXFLAGS = $(PCRE_CFLAGS) $(CLAMAV_CFLAGS) $(AM_CXXFLAGS)
-dansguardian_LDADD = $(PCRE_LIBS) $(CLAMAV_LIBS) $(AM_LIBS)
+dansguardian_CXXFLAGS = $(PCRE_CFLAGS) $(AM_CXXFLAGS)
+dansguardian_LDADD = $(PCRE_LIBS) $(AM_LIBS)
 dansguardian_CPPFLAGS = -D__CONFFILE='"$(DGCONFFILE)"' \
 			-D__LOGLOCATION='"$(DGLOGLOCATION)/"' \
 			-D__PIDDIR='"$(DGPIDDIR)"' \
@@ -112,7 +100,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
 		       SocketArray.cpp SocketArray.hpp \
                        dansguardian.cpp \
 		       Plugin.hpp \
-		       $(CLAMAV_SOURCE) $(ICAPSCAN_SOURCE) \
+		       $(ICAPSCAN_SOURCE) \
 		       $(KAVDSCAN_SOURCE) $(CLAMDSCAN_SOURCE) \
 		       $(COMMANDLINE_SOURCE) \
 		       $(DEFAULTDM_SOURCE) $(FANCYDM_SOURCE) \
