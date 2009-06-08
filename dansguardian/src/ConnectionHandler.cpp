@@ -1257,16 +1257,28 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #endif
 					for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
 #ifdef DGDEBUG
-						std::cerr << "running scanTest " << j << std::endl;
+						std::cerr << "running willScanRequest/willScanData " << j << std::endl;
 #endif
-						csrc = ((CSPlugin*)(*i))->scanTest(&header, &docheader, clientuser.c_str(), filtergroup, clientip.c_str());
+						csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), false);
 #ifdef DGDEBUG
-						std::cerr << "scanTest " << j << " returned: " << csrc << std::endl;
+						std::cerr << "willScanRequest " << j << " returned: " << csrc << std::endl;
 #endif
-						if (csrc > 0) {
+						if (csrc > 0)
+						{
+							csrc = ((CSPlugin*)(*i))->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), false,
+								docheader.disposition(), docheader.getContentType(), docheader.contentLength());
+#ifdef DGDEBUG
+							std::cerr << "willScanData " << j << " returned: " << csrc << std::endl;
+#endif
+						}
+
+						if (csrc > 0)
+						{
 							sendtoscanner.push_back(true);
 							runav = true;
-						} else {
+						}
+						else
+						{
 							if (csrc < 0)
 								syslog(LOG_ERR, "scanTest returned error: %d", csrc);
 							sendtoscanner.push_back(false);
@@ -1654,11 +1666,13 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		((o.log_exception_hits == 0) && isexception))
 	{
 #ifdef DGDEBUG
-		if (o.ll != 0) 
+		if (o.ll != 0)
+		{
 			if (isexception)
 				std::cout << "Not logging exceptions" << std::endl;
 			else
 				std::cout << "Not logging 'ADs' blocks" << std::endl;
+		}
 #endif
 		return;
 	}

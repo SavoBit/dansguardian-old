@@ -81,16 +81,16 @@ public:
 	void hexDecode();
 
 	// does the string start/end with this text?
-	bool startsWith(const String& s);
-	bool endsWith(const String& s);
+	bool startsWith(const String& s) const;
+	bool endsWith(const String& s) const;
 	// does this string start with the given text after conversion to lowercase?
 	// (pass the search string in in lowercase; only the text being searched
 	// is converted)
-	bool startsWithLower(const String& s);
+	bool startsWithLower(const String& s) const;
 	// return offset of substring s within the string
-	int indexOf(const char *s);
+	int indexOf(const char *s) const;
 	// does it contain this text?
-	bool contains(const char *s);
+	bool contains(const char *s) const;
 	// index operator mark 2
 	unsigned char charAt(int index) { return (*this)[index]; };
 

@@ -286,7 +286,7 @@ void String::hexDecode()
 }
 
 // does this string start with the given text?
-bool String::startsWith(const String& s)
+bool String::startsWith(const String& s) const
 {
 	if (!strncmp(this->c_str(), s.c_str(), s.length())) {
 		return true;
@@ -295,7 +295,7 @@ bool String::startsWith(const String& s)
 }
 
 // does this string end with the given text?
-bool String::endsWith(const String& s)
+bool String::endsWith(const String& s) const
 {
 	if (s.length() > this->length()) {
 		return false;
@@ -309,7 +309,7 @@ bool String::endsWith(const String& s)
 // does this string start with the given text after conversion to lowercase?
 // (pass the search string in in lowercase; only the text being searched
 // is converted)
-bool String::startsWithLower(const String& s)
+bool String::startsWithLower(const String& s) const
 {
 	for (unsigned int i = 0; i < s.length(); i++) {
 		if (tolower((*this)[i]) != s[i])
@@ -319,7 +319,7 @@ bool String::startsWithLower(const String& s)
 }
 
 // find the position of the given substring within the string
-int String::indexOf(const char *s)
+int String::indexOf(const char *s) const
 {
 	size_type i = this->find(s);
 	if (i != std::string::npos)
@@ -328,7 +328,7 @@ int String::indexOf(const char *s)
 }
 
 // does this string contain given substring?
-bool String::contains(const char *s)
+bool String::contains(const char *s) const
 {
 	if (indexOf(s) != -1) {
 		return true;

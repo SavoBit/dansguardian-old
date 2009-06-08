@@ -67,9 +67,23 @@ public:
 	CSPlugin(ConfigVar &definition);
 
 	virtual ~CSPlugin() {};
-	
-	// test whether a given request should be scanned or not, based on sent & received headers
-	virtual int scanTest(HTTPHeader *requestheader, HTTPHeader *docheader, const char* user, int filtergroup, const char* ip);
+
+	// Test for whether or nor a particular ContentScanner is likely to be interested
+	// in scanning data associated with the given HTTP request.  if "post" is true,
+	// the data which will be scanned is outgoing (i.e. POST requests - file uploads &
+	// form submissions).
+	virtual int willScanRequest(const String &url, const char *user, int filtergroup, const char *ip, bool post);
+
+	// Test whether, in addition to the above, a particular ContentScanner is actually
+	// interested in the data we have for it.  This is split into a separate function
+	// because, for incoming data (as opposed to POST data), we do not have the
+	// information necessary for this test until the response has been received.
+	// Content disposition & MIME type will be empty if not available, and size will be -1 if
+	// not known.
+	// Will not be called for request/response data where willScanRequest previously
+	// returned false.
+	virtual int willScanData(const String &url, const char *user, int filtergroup, const char *ip, bool post,
+		const String &disposition, const String &mimetype, off_t size);
 
 	// scanning functions themselves
 	virtual int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip,

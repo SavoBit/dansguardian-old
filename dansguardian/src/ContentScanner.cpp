@@ -196,119 +196,158 @@ bool CSPlugin::readStandardLists()
 	return true;
 }
 
-// test whether or not a request should be scanned based on sent & received headers
-int CSPlugin::scanTest(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip)
+// Test whether or not a particular request's incoming/outgoing data should be scanned.
+// This is an early-stage (request headers only) test; no other info is known about
+// the actual data itself when this is called.
+int CSPlugin::willScanRequest(const String &url, const char *user, int filtergroup, const char *ip, bool post)
 {
-	char *i;
-
-	//exceptionvirusmimetypelist
-	String mimetype(docheader->getContentType());
-#ifdef DGDEBUG
-	std::cout<<"mimetype: "<<mimetype<<std::endl;
-#endif
-	i = exceptionvirusmimetypelist.findInList(mimetype.toCharArray());
-	if (i != NULL) {
-		return DGCS_NOSCAN;  // match
-	}
-
-	String disposition(docheader->disposition());
-#ifdef DGDEBUG
-	std::cout<<"disposition: "<<disposition<<std::endl;
-#endif
-	String url(requestheader->url());
-	String urld(requestheader->decode(url));
+	String urld(HTTPHeader::decode(url));
 	urld.removeWhiteSpace();
 	urld.toLower();
 	urld.removePTP();
-	String domain, tempurl, foundurl, path, extension;
+	String domain, tempurl, foundurl, path;
 	unsigned int fl;
-	if (urld.contains("/")) {
+	if (urld.contains("/"))
+	{
 		domain = urld.before("/");
 		path = "/" + urld.after("/");
 		path.hexDecode();
 		path.realPath();
-	} else {
+	}
+	else
+	{
 		domain = urld;
 	}
-
-	// don't scan our web server
-	if (((o.fg[filtergroup]->reporting_level == 1) || (o.fg[filtergroup]->reporting_level == 2)) && domain.startsWith(o.fg[filtergroup]->access_denied_domain)) {
+	
+	// Don't scan the web server which hosts the access denied page
+	if (((o.fg[filtergroup]->reporting_level == 1) || (o.fg[filtergroup]->reporting_level == 2))
+		&& domain.startsWith(o.fg[filtergroup]->access_denied_domain))
+	{
 		return DGCS_NOSCAN;
-	}
-
-	//exceptionvirusextensionlist
-	if (disposition.length() > 2) {
-		extension = disposition;
-		while (extension.contains(".")) {
-			extension = extension.after(".");
-		}
-		extension = "." + extension;
-	} else {
-		if (!path.contains("?")) {
-			extension = path;
-		}
-		else if (mimetype.contains("application/")) {
-			extension = path;
-			if (extension.contains("?")) {
-				extension = extension.before("?");
-			}
-		}
-	}
-#ifdef DGDEBUG
-	std::cout<<"extension: "<<extension<<std::endl;
-#endif
-	if (extension.contains(".")) {
-		i = exceptionvirusextensionlist.findEndsWith(extension.toCharArray());
-		if (i != NULL) {
-			return DGCS_NOSCAN;  // match
-		}
 	}
 
 	// exceptionvirussitelist
 	tempurl = domain;
-#ifdef DGDEBUG
-	std::cout<<"domain: "<<domain<<std::endl;
-#endif
-	while (tempurl.contains(".")) {
-		i = exceptionvirussitelist.findInList(tempurl.toCharArray());
-		if (i != NULL) {
+	while (tempurl.contains("."))
+	{
+		if (exceptionvirussitelist.findInList(tempurl.toCharArray()) != NULL)
+		{
 			return DGCS_NOSCAN;  // exact match
 		}
 		tempurl = tempurl.after(".");  // check for being in higher level domains
 	}
-	if (tempurl.length() > 1) {	// allows matching of .tld
+	if (tempurl.length() > 1)
+	{
+		// allows matching of .tld
 		tempurl = "." + tempurl;
-		i = exceptionvirussitelist.findInList(tempurl.toCharArray());
-		if (i != NULL) {
+		if (exceptionvirussitelist.findInList(tempurl.toCharArray()) != NULL)
+		{
 			return DGCS_NOSCAN;  // exact match
 		}
 	}
 
 	// exceptionvirusurllist
 	tempurl = domain + path;
-	if (tempurl.endsWith("/")) {
+	if (tempurl.endsWith("/"))
+	{
 		tempurl.chop();  // chop off trailing / if any
 	}
-	while (tempurl.before("/").contains(".")) {
-		i = exceptionvirusurllist.findStartsWith(tempurl.toCharArray());
-		if (i != NULL) {
+	while (tempurl.before("/").contains("."))
+	{
+		char *i = exceptionvirusurllist.findStartsWith(tempurl.toCharArray());
+		if (i != NULL)
+		{
 			foundurl = i;
 			fl = foundurl.length();
-			if (tempurl.length() > fl) {
+			if (tempurl.length() > fl)
+			{
 				unsigned char c = tempurl[fl];
-				if (c == '/' || c == '?' || c == '&' || c == '=') {
+				if (c == '/' || c == '?' || c == '&' || c == '=')
+				{
 					return DGCS_NOSCAN;  // matches /blah/ or /blah/foo but not /blahfoo
 				}
-			} else {
+			}
+			else
+			{
 				return DGCS_NOSCAN;  // exact match
 			}
 		}
 		tempurl = tempurl.after(".");  // check for being in higher level domains
 	}
 
+	return DGCS_NEEDSCAN;
+}
+
+// Test whether or not a particular request's incoming/outgoing data should be scanned.
+// This is a later-stage test; info is known about the actual data itself when this is called.
+int CSPlugin::willScanData(const String &url, const char *user, int filtergroup, const char *ip, bool post,
+	const String &disposition, const String &mimetype, off_t size)
+{
+	//exceptionvirusmimetypelist
+	if (mimetype.length() > 2)
+	{
 #ifdef DGDEBUG
-	std::cout << "URL " << url << " is going to need AV scanning." << std::endl;
+		std::cout << "mimetype: " << mimetype << std::endl;
 #endif
+		if (exceptionvirusmimetypelist.findInList(mimetype.toCharArray()) != NULL)
+		{
+			return DGCS_NOSCAN;  // match
+		}
+	}
+	
+	//exceptionvirusextensionlist
+	String extension;
+	if (disposition.length() > 2)
+	{
+		// If we have a content-disposition, determine file extension from that
+#ifdef DGDEBUG
+		std::cout << "disposition: " << disposition << std::endl;
+#endif
+		extension = disposition;
+		while (extension.contains("."))
+		{
+			extension = extension.after(".");
+		}
+		extension = "." + extension;
+	}
+	else
+	{
+		// Otherwise, determine it from the URL
+		String urld(HTTPHeader::decode(url)), path;
+		urld.removeWhiteSpace();
+		urld.toLower();
+		urld.removePTP();
+
+		if (urld.contains("/"))
+		{
+			path = urld.after("/");
+			path.hexDecode();
+			path.realPath();
+		}
+
+		if (!path.contains("?"))
+		{
+			extension = path;
+		}
+		else if (mimetype.contains("application/"))
+		{
+			extension = path;
+			if (extension.contains("?"))
+			{
+				extension = extension.before("?");
+			}
+		}
+	}
+#ifdef DGDEBUG
+	std::cout << "extension: " << extension <<std::endl;
+#endif
+	if (extension.contains("."))
+	{
+		if (exceptionvirusextensionlist.findEndsWith(extension.toCharArray()) != NULL)
+		{
+			return DGCS_NOSCAN;  // match
+		}
+	}
 
 	return DGCS_NEEDSCAN;
 }

@@ -116,7 +116,7 @@ public:
 
 	// do URL decoding (%xx) on string
 	// decode everything, or just numbers, letters and -
-	String decode(const String &s, bool decodeAll = false);
+	static String decode(const String &s, bool decodeAll = false);
 
 	// Bypass URL & Cookie funcs
 	
@@ -165,7 +165,7 @@ private:
 	void checkheader(bool allowpersistent);
 
 	// convert %xx back to original character
-	String hexToChar(const String &n, bool all = false);
+	static String hexToChar(const String &n, bool all = false);
 	// base64 decode an individual char
 	int decode1b64(char c);
 	// base64 decode a complete string
