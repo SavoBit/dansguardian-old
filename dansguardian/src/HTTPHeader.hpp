@@ -63,7 +63,8 @@ public:
 	void out(Socket *peersock, Socket *sock, int sendflag, bool reconnect = false) throw(std::exception);
 
 	// discard remainder of POST data
-	void discard(Socket *sock);
+	// amount to discard can be passed in, or will default to contentLength()
+	void discard(Socket *sock, off_t cl = -2);
 	
 	// header value and type checks
 
@@ -73,6 +74,7 @@ public:
 	// get content length - returns -1 if undetermined
 	off_t contentLength();
 	String getContentType();
+	String getMIMEBoundary();
 	// check received content type against given content type
 	bool isContentType(const String& t);
 	// check HTTP message code to see if it's an auth required message
@@ -94,11 +96,16 @@ public:
 	std::string getRawAuthData();
 	// check whether a connection is persistent
 	bool isPersistent() { return ispersistent; };
+	
+	// set POST data for outgoing requests.
+	// assumes that existing POST data has already been discarded
+	// or retrieved elsewhere, and sends this data instead when ::out
+	// is called.
+	void setPostData(const char *data, size_t len);
 
 	// detailed value/type checks
 
 	bool malformedURL(const String& url);
-	bool isPostUpload(Socket &peersock);
 	String getAuthType();
 	String url(bool withport = false);
 
@@ -132,7 +139,8 @@ public:
 	// add cookie to outgoing headers with given name & value
 	void setCookie(const char *cookie, const char *domain, const char *value);
 	
-	HTTPHeader():dirty(true) { reset(); };
+	HTTPHeader():postdata(NULL), dirty(true) { reset(); };
+	~HTTPHeader() { delete postdata; };
 
 private:
 	// timeout for socket operations
@@ -152,10 +160,13 @@ private:
 	// cached result of url()
 	std::string cachedurl;
 
-	char postdata[15];
-	off_t postdatalen;
-	bool postdatachopped;
-	bool ispostupload;
+	// cached result of contentLength()
+	off_t contentlength;
+	bool clcached;
+
+	// replacement POST data for sending during ::out
+	char *postdata;
+	size_t postdata_len;
 
 	bool ispersistent, waspersistent;
 

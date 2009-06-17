@@ -61,15 +61,12 @@ void HTTPHeader::reset()
 {
 	if (dirty) {
 		header.clear();
-		//postdata.reset();
-		postdata[0] = '\0';
-		postdatalen = 0;
-		postdatachopped = false;
-		ispostupload = false;
 		waspersistent = false;
 		ispersistent = false;
 
 		cachedurl = "";
+
+		clcached = false;
 
 		phost = NULL;
 		pport = NULL;
@@ -83,6 +80,10 @@ void HTTPHeader::reset()
 		pproxyconnection = NULL;
 		
 		dirty = false;
+
+		delete postdata;
+		postdata = NULL;
+		postdata_len = 0;
 	}
 }
 
@@ -107,16 +108,22 @@ int HTTPHeader::returnCode()
 // grab content length
 off_t HTTPHeader::contentLength()
 {
+	if (clcached)
+		return contentlength;
+
+	clcached = true;
+	contentlength = -1;
+
 	// code 304 - not modified - no content
 	String temp(header.front().after(" "));
 	if (temp.startsWith("304"))
-		return 0;
-	if (pcontentlength != NULL) {
+		contentlength = 0;
+	else if (pcontentlength != NULL) {
 		temp = pcontentlength->after(" ");
-		return temp.toOffset();
+		contentlength = temp.toOffset();
 	}
-	// no content-length header - we don't know
-	return -1;
+
+	return contentlength;
 }
 
 // grab the auth type
@@ -179,23 +186,45 @@ String HTTPHeader::getContentType()
 		String mimetype(pcontenttype->after(" "));
 		if (mimetype.length() < 1)
 			return "-";
-		
-		unsigned char c;
-		size_t j = 0;
-		while (j < mimetype.length()) {
-			c = mimetype[j];
-			if (c == ' ' || c == ';' || c < 32) {	// remove the
-				mimetype = mimetype.subString(0, j);
-				// extra info not needed
-				j = 0;
-			}
-			++j;
-		}
+
+		mimetype.chop();
+
+		if (mimetype.contains(" "))
+			mimetype = mimetype.before(" ");
+
+		if (mimetype.contains(";"))
+			mimetype = mimetype.before(";");
 		
 		mimetype.toLower();
 		return mimetype;
 	}
 	return "-";
+}
+
+// grab the boundary for multi-part MIME POST data
+String HTTPHeader::getMIMEBoundary()
+{
+	if (pcontenttype != NULL)
+	{
+		String boundary(pcontenttype->after(" "));
+		boundary.chop();
+
+		if (!boundary.contains("boundary="))
+			return "";
+
+		boundary = boundary.after("boundary=");
+		if (boundary.contains(";"))
+			boundary = boundary.after(";");
+
+		if (boundary[0] == '"')
+		{
+			boundary.lop();
+			boundary.chop();
+		}
+
+		return boundary;
+	}
+	return "";
 }
 
 // does the given content type string match our headers?
@@ -299,6 +328,8 @@ void HTTPHeader::setContentLength(int newlen)
 	if (pcontentlength != NULL) {
 		(*pcontentlength) = "Content-Length: " + String(newlen) + "\r";
 	}
+	contentlength = newlen;
+	clcached = true;
 }
 
 // set the proxy-connection header to allow persistence (or not)
@@ -583,6 +614,14 @@ bool HTTPHeader::headerRegExp(int filtergroup) {
 	return result;
 }
 
+void HTTPHeader::setPostData(const char *data, size_t len)
+{
+	delete postdata;
+	postdata = new char[len];
+	memcpy(postdata, data, len);
+	postdata_len = len;
+}
+
 // *
 // *
 // * detailed header checks & fixes
@@ -672,99 +711,6 @@ bool HTTPHeader::malformedURL(const String& url)
 	} while (host.contains("."));
 	// If we have any obfuscated parts, and haven't proven it's a hostname, it's invalid.
 	return obfuscation;
-}
-
-// is this a POST request encapsulating a file upload?
-bool HTTPHeader::isPostUpload(Socket &peersock)
-{
-	if (header.front().toCharArray()[0] != 'P') {
-		return false;
-	}
-
-	/*bool answer = false;
-	int postlen = postdata.buffer_length;
-	int i;
-	if (postlen < 14) {	// min length for there to be a match
-		return false;
-	}
-	char *postdatablock = new char[postlen + 64];  // extra 64 for search
-	try {
-		postdata.copyToMemory(postdatablock);
-		for (i = 0; i < postlen; i++) {	// make lowercase char by char
-			if (isupper(postdatablock[i])) {
-				postdatablock[i] = tolower(postdatablock[i]);
-			}
-		}
-		RegExp mysearch;
-		std::string dis("content-type: ");  // signifies file upload
-		char *p = new char[32];
-		try {
-			for (i = 0; i < (signed) dis.length(); i++) {
-				p[i] = dis[i];  // copy it to the block of memory
-			}
-			char *pend = p + dis.length();  // pointer for search
-			char *postdatablockend = postdatablock + postlen;
-			// search the post data for the content type header
-			char *res = mysearch.search(postdatablock, postdatablockend, p, pend);
-			// if we searched all the way to the end without finding it,
-			// there is no post upload going on; otherwise, there is
-			if (res != postdatablockend) {
-				answer = true;
-			}
-		}
-		catch(exception & e) {
-		};
-		delete[]p;
-	}
-	catch(exception & e) {
-	};
-	delete[]postdatablock;
-	return answer;*/
-
-	off_t cl = contentLength();
-	if (((cl > 0) && (cl < 14)) || (getContentType() == "application/x-www-form-urlencoded")) {
-#ifdef DGDEBUG
-		std::cout << "Based on content length/type, is not POST upload!" << std::endl;
-#endif
-		ispostupload = false;
-		return false;
-	}
-	if (getContentType().length() > 0) {
-#ifdef DGDEBUG
-		std::cout << "Based on content length/type, is POST upload!" << std::endl;
-#endif
-		ispostupload = true;
-		return true;
-	}
-
-#ifdef DGDEBUG
-	std::cout << "Reading a line of POST data to determine content type: ";
-#endif
-	postdatalen = peersock.getLine(postdata, 14, 60, &postdatachopped);
-#ifdef DGDEBUG
-	std::cout << postdata << std::endl;
-#endif
-	if (postdatalen != 14) {
-#ifdef DGDEBUG
-		std::cout << "Is not POST upload!" << std::endl;
-#endif
-		ispostupload = false;
-		return false;
-	}
-	String conttype(postdata);
-	if (conttype.startsWithLower("content-type: ")) {
-#ifdef DGDEBUG
-		std::cout << "Is POST upload!" << std::endl;
-#endif
-		ispostupload = true;
-		return true;
-	} else {
-#ifdef DGDEBUG
-		std::cout << "Is not POST upload!" << std::endl;
-#endif
-		ispostupload = false;
-		return false;
-	}
 }
 
 // fix bugs in certain web servers that don't obey standards.
@@ -1492,37 +1438,34 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 		break;
 	}
 
-	if ((!requestType().startsWith("HTTP")) && (pcontentlength != NULL)) {
-		if (postdatalen > 0) {
+	if (postdata_len > 0)
+	{
 #ifdef DGDEBUG
-			std::cout << "Sending initial POST data chunk" << std::endl;
+		std::cout << "Sending manually set POST data" << std::endl;
 #endif
-			// Re-add the chopped off \n, if necessary
-			if (postdatachopped) {
+		if (!sock->writeToSocket(postdata, postdata_len, 0, timeout))
+		{
 #ifdef DGDEBUG
-				std::cout << "Re-adding newline to POST data (postdatalen " << postdatalen << ")" << std::endl;
+			std::cout << "Could not send POST data!" << std::endl;
 #endif
-				postdata[postdatalen-1] = '\n';
-				postdata[postdatalen] = '\0';
-			}
-			sock->writeToSockete(postdata, postdatalen, 0, timeout);
+			throw std::exception();
 		}
+	}
+	else if ((peersock != NULL) && (!requestType().startsWith("HTTP")) && (pcontentlength != NULL)) {
 #ifdef DGDEBUG
-		std::cout << "Opening tunnel for remainder of POST data" << std::endl;
+		std::cout << "Opening tunnel for POST data" << std::endl;
 #endif
 		FDTunnel fdt;
-		off_t remaining = contentLength() - postdatalen;
-		if (remaining < 0)
-			throw std::runtime_error("No POST data left to send!?");
-		fdt.tunnel(*peersock, *sock, false, remaining, true);
+		fdt.tunnel(*peersock, *sock, false, contentLength(), true);
 	}
 }
 
 // discard remainder of POST data
-void HTTPHeader::discard(Socket *sock)
+void HTTPHeader::discard(Socket *sock, off_t cl)
 {
 	static char fred[4096];
-	off_t cl = contentLength() - postdatalen;
+	if (cl == -2)
+		cl = contentLength();
 	int rc;
 	while (cl > 0) {
 		rc = sock->readFromSocket(fred, ((cl > 4096) ? 4096 : cl), 0, timeout, false);
