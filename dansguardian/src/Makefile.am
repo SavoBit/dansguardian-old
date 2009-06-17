@@ -75,6 +75,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        DataBuffer.cpp DataBuffer.hpp \
                        HTTPHeader.cpp HTTPHeader.hpp \
                        NaughtyFilter.cpp NaughtyFilter.hpp \
+		       BackedStore.cpp BackedStore.hpp\
                        RegExp.cpp RegExp.hpp \
 		       FDFuncs.cpp FDFuncs.hpp \
 		       BaseSocket.cpp BaseSocket.hpp \
