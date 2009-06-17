@@ -134,7 +134,8 @@ int CSPlugin::writeMemoryTempFile(const char *object, unsigned int objectsize, S
 
 // default implementation of scanMemory, which defers to scanFile.
 int CSPlugin::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-	const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme)
+	const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme,
+	const String *disposition, const String *mimetype)
 {
 	// there is no capability to scan memory with some AV as we pass it
 	// a file name to scan.  So we save the memory to disk and pass that.
@@ -147,7 +148,7 @@ int CSPlugin::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, con
 		syslog(LOG_ERR, "%s", "Error creating/writing temp file for scanMemory.");
 		return DGCS_SCANERROR;
 	}
-	int rc = scanFile(requestheader, docheader, user, filtergroup, ip, tempfilepath.toCharArray(), checkme);
+	int rc = scanFile(requestheader, docheader, user, filtergroup, ip, tempfilepath.toCharArray(), checkme, disposition, mimetype);
 #ifndef DGDEBUG
 	unlink(tempfilepath.toCharArray());  // delete temp file
 #endif
@@ -199,8 +200,13 @@ bool CSPlugin::readStandardLists()
 // Test whether or not a particular request's incoming/outgoing data should be scanned.
 // This is an early-stage (request headers only) test; no other info is known about
 // the actual data itself when this is called.
-int CSPlugin::willScanRequest(const String &url, const char *user, int filtergroup, const char *ip, bool post)
+int CSPlugin::willScanRequest(const String &url, const char *user, int filtergroup,
+	const char *ip, bool post, bool reconstituted)
 {
+	// Most content scanners only deal with original, unmodified content
+	if (reconstituted)
+		return DGCS_NOSCAN;
+
 	String urld(HTTPHeader::decode(url));
 	urld.removeWhiteSpace();
 	urld.toLower();
@@ -223,6 +229,9 @@ int CSPlugin::willScanRequest(const String &url, const char *user, int filtergro
 	if (((o.fg[filtergroup]->reporting_level == 1) || (o.fg[filtergroup]->reporting_level == 2))
 		&& domain.startsWith(o.fg[filtergroup]->access_denied_domain))
 	{
+#ifdef DGDEBUG
+		std::cout << "willScanRequest: ignoring our own webserver" << std::endl;
+#endif
 		return DGCS_NOSCAN;
 	}
 
@@ -232,6 +241,9 @@ int CSPlugin::willScanRequest(const String &url, const char *user, int filtergro
 	{
 		if (exceptionvirussitelist.findInList(tempurl.toCharArray()) != NULL)
 		{
+#ifdef DGDEBUG
+			std::cout << "willScanRequest: ignoring exception virus site" << std::endl;
+#endif
 			return DGCS_NOSCAN;  // exact match
 		}
 		tempurl = tempurl.after(".");  // check for being in higher level domains
@@ -242,6 +254,9 @@ int CSPlugin::willScanRequest(const String &url, const char *user, int filtergro
 		tempurl = "." + tempurl;
 		if (exceptionvirussitelist.findInList(tempurl.toCharArray()) != NULL)
 		{
+#ifdef DGDEBUG
+			std::cout << "willScanRequest: ignoring exception virus site" << std::endl;
+#endif
 			return DGCS_NOSCAN;  // exact match
 		}
 	}
@@ -264,33 +279,42 @@ int CSPlugin::willScanRequest(const String &url, const char *user, int filtergro
 				unsigned char c = tempurl[fl];
 				if (c == '/' || c == '?' || c == '&' || c == '=')
 				{
+#ifdef DGDEBUG
+					std::cout << "willScanRequest: ignoring exception virus URL" << std::endl;
+#endif
 					return DGCS_NOSCAN;  // matches /blah/ or /blah/foo but not /blahfoo
 				}
 			}
 			else
 			{
+#ifdef DGDEBUG
+				std::cout << "willScanRequest: ignoring exception virus URL" << std::endl;
+#endif
 				return DGCS_NOSCAN;  // exact match
 			}
 		}
 		tempurl = tempurl.after(".");  // check for being in higher level domains
 	}
 
+#ifdef DGDEBUG
+	std::cout << "willScanRequest: I'm interested" << std::endl;
+#endif
 	return DGCS_NEEDSCAN;
 }
 
 // Test whether or not a particular request's incoming/outgoing data should be scanned.
 // This is a later-stage test; info is known about the actual data itself when this is called.
 int CSPlugin::willScanData(const String &url, const char *user, int filtergroup, const char *ip, bool post,
-	const String &disposition, const String &mimetype, off_t size)
+	bool reconstituted, const String &disposition, const String &mimetype, off_t size)
 {
 	//exceptionvirusmimetypelist
 	if (mimetype.length() > 2)
 	{
-#ifdef DGDEBUG
-		std::cout << "mimetype: " << mimetype << std::endl;
-#endif
 		if (exceptionvirusmimetypelist.findInList(mimetype.toCharArray()) != NULL)
 		{
+#ifdef DGDEBUG
+			std::cout << "willScanData: ignoring exception MIME type (" << mimetype.c_str() << ")" << std::endl;
+#endif
 			return DGCS_NOSCAN;  // match
 		}
 	}
@@ -338,17 +362,20 @@ int CSPlugin::willScanData(const String &url, const char *user, int filtergroup,
 			}
 		}
 	}
-#ifdef DGDEBUG
-	std::cout << "extension: " << extension <<std::endl;
-#endif
 	if (extension.contains("."))
 	{
 		if (exceptionvirusextensionlist.findEndsWith(extension.toCharArray()) != NULL)
 		{
+#ifdef DGDEBUG
+			std::cout << "willScanData: ignoring exception file extension (" << extension.c_str() << ")" << std::endl;
+#endif
 			return DGCS_NOSCAN;  // match
 		}
 	}
 
+#ifdef DGDEBUG
+	std::cout << "willScanData: I'm interested" << std::endl;
+#endif
 	return DGCS_NEEDSCAN;
 }
 

@@ -69,10 +69,14 @@ public:
 	virtual ~CSPlugin() {};
 
 	// Test for whether or nor a particular ContentScanner is likely to be interested
-	// in scanning data associated with the given HTTP request.  if "post" is true,
+	// in scanning data associated with the given HTTP request.  If "post" is true,
 	// the data which will be scanned is outgoing (i.e. POST requests - file uploads &
-	// form submissions).
-	virtual int willScanRequest(const String &url, const char *user, int filtergroup, const char *ip, bool post);
+	// form submissions).  If "reconstituted" is true, the data which will be passed
+	// in is not exactly as it appeared in the request (i.e. URL-encoded form data,
+	// but with form control names and URL encoding stripped away to leave a single
+	// block of text).
+	virtual int willScanRequest(const String &url, const char *user, int filtergroup,
+		const char *ip, bool post, bool reconstituted);
 
 	// Test whether, in addition to the above, a particular ContentScanner is actually
 	// interested in the data we have for it.  This is split into a separate function
@@ -82,13 +86,16 @@ public:
 	// not known.
 	// Will not be called for request/response data where willScanRequest previously
 	// returned false.
-	virtual int willScanData(const String &url, const char *user, int filtergroup, const char *ip, bool post,
-		const String &disposition, const String &mimetype, off_t size);
+	virtual int willScanData(const String &url, const char *user, int filtergroup, const char *ip,
+		bool post, bool reconstituted, const String &disposition, const String &mimetype, off_t size);
 
 	// scanning functions themselves
+	// docheader will be NULL if the data is from a POST request, rather than a response
+	// disposition & MIME type may be NULL or empty strings, in which case docheader should be checked for them (if it is not NULL itself)
 	virtual int scanMemory(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip,
-		const char *object, unsigned int objectsize, NaughtyFilter * checkme);
-	virtual int scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip, const char* filename, NaughtyFilter * checkme) = 0;
+		const char *object, unsigned int objectsize, NaughtyFilter * checkme, const String *disposition = NULL, const String *mimetype = NULL);
+	virtual int scanFile(HTTPHeader *requestheader, HTTPHeader *docheader, const char *user, int filtergroup, const char *ip,
+		const char* filename, NaughtyFilter * checkme, const String *disposition = NULL, const String *mimetype = NULL) = 0;
 
 	const String &getLastMessage() {return lastmessage;};
 	const String &getLastVirusName() {return lastvirusname;};
