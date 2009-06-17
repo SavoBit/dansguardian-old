@@ -85,8 +85,8 @@ private:
 
 	// do content scanning (AV filtering) and naughty filtering
 	void contentFilter(HTTPHeader *docheader, HTTPHeader *header, DataBuffer *docbody, Socket *proxysock,
-		Socket *peerconn, int *headersent, bool *pausedtoobig, off_t *docsize, NaughtyFilter *checkme, bool runav,
-		bool wasclean, int filtergroup, std::deque<bool > *sendtoscanner, std::string *clientuser,
+		Socket *peerconn, int *headersent, bool *pausedtoobig, off_t *docsize, NaughtyFilter *checkme,
+		bool wasclean, int filtergroup, std::deque<CSPlugin *> &responsescanner, std::string *clientuser,
 		std::string *clientip, bool *wasinfected, bool *wasscanned, bool isbypass, String &url, String &domain,
 		bool *scanerror, bool &contentmodified, String *csmessage);
 

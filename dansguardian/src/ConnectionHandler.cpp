@@ -27,6 +27,7 @@
 #include "UDSocket.hpp"
 #include "Auth.hpp"
 #include "FDTunnel.hpp"
+#include "BackedStore.hpp"
 #include "ImageContainer.hpp"
 #include "FDFuncs.hpp"
 
@@ -39,9 +40,12 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/time.h>
+#include <strings.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <istream>
+#include <sstream>
+#include <memory>
 
 #ifdef ENABLE_ORIG_IP
 #include <linux/types.h>
@@ -369,9 +373,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 	bool ishead;
 	bool scanerror;
 
-	bool runav = false;  // not just AV but any content scanner
-	int headersent = 0;  // 0=none,1=first line,2=all
-	std::deque<bool > sendtoscanner;
+	// 0=none,1=first line,2=all
+	int headersent = 0;
+	
+	// Content scanning plugins to use for request (POST) & response data
+	std::deque<CSPlugin*> requestscanners;
+	std::deque<CSPlugin*> responsescanners;
 
 	std::string mimetype("-");
 
@@ -480,7 +487,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				authed = false;
 				isbanneduser = false;
 
-				//bool runav = false;  // not just AV but any content scanner
+				requestscanners.clear();
+				responsescanners.clear();
+
 				headersent = 0;  // 0=none,1=first line,2=all
 				delete clienthost;
 				clienthost = NULL;  // and the hostname, if available
@@ -490,8 +499,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				mimetype = "-";
 				exceptionreason = "";
 				exceptioncat = "";
-
-				sendtoscanner.clear();
 				
 				// reset header, docheader & docbody
 				// headers *should* take care of themselves on the next in()
@@ -916,23 +923,63 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			std::cout << "extracted url:" << urld << std::endl;
 #endif
 
-			// don't run scanTest if content scanning is disabled, or on exceptions if contentscanexceptions is off,
+			// don't run willScanRequest if content scanning is disabled, or on exceptions if contentscanexceptions is off,
 			// or on SSL (CONNECT) requests, or on HEAD requests, or if in AV bypass mode
 			String reqtype(header.requestType());
 			isconnect = reqtype[0] == 'C';
 			ishead = reqtype[0] == 'H';
-			runav = ((*o.fg[filtergroup]).disable_content_scan != 1) && !(isexception && !o.content_scan_exceptions)
-				&& !isconnect && !ishead && !isvirusbypass;
+			
+
+			// Query request and response scanners to see which is interested in scanning data for this request
+			bool multipart = false;
+			String mtype(header.getContentType());
+			if (!isbannedip && !isbanneduser && !isconnect && !ishead && !isbypass
+				&& (o.fg[filtergroup]->disable_content_scan != 1)
+				&& !(isexception && !o.content_scan_exceptions)
+				&& (mtype == "application/x-www-form-urlencoded" || (multipart = (mtype == "multipart/form-data"))))
+			{
+				for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; ++i)
+				{
+					int csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), false, false);
+					if (csrc > 0)
+						responsescanners.push_back((CSPlugin*)(*i));
+					else if (csrc < 0)
+						syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
+				}
+
+				// Only query scanners regarding outgoing data if we are actually sending data in the request
+				if (header.contentLength() > 0)
+				{
+					// Don't bother if it's a single part POST and is above max_content_ramcache_scan_size
+					if (!multipart && header.contentLength() > o.max_content_ramcache_scan_size)
+					{
 #ifdef DGDEBUG
-			std::cerr << "runav = " << runav << std::endl;
+						std::cout << "Not running willScanRequest for POST data: single-part POST with content length above size limit" << std::endl;
+#endif
+					}
+					else
+					{
+						for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; ++i)
+						{
+							int csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), true, !multipart);
+							if (csrc > 0)
+								requestscanners.push_back((CSPlugin*)(*i));
+							else if (csrc < 0)
+								syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
+						}
+					}
+				}
+			}
+#ifdef DGDEBUG
+			std::cout << "Content scanners interested in request data: " << requestscanners.size() << ", response data: " << responsescanners.size() << std::endl;
 #endif
 
 			if (((isexception || iscookiebypass || isvirusbypass)
 				// don't filter exception and local web server
-				// Cookie bypass so don't need to add cookie so just CONNECT (unless should virus scan)
+				// Cookie bypass so don't need to add cookie so just CONNECT (unless should content scan)
 				&& !isbannedip	 // bad users pc
 				&& !isbanneduser	 // bad user
-				&& !runav)  // needs virus scanning
+				&& requestscanners.empty() && responsescanners.empty())  // doesn't need content scanning
 				// bad people still need to be able to access the banned page
 				|| isourwebserver)
 			{
@@ -1025,7 +1072,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 						// even after regex URL replacement, we still don't want banned IPs/users viewing exception sites
 						&& !isbannedip	 // bad users pc
 						&& !isbanneduser	 // bad user
-						&& !runav)
+						&& requestscanners.empty() && responsescanners.empty())
 						|| isourwebserver)
 					{
 						proxysock.readyForOutput(10);  // exception on timeout or error
@@ -1141,9 +1188,26 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				break;
 			}
 
-			if (authed && !isexception && !isbypass && (o.max_upload_size > -1) && header.isPostUpload(peerconn))
+			// check header sent to proxy - this is done before the send, so that pre-emptive banning
+			// can be used for authenticated users. this gets around the problem of Squid fetching content
+			// from sites when they're just going to get banned: not too big an issue in most cases, but
+			// not good if blocking sites it would be illegal to retrieve, and allows web bugs/tracking
+			// links not to be requested.
+			if (authed && !isbypass && !isexception && !checkme.isItNaughty) {
+				requestChecks(&header, &checkme, &urld, &url, &clientip, &clientuser, filtergroup,
+					isbanneduser, isbannedip);
+			}
+
+			// Filtering of POST data
+			off_t cl = header.contentLength();
+			if (authed && !isbypass && !checkme.isItNaughty && cl > 0)
 			{
-				if ((o.max_upload_size == 0) || (header.contentLength() > o.max_upload_size)) {
+				// Check for POST upload size blocking, unless request is an exception
+				// MIME type test is just an approximation, but probably good enough
+				if (!isexception
+					&& ((o.max_upload_size >= 0) && (cl > o.max_upload_size))
+					&& multipart)
+				{
 #ifdef DGDEBUG
 					std::cout << "Detected POST upload violation by Content-Length header - discarding rest of POST data..." << std::endl;
 #endif
@@ -1156,22 +1220,370 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					ispostblock = true;
 
 				}
+				else if (!requestscanners.empty())
+				{
+					// POST scanning by content scanning plugins
+					if (multipart)
+					{
+#ifdef DGDEBUG
+						std::cout << "Filtering multi-part POST data" << std::endl;
+#endif
+						// multi-part POST, possibly including file upload
+						// retrieve each part in turn and filter it on the fly
+
+						// network retrieval buffer
+						char buffer[2048];
+						size_t bytes_remaining = cl;
+					
+						// determine boundary between MIME parts
+						// limit boundary to a sensible maximum to prevent DoS
+						String boundary("--");
+						boundary.append(header.getMIMEBoundary());
+						// include trailing "\r\n" or "--" in length
+						// later on, will also include leading "\r\n"
+						// need to make sure boundary fits in half our network buffer,
+						// or we won't be able to locate instances of it reliably
+						if ((boundary.length() + 2) == 0 || (boundary.length() + 2) > 1022)
+							throw std::runtime_error("Could not determine boundary for multi-part POST");
+
+#ifdef DGDEBUG
+						std::cout << "Boundary: " << boundary << std::endl;
+#endif
+
+						// Grab remaining data, including trailing boundary
+						// Split into parts and process each as we go
+						std::auto_ptr<BackedStore> part;
+						std::string rolling_buffer;
+						std::string trailer;
+						rolling_buffer.reserve(2048);
+						bool first = true;
+						bool last = false;
+						while (bytes_remaining > 0 && !last && !checkme.isItNaughty)
+						{
+							// Grab the next chunk of data
+							int bytes_this_time = bytes_remaining > (2048 - rolling_buffer.length())
+								? (2048 - rolling_buffer.length()) : bytes_remaining;
+							int rc = peerconn.readFromSocketn(buffer, bytes_this_time, 0, 10);
+							if (rc < bytes_this_time)
+								throw std::runtime_error("Could not retrieve POST data from browser");
+
+							// Put up to (chunk size * 2) in rolling buffer
+							rolling_buffer.append(buffer, bytes_this_time);
+							bytes_remaining -= bytes_this_time;
+
+							bool foundb = false;
+							do
+							{
+								// Process data from left of buffer
+								std::string::size_type loc = rolling_buffer.find(boundary);
+								if ((loc == std::string::npos)
+									|| (rolling_buffer.length() - (loc + (boundary.length() + 2)) < 0))
+								{
+									// Didn't contain the boundary, or wasn't long enough
+									// to contain boundary plus trailer - append up to
+									// the first half of the rolling buffer to the
+									// current part, then discard it
+									loc = 1024 < rolling_buffer.length() ? 1024 : rolling_buffer.length();
+									foundb = false;
+								}
+								else
+								{
+									// Contained the boundary - append data up to the
+									// boundary, discard that data plus boundary
+									foundb = true;
+									// See what the two trailing bytes of the boundary are
+									trailer.assign(rolling_buffer.substr(loc + boundary.length(), 2));
+									if (trailer == "--")
+										last = true;
+									else if (trailer != "\r\n")
+										throw std::runtime_error("Unrecognised multi-part POST boundary trailer");
+								}
+
+								// Store data from left-hand half of buffer
+								// Don't bother storing the preamble
+								if (!first)
+								{
+									if (part.get() != NULL && part->append(rolling_buffer.substr(0, loc).c_str(), loc))
+									{
+										if (foundb)
+										{
+											// Determine where the headers end and the data begins
+											part->finalise();
+											const char *data = part->getData();
+											size_t offset = 0;
+											bool foundend = false;
+											do
+											{
+												void *headend = memchr((void*)(data + offset), '\r', part->getLength() - offset);
+												if (headend == NULL)
+													// not found
+													break;
+												offset = (size_t) headend - (size_t)(data);
+												if ((part->getLength() - offset) >= 4
+													&& strncmp(data + offset, "\r\n\r\n", 4) == 0)
+												{
+													// found
+													foundend = true;
+													break;
+												}
+												// not found, but keep looking
+												++offset;
+											}
+											while (offset < (ssize_t)(part->getLength() - 4));
+
+											if (!foundend)
+												throw std::runtime_error("End of POST data part headers not found");
+#ifdef DGDEBUG
+											std::cout << "POST data headers: " << std::string(data, offset) << std::endl;
+#endif
+											// Extract pertinent info from part's headers
+											String mimetype;
+											String disposition;
+											size_t hdr_offset = 0;
+											do
+											{
+												// Look for the end of the next header line in the section of the part
+												// that we know consists of headers (plus the last '\r')
+												void *headend = memchr((void*)(data + hdr_offset), '\r', (offset - hdr_offset) + 1);
+												if (headend == NULL)
+													// not found
+													break;
+												size_t new_hdr_offset = (size_t) headend - (size_t) (data);
+												if ((new_hdr_offset - hdr_offset > 14)
+													&& strncasecmp(data + hdr_offset + 9, "ype: ", 5) == 0)
+												{
+													// found Content-Type
+													mimetype.assign(data + (hdr_offset + 14), new_hdr_offset - (hdr_offset + 14));
+												}
+												else if ((new_hdr_offset - hdr_offset > 21)
+													&& strncasecmp(data + hdr_offset + 9, "isposition: ", 12) == 0)
+												{
+													// found Content-Disposition
+													disposition.assign(data + (hdr_offset + 21), new_hdr_offset - (hdr_offset + 21));
+												}
+												// Restart from end of current header (also skip '\n')
+												hdr_offset = new_hdr_offset + 2;
+											}
+											while (hdr_offset < offset);
+#ifdef DGDEBUG
+											std::cout << "POST part MIME type: " << mimetype << std::endl;
+											std::cout << "POST part disposition: " << disposition << std::endl;
+#endif
+											// Don't include "\r\n\r\n" in part's body data
+											offset += 4;
+											// Run part through interested request scanning plugins
+											for (std::deque<CSPlugin *>::iterator i = requestscanners.begin(); i != requestscanners.end(); ++i)
+											{
+												int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), true, false,
+													disposition, mimetype, part->getLength() - offset);
+#ifdef DGDEBUG
+												std::cerr << "willScanData returned: " << csrc << std::endl;
+#endif
+												if (csrc > 0)
+												{
+													(*i)->scanMemory(&header, NULL, clientuser.c_str(), filtergroup, clientip.c_str(),
+														data + offset, part->getLength() - offset, &checkme,
+														&disposition, &mimetype);
+													if (checkme.isItNaughty)
+													{
+														// Part was blocked
+														// - discard it and don't bother with other plugins
+														part.reset();
+														break;
+													}
+												}
+												else if (csrc < 0)
+													syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
+											}
+											// Send whole part upstream
+											if (!checkme.isItNaughty)
+												proxysock.writeToSockete(data, part->getLength(), 0, 20);
+										}
+									}
+									else
+									{
+										// Data could not be appended to the buffered POST part
+										// - length must have exceeded maxcontentfilecachescansize,
+										// so send the part directly upstream instead
+										if (part.get() != NULL)
+										{
+#ifdef DGDEBUG
+											std::cout << "POST data part too large, sending upstream" << std::endl;
+#endif
+											// Send what we've buffered so far, then delete the buffer
+											part->finalise();
+											proxysock.writeToSockete(part->getData(), part->getLength(), 0, 20);
+											part.reset();
+										}
+										// Send current chunk upstream directly
+										proxysock.writeToSockete(rolling_buffer.substr(0, loc).c_str(), loc, 0, 20);
+									}
+									if (foundb && !checkme.isItNaughty)
+									{
+										// Regardless of whether we were buffering or streaming, send the
+										// boundary and trailers upstream if this was the last chunk of a part
+										proxysock.writeToSockete(boundary.c_str(), boundary.length(), 0, 10);
+										proxysock.writeToSockete(trailer.c_str(), trailer.length(), 0, 10);
+										// Include final CRLF (after the trailer) after last boundary
+										if (last)
+											proxysock.writeToSockete("\r\n", 2, 0, 10);
+										part.reset(new BackedStore(o.max_content_ramcache_scan_size, o.max_content_filecache_scan_size));
+									}
+								}
+
+								// If we found the boundary, include boundary size
+								// in the length of data we will discard
+								if (foundb && !checkme.isItNaughty)
+								{
+									loc += boundary.length() + 2;
+									if (first)
+									{
+										// We just past the preamble/first boundary
+										// Send request headers and first boundary upstream
+#ifdef DGDEBUG
+										std::cout << "Preamble/first boundary passed; sending headers & first boundary upstream" << std::endl;
+#endif
+										if (!wasrequested) {
+											proxysock.readyForOutput(10);
+											// sent *without* POST data, so cannot retrieve headers yet
+											header.out(NULL, &proxysock, __DGHEADER_SENDALL, true);
+											wasrequested = true;
+											proxysock.writeToSockete(boundary.c_str(), boundary.length(), 0, 10);
+											proxysock.writeToSockete(trailer.c_str(), trailer.length(), 0, 10);
+										}
+										first = false;
+										// For all boundaries after the first, include the leading CRLF
+										boundary.insert(0, "\r\n");
+										// Create BackedStore for first data part
+										part.reset(new BackedStore(o.max_content_ramcache_scan_size, o.max_content_filecache_scan_size));
+									}
+								}
+								rolling_buffer.erase(0, loc);
+							}
+							while (foundb && !checkme.isItNaughty);
+						} // while bytes_remaining > 0 && !last && not blocked
+
+						if (!checkme.isItNaughty)
+						{
+							// Were we still within a part when the data came to an end?
+							// Did we not find a correctly-formatted last part boundary?
+							// Was there data (other than a CRLF) remaining after the final boundary?
+							if (rolling_buffer.length() > 2 || !last || bytes_remaining > 2)
+							{
+								std::ostringstream ss;
+								ss << "Last part of multi-part POST was not correctly terminated.  Part length: ";
+								ss << part->getLength() << ", bytes remaining: " << bytes_remaining << ", last part found: " << last;
+								throw std::runtime_error(ss.str().c_str());
+							}
+							// get header from proxy
+							// wasrequested will have been set to true (we have had to send out
+							// the request headers & POST data by the time we get here), so none
+							// of the code below here will do this for us.
+#ifdef DGDEBUG
+							std::cout << "All parts sent upstream; retrieving response headers" << std::endl;
+#endif
+							proxysock.checkForInput(120);
+							docheader.in(&proxysock, persist);
+							persist = docheader.isPersistent();
+						}
+						else
+						{
+							// Was blocked - discard rest of POST data before we show the block page
+#ifdef DGDEBUG
+							std::cout << "POST data part blocked; discarding remaining POST data" << std::endl;
+#endif
+							header.discard(&peerconn, bytes_remaining);
+						}
+
+					}
+					else // if (mtype == "application/x-www-form-urlencoded")
+					{
+#ifdef DGDEBUG
+						std::cout << "Filtering single-part POST data" << std::endl;
+#endif
+						// single-part POST (plain-text form data)
+						// we know the size for the part has already been checked by this point
+						char buffer[cl];
+						int rc = peerconn.readFromSocketn(buffer, cl, 0, 10);
+						
+						if (rc < 0)
+							throw std::runtime_error("Could not retrieve POST data from browser");
+						
+						// Set the POST data buffer on the request, so that it
+						// does not block indefinitely trying to tunnel data that
+						// the browser has already sent
+						header.setPostData(buffer, cl);
+
+						// data looks like "name=value+1&name2=value+2".
+						// parse the text to remove variable names and pad with
+						// spaces at beginning & end.
+						String result(" ");
+						bool inname = true;
+						for (off_t i = 1; i < cl; ++i)
+						{
+							if (inname)
+							{
+								if (buffer[i] == '=')
+									inname = false;
+							}
+							else
+							{
+								if (buffer[i] == '&')
+								{
+									inname = true;
+									result.append(" ");
+								}
+								else
+									result.append(1, buffer[i]);
+							}
+						}
+						result.append(" ");
+
+						// turn '+' back into ' '
+						result.replaceall("+", " ");
+
+						// decode %xx
+						result = HTTPHeader::decode(result, true);
+
+						// Run the result through request scanners which are happy to deal with reconstituted data
+#ifdef DGDEBUG
+						std::cout << "Form data: " << result.c_str() << std::endl;
+#endif
+						for (std::deque<CSPlugin *>::iterator i = requestscanners.begin(); i != requestscanners.end(); ++i)
+						{
+							int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), true, true,
+								"", "text/plain", result.length());
+#ifdef DGDEBUG
+							std::cerr << "willScanData returned: " << csrc << std::endl;
+#endif
+							if (csrc > 0)
+							{
+								String mimetype("text/plain");
+								(*i)->scanMemory(&header, NULL, clientuser.c_str(), filtergroup, clientip.c_str(),
+									result.c_str(), result.length(), &checkme, NULL, &mimetype);
+								if (checkme.isItNaughty)
+								{
+									// Part was blocked - don't bother with other plugins
+#ifdef DGDEBUG
+									std::cout << "Form data blocked" << std::endl;
+#endif
+									break;
+								}
+							}
+							else if (csrc < 0)
+								syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
+						}
+					}
+					// Cannot be other, unknown MIME type because MIME type
+					// is checked before CS plugins are queried (so plugin lists
+					// will be empty for other MIME types)
+				}
 			}
 #ifdef DGDEBUG
 			// Banning POST requests for unauthed users (when auth is enabled) could potentially prevent users from authenticating.
 			else if (!authed)
-				std::cout << "Skipping POST upload blocking because user is unauthed." << std::endl;
+				std::cout << "Skipping POST filtering because user is unauthed." << std::endl;
 #endif
-
-			// check header sent to proxy - this is done before the send, so that pre-emptive banning
-			// can be used for authenticated users. this gets around the problem of Squid fetching content
-			// from sites when they're just going to get banned: not too big an issue in most cases, but
-			// not good if blocking sites it would be illegal to retrieve, and allows web bugs/tracking
-			// links not to be requested.
-			if (authed && !isbypass && !isexception && !checkme.isItNaughty) {
-				requestChecks(&header, &checkme, &urld, &url, &clientip, &clientuser, filtergroup,
-					isbanneduser, isbannedip);
-			}
 
 			if (!checkme.isItNaughty) {
 				// the request is ok, so we can	now pass it to the proxy, and check the returned header
@@ -1219,78 +1631,51 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					break;
 				}
 				
-				// don't run scanTest on redirections or head requests
-				// actually, you *can* get redirections with content: check the RFCs!
-				if (runav && ishead) { // (docheader.isRedirection() || ishead)) {
-#ifdef DGDEBUG
-					std::cout << "Request is HEAD; disabling runav" << std::endl;
-#endif
-					runav = false;
-				}
-
 				// don't even bother scan testing if the content-length header indicates the file is larger than the maximum size we'll scan
 				// - based on patch supplied by cahya (littlecahya@yahoo.de)
 				// be careful: contentLength is signed, and max_content_filecache_scan_size is unsigned
 				off_t cl = docheader.contentLength();
-				if (runav) {
+				if (!responsescanners.empty()) {
 					if (cl == 0)
-						runav = false;
+						responsescanners.clear();
 					else if ((cl > 0) && (cl > o.max_content_filecache_scan_size))
-						runav = false;
+						responsescanners.clear();
 				}
 
 				// now that we have the proxy's header too, we can make a better informed decision on whether or not to scan.
 				// this used to be done before we'd grabbed the proxy's header, rendering exceptionvirusmimetypelist useless,
 				// and exceptionvirusextensionlist less effective, because we didn't have a Content-Disposition header.
-				// checkme: split scanTest into two parts? we can check the site & URL lists long before we get here, then
-				// do the rest of the checks later.
-				if (runav) {
-					runav = false;
+				if (!responsescanners.empty())
+				{
 #ifdef DGDEBUG
-					std::cerr << "cs plugins:" << o.csplugins.size() << std::endl;
+					std::cerr << "Number of response CS plugins in candidate list: " << responsescanners.size() << std::endl;
 #endif
 					//send header to plugin here needed
 					//also send user and group
-					int csrc = 0;
 #ifdef DGDEBUG
 					int j = 0;
 #endif
-					for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
+					std::deque<CSPlugin *> newplugins;
+					for (std::deque<CSPlugin *>::iterator i = responsescanners.begin(); i != responsescanners.end(); ++i)
+					{
+						int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), false, false,
+							docheader.disposition(), docheader.getContentType(), docheader.contentLength());
 #ifdef DGDEBUG
-						std::cerr << "running willScanRequest/willScanData " << j << std::endl;
-#endif
-						csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), false);
-#ifdef DGDEBUG
-						std::cerr << "willScanRequest " << j << " returned: " << csrc << std::endl;
+						std::cerr << "willScanData for plugin " << j << " returned: " << csrc << std::endl;
 #endif
 						if (csrc > 0)
-						{
-							csrc = ((CSPlugin*)(*i))->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), false,
-								docheader.disposition(), docheader.getContentType(), docheader.contentLength());
-#ifdef DGDEBUG
-							std::cerr << "willScanData " << j << " returned: " << csrc << std::endl;
-#endif
-						}
-
-						if (csrc > 0)
-						{
-							sendtoscanner.push_back(true);
-							runav = true;
-						}
-						else
-						{
-							if (csrc < 0)
-								syslog(LOG_ERR, "scanTest returned error: %d", csrc);
-							sendtoscanner.push_back(false);
-						}
+							newplugins.push_back(*i);
+						else if (csrc < 0)
+							syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
 #ifdef DGDEBUG
 						j++;
 #endif
 					}
+
+					// Store only those plugins which responded positively to willScanData
+					responsescanners.swap(newplugins);
 				}
-#ifdef DGDEBUG
-				std::cerr << "runav = " << runav << std::endl;
-#endif
+				// TODO Debug output showing new contents of candidate list
 
 				// no need to check bypass mode, exception mode, auth required headers, redirections, or banned ip/user (the latter get caught by requestChecks later)
 				if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.isRedirection() && !docheader.authRequired())
@@ -1421,18 +1806,18 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				// can't do content filtering on HEAD or redirections (no content)
 				// actually, redirections CAN have content
 				if (!checkme.isItNaughty && (cl != 0) && !ishead) {
-					if (((docheader.isContentType("text") || docheader.isContentType("-")) && !isexception) || runav) {
+					if (((docheader.isContentType("text") || docheader.isContentType("-")) && !isexception) || !responsescanners.empty()) {
 						// don't search the cache if scan_clean_cache disabled & runav true (won't have been cached)
 						// also don't search cache for auth required headers (same reason)
 
 						// checkme: does not searching the cache if scan_clean_cache is disabled break the fancy DM's bypass stuff?
 						// probably, since it uses a "magic" status code in the cache; easier than coding yet another hash type.
 
-						if (o.url_cache_number > 0 && !(!o.scan_clean_cache && runav) && !docheader.authRequired()) {
+						if (o.url_cache_number > 0 && (o.scan_clean_cache || responsescanners.empty()) && !docheader.authRequired()) {
 							if (wasClean(urld, filtergroup)) {
 								wasclean = true;
 								cachehit = true;
-								runav = false;
+								responsescanners.clear();
 #ifdef DGDEBUG
 								std::cout << "url was clean skipping content and AV checking" << std::endl;
 #endif
@@ -1441,13 +1826,13 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 						// despite the debug note above, we do still go through contentFilter for cached non-exception HTML,
 						// as content replacement rules need to be applied.
 						waschecked = true;
-						if (runav) {
+						if (!responsescanners.empty()) {
 #ifdef DGDEBUG
 							std::cout << "Filtering with expectation of a possible csmessage" << std::endl;
 #endif
 							String csmessage;
 							contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
-								&docsize, &checkme, runav, wasclean, filtergroup, &sendtoscanner, &clientuser, &clientip,
+								&docsize, &checkme, wasclean, filtergroup, responsescanners, &clientuser, &clientip,
 								&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified, &csmessage);
 							if (csmessage.length() > 0) {
 #ifdef DGDEBUG
@@ -1457,7 +1842,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 							}
 						} else {
 							contentFilter(&docheader, &header, &docbody, &proxysock, &peerconn, &headersent, &pausedtoobig,
-								&docsize, &checkme, runav, wasclean, filtergroup, &sendtoscanner, &clientuser, &clientip,
+								&docsize, &checkme, wasclean, filtergroup, responsescanners, &clientuser, &clientip,
 								&wasinfected, &wasscanned, isbypass, urld, urldomain, &scanerror, contentmodified, NULL);
 						}
 					}
@@ -1478,7 +1863,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				// an entry and does a soft restart, we don't want the site to end up in
 				// the clean cache because someone who's already been to it hits refresh.
 				if (!wasclean && !checkme.isItNaughty && !isbypass
-					&& (docheader.isContentType("text") || (runav && o.scan_clean_cache))
+					&& (docheader.isContentType("text") || (wasscanned && o.scan_clean_cache))
 					&& (header.requestType() == "GET") && (docheader.returnCode() == 200))
 				{
 					addToClean(urld, filtergroup);
@@ -1629,6 +2014,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #ifdef DGDEBUG
 		std::cerr << "connection handler caught an exception: " << e.what() << std::endl;
 #endif
+		syslog(LOG_ERR, "Connection handler caught an exception: %s", e.what());
 		proxysock.close();  // close connection to proxy
 		return;
 	}
@@ -2251,7 +2637,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 // do content scanning (AV filtering) and naughty filtering
 void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header, DataBuffer *docbody,
 	Socket *proxysock, Socket *peerconn, int *headersent, bool *pausedtoobig, off_t *docsize, NaughtyFilter *checkme,
-	bool runav, bool wasclean, int filtergroup, std::deque<bool> *sendtoscanner,
+	bool wasclean, int filtergroup, std::deque<CSPlugin *> &responsescanners,
 	std::string *clientuser, std::string *clientip, bool *wasinfected, bool *wasscanned, bool isbypass,
 	String &url, String &domain, bool *scanerror, bool &contentmodified, String *csmessage)
 {
@@ -2267,7 +2653,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 	std::cout << docheader->contentEncoding() << std::endl;
 	std::cout << "about to get body from proxy" << std::endl;
 #endif
-	(*pausedtoobig) = docbody->in(proxysock, peerconn, header, docheader, runav, headersent);  // get body from proxy
+	(*pausedtoobig) = docbody->in(proxysock, peerconn, header, docheader, !responsescanners.empty(), headersent);  // get body from proxy
 	// checkme: surely if pausedtoobig is true, we just want to break here?
 	// the content is larger than max_content_filecache_scan_size if it was downloaded for scanning,
 	// and larger than max_content_filter_size if not.
@@ -2304,86 +2690,70 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 	if (!wasclean) {	// was not clean or no urlcache
 
 		// fixed to obey maxcontentramcachescansize
-		if (runav && (isfile ? dblen <= o.max_content_filecache_scan_size : dblen <= o.max_content_ramcache_scan_size)) {
+		if (!responsescanners.empty() && (isfile ? dblen <= o.max_content_filecache_scan_size : dblen <= o.max_content_ramcache_scan_size))
+		{
 			int csrc = 0;
-			std::deque<bool>::iterator j = sendtoscanner->begin();
 #ifdef DGDEBUG
 			int k = 0;
 #endif
-			for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; i++) {
-				if (*j) {
-					(*wasscanned) = true;
-					if (isfile) {
+			for (std::deque<CSPlugin *>::iterator i = responsescanners.begin(); i != responsescanners.end(); i++) {
+				(*wasscanned) = true;
+				if (isfile) {
 #ifdef DGDEBUG
-						std::cout << "Running scanFile" << std::endl;
+					std::cout << "Running scanFile" << std::endl;
 #endif
-						csrc = ((CSPlugin*)(*i))->scanFile(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->tempfilepath.toCharArray(), checkme);
-						if ((csrc != DGCS_CLEAN) && (csrc != DGCS_WARNING)) {
-							unlink(docbody->tempfilepath.toCharArray());
-							// delete infected (or unscanned due to error) file straight away
-						}
-					} else {
+					csrc = (*i)->scanFile(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->tempfilepath.toCharArray(), checkme);
+					if ((csrc != DGCS_CLEAN) && (csrc != DGCS_WARNING)) {
+						unlink(docbody->tempfilepath.toCharArray());
+						// delete infected (or unscanned due to error) file straight away
+					}
+				} else {
 #ifdef DGDEBUG
-						std::cout << "Running scanMemory" << std::endl;
+					std::cout << "Running scanMemory" << std::endl;
 #endif
-						csrc = ((CSPlugin*)(*i))->scanMemory(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->data, docbody->buffer_length, checkme);
-					}
-#ifdef DGDEBUG
-					std::cerr << "AV scan " << k << " returned: " << csrc << std::endl;
-#endif
-					if (csrc == DGCS_WARNING) {
-						// Scanner returned a warning. File wasn't infected, but wasn't scanned properly, either.
-						(*wasscanned) = false;
-						(*scanerror) = false;
-#ifdef DGDEBUG
-						std::cout << ((CSPlugin*)(*i))->getLastMessage() << std::endl;
-#endif
-						(*csmessage) = ((CSPlugin*)(*i))->getLastMessage();
-					}
-					else if(csrc == DGCS_BLOCKED) {
-						(*wasscanned) = true;
-						(*scanerror) = false;
-						break;
-					}
-					else if(csrc == DGCS_INFECTED) {
-						/* TODO move into plugins
-						checkme->whatIsNaughty = o.language_list.getTranslation(1100);
-						String virname(((CSPlugin*)(*i))->getLastVirusName());
-
-						if (virname.length() > 0) {
-							checkme->whatIsNaughty += " ";
-							checkme->whatIsNaughty += virname.toCharArray();
-						}
-						checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
-						checkme->whatIsNaughtyCategories = "Content scanning";
-						checkme->isItNaughty = true;
-						checkme->isException = false;
-						*/
-						(*wasinfected) = true;
-						(*scanerror) = false;
-						break;
-					}
-					//if its not clean / we errored then treat it as infected
-					else if (csrc != DGCS_CLEAN) {
-						if  (csrc < 0){
-							syslog(LOG_ERR, "Unknown return code from content scanner: %d", csrc);
-						}
-						else{
-							syslog(LOG_ERR, "scanFile/Memory returned error: %d", csrc);
-						}
-						//TODO: have proper error checking/reporting here?
-						//at the very least, integrate with the translation system.
-						checkme->whatIsNaughty = "WARNING: Could not perform content scan!";
-						checkme->whatIsNaughtyLog = ((CSPlugin*)(*i))->getLastMessage().toCharArray();
-						checkme->whatIsNaughtyCategories = "Content scanning";
-						checkme->isItNaughty = true;
-						checkme->isException = false;
-						(*wasinfected) = true;
-						(*scanerror) = true;
-						break;
-					}
+					csrc = (*i)->scanMemory(header, docheader, clientuser->c_str(), filtergroup, clientip->c_str(), docbody->data, docbody->buffer_length, checkme);
 				}
-				j++;
+#ifdef DGDEBUG
+				std::cerr << "AV scan " << k << " returned: " << csrc << std::endl;
+#endif
+				if (csrc == DGCS_WARNING) {
+					// Scanner returned a warning. File wasn't infected, but wasn't scanned properly, either.
+					(*wasscanned) = false;
+					(*scanerror) = false;
+#ifdef DGDEBUG
+					std::cout << (*i)->getLastMessage() << std::endl;
+#endif
+					(*csmessage) = (*i)->getLastMessage();
+				}
+				else if (csrc == DGCS_BLOCKED) {
+					(*wasscanned) = true;
+					(*scanerror) = false;
+					break;
+				}
+				else if (csrc == DGCS_INFECTED) {
+					(*wasinfected) = true;
+					(*scanerror) = false;
+					break;
+				}
+				//if its not clean / we errored then treat it as infected
+				else if (csrc != DGCS_CLEAN) {
+					if (csrc < 0) {
+						syslog(LOG_ERR, "Unknown return code from content scanner: %d", csrc);
+					}
+					else {
+						syslog(LOG_ERR, "scanFile/Memory returned error: %d", csrc);
+					}
+					//TODO: have proper error checking/reporting here?
+					//at the very least, integrate with the translation system.
+					checkme->whatIsNaughty = "WARNING: Could not perform content scan!";
+					checkme->whatIsNaughtyLog = (*i)->getLastMessage().toCharArray();
+					checkme->whatIsNaughtyCategories = "Content scanning";
+					checkme->isItNaughty = true;
+					checkme->isException = false;
+					(*wasinfected) = true;
+					(*scanerror) = true;
+					break;
+				}
 #ifdef DGDEBUG
 				k++;
 #endif
@@ -2395,7 +2765,7 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 #endif
 		}
 #ifdef DGDEBUG
-		else if (runav) {
+		else if (!responsescanners.empty()) {
 			std::cout << "content length large so skipping content scanning (virus) filtering" << std::endl;
 		}
 		system("date");
