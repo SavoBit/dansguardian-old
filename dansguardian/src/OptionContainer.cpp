@@ -233,23 +233,26 @@ bool OptionContainer::read(const char *filename, int type)
 		if (!realitycheck(max_upload_size, -1, 0, "maxuploadsize")) {
 			return false;
 		}		// check its a reasonable value
-		max_upload_size = max_upload_size * 1024;
+		max_upload_size *= 1024;
+		
 		max_content_filter_size = findoptionI("maxcontentfiltersize");
 		if (!realitycheck(max_content_filter_size, 0, 0, "maxcontentfiltersize")) {
 			return false;
 		}		// check its a reasonable value
-		max_content_filter_size = max_content_filter_size * 1024;
+		max_content_filter_size *= 1024;
 
 		max_content_ramcache_scan_size = findoptionI("maxcontentramcachescansize");
 		if (!realitycheck(max_content_ramcache_scan_size, 0, 0, "maxcontentramcachescansize")) {
 			return false;
 		}
-		max_content_ramcache_scan_size = max_content_ramcache_scan_size * 1024;
+		max_content_ramcache_scan_size *= 1024;
+
 		max_content_filecache_scan_size = findoptionI("maxcontentfilecachescansize");
 		if (!realitycheck(max_content_filecache_scan_size, 1, 0, "maxcontentfilecachescansize")) {
 			return false;
 		}
-		max_content_filecache_scan_size = max_content_filecache_scan_size * 1024;
+		max_content_filecache_scan_size *= 1024;
+		
 		if (max_content_ramcache_scan_size == 0) {
 			max_content_ramcache_scan_size = max_content_filecache_scan_size;
 		}
