@@ -53,7 +53,8 @@ public:
 	// we are not replacing scanTest or scanMemory
 	// but for scanFile and the default scanMemory to work, we need a working scanFile implementation
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *filename, NaughtyFilter * checkme);
+		const char *ip, const char *filename, NaughtyFilter * checkme,
+		const String *disposition, const String *mimetype);
 
 	int init(void* args);
 
@@ -109,7 +110,9 @@ int clamdinstance::init(void* args)
 // there is no capability to scan memory with clamdscan as we pass it
 // a file name to scan.  So we save the memory to disk and pass that.
 // Then delete the temp file.
-int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename, NaughtyFilter * checkme)
+int clamdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user,
+	int filtergroup, const char *ip, const char *filename, NaughtyFilter * checkme,
+	const String *disposition, const String *mimetype)
 {
 	lastmessage = lastvirusname = "";
 	// mkstemp seems to only set owner permissions, so our AV daemon won't be

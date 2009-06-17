@@ -55,7 +55,8 @@ public:
 		submatch(0), arguments(NULL), numarguments(0), infectedcodes(NULL), numinfectedcodes(0),
 		cleancodes(NULL), numcleancodes(0), defaultresult(-1) {};
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *filename, NaughtyFilter * checkme);
+		const char *ip, const char *filename, NaughtyFilter * checkme,
+		const String *disposition, const String *mimetype);
 
 	int init(void* args);
 
@@ -247,8 +248,9 @@ int commandlineinstance::init(void* args)
 // there is no capability to scan memory with commandlinescan as we pass it
 // a file name to scan.  So we save the memory to disk and pass that.
 // Then delete the temp file.
+// TODO Allow for placeholders in command line for inserting content-disposition & content-type?
 int commandlineinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-	const char *ip, const char *filename, NaughtyFilter * checkme)
+	const char *ip, const char *filename, NaughtyFilter * checkme, const String *disposition, const String *mimetype)
 {
 	// create socket pairs for child (scanner) process's stdout & stderr
 	int scannerstdout[2];

@@ -60,11 +60,16 @@ class icapinstance:public CSPlugin
 public:
 	icapinstance(ConfigVar & definition):CSPlugin(definition), usepreviews(false), previewsize(0),
 		supportsXIF(false), needsBody(false) {};
+	
+	int willScanRequest(const String &url, const char *user, int filtergroup, const char *ip, bool post,
+		bool reconstituted);
 
 	int scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme);
+		const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme,
+		const String *disposition, const String *mimetype);
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *filename, NaughtyFilter * checkme);
+		const char *ip, const char *filename, NaughtyFilter * checkme,
+		const String *disposition, const String *mimetype);
 
 	int init(void* args);
 
@@ -99,6 +104,16 @@ CSPlugin *icapcreate(ConfigVar & definition)
 }
 
 // end of Class factory
+
+// don't scan POST data or reconstituted data - wouldn't work for multi-part posts
+// without faking request headers, as we are only passed a single part, not the whole request verbatim
+int icapinstance::willScanRequest(const String &url, const char *user, int filtergroup, const char *ip, bool post, bool reconstituted)
+{
+	if (post || reconstituted)
+		return DGCS_NOSCAN;
+	else
+		return CSPlugin::willScanRequest(url, user, filtergroup, ip, post, reconstituted);
+}
 
 // initialise the plugin - determine icap ip, port & url
 int icapinstance::init(void* args)
@@ -202,7 +217,8 @@ int icapinstance::init(void* args)
 
 // send memory buffer to ICAP server for scanning
 int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-	const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme)
+	const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme,
+	const String *disposition, const String *mimetype)
 {
 	lastvirusname = lastmessage = "";
 
@@ -282,7 +298,9 @@ int icapinstance::scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader,
 }
 
 // send file contents for scanning
-int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup, const char *ip, const char *filename, NaughtyFilter * checkme)
+int icapinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user,
+	int filtergroup, const char *ip, const char *filename, NaughtyFilter * checkme,
+	const String *disposition, const String *mimetype)
 {
 	lastmessage = lastvirusname = "";
 	int filefd = open(filename, O_RDONLY);

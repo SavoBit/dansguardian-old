@@ -52,7 +52,8 @@ class kavdinstance:public CSPlugin
 public:
 	kavdinstance(ConfigVar & definition):CSPlugin(definition) {};
 	int scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-		const char *ip, const char *filename, NaughtyFilter * checkme);
+		const char *ip, const char *filename, NaughtyFilter * checkme,
+		const String *disposition, const String *mimetype);
 
 	int init(void* args);
 
@@ -102,7 +103,7 @@ int kavdinstance::init(void* args)
 // a file name to scan.  So we save the memory to disk and pass that.
 // Then delete the temp file.
 int kavdinstance::scanFile(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
-	const char *ip, const char *filename, NaughtyFilter * checkme)
+	const char *ip, const char *filename, NaughtyFilter * checkme, const String *disposition, const String *mimetype)
 {
 	lastvirusname = lastmessage = "";
 	// mkstemp seems to only set owner permissions, so our AV daemon won't be
