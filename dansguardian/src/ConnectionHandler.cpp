@@ -399,6 +399,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 	// clear list of parameters extracted from URL
 	urlparams.clear();
 
+	// clear out info about POST data
+	postparts.clear();
+
 #ifdef DGDEBUG			// debug stuff surprisingly enough
 	std::cout << "got connection" << std::endl;
 	std::cout << clientip << std::endl;
@@ -495,6 +498,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				clienthost = NULL;  // and the hostname, if available
 				matchedip = false;
 				urlparams.clear();
+				postparts.clear();
 				docsize = 0;  // to store the size of the returned document for logging
 				mimetype = "-";
 				exceptionreason = "";
@@ -863,7 +867,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					//urld = header.decode(url);  // unneeded really
 
 					doLog(clientuser, clientip, url, header.port, exceptionreason,
-						rtype, docsize, NULL, false, isexception, false, &thestart,
+						rtype, docsize, NULL, false, 0, isexception, false, &thestart,
 						cachehit, 200, mimetype, wasinfected, wasscanned, 0, filtergroup,
 						&header);
 
@@ -931,12 +935,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			
 
 			// Query request and response scanners to see which is interested in scanning data for this request
+			// TODO - Should probably block if willScanRequest returns error
 			bool multipart = false;
-			String mtype(header.getContentType());
 			if (!isbannedip && !isbanneduser && !isconnect && !ishead && !isbypass
 				&& (o.fg[filtergroup]->disable_content_scan != 1)
-				&& !(isexception && !o.content_scan_exceptions)
-				&& (mtype == "application/x-www-form-urlencoded" || (multipart = (mtype == "multipart/form-data"))))
+				&& !(isexception && !o.content_scan_exceptions))
 			{
 				for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; ++i)
 				{
@@ -946,33 +949,48 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					else if (csrc < 0)
 						syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
 				}
+#ifdef DGDEBUG
+				std::cout << "Content scanners interested in response data: " << responsescanners.size() << std::endl;
+#endif
 
 				// Only query scanners regarding outgoing data if we are actually sending data in the request
 				if (header.contentLength() > 0)
 				{
-					// Don't bother if it's a single part POST and is above max_content_ramcache_scan_size
-					if (!multipart && header.contentLength() > o.max_content_ramcache_scan_size)
+					// POST data log entry - fill in for single-part posts,
+					// and fill in overall "guess" for multi-part posts;
+					// latter will be overwritten with more detail about
+					// individual parts, if part-by-part filtering occurs.
+					String mtype(header.getContentType());
+					postparts.push_back(postinfo());
+					postparts.back().mimetype.assign(mtype);
+					postparts.back().size = header.contentLength();
+					
+					if (mtype == "application/x-www-form-urlencoded" || (multipart = (mtype == "multipart/form-data")))
 					{
-#ifdef DGDEBUG
-						std::cout << "Not running willScanRequest for POST data: single-part POST with content length above size limit" << std::endl;
-#endif
-					}
-					else
-					{
-						for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; ++i)
+						// Don't bother if it's a single part POST and is above max_content_ramcache_scan_size
+						if (!multipart && header.contentLength() > o.max_content_ramcache_scan_size)
 						{
-							int csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), true, !multipart);
-							if (csrc > 0)
-								requestscanners.push_back((CSPlugin*)(*i));
-							else if (csrc < 0)
-								syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
+#ifdef DGDEBUG
+							std::cout << "Not running willScanRequest for POST data: single-part POST with content length above size limit" << std::endl;
+#endif
 						}
+						else
+						{
+							for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; ++i)
+							{
+								int csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), true, !multipart);
+								if (csrc > 0)
+									requestscanners.push_back((CSPlugin*)(*i));
+								else if (csrc < 0)
+									syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
+							}
+						}
+#ifdef DGDEBUG
+						std::cout << "Content scanners interested in request data: " << requestscanners.size() << std::endl;
+#endif
 					}
 				}
 			}
-#ifdef DGDEBUG
-			std::cout << "Content scanners interested in request data: " << requestscanners.size() << ", response data: " << responsescanners.size() << std::endl;
-#endif
 
 			if (((isexception || iscookiebypass || isvirusbypass)
 				// don't filter exception and local web server
@@ -1000,7 +1018,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					docsize = fdt.throughput;
 					if (!isourwebserver) {	// don't log requests to the web server
 						String rtype(header.requestType());
-						doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, (exceptioncat.length() ? &exceptioncat : NULL), false, isexception,
+						doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, (exceptioncat.length() ? &exceptioncat : NULL), false, 0, isexception,
 							false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
 							mimetype, wasinfected, wasscanned, 0, filtergroup, &header);
 					}
@@ -1093,7 +1111,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 							if (!isourwebserver) {	// don't log requests to the web server
 								String rtype(header.requestType());
 								doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, (exceptioncat.length() ? &exceptioncat : NULL),
-									false, isexception, false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
+									false, 0, isexception, false, &thestart, cachehit, ((!isconnect && persist) ? docheader.returnCode() : 200),
 									mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header,
 									// content wasn't modified, but URL was
 									false, true);
@@ -1176,7 +1194,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					docsize = fdt.throughput;
 					String rtype(header.requestType());
 					doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, &checkme.whatIsNaughtyCategories, false,
-						isexception, false, &thestart,
+						0, isexception, false, &thestart,
 						cachehit, (wasrequested ? docheader.returnCode() : 200), mimetype, wasinfected,
 						wasscanned, checkme.naughtiness, filtergroup, &header, false, urlmodified);
 				}
@@ -1369,8 +1387,30 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 											std::cout << "POST part MIME type: " << mimetype << std::endl;
 											std::cout << "POST part disposition: " << disposition << std::endl;
 #endif
+											// Put info about the part in the POST parts list, for logging
+											if (mimetype.empty())
+												mimetype.assign("text/plain");
+											postparts.push_back(postinfo());
+											postparts.back().mimetype.assign(mimetype);
+											std::string::size_type start = disposition.find("filename=");
+											if (start != std::string::npos)
+											{
+												start += 9;
+												char endchar = ';';
+												if (disposition[start] == '"')
+												{
+													endchar = '"';
+													++start;
+												}
+												std::string::size_type end = disposition.find(endchar, start);
+												if (end != std::string::npos)
+													postparts.back().filename = disposition.substr(start, end - start);
+											}
 											// Don't include "\r\n\r\n" in part's body data
 											offset += 4;
+											postparts.back().size = part->getLength();
+											postparts.back().bodyoffset = offset;
+
 											// Run part through interested request scanning plugins
 											for (std::deque<CSPlugin *>::iterator i = requestscanners.begin(); i != requestscanners.end(); ++i)
 											{
@@ -1381,19 +1421,44 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #endif
 												if (csrc > 0)
 												{
-													(*i)->scanMemory(&header, NULL, clientuser.c_str(), filtergroup, clientip.c_str(),
+													csrc = (*i)->scanMemory(&header, NULL, clientuser.c_str(), filtergroup, clientip.c_str(),
 														data + offset, part->getLength() - offset, &checkme,
 														&disposition, &mimetype);
-													if (checkme.isItNaughty)
+													if (csrc != DGCS_CLEAN && csrc != DGCS_WARNING)
 													{
-														// Part was blocked
-														// - discard it and don't bother with other plugins
 														part.reset();
+														checkme.blocktype = 1;
+														postparts.back().blocked = true;
+													}
+													if (csrc == DGCS_BLOCKED) {
+														break;
+													}
+													else if (csrc == DGCS_INFECTED) {
+														wasinfected = true;
+														break;
+													}
+													//if its not clean / we errored then treat it as infected
+													else if (csrc != DGCS_CLEAN && csrc != DGCS_WARNING) {
+														if (csrc < 0) {
+															syslog(LOG_ERR, "Unknown return code from content scanner: %d", csrc);
+														}
+														else {
+															syslog(LOG_ERR, "scanFile/Memory returned error: %d", csrc);
+														}
+														//TODO: have proper error checking/reporting here?
+														//at the very least, integrate with the translation system.
+														checkme.whatIsNaughty = "WARNING: Could not perform content scan!";
+														checkme.whatIsNaughtyLog = (*i)->getLastMessage().toCharArray();
+														checkme.whatIsNaughtyCategories = "Content scanning";
+														checkme.isItNaughty = true;
+														checkme.isException = false;
+														scanerror = true;
 														break;
 													}
 												}
 												else if (csrc < 0)
-													syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
+													// TODO - Should probably block here
+													syslog(LOG_ERR, "willScanData returned error: %d", csrc);
 											}
 											// Send whole part upstream
 											if (!checkme.isItNaughty)
@@ -1452,6 +1517,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 											proxysock.writeToSockete(trailer.c_str(), trailer.length(), 0, 10);
 										}
 										first = false;
+										// Clear out dummy log data so it can be filled in
+										// with info about each POST part individually
+										postparts.clear();
 										// For all boundaries after the first, include the leading CRLF
 										boundary.insert(0, "\r\n");
 										// Create BackedStore for first data part
@@ -1559,19 +1627,42 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 							if (csrc > 0)
 							{
 								String mimetype("text/plain");
-								(*i)->scanMemory(&header, NULL, clientuser.c_str(), filtergroup, clientip.c_str(),
+								csrc = (*i)->scanMemory(&header, NULL, clientuser.c_str(), filtergroup, clientip.c_str(),
 									result.c_str(), result.length(), &checkme, NULL, &mimetype);
-								if (checkme.isItNaughty)
+								if (csrc != DGCS_CLEAN && csrc != DGCS_WARNING)
 								{
-									// Part was blocked - don't bother with other plugins
-#ifdef DGDEBUG
-									std::cout << "Form data blocked" << std::endl;
-#endif
+									checkme.blocktype = 1;
+									postparts.back().blocked = true;
+								}
+								if (csrc == DGCS_BLOCKED) {
+									break;
+								}
+								else if (csrc == DGCS_INFECTED) {
+									wasinfected = true;
+									break;
+								}
+								//if its not clean / we errored then treat it as infected
+								else if (csrc != DGCS_CLEAN && csrc != DGCS_WARNING) {
+									if (csrc < 0) {
+										syslog(LOG_ERR, "Unknown return code from content scanner: %d", csrc);
+									}
+									else {
+										syslog(LOG_ERR, "scanFile/Memory returned error: %d", csrc);
+									}
+									//TODO: have proper error checking/reporting here?
+									//at the very least, integrate with the translation system.
+									checkme.whatIsNaughty = "WARNING: Could not perform content scan!";
+									checkme.whatIsNaughtyLog = (*i)->getLastMessage().toCharArray();
+									checkme.whatIsNaughtyCategories = "Content scanning";
+									checkme.isItNaughty = true;
+									checkme.isException = false;
+									scanerror = true;
 									break;
 								}
 							}
 							else if (csrc < 0)
-								syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
+								// TODO - Should probably block here
+								syslog(LOG_ERR, "willScanData returned error: %d", csrc);
 						}
 					}
 					// Cannot be other, unknown MIME type because MIME type
@@ -1666,7 +1757,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 						if (csrc > 0)
 							newplugins.push_back(*i);
 						else if (csrc < 0)
-							syslog(LOG_ERR, "willScanRequest returned error: %d", csrc);
+							// TODO Should probably block on error
+							syslog(LOG_ERR, "willScanData returned error: %d", csrc);
 #ifdef DGDEBUG
 						j++;
 #endif
@@ -1675,7 +1767,6 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					// Store only those plugins which responded positively to willScanData
 					responsescanners.swap(newplugins);
 				}
-				// TODO Debug output showing new contents of candidate list
 
 				// no need to check bypass mode, exception mode, auth required headers, redirections, or banned ip/user (the latter get caught by requestChecks later)
 				if (!isexception && !isbypass && !(isbannedip || isbanneduser) && !docheader.isRedirection() && !docheader.authRequired())
@@ -1881,7 +1972,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #endif
 				logged = true;
 				doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog,
-					rtype, docsize, &checkme.whatIsNaughtyCategories, true, false, false, &thestart,
+					rtype, docsize, &checkme.whatIsNaughtyCategories, true, checkme.blocktype, false, false, &thestart,
 					cachehit, 403, mimetype, wasinfected, wasscanned, checkme.naughtiness, filtergroup,
 					&header, contentmodified, urlmodified, headermodified);
 				if (denyAccess(&peerconn, &proxysock, &header, &docheader, &url, &checkme, &clientuser,&clientip, filtergroup, ispostblock, headersent, wasinfected, scanerror))
@@ -1919,7 +2010,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				if (!docheader.authRequired() && !pausedtoobig) {
 					String rtype(header.requestType());
 					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
-						rtype, docsize, &checkme.whatIsNaughtyCategories, false, isexception,
+						rtype, docsize, &checkme.whatIsNaughtyCategories, false, 0, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header,
 						contentmodified, urlmodified, headermodified);
@@ -1989,7 +2080,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					docsize += fdt.throughput;
 					String rtype(header.requestType());
 					if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
-						rtype, docsize, &checkme.whatIsNaughtyCategories, false, isexception,
+						rtype, docsize, &checkme.whatIsNaughtyCategories, false, 0, isexception,
 						docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 						wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header,
 						contentmodified, urlmodified, headermodified);
@@ -2003,7 +2094,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				docsize = fdt.throughput;
 				String rtype(header.requestType());
 				if (!logged) doLog(clientuser, clientip, url, header.port, exceptionreason,
-					rtype, docsize, &checkme.whatIsNaughtyCategories, false, isexception,
+					rtype, docsize, &checkme.whatIsNaughtyCategories, false, 0, isexception,
 					docheader.isContentType("text"), &thestart, cachehit, docheader.returnCode(), mimetype,
 					wasinfected, wasscanned, checkme.naughtiness, filtergroup, &header,
 					contentmodified, urlmodified, headermodified);
@@ -2038,7 +2129,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 
 // decide whether or not to perform logging, categorise the log entry, and write it.
 void ConnectionHandler::doLog(std::string &who, std::string &from, String &where, unsigned int &port,
-		std::string &what, String &how, off_t &size, std::string *cat, bool isnaughty,
+		std::string &what, String &how, off_t &size, std::string *cat, bool isnaughty, int naughtytype,
 		bool isexception, bool istext, struct timeval *thestart, bool cachehit,
 		int code, std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness, int filtergroup,
 		HTTPHeader* reqheader, bool contentmodified, bool urlmodified, bool headermodified)
@@ -2114,6 +2205,20 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 			std::cout << "Not looking for log-only category; current cat string is: " << *cat << " (" << cat->length() << ")" << std::endl;
 #endif
 
+		// Build up string describing POST data parts, if any
+		std::ostringstream postdata;
+		for (std::list<postinfo>::iterator i = postparts.begin(); i != postparts.end(); ++i)
+		{
+			// Replace characters which would break log format with underscores
+			std::string::size_type loc = 0;
+			while ((loc = i->filename.find_first_of(",;\t ", loc)) != std::string::npos)
+				i->filename[loc] = '_';
+			// Build up contents of log column
+			postdata << i->mimetype << "," << i->filename << "," << i->size
+				<< "," << i->blocked << "," << i->storedname << "," << i->bodyoffset << ";";
+		}
+		postdata << std::flush;
+
 		// Formatting code moved into log_listener in FatController.cpp
 		// Original patch by J. Gauthier
 
@@ -2124,6 +2229,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		data = String(isexception)+cr;
 		data += ( cat ? (*cat) + cr : cr);
 		data += String(isnaughty)+cr;
+		data += String(naughtytype)+cr;
 		data += String(naughtiness)+cr;
 		data += where+cr;
 		data += what+cr;
@@ -2149,6 +2255,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		else
 			data += cr;
 		data += urlparams + cr;
+		data += postdata.str().c_str() + cr;
 
 #ifdef DGDEBUG   
 		std::cout << "...built" << std::endl;
@@ -2238,7 +2345,10 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 					(o.fg[filtergroup]->searchterm_flag ? o.fg[filtergroup]->searchterm_list : o.fg[filtergroup]->banned_phrase_list),
 					o.fg[filtergroup]->searchterm_limit, true);
 				if (checkme->isItNaughty)
+				{
+					checkme->blocktype = 2;
 					return;
+				}
 			}
 		}
 	}
@@ -2750,7 +2860,6 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 					checkme->whatIsNaughtyCategories = "Content scanning";
 					checkme->isItNaughty = true;
 					checkme->isException = false;
-					(*wasinfected) = true;
 					(*scanerror) = true;
 					break;
 				}

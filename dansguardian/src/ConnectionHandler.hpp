@@ -37,6 +37,25 @@ bool wasClean(String &url, const int fg);
 // add a known clean URL to the cache
 void addToClean(String &url, const int fg);
 
+// record for storing information about POST data parts
+// used for building up the POST data log column
+struct postinfo
+{
+	// MIME type & original filename (if available)
+	std::string mimetype;
+	std::string filename;
+	// name of file containing headers & body info
+	// for this POST part (if it has been stored)
+	std::string storedname;
+	// size of part
+	size_t size;
+	// offset of body data from start of file
+	// (if post part was stored on disk)
+	size_t bodyoffset;
+	bool blocked;
+	postinfo():size(0), bodyoffset(0), blocked(false) {};
+};
+
 // the ConnectionHandler class - handles filtering, scanning, and blocking of
 // data passed between a client and the external proxy.
 class ConnectionHandler
@@ -53,9 +72,11 @@ private:
 	bool matchedip;
 	std::string urlparams;
 
+	std::list<postinfo> postparts;
+
 	// write a log entry containing the given data (if required)
 	void doLog(std::string &who, std::string &from, String &where, unsigned int &port,
-		std::string &what, String &how, off_t &size, std::string *cat, bool isnaughty,
+		std::string &what, String &how, off_t &size, std::string *cat, bool isnaughty, int naughtytype,
 		bool isexception, bool istext, struct timeval *thestart, bool cachehit, int code,
 		std::string &mimetype, bool wasinfected, bool wasscanned, int naughtiness, int filtergroup,
 		HTTPHeader* reqheader, bool contentmodified = false,
