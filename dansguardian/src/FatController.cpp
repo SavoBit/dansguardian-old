@@ -833,7 +833,8 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 	std::string cr("\n");
    
 	std::string where, what, how, cat, clienthost, from, who, mimetype, useragent, ssize, sweight, params;
-	int port = 80, isnaughty = 0, isexception = 0, code = 200;
+	std::string stype, postdata;
+	int port = 80, isnaughty = 0, isexception = 0, code = 200, naughtytype = 0;
 	int cachehit = 0, wasinfected = 0, wasscanned = 0, filtergroup = 0;
 	long tv_sec = 0, tv_usec = 0;
 	int contentmodified = 0, urlmodified = 0, headermodified = 0;
@@ -898,7 +899,7 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 			// read in the various parts of the log string
 			bool error = false;
 			int itemcount = 0;
-			while(itemcount < 25) {
+			while(itemcount < 27) {
 				try {
 				    	char *logline = new char[8192];
 					rc = ipcpeersock->getLine(logline, 8192, 3, true);  // throws on err
@@ -922,70 +923,76 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 							isnaughty = atoi(logline);
 							break;
 						case 3:
-							sweight = logline;
+							naughtytype = atoi(logline);
 							break;
 						case 4:
-							where = logline;
+							sweight = logline;
 							break;
 						case 5:
-							what = logline;
+							where = logline;
 							break;
 						case 6:
-							how = logline;
+							what = logline;
 							break;
 						case 7:
-							who = logline;
+							how = logline;
 							break;
 						case 8:
-							from = logline;
+							who = logline;
 							break;
 						case 9:
-							port = atoi(logline);
+							from = logline;
 							break;
 						case 10:
-							wasscanned = atoi(logline);
+							port = atoi(logline);
 							break;
 						case 11:
-							wasinfected = atoi(logline);
+							wasscanned = atoi(logline);
 							break;
 						case 12:
-							contentmodified = atoi(logline);
+							wasinfected = atoi(logline);
 							break;
 						case 13:
-							urlmodified = atoi(logline);
+							contentmodified = atoi(logline);
 							break;
 						case 14:
-							headermodified = atoi(logline);
+							urlmodified = atoi(logline);
 							break;
 						case 15:
-							ssize = logline;
+							headermodified = atoi(logline);
 							break;
 						case 16:
-							filtergroup = atoi(logline);
+							ssize = logline;
 							break;
 						case 17:
-							code = atoi(logline);
+							filtergroup = atoi(logline);
 							break;
 						case 18:
-							cachehit = atoi(logline);
+							code = atoi(logline);
 							break;
 						case 19:
-							mimetype = logline;
+							cachehit = atoi(logline);
 							break;
 						case 20:
-							tv_sec = atol(logline);
+							mimetype = logline;
 							break;
 						case 21:
-							tv_usec = atol(logline);
+							tv_sec = atol(logline);
 							break;
 						case 22:
-							clienthost = logline;
+							tv_usec = atol(logline);
 							break;
 						case 23:
-							useragent = logline;
+							clienthost = logline;
 							break;
 						case 24:
+							useragent = logline;
+							break;
+						case 25:
 							params = logline;
+							break;
+						case 26:
+							postdata = logline;
 						}
 					}
 					delete[]logline;
@@ -1030,20 +1037,29 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 			}
 
 			// stamp log entries so they stand out/can be searched
+			switch (naughtytype)
+			{
+				case 1:
+					stype = "-POST";
+					break;
+				case 2:
+					stype = "-PARAMS";
+					break;
+				default:
+					stype.clear();
+			}
 			if (isnaughty) {
-				what = "*DENIED* " + what;
+				what = "*DENIED" + stype + "* " + what;
 			}
 			else if (isexception && (o.log_exception_hits == 2)) {
 				what = "*EXCEPTION* " + what;
 			}
 		   
-			if (wasscanned) {
-				if (wasinfected) {
-					what = "*INFECTED* " + what;
-				} else {
-					what = "*SCANNED* " + what;
-				}
-			}
+			if (wasinfected)
+				what = "*INFECTED" + stype + "* " + what;
+			else if (wasscanned)
+				what = "*SCANNED* " + what;
+			
 			if (contentmodified) {
 				what = "*CONTENTMOD* " + what;
 			}
@@ -1139,9 +1155,9 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 					+ stringcode + "\t" + mimetype + "\t" + clienthost + "\t" + o.fg[filtergroup]->name
 #ifdef SG_LOGFORMAT
 					+ "\t" + useragent + "\t\t" + o.logid_1 + "\t" + o.prod_id + "\t"
-					+ params + "\t" + o.logid_2;
+					+ params + "\t" + o.logid_2 + "\t" + postdata;
 #else
-					+ "\t" + useragent + "\t" + params + "\t" + o.logid_1 + "\t" + o.logid_2;
+					+ "\t" + useragent + "\t" + params + "\t" + o.logid_1 + "\t" + o.logid_2 + "\t" + postdata;
 #endif
 				break;
 			case 3:
@@ -1191,13 +1207,13 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 				builtline = "\"" + when  +"\",\""+ who + "\",\"" + from + "\",\"" + where + "\",\"" + what + "\",\""
 					+ how + "\",\"" + ssize + "\",\"" + sweight + "\",\"" + cat +  "\",\"" + stringgroup + "\",\""
 					+ stringcode + "\",\"" + mimetype + "\",\"" + clienthost + "\",\"" + o.fg[filtergroup]->name + "\",\""
-					+ useragent + "\",\"" + params + "\",\"" + o.logid_1 + "\",\"" + o.logid_2 + "\"";
+					+ useragent + "\",\"" + params + "\",\"" + o.logid_1 + "\",\"" + o.logid_2 + "\",\"" + postdata + "\"";
 				break;
 			default:
 				builtline = when +" "+ who + " " + from + " " + where + " " + what + " "
 					+ how + " " + ssize + " " + sweight + " " + cat +  " " + stringgroup + " "
 					+ stringcode + " " + mimetype + " " + clienthost + " " + o.fg[filtergroup]->name + " "
-					+ useragent + " " + params + " " + o.logid_1 + " " + o.logid_2;
+					+ useragent + " " + params + " " + o.logid_1 + " " + o.logid_2 + " " + postdata;
 			}
 
 			if (!logsyslog)
