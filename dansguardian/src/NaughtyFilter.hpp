@@ -35,6 +35,9 @@ public:
 	// should the browser use the categories string or the displaycategories string?
 	// (related to category list thresholding)
 	bool usedisplaycats;
+	// blocked data type - 0 = response body, 1 = request body (POST data),
+	// 2 = URL parameters (search terms)
+	int blocktype;
 
 	// the reason for banning, what to say about it in the logs, and the
 	// categories under which banning has taken place
