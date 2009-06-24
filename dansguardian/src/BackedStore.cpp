@@ -231,3 +231,99 @@ const char *BackedStore::getData() const
 		return (const char*) map;
 	}
 }
+
+std::string BackedStore::store(const char *dir)
+{
+	if (fd >= 0)
+	{
+		// We already have a temp file on disk
+		// Try creating a hardlink with the new name and see what happens
+		std::string storedname(dir);
+		char *name = strrchr(filename, '/');
+		storedname.append(filename);
+#ifdef DGDEBUG
+		std::cout << "BackedStore: creating hard link: " << storedname << std::endl;
+#endif
+		int rc = link(name, storedname.c_str());
+		if (rc >= 0)
+			// Success!  Return new filename
+			return storedname;
+		else if (errno != EXDEV)
+		{
+			// Failure - but ignore EXDEV, as we can "recover"
+			// from that by taking a different approach
+			std::ostringstream ss;
+			ss << "BackedStore could not create link to existing temp file: " << strerror(errno);
+			throw std::runtime_error(ss.str().c_str());
+		}
+	}
+	
+	// We don't already have a temp file,
+	// or a simple link wasn't sufficient (EXDEV)
+	// Generate a new filename in the given directory
+	size_t dirlen = strlen(dir);
+	char storedname[dirlen + 14];
+	strncpy(storedname, dir, dirlen);
+	strncpy(storedname + dirlen, "/__dgbsXXXXXX", 13);
+	storedname[dirlen + 13] = '\0';
+#ifdef DGDEBUG
+	std::cout << "BackedStore: storedname template: " << storedname << std::endl;
+#endif
+	int storefd;
+	if ((storefd = mkstemp(storedname)) < 0)
+	{
+		std::ostringstream ss;
+		ss << "BackedStore could not create stored file: " << strerror(errno);
+		throw std::runtime_error(ss.str().c_str());
+	}
+#ifdef DGDEBUG
+	std::cout << "BackedStore: storedname: " << storedname << std::endl;
+#endif
+	
+	// Dump the RAM buffer/mmap-ed file contents to disk in the new location
+	if (fd >= 0 && map == MAP_FAILED)
+		throw std::runtime_error("BackedStore could not copy existing temp file: store not finalised");
+
+	size_t bytes_written = 0;
+	ssize_t rc = 0;
+	if (fd >= 0)
+	{
+		do
+		{
+			rc = write(storefd, (const char*) map + bytes_written, length - bytes_written);
+			if (rc > 0)
+				bytes_written += rc;
+		}
+		while (bytes_written < length && (rc > 0 || errno == EINTR));
+	}
+	else
+	{
+		do
+		{
+			rc = write(storefd, &(rambuf.front()) + bytes_written, rambuf.size() - bytes_written);
+			if (rc > 0)
+				bytes_written += rc;
+		}
+		while (bytes_written < rambuf.size() && (rc > 0 || errno == EINTR));
+	}
+
+	if (rc < 0 && errno != EINTR)
+	{
+		std::ostringstream ss;
+		ss << "BackedStore could not dump RAM buffer to temp file: " << strerror(errno);
+		do
+		{
+			rc = close(storefd);
+		}
+		while (rc < 0 && errno == EINTR);
+		throw std::runtime_error(ss.str().c_str());
+	}
+
+	do
+	{
+		rc = close(storefd);
+	}
+	while (rc < 0 && errno == EINTR);
+
+	return storedname;
+}

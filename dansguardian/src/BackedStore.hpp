@@ -54,6 +54,10 @@ public:
 	// Get length of buffer
 	size_t getLength() const;
 
+	// Store the contents of the buffer as a uniquely-named
+	// file in the given directory; return the full filename
+	std::string store(const char *dir);
+
 private:
 	// Buffer & file descriptor for in-memory/on-disk storage
 	std::vector<char> rambuf;
