@@ -1426,9 +1426,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 														&disposition, &mimetype);
 													if (csrc != DGCS_CLEAN && csrc != DGCS_WARNING)
 													{
-														part.reset();
 														checkme.blocktype = 1;
 														postparts.back().blocked = true;
+														if (checkme.store && !o.blocked_content_store.empty())
+															postparts.back().storedname = part->store(o.blocked_content_store.c_str());
+														part.reset();
 													}
 													if (csrc == DGCS_BLOCKED) {
 														break;
@@ -1633,6 +1635,53 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 								{
 									checkme.blocktype = 1;
 									postparts.back().blocked = true;
+									if (checkme.store && !o.blocked_content_store.empty())
+									{
+										// Write original encoded buffer to disk
+										size_t dirlen = o.blocked_content_store.length();
+										char storedname[dirlen + 14];
+										strncpy(storedname, o.blocked_content_store.c_str(), dirlen);
+										strncpy(storedname + dirlen, "/__dgbsXXXXXX", 13);
+										storedname[dirlen + 13] = '\0';
+#ifdef DGDEBUG
+										std::cout << "Single-part POST: storedname template: " << storedname << std::endl;
+#endif
+										int storefd;
+										if ((storefd = mkstemp(storedname)) < 0)
+										{
+											std::ostringstream ss;
+											ss << "Could not create file for single-part POST data: " << strerror(errno);
+											throw std::runtime_error(ss.str().c_str());
+										}
+#ifdef DGDEBUG
+										std::cout << "Single-part POST: storedname: " << storedname << std::endl;
+#endif
+										ssize_t bytes_written = 0;
+										ssize_t rc = 0;
+										do
+										{
+											rc = write(storefd, buffer + bytes_written, cl - bytes_written);
+											if (rc > 0)
+												bytes_written += rc;
+										}
+										while (bytes_written < cl && (rc > 0 || errno == EINTR));
+										if (rc < 0 && errno != EINTR)
+										{
+											std::ostringstream ss;
+											ss << "Could not write single-part POST data to file: " << strerror(errno);
+											do
+											{
+												rc = close(storefd);
+											}
+											while (rc < 0 && errno == EINTR);
+											throw std::runtime_error(ss.str().c_str());
+										}
+										do
+										{
+											rc = close(storefd);
+										}
+										while (rc < 0 && errno == EINTR);
+									}
 								}
 								if (csrc == DGCS_BLOCKED) {
 									break;
