@@ -1656,6 +1656,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #ifdef DGDEBUG
 										std::cout << "Single-part POST: storedname: " << storedname << std::endl;
 #endif
+										postparts.back().storedname = storedname;
 										ssize_t bytes_written = 0;
 										ssize_t rc = 0;
 										do
