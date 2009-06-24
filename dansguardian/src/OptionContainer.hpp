@@ -103,6 +103,7 @@ public:
 	std::string urlipc_filename;
 	std::string ipipc_filename;
 	std::string pid_filename;
+	std::string blocked_content_store;
 
 	// Hardware/organisation/etc. IDs
 	std::string logid_1;

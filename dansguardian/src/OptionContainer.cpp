@@ -167,6 +167,8 @@ bool OptionContainer::read(const char *filename, int type)
 			daemon_group_name = __PROXYGROUP;
 		}
 
+		blocked_content_store = findoptionS("blockedcontentstore");
+
 		if (findoptionS("nodaemon") == "on") {
 			no_daemon = true;
 		} else {
