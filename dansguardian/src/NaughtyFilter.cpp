@@ -68,7 +68,7 @@ public:
 
 // constructor - set up defaults
 NaughtyFilter::NaughtyFilter()
-:	isItNaughty(false), isException(false), usedisplaycats(false), blocktype(0), naughtiness(0)
+:	isItNaughty(false), isException(false), usedisplaycats(false), blocktype(0), store(false), naughtiness(0)
 {
 }
 
@@ -81,6 +81,7 @@ void NaughtyFilter::reset()
 	whatIsNaughtyCategories = "";
 	usedisplaycats = false;
 	blocktype = 0;
+	store = false;
 	naughtiness = 0;
 }
 

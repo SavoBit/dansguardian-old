@@ -38,6 +38,9 @@ public:
 	// blocked data type - 0 = response body, 1 = request body (POST data),
 	// 2 = URL parameters (search terms)
 	int blocktype;
+	// flag for use by ContentScanners to say whether data should be stored
+	// for future inspection.  storage only implemented for POST data.
+	bool store;
 
 	// the reason for banning, what to say about it in the logs, and the
 	// categories under which banning has taken place
