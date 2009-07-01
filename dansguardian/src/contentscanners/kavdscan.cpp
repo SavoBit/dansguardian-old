@@ -76,10 +76,9 @@ CSPlugin *kavdcreate(ConfigVar & definition)
 // initialise plugin
 int kavdinstance::init(void* args)
 {
-	// always include these lists
-	if (!readStandardLists()) {
-		return DGCS_ERROR;
-	}
+	int rc;
+	if ((rc = CSPlugin::init(args)) != DGCS_OK)
+		return rc;
 
 	udspath = cv["kavdudsfile"];
 	if (udspath.length() < 3) {

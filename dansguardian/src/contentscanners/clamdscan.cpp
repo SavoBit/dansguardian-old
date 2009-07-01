@@ -82,10 +82,9 @@ CSPlugin *clamdcreate(ConfigVar & definition)
 // initialise the plugin
 int clamdinstance::init(void* args)
 {
-	// always include these lists
-	if (!readStandardLists()) {
-		return DGCS_ERROR;
-	}
+	int rc;
+	if ((rc = CSPlugin::init(args)) != DGCS_OK)
+		return rc;
 	
 	// read in ClamD UNIX domain socket path 
 	udspath = cv["clamdudsfile"];

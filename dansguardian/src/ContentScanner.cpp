@@ -67,6 +67,7 @@ extern cscreate_t commandlinecreate;
 // CSPlugin class
 
 CSPlugin::CSPlugin(ConfigVar & definition)
+	:scanpost(false)
 {
 	cv = definition;
 }
@@ -74,6 +75,11 @@ CSPlugin::CSPlugin(ConfigVar & definition)
 // start the plugin - i.e. read in the configuration
 int CSPlugin::init(void* args)
 {
+	if (cv["scanpost"] == "on")
+		scanpost = true;
+	else
+		scanpost = false;
+
 	if (!readStandardLists()) {	//always
 		return DGCS_ERROR;  //include
 	}			// these
@@ -205,6 +211,10 @@ int CSPlugin::willScanRequest(const String &url, const char *user, int filtergro
 {
 	// Most content scanners only deal with original, unmodified content
 	if (reconstituted)
+		return DGCS_NOSCAN;
+
+	// Deal with POST file uploads conditionally
+	if (post && !scanpost)
 		return DGCS_NOSCAN;
 
 	String urld(HTTPHeader::decode(url));

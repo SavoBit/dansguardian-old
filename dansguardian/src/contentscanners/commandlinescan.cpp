@@ -101,10 +101,9 @@ CSPlugin *commandlinecreate(ConfigVar & definition)
 // initialise plugin
 int commandlineinstance::init(void* args)
 {
-	// always include these lists
-	if (!readStandardLists()) {
-		return DGCS_ERROR;
-	}
+	int rc;
+	if ((rc = CSPlugin::init(args)) != DGCS_OK)
+		return rc;
 
 	// read in program name
 	progname = cv["progname"];

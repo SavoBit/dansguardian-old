@@ -116,6 +116,9 @@ protected:
 	String lastmessage;
 	String lastvirusname;
 
+	// whether or not to AV scan POST uploads
+	bool scanpost;
+
 	void blockFile(std::string * _category,std::string * _message, NaughtyFilter * checkme);
 
 	// read in scan exception lists
