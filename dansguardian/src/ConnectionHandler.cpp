@@ -1638,11 +1638,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 									if (checkme.store && !o.blocked_content_store.empty())
 									{
 										// Write original encoded buffer to disk
-										size_t dirlen = o.blocked_content_store.length();
-										char storedname[dirlen + 14];
-										strncpy(storedname, o.blocked_content_store.c_str(), dirlen);
-										strncpy(storedname + dirlen, "/__dgbsXXXXXX", 13);
-										storedname[dirlen + 13] = '\0';
+										size_t pfxlen = o.blocked_content_store.length();
+										char storedname[pfxlen + 7];
+										strncpy(storedname, o.blocked_content_store.c_str(), pfxlen);
+										strncpy(storedname + pfxlen, "XXXXXX", 6);
+										storedname[pfxlen + 6] = '\0';
 #ifdef DGDEBUG
 										std::cout << "Single-part POST: storedname template: " << storedname << std::endl;
 #endif

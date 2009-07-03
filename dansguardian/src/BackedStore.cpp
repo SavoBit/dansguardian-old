@@ -36,6 +36,7 @@
 #include <unistd.h>
 
 #include <sys/mman.h>
+#include <sys/time.h>
 
 #include "BackedStore.hpp"
 
@@ -232,22 +233,30 @@ const char *BackedStore::getData() const
 	}
 }
 
-std::string BackedStore::store(const char *dir)
+std::string BackedStore::store(const char *prefix)
 {
 	if (fd >= 0)
 	{
 		// We already have a temp file on disk
 		// Try creating a hardlink with the new name and see what happens
-		std::string storedname(dir);
+		std::ostringstream storedname;
+		storedname << prefix;
+		timeval tv;
+		// Use time of day (in microsecond resolution) to try and generate
+		// a "random" name for the hardlink - tempnam doesn't allow arbitrary
+		// prefixes (POSIX says up to 5 chars).
+		gettimeofday(&tv, NULL);
+		storedname << tv.tv_sec << tv.tv_usec << std::flush;
+
 		char *name = strrchr(filename, '/');
-		storedname.append(filename);
 #ifdef DGDEBUG
 		std::cout << "BackedStore: creating hard link: " << storedname << std::endl;
 #endif
-		int rc = link(name, storedname.c_str());
+		std::string storedname_str(storedname.str());
+		int rc = link(name, storedname_str.c_str());
 		if (rc >= 0)
 			// Success!  Return new filename
-			return storedname;
+			return storedname_str;
 		else if (errno != EXDEV)
 		{
 			// Failure - but ignore EXDEV, as we can "recover"
@@ -260,12 +269,12 @@ std::string BackedStore::store(const char *dir)
 	
 	// We don't already have a temp file,
 	// or a simple link wasn't sufficient (EXDEV)
-	// Generate a new filename in the given directory
-	size_t dirlen = strlen(dir);
-	char storedname[dirlen + 14];
-	strncpy(storedname, dir, dirlen);
-	strncpy(storedname + dirlen, "/__dgbsXXXXXX", 13);
-	storedname[dirlen + 13] = '\0';
+	// Generate a new filename in the given directory, with the given name prefix
+	size_t pfxlen = strlen(prefix);
+	char storedname[pfxlen + 7];
+	strncpy(storedname, prefix, pfxlen);
+	strncpy(storedname + pfxlen, "XXXXXX", 6);
+	storedname[pfxlen + 6] = '\0';
 #ifdef DGDEBUG
 	std::cout << "BackedStore: storedname template: " << storedname << std::endl;
 #endif
