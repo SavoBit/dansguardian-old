@@ -182,3 +182,52 @@ int ListManager::newPhraseList(const char *exception, const char *banned, const 
 	(*l[(unsigned) free]).weightedpfile = weighted;
 	return (unsigned) free;
 }
+
+bool ListManager::readbplfile(const char *banned, const char *exception, const char *weighted, unsigned int &list, bool force_quick_search)
+{
+
+	int res = newPhraseList(exception, banned, weighted);
+	if (res < 0) {
+		if (!is_daemonised) {
+			std::cerr << "Error opening phraselists" << std::endl;
+		}
+		syslog(LOG_ERR, "%s", "Error opening phraselists");
+		return false;
+	}
+	if (!(*l[res]).used) {
+#ifdef DGDEBUG
+		std::cout << "Reading new phrase lists" << std::endl;
+#endif
+		bool result = (*l[res]).readPhraseList(exception, true);
+		if (!result) {
+			if (!is_daemonised) {
+				std::cerr << "Error opening exceptionphraselist" << std::endl;
+			}
+			syslog(LOG_ERR, "%s", "Error opening exceptionphraselist");
+			return false;
+		}
+
+		result = (*l[res]).readPhraseList(banned, false, -1, -1, false);
+		if (!result) {
+			if (!is_daemonised) {
+				std::cerr << "Error opening bannedphraselist" << std::endl;
+			}
+			syslog(LOG_ERR, "%s", "Error opening bannedphraselist");
+			return false;
+		}
+		result = (*l[res]).readPhraseList(weighted, false, -1, -1, false);
+		if (!result) {
+			if (!is_daemonised) {
+				std::cerr << "Error opening weightedphraselist" << std::endl;
+			}
+			syslog(LOG_ERR, "%s", "Error opening weightedphraselist");
+			return false;
+		}
+		if (!(*l[res]).makeGraph(force_quick_search))
+			return false;
+
+		(*l[res]).used = true;
+	}
+	list = res;
+	return true;
+}

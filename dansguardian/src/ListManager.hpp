@@ -47,6 +47,8 @@ public:
 	// create a new phrase list. re-uses existing lists, but cannot check nested lists (known limitation).
 	// does not call readPhraseList. (checkme: why?)
 	int newPhraseList(const char *exception, const char *banned, const char *weighted);
+
+	bool readbplfile(const char *banned, const char *exception, const char *weighted, unsigned int &list, bool force_quick_search);
 	
 	void deRefList(size_t item);
 	

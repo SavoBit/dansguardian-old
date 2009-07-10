@@ -307,7 +307,6 @@ private:
 	std::deque<std::string > conffile;
 
 	bool precompileregexps();
-	bool readbplfile(const char *banned, const char *exception, const char *weighted, unsigned int &list);
 	bool readFile(const char *filename, unsigned int* whichlist, bool sortsw, bool cache, const char *listname);
 	bool readRegExMatchFile(const char *filename, const char *listname, unsigned int& listref,
 		std::deque<RegExp> &list_comp, std::deque<String> &list_source, std::deque<unsigned int> &list_ref);
