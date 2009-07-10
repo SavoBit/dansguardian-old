@@ -211,11 +211,33 @@ int CSPlugin::willScanRequest(const String &url, const char *user, int filtergro
 {
 	// Most content scanners only deal with original, unmodified content
 	if (reconstituted)
+	{
+#ifdef DGDEBUG
+		std::cout << "willScanRequest: ignoring reconstituted data" << std::endl;
+#endif
 		return DGCS_NOSCAN;
+	}
 
-	// Deal with POST file uploads conditionally
-	if (post && !scanpost)
-		return DGCS_NOSCAN;
+	// Deal with POST file uploads conditionally, but subject only to the "scanpost"
+	// option, not to the domain & URL lists - uploading files does not have the same
+	// implications as downlaoding them.
+	if (post)
+	{
+		if (scanpost)
+		{
+#ifdef DGDEBUG
+			std::cout << "willScanRequest: I'm interested in uploads" << std::endl;
+#endif
+			return DGCS_NEEDSCAN;
+		}
+		else
+		{
+#ifdef DGDEBUG
+			std::cout << "willScanRequest: Not interested in uploads" << std::endl;
+#endif
+			return DGCS_NOSCAN;
+		}
+	}
 
 	String urld(HTTPHeader::decode(url));
 	urld.removeWhiteSpace();
@@ -337,12 +359,30 @@ int CSPlugin::willScanData(const String &url, const char *user, int filtergroup,
 #ifdef DGDEBUG
 		std::cout << "disposition: " << disposition << std::endl;
 #endif
-		extension = disposition;
+		std::string::size_type start = disposition.find("filename=");
+		if (start != std::string::npos)
+		{
+			start += 9;
+			char endchar = ';';
+			if (disposition[start] == '"')
+			{
+				endchar = '"';
+				++start;
+			}
+			std::string::size_type end = disposition.find(endchar, start);
+			if (end != std::string::npos)
+				extension = disposition.substr(start, end - start);
+			else
+				extension = disposition.substr(start);
+		}
 		while (extension.contains("."))
 		{
 			extension = extension.after(".");
 		}
 		extension = "." + extension;
+#ifdef DGDEBUG
+		std::cout << "extension from disposition: " << extension << std::endl;
+#endif
 	}
 	else
 	{
@@ -371,6 +411,9 @@ int CSPlugin::willScanData(const String &url, const char *user, int filtergroup,
 				extension = extension.before("?");
 			}
 		}
+#ifdef DGDEBUG
+		std::cout << "extension from URL: " << extension << std::endl;
+#endif
 	}
 	if (extension.contains("."))
 	{
