@@ -1405,6 +1405,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 												std::string::size_type end = disposition.find(endchar, start);
 												if (end != std::string::npos)
 													postparts.back().filename = disposition.substr(start, end - start);
+												else
+													postparts.back().filename = disposition.substr(start);
 											}
 											// Don't include "\r\n\r\n" in part's body data
 											offset += 4;
@@ -1573,6 +1575,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #endif
 						// single-part POST (plain-text form data)
 						// we know the size for the part has already been checked by this point
+						// TODO Change this to use a BackedStore for consistency, and so that we
+						// don't have to have cut-and-pasted code in the blocked content storage
+						// implementation?  Should possibly make this a loop around a more
+						// light-weight socket read function, as even if we won't get data into the
+						// BackedStore in a zero-copy fashion, there is no reason to have *too*
+						// much copied data sat around in RAM.
+						// Also a "reserve()"-alike for BackedStore wouldn't go amiss, as we know
+						// the data size in advance.
 						char buffer[cl];
 						int rc = peerconn.readFromSocketn(buffer, cl, 0, 10);
 						
