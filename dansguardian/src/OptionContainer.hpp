@@ -55,6 +55,8 @@ public:
 	bool createlistcachefiles;
 	bool use_custom_banned_image;
 	std::string custom_banned_image_file;
+	bool use_custom_banned_flash;
+	std::string custom_banned_flash_file;
 	bool reverse_lookups;
 	bool reverse_client_ip_lookups;
 	bool log_client_hostnames;
@@ -149,6 +151,7 @@ public:
 	IPList banned_ip_list;
 	LanguageContainer language_list;
 	ImageContainer banned_image;
+	ImageContainer banned_flash;
 
 	std::deque<Plugin*> dmplugins;
 	std::deque<Plugin*> csplugins;

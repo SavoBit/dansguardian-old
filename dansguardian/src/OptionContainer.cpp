@@ -356,6 +356,14 @@ bool OptionContainer::read(const char *filename, int type)
 		custom_banned_image_file = findoptionS("custombannedimagefile");
 		banned_image.read(custom_banned_image_file.c_str());
 
+		if (findoptionS("usecustombannedflash") == "off") {
+			use_custom_banned_flash = false;
+		} else {
+			use_custom_banned_flash = true;
+		}
+		custom_banned_flash_file = findoptionS("custombannedflashfile");
+		banned_flash.read(custom_banned_flash_file.c_str());
+		
 		filter_port = findoptionI("filterport");
 		if (!realitycheck(filter_port, 1, 65535, "filterport")) {
 			return false;

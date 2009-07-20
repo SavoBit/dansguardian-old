@@ -86,7 +86,9 @@ bool ImageContainer::read(const char *filename)
 	}
 	else if (temp.endsWith("png"))
 		mimetype = "image/png";
-	else {
+	else if (temp.endsWith("swf"))
+		mimetype = "application/x-shockwave-flash";
+	else{
 		mimetype = "image/gif";
 	}
 

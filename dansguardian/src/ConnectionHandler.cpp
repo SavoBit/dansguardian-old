@@ -2583,6 +2583,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 			} else {
 				// we're dealing with a non-SSL'ed request, and have the option of using the custom banned image/page directly
 				bool replaceimage = false;
+				bool replaceflash = false;
 				if (o.use_custom_banned_image) {
 
 					// It would be much nicer to do a mime comparison
@@ -2601,6 +2602,15 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 					}
 				}
 				
+				if (o.use_custom_banned_flash) {
+					String lurl((*url));
+					lurl.toLower();
+					if (lurl.endsWith(".swf") || (*docheader).isContentType("application/x-shockwave-flash"))
+					{
+						replaceflash = true;
+					}
+				}
+				
 				// if we're denying an image request, show the image; otherwise, show the HTML page.
 				// (or advanced ad block page, or HTML page with bypass URLs)
 				if (replaceimage) {
@@ -2608,6 +2618,18 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 						(*peerconn).writeString("HTTP/1.0 200 OK\n");
 					}
 					o.banned_image.display(peerconn);
+				} 
+				else if (replaceflash)
+				{
+					if(headersent == 0) {
+						(*peerconn).writeString("HTTP/1.0 200 OK\n");
+					}
+					o.banned_flash.display(peerconn);
+					/*	std::string message = "Reason: " + checkme->whatIsNaughty + "\n" + "Categorie(s): " + checkme->whatIsNaughtyCategories;
+						std::string blockpage = swfGenerateBlockPage(&message);
+					//peerconn->writeToSocket(peer1_0, sizeof(peer1_0),0, 10, false, false);
+					peerconn->writeToSocket(blockpage.c_str(), blockpage.length(),0, 10, false, false);
+					*/
 				} else {
 					// advanced ad blocking - if category contains ADs, wrap ad up in an "ad blocked" message,
 					// which provides a link to the original URL if you really want it. primarily
