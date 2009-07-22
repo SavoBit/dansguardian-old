@@ -207,7 +207,7 @@ bool CSPlugin::readStandardLists()
 // This is an early-stage (request headers only) test; no other info is known about
 // the actual data itself when this is called.
 int CSPlugin::willScanRequest(const String &url, const char *user, int filtergroup,
-	const char *ip, bool post, bool reconstituted)
+	const char *ip, bool post, bool reconstituted, bool exception, bool bypass)
 {
 	// Most content scanners only deal with original, unmodified content
 	if (reconstituted)
@@ -337,7 +337,8 @@ int CSPlugin::willScanRequest(const String &url, const char *user, int filtergro
 // Test whether or not a particular request's incoming/outgoing data should be scanned.
 // This is a later-stage test; info is known about the actual data itself when this is called.
 int CSPlugin::willScanData(const String &url, const char *user, int filtergroup, const char *ip, bool post,
-	bool reconstituted, const String &disposition, const String &mimetype, off_t size)
+	bool reconstituted, bool exception, bool bypass, const String &disposition, const String &mimetype,
+	off_t size)
 {
 	//exceptionvirusmimetypelist
 	if (mimetype.length() > 2)

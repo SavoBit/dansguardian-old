@@ -62,7 +62,7 @@ public:
 		supportsXIF(false), needsBody(false) {};
 	
 	int willScanRequest(const String &url, const char *user, int filtergroup, const char *ip, bool post,
-		bool reconstituted);
+		bool reconstituted, bool exception, bool bypass);
 
 	int scanMemory(HTTPHeader * requestheader, HTTPHeader * docheader, const char *user, int filtergroup,
 		const char *ip, const char *object, unsigned int objectsize, NaughtyFilter * checkme,
@@ -107,12 +107,16 @@ CSPlugin *icapcreate(ConfigVar & definition)
 
 // don't scan POST data or reconstituted data - wouldn't work for multi-part posts
 // without faking request headers, as we are only passed a single part, not the whole request verbatim
-int icapinstance::willScanRequest(const String &url, const char *user, int filtergroup, const char *ip, bool post, bool reconstituted)
+int icapinstance::willScanRequest(const String &url, const char *user, int filtergroup, const char *ip,
+	bool post, bool reconstituted, bool exception, bool bypass)
 {
 	if (post || reconstituted)
 		return DGCS_NOSCAN;
 	else
-		return CSPlugin::willScanRequest(url, user, filtergroup, ip, post, reconstituted);
+	{
+		return CSPlugin::willScanRequest(url, user, filtergroup, ip,
+			post, reconstituted, exception, bypass);
+	}
 }
 
 // initialise the plugin - determine icap ip, port & url

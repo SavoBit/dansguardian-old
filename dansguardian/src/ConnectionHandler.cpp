@@ -937,13 +937,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			// Query request and response scanners to see which is interested in scanning data for this request
 			// TODO - Should probably block if willScanRequest returns error
 			bool multipart = false;
-			if (!isbannedip && !isbanneduser && !isconnect && !ishead && !isbypass
+			if (!isbannedip && !isbanneduser && !isconnect && !ishead
 				&& (o.fg[filtergroup]->disable_content_scan != 1)
 				&& !(isexception && !o.content_scan_exceptions))
 			{
 				for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; ++i)
 				{
-					int csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), false, false);
+					int csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup,
+						clientip.c_str(), false, false, isexception, isbypass);
 					if (csrc > 0)
 						responsescanners.push_back((CSPlugin*)(*i));
 					else if (csrc < 0)
@@ -978,7 +979,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 						{
 							for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; ++i)
 							{
-								int csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), true, !multipart);
+								int csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup,
+									clientip.c_str(), true, !multipart, isexception, isbypass);
 								if (csrc > 0)
 									requestscanners.push_back((CSPlugin*)(*i));
 								else if (csrc < 0)
@@ -1218,11 +1220,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 
 			// Filtering of POST data
 			off_t cl = header.contentLength();
-			if (authed && !isbypass && !checkme.isItNaughty && cl > 0)
+			if (authed && !checkme.isItNaughty && cl > 0)
 			{
 				// Check for POST upload size blocking, unless request is an exception
 				// MIME type test is just an approximation, but probably good enough
-				if (!isexception
+				if (!isbypass && !isexception
 					&& ((o.max_upload_size >= 0) && (cl > o.max_upload_size))
 					&& multipart)
 				{
@@ -1416,8 +1418,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 											// Run part through interested request scanning plugins
 											for (std::deque<CSPlugin *>::iterator i = requestscanners.begin(); i != requestscanners.end(); ++i)
 											{
-												int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), true, false,
-													disposition, mimetype, part->getLength() - offset);
+												int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(),
+													true, false, isexception, isbypass, disposition, mimetype, part->getLength() - offset);
 #ifdef DGDEBUG
 												std::cerr << "willScanData returned: " << csrc << std::endl;
 #endif
@@ -1631,8 +1633,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #endif
 						for (std::deque<CSPlugin *>::iterator i = requestscanners.begin(); i != requestscanners.end(); ++i)
 						{
-							int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), true, true,
-								"", "text/plain", result.length());
+							int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(),
+								true, true, isexception, isbypass, "", "text/plain", result.length());
 #ifdef DGDEBUG
 							std::cerr << "willScanData returned: " << csrc << std::endl;
 #endif
@@ -1809,8 +1811,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					std::deque<CSPlugin *> newplugins;
 					for (std::deque<CSPlugin *>::iterator i = responsescanners.begin(); i != responsescanners.end(); ++i)
 					{
-						int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(), false, false,
-							docheader.disposition(), docheader.getContentType(), docheader.contentLength());
+						int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(),
+							false, false, isexception, isbypass, docheader.disposition(), docheader.getContentType(), docheader.contentLength());
 #ifdef DGDEBUG
 						std::cerr << "willScanData for plugin " << j << " returned: " << csrc << std::endl;
 #endif

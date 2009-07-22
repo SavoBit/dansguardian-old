@@ -76,7 +76,7 @@ public:
 	// but with form control names and URL encoding stripped away to leave a single
 	// block of text).
 	virtual int willScanRequest(const String &url, const char *user, int filtergroup,
-		const char *ip, bool post, bool reconstituted);
+		const char *ip, bool post, bool reconstituted, bool exception, bool bypass);
 
 	// Test whether, in addition to the above, a particular ContentScanner is actually
 	// interested in the data we have for it.  This is split into a separate function
@@ -87,7 +87,8 @@ public:
 	// Will not be called for request/response data where willScanRequest previously
 	// returned false.
 	virtual int willScanData(const String &url, const char *user, int filtergroup, const char *ip,
-		bool post, bool reconstituted, const String &disposition, const String &mimetype, off_t size);
+		bool post, bool reconstituted, bool exception, bool bypass, const String &disposition,
+		const String &mimetype, off_t size);
 
 	// scanning functions themselves
 	// docheader will be NULL if the data is from a POST request, rather than a response
