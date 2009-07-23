@@ -1434,14 +1434,20 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 														postparts.back().blocked = true;
 														if (checkme.store && !o.blocked_content_store.empty())
 															postparts.back().storedname = part->store(o.blocked_content_store.c_str());
-														part.reset();
+														// Don't delete part (yet) if in stealth mode - need to send the data upstream
+														if (o.fg[filtergroup]->reporting_level != -1)
+															part.reset();
 													}
 													if (csrc == DGCS_BLOCKED) {
-														break;
+														// Send part upstream anyway if in stealth mode
+														if (o.fg[filtergroup]->reporting_level != -1)
+															break;
 													}
 													else if (csrc == DGCS_INFECTED) {
 														wasinfected = true;
-														break;
+														// Send part upstream anyway if in stealth mode
+														if (o.fg[filtergroup]->reporting_level != -1)
+															break;
 													}
 													//if its not clean / we errored then treat it as infected
 													else if (csrc != DGCS_CLEAN && csrc != DGCS_WARNING) {
@@ -1467,7 +1473,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 													syslog(LOG_ERR, "willScanData returned error: %d", csrc);
 											}
 											// Send whole part upstream
-											if (!checkme.isItNaughty)
+											if (!checkme.isItNaughty || o.fg[filtergroup]->reporting_level == -1)
 												proxysock.writeToSockete(data, part->getLength(), 0, 20);
 										}
 									}
@@ -1489,7 +1495,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 										// Send current chunk upstream directly
 										proxysock.writeToSockete(rolling_buffer.substr(0, loc).c_str(), loc, 0, 20);
 									}
-									if (foundb && !checkme.isItNaughty)
+									if (foundb && (!checkme.isItNaughty || o.fg[filtergroup]->reporting_level == -1))
 									{
 										// Regardless of whether we were buffering or streaming, send the
 										// boundary and trailers upstream if this was the last chunk of a part
@@ -1504,7 +1510,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 
 								// If we found the boundary, include boundary size
 								// in the length of data we will discard
-								if (foundb && !checkme.isItNaughty)
+								if (foundb && (!checkme.isItNaughty || o.fg[filtergroup]->reporting_level == -1))
 								{
 									loc += boundary.length() + 2;
 									if (first)
@@ -1566,7 +1572,22 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #ifdef DGDEBUG
 							std::cout << "POST data part blocked; discarding remaining POST data" << std::endl;
 #endif
-							header.discard(&peerconn, bytes_remaining);
+							// Send rest of data upstream anyway if in stealth mode
+							if (o.fg[filtergroup]->reporting_level == -1)
+							{
+								proxysock.writeToSockete(rolling_buffer.c_str(), rolling_buffer.length(), 0, 10);
+								fdt.reset();
+								fdt.tunnel(peerconn, proxysock, false, bytes_remaining, false);
+								// Also retrieve response headers, if wasrequested was set to true,
+								// because nothing else will do so later on
+								if (wasrequested)
+								{
+									docheader.in(&proxysock, persist);
+									persist = docheader.isPersistent();
+								}
+							}
+							else
+								header.discard(&peerconn, bytes_remaining);
 						}
 
 					}
