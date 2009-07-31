@@ -32,6 +32,7 @@
 #include <cstring>
 #include <cerrno>
 #include <sstream>
+#include <ctime>
 
 #include <unistd.h>
 
@@ -246,7 +247,7 @@ std::string BackedStore::store(const char *prefix)
 		// a "random" name for the hardlink - tempnam doesn't allow arbitrary
 		// prefixes (POSIX says up to 5 chars).
 		gettimeofday(&tv, NULL);
-		storedname << tv.tv_sec << tv.tv_usec << std::flush;
+		storedname << '-' << tv.tv_sec << tv.tv_usec << std::flush;
 
 		char *name = strrchr(filename, '/');
 #ifdef DGDEBUG
@@ -270,11 +271,14 @@ std::string BackedStore::store(const char *prefix)
 	// We don't already have a temp file,
 	// or a simple link wasn't sufficient (EXDEV)
 	// Generate a new filename in the given directory, with the given name prefix
-	size_t pfxlen = strlen(prefix);
-	char storedname[pfxlen + 7];
-	strncpy(storedname, prefix, pfxlen);
-	strncpy(storedname + pfxlen, "XXXXXX", 6);
-	storedname[pfxlen + 6] = '\0';
+	// Include timestamp in the name for added uniqueness
+	std::ostringstream timedprefix;
+	timedprefix << prefix << '-' << time(NULL) << '-' << std::flush;
+	std::string pfx(timedprefix.str());
+	char storedname[pfx.length() + 7];
+	strncpy(storedname, pfx.c_str(), pfx.length());
+	strncpy(storedname + pfx.length(), "XXXXXX", 6);
+	storedname[pfx.length() + 6] = '\0';
 #ifdef DGDEBUG
 	std::cout << "BackedStore: storedname template: " << storedname << std::endl;
 #endif

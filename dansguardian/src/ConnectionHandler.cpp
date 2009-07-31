@@ -1278,7 +1278,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 						rolling_buffer.reserve(2048);
 						bool first = true;
 						bool last = false;
-						while (bytes_remaining > 0 && !last && !checkme.isItNaughty)
+						// Iterate over all parts.  Stop filtering after the first blocked part,
+						// for performance, but keep processing so that we can store all parts
+						// if necessary.
+						while (bytes_remaining > 0 && !last /*&& !checkme.isItNaughty*/)
 						{
 							// Grab the next chunk of data
 							int bytes_this_time = bytes_remaining > (2048 - rolling_buffer.length())
@@ -1415,62 +1418,75 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 											postparts.back().size = part->getLength();
 											postparts.back().bodyoffset = offset;
 
-											// Run part through interested request scanning plugins
-											for (std::deque<CSPlugin *>::iterator i = requestscanners.begin(); i != requestscanners.end(); ++i)
+											// Pre-emptively store the data part if storage is enabled.
+											// If, when we get to the end of the filtering, the request
+											// is not blocked/marked for storage, all parts will then
+											// be deleted.  We need all parts to give decent context.
+											if (!o.blocked_content_store.empty())
 											{
-												int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(),
-													true, false, isexception, isbypass, disposition, mimetype, part->getLength() - offset);
+												postparts.back().storedname = part->store(o.blocked_content_store.c_str());
 #ifdef DGDEBUG
-												std::cerr << "willScanData returned: " << csrc << std::endl;
+												std::cout << "Pre-emptively stored POST data part: " << postparts.back().storedname << std::endl;
 #endif
-												if (csrc > 0)
+											}
+
+											// Run part through interested request scanning plugins
+											if (!checkme.isItNaughty)
+											{
+												for (std::deque<CSPlugin *>::iterator i = requestscanners.begin(); i != requestscanners.end(); ++i)
 												{
-													csrc = (*i)->scanMemory(&header, NULL, clientuser.c_str(), filtergroup, clientip.c_str(),
-														data + offset, part->getLength() - offset, &checkme,
-														&disposition, &mimetype);
-													if (csrc != DGCS_CLEAN && csrc != DGCS_WARNING)
+													int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(),
+														true, false, isexception, isbypass, disposition, mimetype, part->getLength() - offset);
+#ifdef DGDEBUG
+													std::cerr << "willScanData returned: " << csrc << std::endl;
+#endif
+													if (csrc > 0)
 													{
-														checkme.blocktype = 1;
-														postparts.back().blocked = true;
-														if (checkme.store && !o.blocked_content_store.empty())
-															postparts.back().storedname = part->store(o.blocked_content_store.c_str());
-														// Don't delete part (yet) if in stealth mode - need to send the data upstream
-														if (o.fg[filtergroup]->reporting_level != -1)
-															part.reset();
-													}
-													if (csrc == DGCS_BLOCKED) {
-														// Send part upstream anyway if in stealth mode
-														if (o.fg[filtergroup]->reporting_level != -1)
-															break;
-													}
-													else if (csrc == DGCS_INFECTED) {
-														wasinfected = true;
-														// Send part upstream anyway if in stealth mode
-														if (o.fg[filtergroup]->reporting_level != -1)
-															break;
-													}
-													//if its not clean / we errored then treat it as infected
-													else if (csrc != DGCS_CLEAN && csrc != DGCS_WARNING) {
-														if (csrc < 0) {
-															syslog(LOG_ERR, "Unknown return code from content scanner: %d", csrc);
+														csrc = (*i)->scanMemory(&header, NULL, clientuser.c_str(), filtergroup, clientip.c_str(),
+															data + offset, part->getLength() - offset, &checkme,
+															&disposition, &mimetype);
+														if (csrc != DGCS_CLEAN && csrc != DGCS_WARNING)
+														{
+															checkme.blocktype = 1;
+															postparts.back().blocked = true;
+															// Don't delete part (yet) if in stealth mode - need to send the data upstream
+															if (o.fg[filtergroup]->reporting_level != -1)
+																part.reset();
 														}
-														else {
-															syslog(LOG_ERR, "scanFile/Memory returned error: %d", csrc);
+														if (csrc == DGCS_BLOCKED) {
+															// Send part upstream anyway if in stealth mode
+															if (o.fg[filtergroup]->reporting_level != -1)
+																break;
 														}
-														//TODO: have proper error checking/reporting here?
-														//at the very least, integrate with the translation system.
-														checkme.whatIsNaughty = "WARNING: Could not perform content scan!";
-														checkme.whatIsNaughtyLog = (*i)->getLastMessage().toCharArray();
-														checkme.whatIsNaughtyCategories = "Content scanning";
-														checkme.isItNaughty = true;
-														checkme.isException = false;
-														scanerror = true;
-														break;
+														else if (csrc == DGCS_INFECTED) {
+															wasinfected = true;
+															// Send part upstream anyway if in stealth mode
+															if (o.fg[filtergroup]->reporting_level != -1)
+																break;
+														}
+														//if its not clean / we errored then treat it as infected
+														else if (csrc != DGCS_CLEAN && csrc != DGCS_WARNING) {
+															if (csrc < 0) {
+																syslog(LOG_ERR, "Unknown return code from content scanner: %d", csrc);
+															}
+															else {
+																syslog(LOG_ERR, "scanFile/Memory returned error: %d", csrc);
+															}
+															//TODO: have proper error checking/reporting here?
+															//at the very least, integrate with the translation system.
+															checkme.whatIsNaughty = "WARNING: Could not perform content scan!";
+															checkme.whatIsNaughtyLog = (*i)->getLastMessage().toCharArray();
+															checkme.whatIsNaughtyCategories = "Content scanning";
+															checkme.isItNaughty = true;
+															checkme.isException = false;
+															scanerror = true;
+															break;
+														}
 													}
+													else if (csrc < 0)
+														// TODO - Should probably block here
+														syslog(LOG_ERR, "willScanData returned error: %d", csrc);
 												}
-												else if (csrc < 0)
-													// TODO - Should probably block here
-													syslog(LOG_ERR, "willScanData returned error: %d", csrc);
 											}
 											// Send whole part upstream
 											if (!checkme.isItNaughty || o.fg[filtergroup]->reporting_level == -1)
@@ -1495,22 +1511,25 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 										// Send current chunk upstream directly
 										proxysock.writeToSockete(rolling_buffer.substr(0, loc).c_str(), loc, 0, 20);
 									}
-									if (foundb && (!checkme.isItNaughty || o.fg[filtergroup]->reporting_level == -1))
+									if (foundb)
 									{
-										// Regardless of whether we were buffering or streaming, send the
-										// boundary and trailers upstream if this was the last chunk of a part
-										proxysock.writeToSockete(boundary.c_str(), boundary.length(), 0, 10);
-										proxysock.writeToSockete(trailer.c_str(), trailer.length(), 0, 10);
-										// Include final CRLF (after the trailer) after last boundary
-										if (last)
-											proxysock.writeToSockete("\r\n", 2, 0, 10);
+										if (!checkme.isItNaughty || o.fg[filtergroup]->reporting_level == -1)
+										{
+											// Regardless of whether we were buffering or streaming, send the
+											// boundary and trailers upstream if this was the last chunk of a part
+											proxysock.writeToSockete(boundary.c_str(), boundary.length(), 0, 10);
+											proxysock.writeToSockete(trailer.c_str(), trailer.length(), 0, 10);
+											// Include final CRLF (after the trailer) after last boundary
+											if (last)
+												proxysock.writeToSockete("\r\n", 2, 0, 10);
+										}
 										part.reset(new BackedStore(o.max_content_ramcache_scan_size, o.max_content_filecache_scan_size));
 									}
 								}
 
 								// If we found the boundary, include boundary size
 								// in the length of data we will discard
-								if (foundb && (!checkme.isItNaughty || o.fg[filtergroup]->reporting_level == -1))
+								if (foundb)
 								{
 									loc += boundary.length() + 2;
 									if (first)
@@ -1520,7 +1539,8 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #ifdef DGDEBUG
 										std::cout << "Preamble/first boundary passed; sending headers & first boundary upstream" << std::endl;
 #endif
-										if (!wasrequested) {
+										if (!wasrequested && (!checkme.isItNaughty || o.fg[filtergroup]->reporting_level == -1))
+										{
 											proxysock.readyForOutput(10);
 											// sent *without* POST data, so cannot retrieve headers yet
 											header.out(NULL, &proxysock, __DGHEADER_SENDALL, true);
@@ -1540,8 +1560,30 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 								}
 								rolling_buffer.erase(0, loc);
 							}
-							while (foundb && !checkme.isItNaughty);
-						} // while bytes_remaining > 0 && !last && not blocked
+							while (foundb /*&& !checkme.isItNaughty*/);
+						} // while bytes_remaining > 0 && !last /* && not blocked */
+
+						// If the request is not blocked or storage has not been requested,
+						// delete all the (possibly) pre-emptively stored data parts
+						if (!o.blocked_content_store.empty() && (!checkme.isItNaughty || !checkme.store))
+						{
+#ifdef DGDEBUG
+							std::cout << "Request was not blocked/marked for storage. Deleting data parts:" << std::endl;
+#endif
+							for (std::list<postinfo>::iterator i = postparts.begin(); i != postparts.end(); ++i)
+							{
+								if (i->storedname.empty())
+									continue;
+#ifdef DGDEBUG
+								std::cout << "Part " << i->storedname << std::endl;
+#endif
+								unlink(i->storedname.c_str());
+								i->storedname.clear();
+							}
+#ifdef DGDEBUG
+							std::cout << "All parts deleted" << std::endl;
+#endif
+						}
 
 						if (!checkme.isItNaughty)
 						{
@@ -1671,11 +1713,13 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 									if (checkme.store && !o.blocked_content_store.empty())
 									{
 										// Write original encoded buffer to disk
-										size_t pfxlen = o.blocked_content_store.length();
-										char storedname[pfxlen + 7];
-										strncpy(storedname, o.blocked_content_store.c_str(), pfxlen);
-										strncpy(storedname + pfxlen, "XXXXXX", 6);
-										storedname[pfxlen + 6] = '\0';
+										std::ostringstream timedprefix;
+										timedprefix << o.blocked_content_store << '-' << time(NULL) << '-' << std::flush;
+										std::string pfx(timedprefix.str());
+										char storedname[pfx.length() + 7];
+										strncpy(storedname, pfx.c_str(), pfx.length());
+										strncpy(storedname + pfx.length(), "XXXXXX", 6);
+										storedname[pfx.length() + 6] = '\0';
 #ifdef DGDEBUG
 										std::cout << "Single-part POST: storedname template: " << storedname << std::endl;
 #endif
