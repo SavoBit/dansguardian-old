@@ -38,6 +38,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <netdb.h>		// for gethostby
+#include <cstdio>
 
 
 // DEFINES

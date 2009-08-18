@@ -47,17 +47,18 @@ logexceptionhits = 2
 logfileformat = 1
 
 # truncate large items in log lines
-#maxlogitemlength = 400
+# 0 = no truncating (default)
+#maxlogitemlength = 0
 
 # anonymize logs (blank out usernames & IPs)
-#anonymizelogs = on
+#anonymizelogs = off
 
 
 # Syslog logging
 #
 # Use syslog for access logging instead of logging to the file
 # at the defined or built-in "loglocation"
-#syslog = on
+#logsyslog = off
 
 # Log file location
 # 
@@ -199,11 +200,13 @@ urlcacheage = 900
 
 
 
-# Clean cache for content (AV) scan results
+# Cache for content (AV) scan results as 'clean'
 # By default, to save CPU, files scanned and found to be
 # clean are inserted into the clean cache and NOT scanned
 # again for a while.  If you don't like this then choose
 # to disable it.
+# on = cache results; do not re-scan
+# off = do not cache; always re-scan
 # (on|off) default = on.
 scancleancache = on
 
