@@ -298,10 +298,23 @@ logclienthostnames = off
 # Build bannedsitelist and bannedurllist cache files.
 # This will compare the date stamp of the list file with the date stamp of
 # the cache file and will recreate as needed.
-# If a bsl or bul .processed file exists, then that will be used instead.
-# It will increase process start speed by 300%.  On slow computers this will
-# be significant.  Fast computers do not need this option. on | off
+# If a .processed file exists for an item (e.g. domain/URL) list, then that
+# will be used instead, if it is up to date (i.e. newer than the unprocessed
+# list file).
+# This can increase process start speed on slow computers.
+# Fast computers do not need this option.
+# on | off, default = on
 createlistcachefiles = on
+
+
+# Prefer cached list files
+# If enabled, DansGuardian will always prefer to load ".processed" versions of
+# list files, regardless of their time stamps relative to the original
+# unprocessed lists.  This is not generally useful unless you have a specific
+# list update process which results in - for example - up-to-date, pre-sorted
+# ".processed" list files with dummy unprocessed files.
+# on | off, default = off
+prefercachedlists = off
 
 
 
