@@ -887,12 +887,7 @@ void NaughtyFilter::checkphrase(char *file, off_t filelen, const String *url, co
 			}
 			if (k->string.length() > 0) {
 				if (nonempty) categories += ", ";
-				// put brackets around the string to indicate cats that are logged but not displayed
-				if (belowthreshold)
-					categories += "(";
 				categories += k->string;
-				if (belowthreshold)
-					categories += ")";
 				nonempty = true;
 			}
 			k++;
