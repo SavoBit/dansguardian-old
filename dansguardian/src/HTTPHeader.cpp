@@ -824,6 +824,14 @@ void HTTPHeader::checkheader(bool allowpersistent)
 #ifdef DGDEBUG
 	std::cout << "CheckHeader flags: AP=" << allowpersistent << " IP=" << ispersistent << " PPC=" << !(pproxyconnection == NULL) << std::endl;
 #endif
+	//Force ispersistent off if we dont get a content length 
+	if (ispersistent && pcontentlength == NULL)
+	{
+#ifdef DGDEBUG
+		std::cout << "CheckHeader: Response was marked persistent without content length. Disabling persistency" << std::endl;
+#endif
+		ispersistent = false;
+	}
 	// if a request was HTTP 1.1 and there was no proxy-connection header, we may need to add one
 	if ((!allowpersistent) && ispersistent) {
 		// we should only be in this state if pproxyconnection == NULL (otherwise ispersistent will have been falsified earlier)
