@@ -288,10 +288,7 @@ void String::hexDecode()
 // does this string start with the given text?
 bool String::startsWith(const String& s) const
 {
-	if (!strncmp(this->c_str(), s.c_str(), s.length())) {
-		return true;
-	}
-	return false;
+	return (strncmp(this->c_str(), s.c_str(), s.length()) == 0);
 }
 
 // does this string end with the given text?
