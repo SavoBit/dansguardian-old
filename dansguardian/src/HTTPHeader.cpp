@@ -721,134 +721,173 @@ void HTTPHeader::checkheader(bool allowpersistent)
 	// are these headers outgoing, or incoming?
 	bool outgoing = true;
 	if (header.front().startsWith("HT"))
+	{
 		outgoing = false;
+	}
 
-	bool first = true;
-	for (std::deque<String>::iterator i = header.begin(); i != header.end(); i++) {	// check each line in the headers
-		// HTTP 1.1 is persistent by default
-		if (first) {
-			if (i->after("HTTP/").startsWith("1.1")) {
-#ifdef DGDEBUG
-				std::cout << "CheckHeader: HTTP/1.1, so assuming persistency" << std::endl;
-#endif
-				waspersistent = true;
-				ispersistent = true;
-			}
-
-			// Do not allow persistent connections on CONNECT requests - the browser thinks it has a tunnel
-			// directly to the external server, not a connection to the proxy, so it won't be re-used in the
-			// manner expected by DG and will result in waiting for time-outs.  Bug identified by Jason Deasi.
-			if ((*i)[0] == 'C') {
-#ifdef DGDEBUG
-				std::cout << "CheckHeader: CONNECT request; disallowing persistency" << std::endl;
-#endif
-				allowpersistent = false;
-			}
-
-			first = false;
-
-			// force HTTP/1.0 - we don't support chunked transfer encoding, possibly amongst other things
-			if (outgoing)
-				(*i) = i->before(" HTTP/") + " HTTP/1.0\r";
-		}
+	for (std::deque<String>::iterator i = header.begin()+1; i != header.end(); i++)
+	{	// check each line in the headers
 		// index headers - try to perform the checks in the order the average browser sends the headers.
 		// also only do the necessary checks for the header type (sent/received).
-		else if (outgoing && (phost == NULL) && i->startsWithLower("host:")) {
+		if (outgoing && (phost == NULL) && i->startsWithLower("host:"))
+		{
 			phost = &(*i);
 		}
 		// don't allow through multiple host headers
-		else if (outgoing && (phost != NULL) && i->startsWithLower("host:")) {
+		else if (outgoing && (phost != NULL) && i->startsWithLower("host:"))
+		{
 			i->assign("X-DG-IgnoreMe: removed multiple host headers\r");
 		}
-		else if (outgoing && (puseragent == NULL) && i->startsWithLower("user-agent:")) {
+		else if (outgoing && (puseragent == NULL) && i->startsWithLower("user-agent:"))
+		{
 			puseragent = &(*i);
 		}
-		else if (outgoing && i->startsWithLower("accept-encoding:")) {
+		else if (outgoing && i->startsWithLower("accept-encoding:"))
+		{
 			(*i) = "Accept-Encoding:" + i->after(":");
 			(*i) = modifyEncodings(*i) + "\r";
 		}
-		else if ((pcontenttype == NULL) && i->startsWithLower("content-type:")) {
+		else if ((pcontenttype == NULL) && i->startsWithLower("content-type:"))
+		{
 			pcontenttype = &(*i);
 		}
-		else if ((pcontentlength == NULL) && i->startsWithLower("content-length:")) {
+		else if ((pcontentlength == NULL) && i->startsWithLower("content-length:"))
+		{
 			pcontentlength = &(*i);
 		}
 		// is this ever sent outgoing?
-		else if ((pcontentdisposition == NULL) && i->startsWithLower("content-disposition:")) {
+		else if ((pcontentdisposition == NULL) && i->startsWithLower("content-disposition:"))
+		{
 			pcontentdisposition = &(*i);
 		}
-		else if ((!outgoing) && (pcontentencoding == NULL) && i->startsWithLower("content-encoding:")) {
+		else if ((!outgoing) && (pcontentencoding == NULL) && i->startsWithLower("content-encoding:"))
+		{
 			pcontentencoding = &(*i);
 		}
-		else if ((pproxyauthorization == NULL) && i->startsWithLower("proxy-authorization:")) {
+		else if ((pproxyauthorization == NULL) && i->startsWithLower("proxy-authorization:"))
+		{
 			pproxyauthorization = &(*i);
 		}
-		else if ((pproxyconnection == NULL) && (i->startsWithLower("proxy-connection:") || i->startsWithLower("connection:"))) {
-#ifdef DGDEBUG
-			std::cout << "CheckHeader: Found Proxy-Connection" << std::endl;
-#endif
-			if (i->contains("live")) {
-#ifdef DGDEBUG
-				std::cout << "CheckHeader: P-C says keep-alive" << std::endl;
-#endif
-				waspersistent = true;
-				if (!allowpersistent) {
-#ifdef DGDEBUG
-					std::cout << "CheckHeader: ... but we aren't allowed to" << std::endl;
-#endif
-					ispersistent = false;
-					(*i) = i->before(":") + ": Close\r";
-				} else {
-					ispersistent = true;
-				}
-			} else {
-#ifdef DGDEBUG
-				std::cout << "CheckHeader: P-C says close" << std::endl;
-#endif
-				ispersistent = false;
-				waspersistent = false;
-			}
+		else if ((pproxyconnection == NULL) && (i->startsWithLower("proxy-connection:") || i->startsWithLower("connection:")))
+		{
 			pproxyconnection = &(*i);
 		}
-		else if (outgoing && (pxforwardedfor == NULL) && i->startsWithLower("x-forwarded-for:")) {
+		else if (outgoing && (pxforwardedfor == NULL) && i->startsWithLower("x-forwarded-for:"))
+		{
 			pxforwardedfor = &(*i);
 		}
 		// this one's non-standard, so check for it last
-		else if (outgoing && (pport = NULL) && i->startsWithLower("port:")) {
+		else if (outgoing && (pport = NULL) && i->startsWithLower("port:"))
+		{
 			pport = &(*i);
 		}
 #ifdef DGDEBUG
 		std::cout << (*i) << std::endl;
 #endif
 	}
-#ifdef DGDEBUG
-	std::cout << "CheckHeader flags: AP=" << allowpersistent << " IP=" << ispersistent << " PPC=" << !(pproxyconnection == NULL) << std::endl;
-#endif
-	//Force ispersistent off if we dont get a content length 
-	if (ispersistent && pcontentlength == NULL)
+	
+	//if its http1.1
+	bool onepointone = false;
+	if (header.front().after("HTTP/").startsWith("1.1"))
 	{
 #ifdef DGDEBUG
-		std::cout << "CheckHeader: Response was marked persistent without content length. Disabling persistency" << std::endl;
+		std::cout << "CheckHeader: HTTP/1.1 detected" << std::endl;
 #endif
-		ispersistent = false;
+		onepointone = true;
+		// force HTTP/1.0 - we don't support chunked transfer encoding, possibly amongst other things
+		if (outgoing)
+			header.front() = header.front().before(" HTTP/") + " HTTP/1.0\r";
 	}
-	// if a request was HTTP 1.1 and there was no proxy-connection header, we may need to add one
-	if ((!allowpersistent) && ispersistent) {
-		// we should only be in this state if pproxyconnection == NULL (otherwise ispersistent will have been falsified earlier)
+
+
+	//work out if we should explicitly close this connection after this request
+	bool connectionclose;
+	if (pproxyconnection != NULL)
+	{
+		if (pproxyconnection->contains("lose"))
+		{
 #ifdef DGDEBUG
-		std::cout << "CheckHeader: Adding our own Proxy-Connection: Close" << std::endl;
+			std::cout << "CheckHeader: P-C says close" << std::endl;
 #endif
-		header.push_back("Proxy-Connection: Close\r");
-		pproxyconnection = &(header.back());
-		ispersistent = false;
-	} else if (allowpersistent && ispersistent && (pproxyconnection == NULL)) {
-#ifdef DGDEBUG
-		std::cout << "CheckHeader: Adding our own Proxy-Connection: Keep-Alive" << std::endl;
-#endif
-		// we should only be in this state if HTTP 1.1, persistency allowed, but persistency not explicitly asked for
-		header.push_back("Proxy-Connection: Keep-Alive\r");
-		pproxyconnection = &(header.back());
+			connectionclose = true;
+		}
+		else
+		{
+			connectionclose = false;
+		}
 	}
+	else
+	{
+		connectionclose = !onepointone;
+	}
+	
+	// Do not allow persistent connections on CONNECT requests - the browser thinks it has a tunnel
+	// directly to the external server, not a connection to the proxy, so it won't be re-used in the
+	// manner expected by DG and will result in waiting for time-outs.  Bug identified by Jason Deasi.
+	bool isconnect = false;
+	if (outgoing && header.front()[0] == 'C')
+	{
+#ifdef DGDEBUG
+		std::cout << "CheckHeader: CONNECT request detected" << std::endl;
+#endif
+		isconnect = true;
+	}
+	
+#ifdef DGDEBUG
+	std::cout << "CheckHeader flags before normalisation: AP=" << allowpersistent << " PPC=" << (pproxyconnection != NULL)
+		<< " 1.1=" << onepointone << " connectionclose=" << connectionclose << " CL=" << (pcontentlength != NULL) << std::endl;
+#endif
+
+	if (connectionclose || (outgoing ? isconnect : (pcontentlength == NULL)))
+	{	
+		// couldnt have done persistency even if we wanted to
+		allowpersistent = false;
+	}
+	else
+	{
+		//must have been persistent 
+		waspersistent = true;
+	}
+
+#ifdef DGDEBUG
+	std::cout << "CheckHeader flags after normalisation: AP=" << allowpersistent << " WP=" << waspersistent << std::endl;
+#endif
+
+	// force the headers to reflect whether or not persistency is allowed
+	// (modify pproxyconnection if its there, add our own explicit close/keep-alive otherwise)
+	if (allowpersistent)
+	{
+		if (pproxyconnection == NULL)
+		{
+#ifdef DGDEBUG
+			std::cout << "CheckHeader: Adding our own Proxy-Connection: Keep-Alive" << std::endl;
+#endif
+			header.push_back("Proxy-Connection: Keep-Alive\r");
+			pproxyconnection = &(header.back());
+		}
+		else
+		{
+			(*pproxyconnection) = pproxyconnection->before(":") + ": Keep-Alive\r";
+		}
+	}
+	else
+	{
+		if (pproxyconnection == NULL)
+		{
+#ifdef DGDEBUG
+			std::cout << "CheckHeader: Adding our own Proxy-Connection: Close" << std::endl;
+#endif
+			header.push_back("Proxy-Connection: Close\r");
+			pproxyconnection = &(header.back());
+		}
+		else
+		{
+			(*pproxyconnection) = pproxyconnection->before(":") + ": Close\r";
+		}
+	}
+	
+	ispersistent = allowpersistent;
+
 	// Normalise request headers (fix host, port, first line of header, etc. to all be consistent)
 	if (outgoing)
 	{
