@@ -61,6 +61,15 @@ extern bool reloadconfig;
 
 // IMPLEMENTATION
 
+// Custom exception class for POST filtering errors
+class postfilter_exception: public std::runtime_error
+{
+	public:
+		postfilter_exception(const char *const &msg)
+			: std::runtime_error(msg)
+		{};
+};
+
 //
 // URL cache funcs
 //
@@ -1264,7 +1273,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 						// need to make sure boundary fits in half our network buffer,
 						// or we won't be able to locate instances of it reliably
 						if ((boundary.length() + 2) == 0 || (boundary.length() + 2) > 1022)
-							throw std::runtime_error("Could not determine boundary for multi-part POST");
+							throw postfilter_exception("Could not determine boundary for multi-part POST");
 
 #ifdef DGDEBUG
 						std::cout << "Boundary: " << boundary << std::endl;
@@ -1288,7 +1297,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 								? (2048 - rolling_buffer.length()) : bytes_remaining;
 							int rc = peerconn.readFromSocketn(buffer, bytes_this_time, 0, 10);
 							if (rc < bytes_this_time)
-								throw std::runtime_error("Could not retrieve POST data from browser");
+								throw postfilter_exception("Could not retrieve POST data from browser");
 
 							// Put up to (chunk size * 2) in rolling buffer
 							rolling_buffer.append(buffer, bytes_this_time);
@@ -1319,7 +1328,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 									if (trailer == "--")
 										last = true;
 									else if (trailer != "\r\n")
-										throw std::runtime_error("Unrecognised multi-part POST boundary trailer");
+										throw postfilter_exception("Unrecognised multi-part POST boundary trailer");
 								}
 
 								// Store data from left-hand half of buffer
@@ -1355,7 +1364,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 											while (offset < (ssize_t)(part->getLength() - 4));
 
 											if (!foundend)
-												throw std::runtime_error("End of POST data part headers not found");
+												throw postfilter_exception("End of POST data part headers not found");
 #ifdef DGDEBUG
 											std::cout << "POST data headers: " << std::string(data, offset) << std::endl;
 #endif
@@ -1595,7 +1604,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 								std::ostringstream ss;
 								ss << "Last part of multi-part POST was not correctly terminated.  Part length: ";
 								ss << part->getLength() << ", bytes remaining: " << bytes_remaining << ", last part found: " << last;
-								throw std::runtime_error(ss.str().c_str());
+								throw postfilter_exception(ss.str().c_str());
 							}
 							// get header from proxy
 							// wasrequested will have been set to true (we have had to send out
@@ -1652,7 +1661,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 						int rc = peerconn.readFromSocketn(buffer, cl, 0, 10);
 						
 						if (rc < 0)
-							throw std::runtime_error("Could not retrieve POST data from browser");
+							throw postfilter_exception("Could not retrieve POST data from browser");
 						
 						// Set the POST data buffer on the request, so that it
 						// does not block indefinitely trying to tunnel data that
@@ -2228,11 +2237,19 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			}
 		} // while persist
 	}
+	catch(postfilter_exception &e)
+	{
+#ifdef DGDEBUG
+		std::cerr << "connection handler caught a POST filtering exception: " << e.what() << std::endl;
+#endif
+		syslog(LOG_ERR, "POST filtering exception: %s", e.what());
+		proxysock.close();  // close connection to proxy
+		return;
+	}
 	catch(std::exception & e) {
 #ifdef DGDEBUG
 		std::cerr << "connection handler caught an exception: " << e.what() << std::endl;
 #endif
-		syslog(LOG_ERR, "Connection handler caught an exception: %s", e.what());
 		proxysock.close();  // close connection to proxy
 		return;
 	}
