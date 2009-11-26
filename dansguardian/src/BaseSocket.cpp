@@ -299,7 +299,7 @@ int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadcon
 		try {
 			checkForInput(timeout, honour_reloadconfig);
 		} catch(std::exception & e) {
-			throw std::runtime_error(std::string("Can't read from socket: ") + strerror(errno));  // on error
+			throw std::runtime_error(std::string("Can't read from socket: ") + e.what());  // on error
 		}
 		bufflen = recv(sck, buffer, 1024, 0);
 #ifdef DGDEBUG
