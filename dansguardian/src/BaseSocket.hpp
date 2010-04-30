@@ -68,7 +68,7 @@ public:
 	void readyForOutput(int timeout, bool honour_reloadconfig = false) throw(std::exception);
 	
 	// get a line from the socket - can break on config reloads
-	int getLine(char *buff, int size, int timeout, bool honour_reloadconfig = false, bool *chopped = NULL) throw(std::exception);
+	int getLine(char *buff, int size, int timeout, bool honour_reloadconfig = false, bool *chopped = NULL, bool *truncated = NULL) throw(std::exception);
 	
 	// write buffer to string - throws std::exception on error
 	void writeString(const char *line) throw(std::exception);
