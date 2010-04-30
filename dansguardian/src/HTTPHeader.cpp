@@ -1537,7 +1537,7 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 
 	// the RFCs don't specify a max header line length so this should be
 	// dynamic really.  Pointed out (well reminded actually) by Daniel Robbins
-	char buff[8192];  // setup a buffer to hold the incomming HTTP line
+	char buff[32768];  // setup a buffer to hold the incomming HTTP line
 	String line;  // temp store to hold the line after processing
 	line = "----";  // so we get past the first while
 	bool firsttime = true;
@@ -1549,7 +1549,10 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 		// on the first time round the loop, honour the reloadconfig flag if desired
 		// - this lets us break when waiting for the next request on a pconn, but not
 		// during receipt of a request in progress.
-		(*sock).getLine(buff, 8192, timeout, firsttime ? honour_reloadconfig : false);
+		bool truncated = false;
+		(*sock).getLine(buff, 32768, timeout, firsttime ? honour_reloadconfig : false, NULL, &truncated);
+		if (truncated)
+			throw std::exception();
 
 		// getline will throw an exception if there is an error which will
 		// only be caught by HandleConnection()
