@@ -270,7 +270,7 @@ void BaseSocket::readyForOutput(int timeout, bool honour_reloadconfig) throw(std
 }
 
 // read a line from the socket, can be told to break on config reloads
-int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadconfig, bool *chopped) throw(std::exception)
+int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadconfig, bool *chopped, bool *truncated) throw(std::exception)
 {
 	// first, return what's left from the previous buffer read, if anything
 	int i = 0;
@@ -278,19 +278,29 @@ int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadcon
 /*#ifdef DGDEBUG
 		std::cout << "data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
 #endif*/
-		int tocopy = size;
-		if ((bufflen - buffstart) < size)
+
+		//work out the maximum size we want to read from our internal buffer
+		int tocopy = size-1;
+		if ((bufflen - buffstart) < tocopy)
 			tocopy = bufflen - buffstart;
+		
+		//copy the data to output buffer (up to 8192 chars in loglines case)
 		char* result = (char*)memccpy(buff, buffer + buffstart, '\n', tocopy);
+		
+		//if the result was < max size
+		//if the result WAS null this indicates a full buffer copy
 		if (result != NULL) {
 			// indicate that a newline was chopped off, if desired
 			if (chopped)
 				*chopped = true;
+			
+			//make the last char a null
 			*(--result) = '\0';
 			buffstart += (result - buff) + 1;
 			return result - buff;
 		} else {
 			i += tocopy;
+			buffstart += tocopy;
 		}
 	}
 	while (i < (size - 1)) {
@@ -305,15 +315,18 @@ int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadcon
 #ifdef DGDEBUG
 		std::cout << "read into buffer; bufflen: " << bufflen << std::endl;
 #endif
+		//if there was a socket error
 		if (bufflen < 0) {
 			if (errno == EINTR && (honour_reloadconfig ? !reloadconfig : true)) {
 				continue;
 			}
 			throw std::runtime_error(std::string("Can't read from socket: ") + strerror(errno));  // on error
 		}
-		//if socket closed or newline received...
+		//if socket closed...
 		if (bufflen == 0) {
 			buff[i] = '\0';  // ...terminate string & return what read
+			if (truncated)
+				*truncated = true;
 			return i;
 		}
 		int tocopy = bufflen;
@@ -332,6 +345,8 @@ int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadcon
 	}
 	// oh dear - buffer end reached before we found a newline
 	buff[i] = '\0';
+	if (truncated)
+		*truncated = true;
 	return i;
 }
 
