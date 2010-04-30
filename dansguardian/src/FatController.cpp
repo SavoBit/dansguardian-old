@@ -38,6 +38,7 @@
 #include <sys/poll.h>
 #include <istream>
 #include <map>
+#include <memory>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/select.h>
@@ -899,103 +900,118 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 			// read in the various parts of the log string
 			bool error = false;
 			int itemcount = 0;
+			
 			while(itemcount < 27) {
 				try {
-				    	char *logline = new char[8192];
-					rc = ipcpeersock->getLine(logline, 8192, 3, true);  // throws on err
-					if (rc < 0) {
-						delete ipcpeersock;
-						if (!is_daemonised)
-							std::cout << "Error reading from log socket" <<std::endl;
-						syslog(LOG_ERR, "Error reading from log socket");
-						error = true;
-						break;
-					}
-					else {
-						switch (itemcount) {
-						case 0:
-							isexception = atoi(logline);
+					// Loop around reading in data, because we might have huge URLs
+					std::string logline;
+					char logbuff[8192];
+					bool truncated = false;
+					do
+					{
+						truncated = false;
+						rc = ipcpeersock->getLine(logbuff, 8192, 3, true, NULL, &truncated);  // throws on err
+						if (rc < 0) {
+							delete ipcpeersock;
+							if (!is_daemonised)
+								std::cout << "Error reading from log socket" <<std::endl;
+							syslog(LOG_ERR, "Error reading from log socket");
+							error = true;
 							break;
-						case 1:
-							cat = logline;
-							break;
-						case 2:
-							isnaughty = atoi(logline);
-							break;
-						case 3:
-							naughtytype = atoi(logline);
-							break;
-						case 4:
-							sweight = logline;
-							break;
-						case 5:
-							where = logline;
-							break;
-						case 6:
-							what = logline;
-							break;
-						case 7:
-							how = logline;
-							break;
-						case 8:
-							who = logline;
-							break;
-						case 9:
-							from = logline;
-							break;
-						case 10:
-							port = atoi(logline);
-							break;
-						case 11:
-							wasscanned = atoi(logline);
-							break;
-						case 12:
-							wasinfected = atoi(logline);
-							break;
-						case 13:
-							contentmodified = atoi(logline);
-							break;
-						case 14:
-							urlmodified = atoi(logline);
-							break;
-						case 15:
-							headermodified = atoi(logline);
-							break;
-						case 16:
-							ssize = logline;
-							break;
-						case 17:
-							filtergroup = atoi(logline);
-							break;
-						case 18:
-							code = atoi(logline);
-							break;
-						case 19:
-							cachehit = atoi(logline);
-							break;
-						case 20:
-							mimetype = logline;
-							break;
-						case 21:
-							tv_sec = atol(logline);
-							break;
-						case 22:
-							tv_usec = atol(logline);
-							break;
-						case 23:
-							clienthost = logline;
-							break;
-						case 24:
-							useragent = logline;
-							break;
-						case 25:
-							params = logline;
-							break;
-						case 26:
-							postdata = logline;
 						}
+						if (rc == 0)
+							break;
+						// Limit overall item length, but we still need to
+						// read from the socket until next newline
+						if (logline.length() < 32768)
+							logline.append(logbuff, rc);
 					}
-					delete[]logline;
+					while (truncated);
+					if (error)
+						break;
+
+					switch (itemcount) {
+					case 0:
+						isexception = atoi(logline.c_str());
+						break;
+					case 1:
+						cat = logline;
+						break;
+					case 2:
+						isnaughty = atoi(logline.c_str());
+						break;
+					case 3:
+						naughtytype = atoi(logline.c_str());
+						break;
+					case 4:
+						sweight = logline;
+						break;
+					case 5:
+						where = logline;
+						break;
+					case 6:
+						what = logline;
+						break;
+					case 7:
+						how = logline;
+						break;
+					case 8:
+						who = logline;
+						break;
+					case 9:
+						from = logline;
+						break;
+					case 10:
+						port = atoi(logline.c_str());
+						break;
+					case 11:
+						wasscanned = atoi(logline.c_str());
+						break;
+					case 12:
+						wasinfected = atoi(logline.c_str());
+						break;
+					case 13:
+						contentmodified = atoi(logline.c_str());
+						break;
+					case 14:
+						urlmodified = atoi(logline.c_str());
+						break;
+					case 15:
+						headermodified = atoi(logline.c_str());
+						break;
+					case 16:
+						ssize = logline;
+						break;
+					case 17:
+						filtergroup = atoi(logline.c_str());
+						break;
+					case 18:
+						code = atoi(logline.c_str());
+						break;
+					case 19:
+						cachehit = atoi(logline.c_str());
+						break;
+					case 20:
+						mimetype = logline;
+						break;
+					case 21:
+						tv_sec = atol(logline.c_str());
+						break;
+					case 22:
+						tv_usec = atol(logline.c_str());
+						break;
+					case 23:
+						clienthost = logline;
+						break;
+					case 24:
+						useragent = logline;
+						break;
+					case 25:
+						params = logline;
+						break;
+					case 26:
+						postdata = logline;
+					}
 				}
 				catch(std::exception & e) {
 					delete ipcpeersock;
@@ -1793,6 +1809,7 @@ int fc_controlit()
 
 	// we expect to find a valid filter ip 0 specified in conf if multiple IPs are in use.
 	// if we don't find one, bind to any, as per old behaviour.
+	// XXX AAAARGH!
 	if (o.filter_ip[0].length() > 6) {
 		if (serversockets.bindAll(o.filter_ip, o.filter_port)) {
 			if (!is_daemonised) {
