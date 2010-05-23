@@ -1,53 +1,56 @@
 # DansGuardian messages file in Slovak
-# by Du¹an Biro¹èák biroscak@gmail.com
+# by DuÅ¡an BiroÅ¡ÄÃ¡k biroscak@gmail.com
+# corrections Peter TuhÃ¡rsky tuharsky@misbb.sk
+# charset=utf-8
 
-"1","Prístup zamietnutı"
+"1","PrÃ­stup bol odopretÃ½
 
-"100","Va¹ej IP adrese neni povolené prehliada»: "
-"101","Va¹a IP adresa nemá povolené prohliadanie."
-"102","Va¹e u¾ívateµské meno nemá povolené prohliada»: "
+"100","VaÅ¡ej IP adrese nie je dovolenÃ© prehliadaÅ¥: "
+"101","VaÅ¡a IP adresa nemÃ¡ dovolenÃ© prohliadanie."
+"102","VaÅ¡e pouÅ¾Ã­vateÄ¾skÃ© meno nemÃ¡ dovolenÃ© prehliadaÅ¥: "
 
-"200","Po¾adovaná URL je ¹patne zadaná."
+"200","PoÅ¾adovanÃ¡ URL je chybne zadanÃ¡."
 
-"300","Nájdená zakázaná fráza: "
-"301","Nájdena zakázaná fráza."
+"300","NaÅ¡la sa zakÃ¡zanÃ¡ frÃ¡za: "
+"301","NaÅ¡la sa zakÃ¡zanÃ¡ frÃ¡za."
 
-"400","Nájdená zakázaná kombinacia fráz: "
-"401","Najdená zakázaná kombinacia fráz."
-"402","Limit vá¾enıch fráz: "
-"403","Bol prekroèenı limit pre vá¾ené frázy."
+"400","NaÅ¡la sa zakÃ¡zanÃ¡ kombinÃ¡cia frÃ¡z: "
+"401","NaÅ¡la sa zakÃ¡zanÃ¡ kombinÃ¡cia frÃ¡z."
+"402","Limit vÃ¡Å¾enÃ½ch frÃ¡z: "
+"403","Bol prekroÄenÃ½ limit pre vÃ¡Å¾enÃ© frÃ¡zy."
 
-"500","Zakázané webové sídlo: "
-"501","Zakázaná URL adresa: "
-"502","Celoplo¹né blokovánie prístupu je aktivované a toto webové sídlo neni povolené."
-"503","Nájdena zakázaná URL adresa podµa regularneho vırazu: "
-"504","Nájdena zakázaná URL adresa podµa regularneho vırazu."
-"505","Celoplo¹né blokovanie IP adries je aktivované a bola zadána IP adresa."
+"500","ZakÃ¡zanÃ¡ domÃ©na: "
+"501","ZakÃ¡zanÃ¡ URL: "
+"502","CeloploÅ¡nÃ© blokovanie prÃ­stupu je aktivovanÃ© a tÃ¡to webovÃ¡ domÃ©na nie je povolenÃ¡."
+"503","NaÅ¡la sa zakÃ¡zanÃ¡ URL adresa podÄ¾a regulÃ¡rneho vÃ½razu: "
+"504","NaÅ¡la sa zakÃ¡zanÃ¡ URL adresa podÄ¾a regulÃ¡rneho vÃ½razu."
+"505","CeloploÅ¡nÃ© blokovanie IP adries je aktivovanÃ© a bola zadanÃ¡ len IP adresa."
 
-"600","Nájdená vınímková IP adresa."
-"601","Nájdenı vınimkovı u¾ívateµ."
-"602","Nájdené vınimkové webové sídlo."
-"603","Nájdená vınimková URL adresa."
-"604","Nájdená vınimková fráza: "
-"605","Nájdená kombinacia vınimkovıch fráz: "
-"606","Nahradi» vınimku URL."
-"607","Nahradi» cookie vınimku."
+"600","NaÅ¡la sa vÃ½nimkovÃ¡ IP adresa klienta."
+"601","NaÅ¡iel sa vÃ½nimkovÃ½ pouÅ¾Ã­vateÄ¾."
+"602","NaÅ¡la sa vÃ½nimkovÃ¡ webovÃ¡ domÃ©na."
+"603","NaÅ¡la sa vÃ½nimkovÃ¡ URL adresa."
+"604","NaÅ¡la sa vÃ½nimkovÃ¡ frÃ¡za: "
+"605","NaÅ¡la sa kombinÃ¡cia vÃ½nimkovÃ½ch frÃ¡z: "
+"606","PrekonaÅ¥ vÃ½nimku URL."
+"607","PrekonaÅ¥ cookie vÃ½nimku."
 "608","Scan bypass URL exception."
 "609","Exception regular expression URL match: "
 
-"700","Web upload je zakázanı."
-"701","Web upload limit bol prekroèenı."
+"700","Odosielanie na web je zakÃ¡zanÃ©."
+"701","Limit pre odosielanie na web bol prekroÄenÃ½."
 
-"800","Zakázanı obsah súboru: "
+"800","ZakÃ¡zanÃ½ obsah sÃºboru (MIME): "
 
-"900","Zakázaná prípona súboru: "
+"900","ZakÃ¡zanÃ¡ prÃ­pona sÃºboru: "
 
-"1000","Úroven PICS oznaèenia bola prekroèená na tomto webovém sídle."
+"1000","Na tejto webovej domÃ©ne bola prekroÄenÃ¡ ÃºroveÅˆ oznaÄovania PICS."
 
-"1100","Virus or bad content detected."
+"1100","V tomto obsahu sa naÅ¡iel vÃ­rus."
 "1101","Advert blocked"
 
 "1200","Please wait - downloading to be scanned..."
 "1210","Download Complete.  Starting scan..."
 "1220","Scan complete.</p><p>Click here to download: "
 "1230","File no longer available"
+
