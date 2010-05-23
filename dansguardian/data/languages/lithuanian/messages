@@ -1,54 +1,68 @@
-# DansGuardian messages file
-# Lithuanian version by Nerijus Baliûnas
-# charset=windows-1257
+# DansGuardian 2.10 messages file
+# Lithuanian version by Nerijus BaliÅ«nas and Mantas KriauÄiÅ«nas
+# charset=utf-8
 
-"1","Tinklalapis uşdraustas"
+"1","Tinklalapis uÅ¾draustas"
 
-"100","Iğ jûsø IP adreso negalima pasiekti tinklalapio: "
-"101","Draudşiama narğyti iğ jûsø IP adreso."
-"102","Ğiam vartotojui negalima pasiekti tinklalapio: "
+"100","IÅ¡ jÅ«sÅ³ IP adreso negalima pasiekti tinklalapio: "
+"101","DraudÅ¾iama narÅ¡yti iÅ¡ jÅ«sÅ³ IP adreso."
+"102","JÅ«sÅ³ naudotojui negalima pasiekti tinklalapio: "
 
 "200","Neteisingas URL."
 
-"300","Rasta uşdrausta frazë: "
-"301","Rasta uşdrausta frazë."
+"300","Rasta uÅ¾drausta frazÄ—: "
+"301","Rasta uÅ¾drausta frazÄ—."
 
-"400","Rasta uşdrausta fraziø kombinacija: "
-"401","Rasta uşdrausta fraziø kombinacija."
-"402","Sumuojamø fraziø limitas "
-"403","Virğytas sumuojamø fraziø limitas."
+"400","Rasta uÅ¾drausta fraziÅ³ kombinacija: "
+"401","Rasta uÅ¾drausta fraziÅ³ kombinacija."
+"402","SumuojamÅ³ fraziÅ³ limitas "
+"403","VirÅ¡ytas sumuojamÅ³ fraziÅ³ limitas."
 
-"500","Uşdraustas adresas (site): "
-"501","Uşdraustas URL: "
-"502","Leidşiamas priëjimas tik prie tinklalapiø, esanèiø 'baltame' sàrağe, bet ğio tinklalapio jame nëra."
-"503","Draudşiamas URL regexp: "
-"504","Rastas draudşiamas URL regexp."
-"505","Priëjimas prie IP adresø uşdraustas, o ğis adresas yra tik IP adresas."
+"500","UÅ¾draustas adresas (site): "
+"501","UÅ¾draustas URL: "
+"502","LeidÅ¾iamas priÄ—jimas tik prie tinklalapiÅ³, esanÄiÅ³ 'baltame' ar 'pilkame' sÄ…raÅ¡e, bet Å¡io tinklalapio juose nÄ—ra."
+"503","DraudÅ¾iamas URL regexp: "
+"504","Rastas draudÅ¾iamas URL regexp."
+"505","PriÄ—jimas prie IP adresÅ³ uÅ¾draustas, o Å¡is adresas yra tik IP adresas."
+"506","Aktyvus Blanket SSL Block ir Å¡is tinklalapis nÄ—ra 'baltame' ar 'pilkame' sÄ…raÅ¡e."
+"507","Aktyvus Blanket SSL IP Block ir Å¡is adresas yra tik IP adresas."
+"508","UÅ¾drausta reguliarioji iÅ¡raiÅ¡ka (regexp) HTTP antraÅ¡tÄ—je: ",
+"509","Rasta draudÅ¾iama reguliarioji iÅ¡raiÅ¡ka (regexp) HTTP antraÅ¡tÄ—je."
 
-"600","Kliento IP yra iğimèiø sàrağe."
-"601","Kliento vardas yra iğimèiø sàrağe."
-"602","Adresas yra iğimèiø sàrağe."
-"603","URL yra iğimèiø sàrağe."
-"604","Rasta frazë iğ iğimèiø sàrağo: "
-"605","Rasta fraziø kombinacija iğ iğimèiø sàrağo: "
-"606","URL apëjimo iğimtis."
-"607","Slapuko apëjimo iğimtis."
-"608","URL skanavimo apëjimo iğimtis."
-"609","Regexp URL yra iğimèiø sàrağe: "
+"600","Kliento IP yra iÅ¡imÄiÅ³ sÄ…raÅ¡e."
+"601","Kliento vardas yra iÅ¡imÄiÅ³ sÄ…raÅ¡e."
+"602","Adresas yra iÅ¡imÄiÅ³ sÄ…raÅ¡e."
+"603","URL yra iÅ¡imÄiÅ³ sÄ…raÅ¡e."
+"604","Rasta frazÄ— iÅ¡ iÅ¡imÄiÅ³ sÄ…raÅ¡o: "
+"605","Rasta fraziÅ³ kombinacija iÅ¡ iÅ¡imÄiÅ³ sÄ…raÅ¡o: "
+"606","URL apÄ—jimo iÅ¡imtis."
+"607","Slapuko apÄ—jimo iÅ¡imtis."
+"608","URL skanavimo apÄ—jimo iÅ¡imtis."
+"609","Regexp URL yra iÅ¡imÄiÅ³ sÄ…raÅ¡e: "
 
-"700","Nusiuntimas (upload) yra uşdraustas."
-"701","Virğytas nusiuntimo (upload) limitas."
+"700","Nusiuntimas (upload) yra uÅ¾draustas."
+"701","VirÅ¡ytas nusiuntimo (upload) limitas."
 
-"800","Uşdraustas MIME tipas: "
+"750","Aktyvus Blanket failÅ³ atsiuntimas ir Å¡is MIME tipas nÄ—ra 'baltame' sÄ…raÅ¡e: "
+"751","Aktyvus Blanket failÅ³ atsiuntimas ir Å¡is failas netinka pagal 'baltus' sÄ…raÅ¡us."
 
-"900","Uşdraustas praplëtimas: "
+"800","UÅ¾draustas MIME tipas: "
 
-"1000","Virğytas ğio tinklalapio PICS vertinimo kriterijus."
+"900","UÅ¾draustas praplÄ—timas: "
 
-"1100","Turinys uşkrëstas virusu."
-"1101","Reklama uşblokuota"
+"1000","VirÅ¡ytas Å¡io tinklalapio PICS vertinimo kriterijus."
 
-"1200","Palaukite - siunèiame tikrinimui nuo virusø..."
-"1210","Atsiøsta.  Tikriname nuo virusø..."
-"1220","Patikrinta.</p><p>Atsisiøskite: "
+"1100","Aptiktas virusas arba negeras turinys."
+"1101","Reklama uÅ¾blokuota"
+
+"1200","Palaukite - siunÄiame tikrinimui nuo virusÅ³..."
+"1201","DÄ—mesio: failo negalime patikrinti, nes jis per didelis. Jei manote, kad Å¡is failas yra didesnis nei "
+"1202",", tuomet nueikite Ä¯ Å¡Ä¯ puslapÄ¯ iÅ¡ naujo (refresh) ir atsisiÅ³skite nepatikrintÄ… failÄ…."
+
+"1210","AtsiÅ³sta. Tikriname nuo virusÅ³..."
+
+"1220","Patikrinta.</p><p>AtsisiÅ³skite: "
+"1221","Siuntimas baigtas; failas nebuvo patikrintas.</p><p>SpustelÄ—kite Äia jei norite atsisiÅ³sti: "
+"1222","Failas per didelis.</p><p>Jei norite atsisiÅ³sti nepatikrintÄ… failÄ… - spustelÄ—kite Äia: "
+
 "1230","Failas neprieinamas"
