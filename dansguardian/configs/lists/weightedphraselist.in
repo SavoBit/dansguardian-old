@@ -61,6 +61,7 @@
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_polish>
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_portuguese>
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_russian> #BETA#
+.Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_russian_utf8> #BETA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_spanish> #ALPHA#
 .Include<@DGCONFDIR@/lists/phraselists/pornography/weighted_swedish>
 .Include<@DGCONFDIR@/lists/phraselists/nudism/weighted>
