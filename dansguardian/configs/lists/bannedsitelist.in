@@ -46,7 +46,7 @@ badboys.com
 #the # from the next line to leave only a '**':
 #**
 
-#Blanket SSL/CONNECT Block.  To block all SSL 
+#Blanket SSL/CONNECT Block.  To block all SSL
 #and CONNECT tunnels except to addresses in the
 #exceptionsitelist and greysitelist files, remove
 #the # from the next line to leave only a '**s':
