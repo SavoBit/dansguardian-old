@@ -336,3 +336,13 @@ deepurlanalysis = off
 # notifaction will be sent.
 @EMAILSUPPORT@threshold = 0
 
+#SSL certificate checking
+# Check that ssl certificates for servers on https connections are valid
+# and signed by a ca in the configured path
+sslcertcheck = off
+
+#SSL man in the middle
+# Forge ssl certificates for all sites, decrypt the data then re encrypt it
+# using a different private key. Used to filter ssl sites
+sslmitm = off
+

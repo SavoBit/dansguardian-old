@@ -72,6 +72,14 @@ FOptionContainer::~FOptionContainer()
 }
 
 void FOptionContainer::reset()
+{	
+	conffile.clear();	
+	delete banned_page;
+	banned_page = NULL;
+	resetJustListData();
+}
+
+void FOptionContainer::resetJustListData()
 {
 	if (banned_phrase_flag) o.lm.deRefList(banned_phrase_list);
 	if (searchterm_flag) o.lm.deRefList(searchterm_list);
@@ -127,7 +135,7 @@ void FOptionContainer::reset()
 	
 	banned_phrase_list_index.clear();
 	
-	conffile.clear();
+//	conffile.clear();
 	
 	content_regexp_list_comp.clear();
 	content_regexp_list_rep.clear();
@@ -151,9 +159,11 @@ void FOptionContainer::reset()
 	searchengine_regexp_list_source.clear();
 	searchengine_regexp_list_ref.clear();
 	
-	delete banned_page;
-	banned_page = NULL;
+//	delete banned_page;
+//	banned_page = NULL;
 }
+
+
 
 // grab this FG's HTML template
 HTMLTemplate* FOptionContainer::getHTMLTemplate()
@@ -237,6 +247,34 @@ bool FOptionContainer::read(const char *filename)
 		} else {
 			disable_content_scan = false;
 		}
+
+
+#ifdef __SSLCERT
+		if (findoptionS("sslcheckcert") == "on") {
+			ssl_check_cert = true;
+		} else {
+			ssl_check_cert = false;
+		}
+#endif //__SSLCERT
+
+#ifdef __SSLMITM
+		if (findoptionS("sslmitm") == "on") {
+			ssl_mitm = true;
+			mitm_magic = findoptionS("mitmkey");
+			if (mitm_magic.length() < 9) {
+				std::string s(16u, ' ');
+				for (int i = 0; i < 16; i++) {
+					s[i] = (rand() % 26) + 'A';
+				}
+				mitm_magic = s;
+			}
+#ifdef DGDEBUG
+			std::cout << "Setting mitm_magic key to '" << mitm_magic << "'" << std::endl;
+#endif
+		} else {
+			ssl_mitm = false;
+		}
+#endif //__SSLMITM
 
 #ifdef ENABLE_EMAIL
 		// Email notification patch by J. Gauthier

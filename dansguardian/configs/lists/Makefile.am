@@ -4,7 +4,7 @@ MAINTAINERCLEANFILES = Makefile.in \
 
 DGDATADIR = $(DGCONFDIR)/lists
 
-SUBDIRS = phraselists . blacklists authplugins
+SUBDIRS = phraselists . blacklists authplugins bannedrooms
 
 if NEED_CSLISTS
 SUBDIRS += contentscanners
@@ -21,7 +21,7 @@ WLISTS = bannedextensionlist bannediplist bannedmimetypelist \
 	 exceptionphraselist bannediplist exceptioniplist urlregexplist \
 	 exceptionregexpurllist exceptionextensionlist exceptionmimetypelist \
 	 exceptionfilesitelist bannedregexpheaderlist headerregexplist \
-	 exceptionfileurllist logsitelist logurllist logregexpurllist
+	 exceptionfileurllist logsitelist logurllist logregexpurllist bannedrooms/default
 
 EXTRA_DIST = bannedextensionlist bannediplist bannedmimetypelist \
 	 bannedregexpurllist bannedsitelist.in bannedurllist.in \
@@ -31,11 +31,11 @@ EXTRA_DIST = bannedextensionlist bannediplist bannedmimetypelist \
 	 exceptionphraselist.in bannediplist exceptioniplist urlregexplist \
 	 exceptionregexpurllist exceptionextensionlist exceptionmimetypelist \
 	 exceptionfilesitelist bannedregexpheaderlist headerregexplist \
-	 exceptionfileurllist logsitelist logurllist logregexpurllist
+	 exceptionfileurllist logsitelist logurllist logregexpurllist bannedrooms/default
 
 install-data-local: 
 	$(mkinstalldirs) $(DESTDIR)$(DGDATADIR) && \
-	for l in $(WLISTS) ; do \
+		for l in $(WLISTS) ; do \
 		echo "$(INSTALL_DATA) $$l $(DESTDIR)$(DGDATADIR)/$$l"; \
 		$(INSTALL_DATA) $$l $(DESTDIR)$(DGDATADIR)/$$l; \
 	done

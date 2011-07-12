@@ -31,6 +31,7 @@
 #include <fstream>
 #include <sstream>
 #include <syslog.h>
+#include <dirent.h>
 
 #include <unistd.h>		// checkme: remove?
 
@@ -57,6 +58,7 @@ void OptionContainer::reset()
 	deletePlugins(dmplugins);
 	deletePlugins(csplugins);
 	deletePlugins(authplugins);
+	deleteRooms();
 	exception_ip_list.reset();
 	banned_ip_list.reset();
 	html_template.reset();
@@ -64,6 +66,8 @@ void OptionContainer::reset()
 	conffile.clear();
 	if (use_filter_groups_list) filter_groups_list.reset();
 	filter_ip.clear();
+	filter_ports.clear();
+	auth_map.clear();
 }
 
 void OptionContainer::deleteFilterGroups()
@@ -82,6 +86,16 @@ void OptionContainer::deleteFilterGroups()
 		numfg = 0;
 	}
 }
+
+void OptionContainer::deleteFilterGroupsJustListData()
+{
+	for (int i = 0; i < numfg; i++) {
+		if (fg[i] != NULL) {
+			fg[i]->resetJustListData();
+		}
+	}
+}
+
 
 void OptionContainer::deletePlugins(std::deque<Plugin*> &list)
 {
@@ -186,6 +200,43 @@ bool OptionContainer::read(const char *filename, int type)
 		} else {
 			soft_restart = false;
 		}
+
+#ifdef __SSLCERT
+		ssl_certificate_path = findoptionS("sslcertificatepath") + "/";
+		if (ssl_certificate_path == "/"){
+			ssl_certificate_path = "/etc/ssl/certs/";
+		}
+#endif
+
+
+#ifdef __SSLMITM
+		// TODO: maybe make these more sensible paths?
+		ca_certificate_path = findoptionS("cacertificatepath");
+		if (ca_certificate_path == ""){
+			//ca_certificate_path = __CONFDIR "/ca.pem";
+		}
+		
+		ca_private_key_path = findoptionS("caprivatekeypath");
+		if (ca_private_key_path == ""){
+			//ca_private_key_path = __CONFDIR "/ca.key";
+		}
+		
+		cert_private_key_path  = findoptionS("certprivatekeypath");
+		if (cert_private_key_path == ""){
+			//cert_private_key_path = __CONFDIR "/certs.key";
+		}
+
+		generated_cert_path = findoptionS("generatedcertpath") + "/";
+		if (generated_cert_path == "/"){
+			//generated_cert_path = "/etc/ssl/certs/";
+		}
+		
+		generated_link_path = findoptionS("generatedlinkpath") + "/";
+		if (generated_link_path == "/"){
+			//generated_link_path = "/etc/ssl/certs/";
+		}
+#endif
+
 
 #ifdef ENABLE_EMAIL
 		// Email notification patch by J. Gauthier
@@ -383,6 +434,14 @@ bool OptionContainer::read(const char *filename, int type)
 			syslog(LOG_ERR, "%s", "Can not listen on more than 127 IPs");
 			return false;
 		}
+		filter_ports = findoptionM("filterports");
+		if (filter_ports.size() != filter_ip.size()) {
+			if (!is_daemonised) {
+				std::cerr << "filterports must match number of filterips" << std::endl;
+			}
+			syslog(LOG_ERR, "%s", "filterports must match number of filterips");
+			return false;
+		}
 
 #ifdef ENABLE_ORIG_IP
 		if (findoptionS("originalip") == "off") {
@@ -552,6 +611,47 @@ bool OptionContainer::read(const char *filename, int type)
 			return false;
 		}
 
+		// map port numbers to auth plugin names
+		for (int i = 0; i < authplugins.size(); i++) {
+			AuthPlugin* tmpPlugin = (AuthPlugin*) authplugins[i];
+			String tmpStr = tmpPlugin->getPluginName();
+			auth_map[filter_ports[i].toInteger()] = tmpStr;
+		}
+
+		// if the more than one port is being used, validate the combination of auth plugins
+		if (authplugins.size() > 1) {
+			std::deque<Plugin*>::iterator it = authplugins.begin();
+			String firstPlugin;
+			bool sslused = false;
+			bool coreused = false;
+			while (it != authplugins.end()) {
+				AuthPlugin* tmp = (AuthPlugin*) *it;
+				if (tmp->getPluginName().startsWith("proxy-basic")) {
+					if (!is_daemonised)
+						std::cerr << "Proxy auth is not possible with multiple ports" << std::endl;
+					syslog(LOG_ERR, "Proxy auth is not possible with multiple ports");
+					return false;
+				}
+				if (tmp->getPluginName().startsWith("proxy-ntlm") && (tmp->isTransparent() == false)) {
+					if (!is_daemonised)
+						std::cerr << "Non-transparent NTLM is not possible with multiple ports" << std::endl;
+					syslog(LOG_ERR, "Non-transparent NTLM is not possible with multiple ports");
+					return false;
+				}
+				if (it == authplugins.begin())
+					firstPlugin = tmp->getPluginName();
+				else {
+					if ((firstPlugin == tmp->getPluginName()) and (!tmp->getPluginName().startsWith("ssl-core"))) {
+						if (!is_daemonised)
+							std::cerr << "Auth plugins can not be the same" << std::endl;
+						syslog(LOG_ERR, "Auth plugins can not be the same");
+						return false;
+					}
+				}
+				*it++;
+			}
+		}
+
 		// if there's no auth enabled, we only need the first group's settings
 		if (authplugins.size() == 0)
 			filter_groups = 1;
@@ -559,6 +659,7 @@ bool OptionContainer::read(const char *filename, int type)
 		filter_groups_list_location = findoptionS("filtergroupslist");
 		std::string banned_ip_list_location(findoptionS("bannediplist"));
 		std::string exception_ip_list_location(findoptionS("exceptioniplist"));
+		std::string per_room_blocking_directory_location(findoptionS("perroomblockingdirectory"));
 		group_names_list_location = findoptionS("groupnamesfile");
 		std::string language_list_location(languagepath + "messages");
 		if (reporting_level == 1 || reporting_level == 2) {
@@ -617,6 +718,8 @@ bool OptionContainer::read(const char *filename, int type)
 			std::cout << "Failed to read bannediplist" << std::endl;
 			return false;
 		}
+
+		loadRooms(per_room_blocking_directory_location);
 
 		if (!language_list.readLanguageList(language_list_location.c_str())) {
 			return false;
@@ -678,6 +781,66 @@ bool OptionContainer::inBannedIPList(const std::string *ip, std::string *&host)
 	return banned_ip_list.inList(*ip, host);
 }
 
+bool OptionContainer::inRoom(const std::string& ip, std::string& room, std::string *&host) const
+{
+	for (std::list<std::pair<std::string, IPList*> >::const_iterator i = rooms.begin(); i != rooms.end(); ++i)
+	{
+		if (i->second->inList(ip, host))
+		{
+			room = i->first;
+			return true;
+		}
+	}
+	return false;
+}
+
+void OptionContainer::loadRooms(std::string &per_room_blocking_directory_location)
+{
+	DIR* d = opendir(per_room_blocking_directory_location);
+	if (d == NULL)
+	{
+		syslog(LOG_ERR, "Could not open room definitions directory: %s", strerror(errno));
+		exit(1);
+	}
+
+	struct dirent* f;
+	while ((f = readdir(d)))
+	{
+		if (f->d_name[0] == '.')
+			continue;
+		std::string filename(per_room_blocking_directory_location);
+		filename.append(f->d_name);
+		std::ifstream infile(filename.c_str());
+
+		std::string roomname;
+		std::getline(infile, roomname);
+		infile.close();
+		roomname = roomname.substr(1);
+
+		IPList* contents = new IPList();
+		contents->readIPMelangeList(filename.c_str());
+
+		rooms.push_back(std::pair<std::string, IPList*>(roomname, contents));
+	}
+
+	while (closedir(d) != 0)
+	{
+		if (errno != EINTR)
+		{
+			syslog(LOG_ERR, "Could not close room definitions directory: %s", strerror(errno));
+			exit(1);
+		}
+	}
+}
+
+void OptionContainer::deleteRooms()
+{
+	for (std::list<std::pair<std::string, IPList*> >::const_iterator i = rooms.begin(); i != rooms.end(); ++i)
+	{
+		delete i->second;
+	}
+	rooms.clear();
+}
 
 long int OptionContainer::findoptionI(const char *option)
 {
@@ -875,8 +1038,12 @@ bool OptionContainer::readAnotherFilterGroupConf(const char *filename, const cha
 	if (!rc) {
 		return false;
 	}
-
+	//<TODO> ifdef for ssl mitm
+#ifdef __SSLMITM
+	if (((fg[numfg-1]->reporting_level == 3)  || fg[numfg-1]->ssl_mitm) && (html_template.html.size() == 0)) {
+#else
 	if ((fg[numfg-1]->reporting_level == 3) && (html_template.html.size() == 0)) {
+#endif
 #ifdef DGDEBUG
 		std::cout << "One of the groups has overridden the reporting level! Loading the HTML template." << std::endl;
 #endif

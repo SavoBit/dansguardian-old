@@ -31,6 +31,10 @@
 #include "ImageContainer.hpp"
 #include "FDFuncs.hpp"
 
+#ifdef __SSLMITM
+#include "CertificateAuthority.hpp"
+#endif //__SSLMITM
+
 #include <syslog.h>
 #include <cerrno>
 #include <cstdio>
@@ -52,6 +56,11 @@
 #include <linux/netfilter_ipv4.h>
 #endif
 
+#ifdef __SSLCERT
+#include "openssl/ssl.h"
+#include "openssl/x509v3.h"
+#include "String.hpp" 
+#endif
 
 // GLOBALS
 extern OptionContainer o;
@@ -217,13 +226,13 @@ String ConnectionHandler::hashedURL(String *url, int filtergroup, std::string *c
 }
 
 // create temporary bypass cookie
-String ConnectionHandler::hashedCookie(String * url, int filtergroup, std::string * clientip, int bypasstimestamp)
+String ConnectionHandler::hashedCookie(String * url, const char *magic, std::string * clientip, int bypasstimestamp)
 {
 	String timecode(bypasstimestamp);
-	String magic((*o.fg[filtergroup]).cookie_magic.c_str());
-	magic += (*clientip).c_str();
-	magic += timecode;
-	String res((*url).md5(magic.toCharArray()));
+	String data(magic);
+	data += (*clientip).c_str();
+	data += timecode;
+	String res((*url).md5(data.toCharArray()));
 	res += timecode;
 
 #ifdef DGDEBUG
@@ -334,9 +343,43 @@ off_t ConnectionHandler::sendFile(Socket * peerconn, String & filename, String &
 	return sent;
 }
 
+
+
+
 // pass data between proxy and client, filtering as we go.
 // this is the only public function of ConnectionHandler - all content blocking/filtering is triggered from calls that live here.
 void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
+{
+	persistent_authed = false;
+	
+	//create conneciton to proxy then call connectionhandler
+	Socket proxysock;
+	try {
+		// connect to proxy
+		int rc = proxysock.connect(o.proxy_ip, o.proxy_port);
+
+		if (rc) {
+#ifdef DGDEBUG
+			std::cerr << "Error connecting to proxy" << std::endl;
+#endif
+			syslog(LOG_ERR, "Error connecting to proxy");
+			return;  // if we can't connect to the proxy, there is no point
+			// in continuing
+		}
+		handleConnection(peerconn, ip, proxysock);  // deal with the connection
+	}
+	catch(std::exception & e) {
+#ifdef DGDEBUG
+		std::cerr << "exception while creating proxysock: " << e.what() << std::endl;
+#endif
+	}
+	proxysock.close();  // close connection to proxy
+	return;
+}
+
+
+
+void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &proxysock)
 {
 	struct timeval thestart;
 	gettimeofday(&thestart, NULL);
@@ -416,22 +459,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 	std::cout << clientip << std::endl;
 #endif
 
-	Socket proxysock;  // to hold connection to proxy
-
 	try {
-
-		// connect to proxy
-		int rc = proxysock.connect(o.proxy_ip, o.proxy_port);
-
-		if (rc) {
-#ifdef DGDEBUG
-			std::cerr << "Error connecting to proxy" << std::endl;
-#endif
-			syslog(LOG_ERR, "Error connecting to proxy");
-			return;  // if we can't connect to the proxy, there is no point
-			// in continuing
-		}
-
+		int rc;
+		
 		header.in(&peerconn, true, true);  // get header from client, allowing persistency and breaking on reloadconfig
 		bool persist = header.isPersistent();
 		bool firsttime = true;
@@ -443,12 +473,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 		// the same user. means we only need to query the auth plugin until
 		// we get credentials, then assume they are valid for all reqs. on
 		// the persistent connection.
-		std::string clientuser;
 		std::string oldclientuser;
-		int filtergroup, oldfg = 0, gmode;
+		std::string room;
+		int oldfg = 0, gmode;
 		bool authed = false;
 		bool isbanneduser = false;
-		bool persistent_authed = false;
+		
 		
 		FDTunnel fdt;
 		NaughtyFilter checkme;
@@ -456,8 +486,15 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 
 		// maintain a persistent connection
 		while ((firsttime || persist) && !reloadconfig) {
-
 			if (!firsttime) {
+#ifdef __SSLMITM
+				//<TODO>resolve issues with persistency and ssl
+				//dont allow persistent connections inside an ssl tunnel as this doesnt work properly
+				if (peerconn.isSsl()){
+					break;
+				}
+#endif// __SSLMITM
+
 #ifdef DGDEBUG
 				std::cout << "persisting (count " << ++pcount << ")" << std::endl;
 				syslog(LOG_ERR, "Served %d requests on this connection so far", pcount);
@@ -512,6 +549,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				mimetype = "-";
 				exceptionreason = "";
 				exceptioncat = "";
+				room = "";
 				
 				// reset header, docheader & docbody
 				// headers *should* take care of themselves on the next in()
@@ -542,7 +580,15 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 #endif
 						// try to get the username & parse the return value
 						auth_plugin = (AuthPlugin*)(*i);
-						rc = auth_plugin->identify(peerconn, proxysock, header, /*filtergroup,*/ clientuser);
+						// auth plugin selection for multi ports
+						String tmp = o.auth_map[peerconn.getPort()];
+						if (tmp.compare(auth_plugin->getPluginName().toCharArray()) == 0) {
+							rc = auth_plugin->identify(peerconn, proxysock, header, /*filtergroup,*/ clientuser);
+						}
+						else {
+							rc = DGAUTH_NOMATCH;
+						}
+
 						if (rc == DGAUTH_NOMATCH) {
 #ifdef DGDEBUG
 							std::cout<<"Auth plugin did not find a match; querying remaining plugins"<<std::endl;
@@ -677,7 +723,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			// is this user banned?
 			isbanneduser = (gmode == 0);
 
-			url = header.url();
+			url = header.url(false, peerconn.isSsl());
 			urld = header.decode(url);
 			if (url.after("://").contains("/")) {
 				urldomain = url.after("//").before("/");
@@ -714,6 +760,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			bool isbannedip = o.inBannedIPList(&clientip, clienthost);
 			if (isbannedip)
 				matchedip = clienthost == NULL;
+			else {
+				isbannedip = o.inRoom(clientip, room, clienthost);
+				if (isbannedip)
+					matchedip = clienthost == NULL;
+			}
 
 			if (o.forwarded_for) {
 				header.addXForwardedFor(clientip);  // add squid-like entry
@@ -804,6 +855,85 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				}
 			}
 #endif
+
+			if (peerconn.isSsl()) {
+#ifdef DGDEBUG
+				std::cout << "SSL connection; about to begin MITM" << std::endl;
+#endif
+
+				String magic(o.fg[filtergroup]->mitm_magic);
+
+#ifdef DGDEBUG
+				std::cout << "Testing for MITM accept cookie" << std::endl;
+#endif
+				if (! header.isMITMAcceptCookie(urldomain, magic.c_str(), clientip.c_str())) {
+#ifdef DGDEBUG
+					std::cout << "MITM accept cookie not found" << std::endl;
+#endif
+					/* If magic string in URL, set cookie and redirect to original page. */
+					if (header.isMITMAcceptURL(&url, magic.c_str(), clientip.c_str())) {
+#ifdef DGDEBUG
+						std::cout << "Found MITM Accept URL" << std::endl;
+#endif
+						header.chopMITMAccept(url);
+						url = header.url(false, true);
+
+#ifdef DGDEBUG
+						std::cout<<"Setting GMACCEPT cookie"<<std::endl;
+#endif
+						String ud(urldomain);
+						if (ud.startsWith("www")) {
+							ud = ud.after("www");
+						} else {
+							ud = "." + urldomain;
+						}
+
+						String cookie("GMACCEPT=");
+						int timecode = time(NULL) + 86400; // lasts for 1 day
+						String hash = hashedCookie(&ud, magic.c_str(), &clientip, timecode);
+						cookie += hash;
+						cookie += "; domain=";
+						cookie += ud;
+
+						// redirect user to URL with GMACCEPT parameter no longer appended
+#ifdef DGDEBUG
+						std::cout << "Redirecting to original page with cookie" << std::endl;
+#endif
+
+						String writestring("HTTP/1.0 302 Redirect\r\nLocation: ");
+						writestring += url;
+						writestring += "\r\nP3P: CP=\"NOI NID CUR OUR NOR\"";
+						writestring += "\r\nSet-cookie: ";
+						writestring += cookie;
+						writestring += "\r\n\r\n";
+						peerconn.writeString(writestring.toCharArray());
+
+						return;
+					}
+
+#ifdef DGDEBUG
+					std::cout << "MITM Accept URL not found" << std::endl;
+#endif
+					/* Neither MITM accept URL nor cookie found. Redirect to warning page */
+
+					String writestring("HTTP/1.0 302 Redirect\r\nLocation: http://");
+					writestring += peerconn.getLocalIP();
+					writestring += "/modules/guardian/cgi-bin/mitm.cgi?";
+					writestring += url;
+					writestring += "\r\n\r\n";
+					peerconn.writeString(writestring.toCharArray());
+
+					return;
+				}
+
+
+
+				/* Accept request. */
+#ifdef DGDEBUG
+				std::cout << "MITM looks good" << std::endl;
+#endif
+			}
+
 
 			if (header.isScanBypassURL(&url, (*o.fg[filtergroup]).magic.c_str(), clientip.c_str())) {
 #ifdef DGDEBUG
@@ -1021,6 +1151,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				if (!(docheader.returnCode() == 200)) {
 					isconnect = false;
 				}
+				
 				try {
 					fdt.reset();  // make a tunnel object
 					// tunnel from client to proxy and back
@@ -1180,13 +1311,207 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					// as its ssl so we can't see the return header etc
 					// So preemptive banning is forced on with ssl unfortunately.
 					// It is unlikely to cause many problems though.
-					requestChecks(&header, &checkme, &urld, &url, &clientip, &clientuser, filtergroup, isbanneduser, isbannedip);
+					requestChecks(&header, &checkme, &urld, &url, &clientip, &clientuser, filtergroup, isbanneduser, isbannedip, room);
 #ifdef DGDEBUG
 					std::cout << "done checking" << std::endl;
 #endif
 				}
 			}
 
+
+#ifdef __SSLMITM
+			//https mitm but only on port 443
+			if (!checkme.isItNaughty && isconnect && (*o.fg[filtergroup]).ssl_mitm && (header.port == 443)){
+#ifdef DGDEBUG
+				std::cout << "Intercepting HTTPS connection" << std::endl;
+#endif
+
+				//Do the connect request
+				if (!checkme.isItNaughty && !wasrequested) {
+#ifdef DGDEBUG
+					std::cout << "Forwarding connect request" << std::endl;
+#endif
+					proxysock.readyForOutput(10);  // exception on timeout or error
+					header.out(NULL, &proxysock, __DGHEADER_SENDALL, true);  // send proxy the request
+					//check the response headers so we can go ssl
+					proxysock.checkForInput(120);
+					docheader.in(&proxysock, persist);
+				}
+
+				//take care of connect fails / proxy auth requests
+				if (!checkme.isItNaughty && !(docheader.returnCode() == 200)) {
+#ifdef DGDEBUG
+					std::cout << "Connect request failed / proxy auth required. Returning data to client" << std::endl;
+#endif
+					//send data to the client and let it deal with it
+					docheader.out(NULL, &peerconn,__DGHEADER_SENDALL,true);
+
+					try {
+	#ifdef DGDEBUG
+						std::cout << "Forwarding body to client" << std::endl;
+	#endif
+						fdt.reset();  // make a tunnel object
+						// tunnel from proxy to client
+						fdt.tunnel(proxysock, peerconn, false);  // not expected to exception
+						docsize = fdt.throughput;
+						String rtype(header.requestType());
+						doLog(clientuser, clientip, url, header.port, exceptionreason, rtype, docsize, &checkme.whatIsNaughtyCategories, false, 0,
+							isexception, false, &thestart,
+							cachehit, header.returnCode(), mimetype, wasinfected,
+							wasscanned, checkme.naughtiness, filtergroup, &header, false, urlmodified);
+					}
+					catch(std::exception & e) {
+					}
+
+
+					if(docheader.isPersistent()){
+						continue;
+					}
+					proxysock.close();
+					break;
+				}
+
+				//<TODO>May be worth moving this if dg gets really busy.
+				CertificateAuthority ca(o.ca_certificate_path.c_str(),
+								o.ca_private_key_path.c_str(),
+								o.cert_private_key_path.c_str(),
+								o.generated_cert_path.c_str(),
+								o.generated_link_path.c_str());
+
+				X509 * cert = NULL;
+				EVP_PKEY * pkey = NULL;
+				bool certfromcache = false;
+				//generate the cert 
+				if (!checkme.isItNaughty){
+#ifdef DGDEBUG
+					std::cout << "Getting ssl certificate for client connection" << std::endl;
+#endif					
+					
+					pkey = ca.getServerPkey();
+
+					//generate the certificate but dont write it to disk (avoid someone 
+					//requesting lots of places that dont exist causing the disk to fill
+					//up / run out of inodes
+					certfromcache = ca.getServerCertificate(urldomain.c_str(), &cert);
+										
+					//check that the generated cert is not null and fillin checkme if it is
+					if (cert == NULL){
+						checkme.isItNaughty = true;
+						checkme.whatIsNaughty = "Failed to get ssl certificate";
+						checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+						checkme.whatIsNaughtyCategories = "SSL Site";					
+					}
+					else if(pkey == NULL){
+						checkme.isItNaughty = true;
+						checkme.whatIsNaughty = "Failed to load ssl private key";
+						checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+						checkme.whatIsNaughtyCategories = "SSL Site";					
+					}
+				}
+
+				//startsslserver on the connection to the client
+				if (!checkme.isItNaughty){
+#ifdef DGDEBUG
+					std::cout << "Going SSL on the peer connection" << std::endl;
+#endif
+					//send a 200 to the client no matter what because they managed to get a connection to us
+					//and we can use it for a blockpage if nothing else
+					std::string msg = "HTTP/1.0 200 Connection established\r\n\r\n";
+					peerconn.writeString(msg.c_str());
+					
+					if (peerconn.startSslServer(cert,pkey) < 0){
+						//make sure the ssl stuff is shutdown properly so we display the old ssl blockpage
+						peerconn.stopSsl();
+	
+						checkme.isItNaughty = true;
+						checkme.whatIsNaughty = "Failed to negotiate ssl connection to client";
+						checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
+						checkme.whatIsNaughtyCategories = "SSL Site";					
+					}
+				}
+
+				//startsslclient connected to the proxy and check the certificate of the server
+				bool badcert = false;
+				if (!checkme.isItNaughty){
+#ifdef DGDEBUG
+					std::cout << "Going SSL on connection to proxy" << std::endl;
+#endif
+					std::string certpath = std::string(o.ssl_certificate_path);
+					proxysock.startSslClient(certpath);
+
+#ifdef DGDEBUG
+					std::cout << "Checking certificate" << std::endl;
+#endif
+					//will fill in checkme of its own accord
+					checkCertificate(urldomain,&proxysock,&checkme);
+					badcert = checkme.isItNaughty;
+				}
+				
+				//handleConnection inside the ssl tunnel
+				if (!checkme.isItNaughty){
+					bool writecert = true;
+					if (!certfromcache){
+						writecert = ca.writeCertificate(urldomain.c_str(),cert);
+					}
+					
+					//if we cant write the certificate its not the end of the world but it is slow
+					if (!writecert){
+						std::cout << "Couldn't save certificate to on disk cache" << std::endl;
+						syslog(LOG_ERR,"Couldn't save certificate to on disk cache");
+					}
+#ifdef DGDEBUG
+					std::cout << "Handling connections inside ssl tunnel" << std::endl;
+#endif
+					
+					if (authed)
+					{
+						persistent_authed = true;
+					}
+					
+					handleConnection(peerconn,ip,proxysock);
+#ifdef DGDEBUG
+					std::cout << "Handling connections inside ssl tunnel: done" << std::endl;
+#endif
+				}
+				
+				//stopssl on the proxy connection
+				//if it was marked as naughty then show a deny page and close the connection 
+				if (checkme.isItNaughty){
+
+					std::cout << "SSL Interception failed " << checkme.whatIsNaughty << std::endl;
+
+					String rtype(header.requestType());
+					doLog(clientuser, clientip, url, header.port, checkme.whatIsNaughtyLog, rtype, docsize, &checkme.whatIsNaughtyCategories, true, checkme.blocktype,
+						isexception, false, &thestart,
+						cachehit, (wasrequested ? docheader.returnCode() : 200), mimetype, wasinfected,
+						wasscanned, checkme.naughtiness, filtergroup, &header, false, urlmodified);
+						
+					denyAccess(&peerconn, &proxysock, &header, &docheader, &url, &checkme, &clientuser,
+						&clientip, filtergroup, ispostblock, headersent, wasinfected, scanerror, badcert);
+
+				}
+#ifdef DGDEBUG
+				std::cout << "Shutting down ssl to proxy" << std::endl;
+#endif
+				proxysock.stopSsl();
+
+#ifdef DGDEBUG
+				std::cout << "Shutting down ssl to client" << std::endl;
+#endif
+
+				peerconn.stopSsl();
+				
+				//tidy up key and cert
+				X509_free(cert);
+				EVP_PKEY_free(pkey);
+				
+				proxysock.close();
+				break;
+
+			}
+			//if not mitm then just do the tunneling
+			else
+#endif //__SSLMITM
 			if (!checkme.isItNaughty && isconnect) {
 				// can't filter content of CONNECT
 				if (!wasrequested) {
@@ -1224,7 +1549,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 			// links not to be requested.
 			if (authed && !isbypass && !isexception && !checkme.isItNaughty) {
 				requestChecks(&header, &checkme, &urld, &url, &clientip, &clientuser, filtergroup,
-					isbanneduser, isbannedip);
+					isbanneduser, isbannedip, room);
 			}
 
 			// Filtering of POST data
@@ -1845,7 +2170,9 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					if (ud.startsWith("www.")) {
 						ud = ud.after("www.");
 					}
-					docheader.setCookie("GBYPASS", ud.toCharArray(), hashedCookie(&ud, filtergroup, &clientip, bypasstimestamp).toCharArray());
+					docheader.setCookie("GBYPASS", ud.toCharArray(),
+						hashedCookie(&ud, (*o.fg[filtergroup]).cookie_magic.c_str(), &clientip, bypasstimestamp).toCharArray());
+	//String magic((*o.fg[filtergroup]).cookie_magic.c_str());
 					// redirect user to URL with GBYPASS parameter no longer appended
 					docheader.header[0] = "HTTP/1.0 302 Redirect";
 					String loc("Location: ");
@@ -2026,7 +2353,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				// un-authed users.
 				if (!authed && !isbypass && !isexception && !checkme.isItNaughty && !docheader.authRequired()) {
 					requestChecks(&header, &checkme, &urld, &url, &clientip, &clientuser, filtergroup,
-						isbanneduser, isbannedip);
+						isbanneduser, isbannedip, room);
 				}
 
 				// check body from proxy
@@ -2440,7 +2767,7 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 // check the request header is OK (client host/user/IP allowed to browse, site not banned, upload not too big)
 void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld, String *url,
 	std::string *clientip, std::string *clientuser, int filtergroup,
-	bool &isbanneduser, bool &isbannedip)
+	bool &isbanneduser, bool &isbannedip, std::string &room)
 {
 	if (isbannedip) {
 		(*checkme).isItNaughty = true;
@@ -2449,7 +2776,13 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 		(*checkme).whatIsNaughtyLog += clienthost ? *clienthost : *clientip;
 		(*checkme).whatIsNaughty = o.language_list.getTranslation(101);
 		// Your IP address is not allowed to web browse.
-		(*checkme).whatIsNaughtyCategories = "Banned Client IP";
+		if (room.empty())
+			(*checkme).whatIsNaughtyCategories = "Banned Client IP";
+		else {
+			checkme->whatIsNaughtyCategories = "Banned Room";
+			checkme->whatIsNaughtyLog.append(" in ");
+			checkme->whatIsNaughtyLog.append(room);
+		}
 		return;
 	}
 	else if (isbanneduser) {
@@ -2587,13 +2920,80 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 #endif
 		}
 	} // grey site/URL list
+
+#ifdef __SSLCERT
+	//check the certificate if
+	//its a connect,
+	//ssl cert checking is enabled,
+	//ssl mitm is disabled (will get checked by that anyway)
+	//its a connection to port 443
+	if(is_ssl && !((*checkme).isItNaughty) && (*o.fg[filtergroup]).ssl_check_cert &&
+		!(*o.fg[filtergroup]).ssl_mitm && (*header).port == 443)
+	{
+	
+#ifdef DGDEBUG
+		std::cout << "checking SSL certificate" << std::endl;
+#endif
+
+		Socket ssl_sock;
+		//connect to the local proxy then do a connect 
+		//to make sure we go through any upstream proxys
+		if (ssl_sock.connect(o.proxy_ip.c_str(),o.proxy_port) < 0){
+			(*checkme).whatIsNaughty = "Could not connect to proxy server" ;
+			(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+			(*checkme).isItNaughty = true;
+			(*checkme).whatIsNaughtyCategories = "SSL Site";
+#ifdef DGDEBUG
+			syslog(LOG_ERR, "error opening socket\n");
+			std::cout << "couldnt connect to proxy for ssl certificate checks. failed with error " << strerror(errno) << std::endl;
+#endif
+			return;
+		}
+
+#ifdef DGDEBUG
+		std::cout << "connected to proxy" << std::endl;
+#endif
+		
+		//create tunnel to destination
+		String hostname(temp);
+		hostname.removePTP();	
+		int rc = sendProxyConnect(hostname, &ssl_sock, checkme);
+		if (rc < 0){
+			return;
+		}
+#ifdef DGDEBUG
+		std::cout << "created tunnel through proxy with rc: " << rc << std::endl;
+#endif
+		//start an ssl client
+		std::string certpath(o.ssl_certificate_path.c_str());
+		if(ssl_sock.startSslClient(certpath) < 0){
+			(*checkme).whatIsNaughty = "Could not open ssl connection" ;
+			(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+			(*checkme).isItNaughty = true;
+			(*checkme).whatIsNaughtyCategories = "SSL Site";
+#ifdef DGDEBUG
+			syslog(LOG_ERR, "error opening ssl connection\n");
+			std::cout << "couldnt connect ssl server to check certificate. failed with error " << strerror(errno) << std::endl;
+#endif
+			return;
+		}
+		checkCertificate(hostname, &ssl_sock, checkme);
+
+#ifdef DGDEBUG
+		std::cout << "done checking SSL certificate" << std::endl;
+#endif
+
+	}
+#endif //__SSLCERT
+
 }
+
 
 // based on patch by Aecio F. Neto (afn@harvest.com.br) - Harvest Consultoria (http://www.harvest.com.br)
 // show the relevant banned page/image/CGI based on report level setting, request type etc.
 bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHeader * header, HTTPHeader * docheader,
 	String * url, NaughtyFilter * checkme, std::string * clientuser, std::string * clientip, int filtergroup,
-	bool ispostblock, int headersent, bool wasinfected, bool scanerror)
+	bool ispostblock, int headersent, bool wasinfected, bool scanerror, bool forceshow)
 {
 	int reporting_level = o.fg[filtergroup]->reporting_level;
 	try {  // writestring throws exception on error/timeout
@@ -2630,14 +3030,22 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		}
 
 		// the user is using the full whack of custom banned images and/or HTML templates
+#ifdef __SSLMITM
+		if (reporting_level == 3 || (headersent > 0 && reporting_level > 0) || forceshow ) {
+#else
 		if (reporting_level == 3 || (headersent > 0 && reporting_level > 0)) {
+#endif
 			// if reporting_level = 1 or 2 and headersent then we can't
 			// send a redirect so we have to display the template instead
 
 			(*proxysock).close();  // finished with proxy
 			(*peerconn).readyForOutput(10);
-			if ((*header).requestType().startsWith("CONNECT")) {
 
+#ifdef __SSLMITM
+			if ((*header).requestType().startsWith("CONNECT") && !(*peerconn).isSsl()) {
+#else
+			if ((*header).requestType().startsWith("CONNECT")) {
+#endif
 				// if it's a CONNECT then headersent can't be set
 				// so we don't need to worry about it
 
@@ -3116,3 +3524,100 @@ void ConnectionHandler::contentFilter(HTTPHeader *docheader, HTTPHeader *header,
 		// that to the browser
 	}
 }
+
+
+#ifdef __SSLCERT
+int ConnectionHandler::sendProxyConnect(String &hostname, Socket * sock, NaughtyFilter * checkme)
+{
+	String connect_request = "CONNECT " + hostname + ":";
+	connect_request += "443 HTTP/1.0\r\n\r\n";
+
+#ifdef DGDEBUG					
+	std::cout << "creating tunnel through proxy to " << hostname << std::endl;
+#endif
+	
+
+	
+	//somewhere to hold the header from the proxy
+	HTTPHeader header;
+	header.setTimeout(14);		
+
+	try{
+		sock->writeString(connect_request.c_str());
+		header.in(sock, true, true);
+	}
+	catch (std::exception &e){
+
+#ifdef DGDEBUG
+		syslog(LOG_ERR, "Error creating tunnel through proxy\n");
+		std::cout << "Error creating tunnel through proxy" << strerror(errno) << std::endl;
+#endif
+		(*checkme).whatIsNaughty = "Unable to create tunnel through local proxy";
+		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+		(*checkme).isItNaughty = true;
+		(*checkme).whatIsNaughtyCategories = "SSL Site";
+
+		return -1;
+	}
+	//do http connect
+	if ( header.returnCode() != 200){
+		//connection failed
+		(*checkme).whatIsNaughty = "Opening tunnel failed";
+		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty + " with errror code " + String(header.returnCode());
+		(*checkme).isItNaughty = true;
+		(*checkme).whatIsNaughtyCategories = "SSL Site";
+
+#ifdef DGDEBUG
+		syslog(LOG_ERR, "Tunnel status not 200 ok aborting\n");
+		std::cout << "Tunnel status was " << header.returnCode() << " expecting 200 ok" << std::endl;
+#endif
+	
+		return -1;
+	}
+	
+	return 0;
+}
+
+void ConnectionHandler::checkCertificate(String &hostname, Socket * sslsock, NaughtyFilter * checkme)
+{
+
+#ifdef DGDEBUG
+	std::cout << "checking SSL certificate is valid" << std::endl;
+#endif
+
+	long rc = sslsock->checkCertValid();	
+	//check that everything in this certificate is correct appart from the hostname
+	if(rc < 0){
+		//no certificate
+		checkme->isItNaughty = true;
+		(*checkme).whatIsNaughty = "No SSL certificate supplied by server";
+		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+		(*checkme).whatIsNaughtyCategories = "SSL Site";
+		return;
+	}
+	else if(rc != X509_V_OK) {
+		//something was wrong in the certificate
+		checkme->isItNaughty = true;
+		(*checkme).whatIsNaughty = "Certificate supplied by server was not valid";
+		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty + ": " + X509_verify_cert_error_string(rc);
+		(*checkme).whatIsNaughtyCategories = "SSL Site";
+		return;
+	}
+
+#ifdef DGDEBUG
+	std::cout << "checking SSL certificate hostname" << std::endl;
+#endif
+
+	//check the common name and altnames of a certificate against hostname
+	if (sslsock->checkCertHostname(hostname) < 0){
+		//hostname was not matched by the certificate
+		checkme->isItNaughty = true;
+		(*checkme).whatIsNaughty = "Server's SSL certificate does not match domain name";
+		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
+		(*checkme).whatIsNaughtyCategories = "SSL Site";
+		return;
+	}
+}
+#endif //__SSLCERT
+
+

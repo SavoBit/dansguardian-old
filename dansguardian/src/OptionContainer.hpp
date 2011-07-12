@@ -73,6 +73,8 @@ public:
 	int proxy_port;
 	std::string proxy_ip;
 	std::deque<String> filter_ip;
+	std::deque<String> filter_ports;
+	std::map<int, String> auth_map;
 #ifdef ENABLE_ORIG_IP
 	bool get_orig_ip;
 #endif
@@ -126,6 +128,18 @@ public:
 	bool log_user_agent;
 	bool soft_restart;
 
+#ifdef __SSLCERT
+	std::string ssl_certificate_path;
+#endif
+
+#ifdef __SSLMITM
+	std::string ca_certificate_path;
+	std::string ca_private_key_path;
+	std::string cert_private_key_path;
+	std::string generated_cert_path;
+	std::string generated_link_path;
+#endif
+
 #ifdef ENABLE_EMAIL
 	// Email notification patch by J. Gauthier
 	std::string mailer;   
@@ -174,6 +188,7 @@ public:
 	bool loadAuthPlugins();
 	void deletePlugins(std::deque<Plugin*> &list);
 	void deleteFilterGroups();
+	void deleteFilterGroupsJustListData();
 
 	//...and the functions that read them
 
@@ -186,6 +201,11 @@ public:
 	bool readFilterGroupConf();
 	// public so fc_controlit can reload filter group config files
 	bool doReadItemList(const char *filename, ListContainer *lc, const char *fname, bool swsort);
+
+	// per-room blocking: see if given IP is in a room; if it is, return true and put the room name in "room"
+	bool inRoom(const std::string& ip, std::string& room, std::string *&host) const;
+	void loadRooms(std::string &per_room_blocking_directory_location);
+	void deleteRooms();
 
 private:
 	std::deque<std::string> conffile;
@@ -206,6 +226,8 @@ private:
 	std::deque<String> findoptionM(const char *option);
 
 	bool inIPList(const std::string *ip, ListContainer& list, std::string *&host);
+
+	std::list<std::pair<std::string, IPList*> > rooms;
 };
 
 #endif

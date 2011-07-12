@@ -107,7 +107,7 @@ public:
 
 	bool malformedURL(const String& url);
 	String getAuthType();
-	String url(bool withport = false);
+	String url(bool withport = false, bool isssl = false);
 
 	// header modifications
 
@@ -120,6 +120,11 @@ public:
 	bool headerRegExp(int filtergroup);
 	// make a connection persistent - or not
 	void makePersistent(bool persist = true);
+	// make the request look as if its coming from the origin server
+	void makeTransparent(bool incoming);
+	// modifies the URL in all relevant header lines after a regexp search and replace
+	// setURL Code originally from from Ton Gorter 2004
+	void setURL(String &url);
 
 	// do URL decoding (%xx) on string
 	// decode everything, or just numbers, letters and -
@@ -131,11 +136,14 @@ public:
 	int isBypassURL(String *url, const char *magic, const char *clientip, bool *isvirusbypass);
 	// is this a scan bypass URL? (download previously scanned file)
 	bool isScanBypassURL(String *url, const char *magic, const char *clientip);
+	bool isMITMAcceptURL(String *url, const char *magic, const char *clientip);
 	// is this a temporary filter bypass cookie?
 	bool isBypassCookie(String url, const char *magic, const char *clientip);
+	bool isMITMAcceptCookie(String url, const char *magic, const char *clientip);
 	// chop GBYPASS/GSPYBASS off URLs (must know it's there to begin with)
 	void chopBypass(String url, bool infectionbypass);
 	void chopScanBypass(String url);
+	void chopMITMAccept(String url);
 	// add cookie to outgoing headers with given name & value
 	void setCookie(const char *cookie, const char *domain, const char *value);
 	
@@ -152,6 +160,8 @@ private:
 	String *pcontentlength;
 	String *pcontenttype;
 	String *pproxyauthorization;
+	String *pauthorization;
+	String *pproxyauthenticate;
 	String *pcontentdisposition;
 	String *puseragent;
 	String *pxforwardedfor;
@@ -184,9 +194,6 @@ private:
 
 	// modify supplied accept-encoding header, adding "identity" and stripping unsupported compression types
 	String modifyEncodings(String e);
-	// modifies the URL in all relevant header lines after a regexp search and replace
-	// setURL Code originally from from Ton Gorter 2004
-	void setURL(String &url);
 
 	// Generic search & replace code, called by urlRegExp and headerRegExp
 	// urlRegExp Code originally from from Ton Gorter 2004

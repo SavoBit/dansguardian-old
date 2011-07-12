@@ -95,23 +95,24 @@ int SocketArray::listenAll(int queue)
 }
 
 // bind all sockets to given IP list
-int SocketArray::bindAll(std::deque<String> &ips, int port)
+int SocketArray::bindAll(std::deque<String> &ips, std::deque<String> &ports)
 {
 	if (ips.size() > socknum) {
 		return -1;
 	}
 	for (unsigned int i = 0; i < socknum; i++) {
 #ifdef DGDEBUG
-		std::cerr << "Binding server socket[" << port << " " << ips[i] << " " << i << "])" << std::endl;
+		std::cerr << "Binding server socket[" << ports[i] << " " << ips[i] << " " << i << "])" << std::endl;
 #endif
-		if (drawer[i].bind(ips[i].toCharArray(), port)) {
+		if (drawer[i].bind(ips[i].toCharArray(), ports[i].toInteger())) {
 			if (!is_daemonised) {
 				std::cerr << "Error binding server socket: ["
-					<< port << " " << ips[i] << " " << i << "] (" << strerror(errno) << ")" << std::endl;
+					<< ports[i] << " " << ips[i] << " " << i << "] (" << strerror(errno) << ")" << std::endl;
 			}
-			syslog(LOG_ERR, "Error binding socket: [%d %s %d] (%s)", port, ips[i].toCharArray(), i, strerror(errno));
+			syslog(LOG_ERR, "Error binding socket: [%d %s %d] (%s)", ports[i], ips[i].toCharArray(), i, strerror(errno));
 			return -1;
 		}
 	}
 	return 0;
 }
+

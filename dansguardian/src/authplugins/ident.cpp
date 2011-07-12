@@ -71,6 +71,7 @@ int identinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, st
 		clientip = peercon.getPeerIP();
 	}
 	int clientport = peercon.getPeerSourcePort();
+	int serverport = peercon.getPort();
 #ifdef DGDEBUG
 	std::cout << "Connecting to: " << clientip << std::endl;
 	std::cout << "to ask about: " << clientport << std::endl;
@@ -90,7 +91,7 @@ int identinstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, st
 	std::string request;
 	request = String(clientport).toCharArray();
 	request += ", ";
-	request += String(o.filter_port).toCharArray();
+	request += String(serverport).toCharArray();
 	request += "\r\n";
 #ifdef DGDEBUG
 	std::cout << "About to send:" << request << std::endl;

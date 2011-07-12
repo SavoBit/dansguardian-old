@@ -122,6 +122,21 @@ bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, off_t targe
 
 		if (ignore && !twoway) FD_CLR(fdto, &inset);
 
+#ifdef __SSLMITM
+		//<TODO> This if is a nasty hack for ssl man in the middle
+		//FD_SET sets the fd to a readable state then data is read 
+		//from the server until the server runs out of data then it
+		//gets gets dumped out to the client.
+		//This will break if the server is ever expecting data from
+		//the client.
+		//There isnt and SSL_select function, SSL_pending only reports
+		//whats waiting in the current record, and nbio doesnt seem to
+		//work if you use BIO_setfd (like we have to) so no ideas how
+		//to actually fix this other than rewrite dg
+		if (sockfrom.isSsl()){
+		}
+		else
+#endif
 		if (selectEINTR(maxfd + 1, &inset, NULL, NULL, &t) < 1) {
 			break;  // an error occured or it timed out so end while()
 		}

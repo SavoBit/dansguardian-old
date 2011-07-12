@@ -101,6 +101,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
 		       SocketArray.cpp SocketArray.hpp \
                        dansguardian.cpp \
 		       Plugin.hpp \
+                       CertificateAuthority.cpp CertificateAuthority.hpp \
 		       $(ICAPSCAN_SOURCE) \
 		       $(KAVDSCAN_SOURCE) $(CLAMDSCAN_SOURCE) \
 		       $(COMMANDLINE_SOURCE) \

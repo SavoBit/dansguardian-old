@@ -48,6 +48,11 @@
 #include <ucontext.h>
 #endif
 
+#ifdef __SSLCERT
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#endif //__SSLCERT
+
 #include "FatController.hpp"
 #include "ConnectionHandler.hpp"
 #include "DynamicURLList.hpp"
@@ -818,6 +823,8 @@ int log_listener(std::string log_location, bool logconerror, bool logsyslog)
 	if (!drop_priv_completely()) {
 		return 1;  //error
 	}
+	o.deleteFilterGroupsJustListData();
+	o.lm.garbageCollect();
 	UDSocket* ipcpeersock;  // the socket which will contain the ipc connection
 	int rc, ipcsockfd;
 
@@ -1443,6 +1450,8 @@ int url_list_listener(bool logconerror)
 	if (!drop_priv_completely()) {
 		return 1;  //error
 	}
+	o.deleteFilterGroupsJustListData();
+	o.lm.garbageCollect();
 	UDSocket* ipcpeersock = NULL;  // the socket which will contain the ipc connection
 	int rc, ipcsockfd;
 	char *logline = new char[32000];
@@ -1570,6 +1579,8 @@ int ip_list_listener(std::string stat_location, bool logconerror) {
 	if (!drop_priv_completely()) {
 		return 1;  //error
 	}
+	o.deleteFilterGroupsJustListData();
+	o.lm.garbageCollect();
 	UDSocket *ipcpeersock;
 	int rc, ipcsockfd;
 	char* inbuff = new char[16];
@@ -1811,7 +1822,7 @@ int fc_controlit()
 	// if we don't find one, bind to any, as per old behaviour.
 	// XXX AAAARGH!
 	if (o.filter_ip[0].length() > 6) {
-		if (serversockets.bindAll(o.filter_ip, o.filter_port)) {
+		if (serversockets.bindAll(o.filter_ip, o.filter_ports)) {
 			if (!is_daemonised) {
 				std::cerr << "Error binding server socket (is something else running on the filter port and ip?" << std::endl;
 			}
@@ -1924,6 +1935,14 @@ int fc_controlit()
 		return 1;
 	}
 
+#ifdef __SSLCERT
+	//init open ssl
+	SSL_load_error_strings();
+	OpenSSL_add_all_algorithms();
+	OpenSSL_add_all_digests();
+	SSL_library_init();
+#endif	
+
 	// this has to be done after daemonise to ensure we get the correct PID.
 	rc = sysv_writepidfile(pidfilefd);  // also closes the fd
 	if (rc != 0) {
@@ -1960,7 +1979,12 @@ int fc_controlit()
 		if (loggerpid == 0) {	// ma ma!  i am the child
 			serversockets.deleteAll();  // we don't need our copy of this so close it
 			delete[] serversockfds;
-			urllistsock.close();  // we don't need our copy of this so close it
+			if (o.max_ips > 0) {
+				iplistsock.close();
+			}
+			if (o.url_cache_number > 0) {
+				urllistsock.close();  // we don't need our copy of this so close it
+			}	
 			log_listener(o.log_location, o.logconerror, o.log_syslog);
 #ifdef DGDEBUG
 			std::cout << "Log listener exiting" << std::endl;
@@ -1978,6 +2002,9 @@ int fc_controlit()
 			if (!o.no_logger) {
 				loggersock.close();  // we don't need our copy of this so close it
 			}
+			if (o.max_ips > 0) {
+				iplistsock.close();
+			}
 			url_list_listener(o.logconerror);
 #ifdef DGDEBUG
 			std::cout << "URL List listener exiting" << std::endl;
@@ -1994,6 +2021,9 @@ int fc_controlit()
 			delete[] serversockfds;
 			if (!o.no_logger) {
 				loggersock.close();  // we don't need our copy of this so close it
+			}
+			if (o.url_cache_number > 0) {
+			        urllistsock.close();  // we don't need our copy of this so close it
 			}
 			ip_list_listener(o.stat_location, o.logconerror);
 #ifdef DGDEBUG
@@ -2165,6 +2195,8 @@ int fc_controlit()
 							reloadconfig = true;  // auth plugs problem
 					}
 					if (!reloadconfig) {
+						o.deleteRooms();
+						o.loadRooms();
 						hup_allchildren();
 						o.lm.garbageCollect();
 						prefork(o.min_children);

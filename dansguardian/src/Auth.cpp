@@ -51,6 +51,7 @@ extern authcreate_t ntlmcreate;
 AuthPlugin::AuthPlugin(ConfigVar &definition):is_connection_based(false), needs_proxy_query(false)
 {
 	cv = definition;
+	pluginName = cv["plugname"];
 }
 
 int AuthPlugin::init(void *args)
@@ -63,6 +64,10 @@ int AuthPlugin::quit()
 	return 0;
 }
 
+String AuthPlugin::getPluginName()
+{
+	return pluginName;
+}
 // determine what filter group the given username is in
 // return -1 when user not found
 int AuthPlugin::determineGroup(std::string &user, int &fg)
@@ -164,6 +169,20 @@ AuthPlugin* auth_plugin_load(const char *pluginConfigPath)
 		return ntlmcreate(cv);
 	}
 #endif
+
+	if (plugname == "ssl") {
+#ifdef DGDEBUG
+		std::cout << "Enabling SSL login/core auth plugin" << std::endl;
+#endif
+		return sslcorecreate(cv);
+	}
+
+	if (plugname == "core") {
+#ifdef DGDEBUG
+		std::cout << "Enabling SSL login/core auth plugin" << std::endl;
+#endif
+		return sslcorecreate(cv);
+	}
 
 	if (!is_daemonised) {
 		std::cerr << "Unable to load plugin: " << pluginConfigPath << std::endl;

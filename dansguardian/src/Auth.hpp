@@ -80,9 +80,14 @@ public:
 
 	// does this auth type rely on queries from the parent proxy (e.g. NTLM, basic auth)?
 	bool needs_proxy_query; 
+	String getPluginName();
+	virtual bool isTransparent() { return false; };
+	virtual bool isSSL() { return false; };
 
 protected:
 	ConfigVar cv;
+private:
+	String pluginName;
 };
 
 // class factory functions for Auth plugins

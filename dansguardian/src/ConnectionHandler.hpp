@@ -66,13 +66,18 @@ public:
 
 	// pass data between proxy and client, filtering as we go.
 	void handleConnection(Socket &peerconn, String &ip);
-
+	void handleConnection(Socket &peerconn, String &ip, Socket &proxyconn);
 private:
 	std::string *clienthost;
 	bool matchedip;
 	std::string urlparams;
 
 	std::list<postinfo> postparts;
+
+	std::string clientuser;
+	bool persistent_authed;
+	int filtergroup;
+
 
 	// write a log entry containing the given data (if required)
 	void doLog(std::string &who, std::string &from, String &where, unsigned int &port,
@@ -90,7 +95,7 @@ private:
 
 	// check the request header is OK (client host/user/IP allowed to browse, site not banned, upload not too big)
 	void requestChecks(HTTPHeader *header, NaughtyFilter *checkme, String *urld, String *url, std::string *clientip,
-		std::string *clientuser, int filtergroup, bool &isbanneduser, bool &isbannedip);
+		std::string *clientuser, int filtergroup, bool &isbanneduser, bool &isbannedip, std::string &room);
 
 	// strip the URL down to just the IP/hostname, then do an isIPHostname on the result
 	bool isIPHostnameStrip(String url);
@@ -98,11 +103,11 @@ private:
 	// show the relevant banned page depending upon the report level settings, request type, etc.
 	bool denyAccess(Socket *peerconn, Socket *proxysock, HTTPHeader *header, HTTPHeader *docheader,
 		String *url, NaughtyFilter *checkme, std::string *clientuser, std::string *clientip,
-		int filtergroup, bool ispostblock, int headersent, bool wasinfected, bool scanerror);
+		int filtergroup, bool ispostblock, int headersent, bool wasinfected, bool scanerror, bool forceshow = false);
 
 	// create temporary ban bypass URLs/cookies
 	String hashedURL(String *url, int filtergroup, std::string *clientip, bool infectionbypass);
-	String hashedCookie(String *url, int filtergroup, std::string *clientip, int bypasstimestamp);
+	String hashedCookie(String *url, const char *magic, std::string *clientip, int bypasstimestamp);
 
 	// do content scanning (AV filtering) and naughty filtering
 	void contentFilter(HTTPHeader *docheader, HTTPHeader *header, DataBuffer *docbody, Socket *proxysock,
@@ -113,6 +118,14 @@ private:
 
 	// send a file to the client - used during bypass of blocked downloads
 	off_t sendFile(Socket *peerconn, String & filename, String & filemime, String & filedis, String &url);
+	
+#ifdef __SSLCERT
+	//ssl certificat checking
+	void checkCertificate(String &hostname, Socket * sslSock, NaughtyFilter * checkme);
+	
+	int sendProxyConnect(String &hostname, Socket * sock, NaughtyFilter * checkme);
+#endif //__SSLCERT
+
 };
 
 #endif

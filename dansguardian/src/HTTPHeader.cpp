@@ -73,6 +73,8 @@ void HTTPHeader::reset()
 		pcontentlength = NULL;
 		pcontenttype = NULL;
 		pproxyauthorization = NULL;
+		pauthorization = NULL;
+		pproxyauthenticate = NULL;
 		pcontentdisposition = NULL;
 		puseragent = NULL;
 		pxforwardedfor = NULL;
@@ -360,6 +362,49 @@ void HTTPHeader::makePersistent(bool persist)
 			}
 			ispersistent = false;
 		}
+	}
+}
+
+// make the request look like it's come from/to the origin server
+void HTTPHeader::makeTransparent(bool incoming)
+{
+#ifdef DGDEBUG
+	std::cout << "Making headers transparent" << std::endl;
+#endif
+	if (incoming) {
+		// remove references to the proxy before sending to browser
+		if (pproxyconnection != NULL) {
+			String temp = pproxyconnection->after(":");
+			(*pproxyconnection) = "Connection:";
+			(*pproxyconnection) += temp;
+		}
+		if (pproxyauthenticate != NULL) {
+			String temp = pproxyauthenticate->after(":");
+			(*pproxyauthenticate) = "WWW-Authenticate:";
+			(*pproxyauthenticate) += temp;
+		}
+		if (returnCode() == 407) {
+			String temp = header.front().before(" ");
+			String temp2 = header.front().after(" ").after(" ");
+			header.front() = temp + " 401 ";
+			header.front() += temp2;
+		}
+	} else {
+		// remove references to origin server before sending to proxy
+		if (pauthorization != NULL) {
+			String temp = pauthorization->after(":");
+			(*pauthorization) = "Proxy-Authorization:";
+			(*pauthorization) += temp;
+			pproxyauthorization = pauthorization;
+			pauthorization = NULL;
+		}
+		if (pproxyconnection != NULL) {
+			String temp = pproxyconnection->after(":");
+			(*pproxyconnection) = "Proxy-Connection:";
+			(*pproxyconnection) += temp;
+		}
+		// call this to fudge the URL into something Squid likes
+		url();
 	}
 }
 
@@ -768,6 +813,12 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		{
 			pproxyauthorization = &(*i);
 		}
+		else if ((pauthorization == NULL) && i->startsWithLower("authorization:")) {
+			pauthorization = &(*i);
+		}
+		else if ((pproxyauthenticate == NULL) && i->startsWithLower("proxy-authenticate:")) {
+			pproxyauthenticate = &(*i);
+		}
 		else if ((pproxyconnection == NULL) && (i->startsWithLower("proxy-connection:") || i->startsWithLower("connection:")))
 		{
 			pproxyconnection = &(*i);
@@ -913,7 +964,7 @@ void HTTPHeader::checkheader(bool allowpersistent)
 //  CONNECT foo.bar:443  HTTP/1.1
 // So we need to handle all 3
 
-String HTTPHeader::url(bool withport)
+String HTTPHeader::url(bool withport, bool isssl)
 {
 	// Version of URL *with* port is not cached,
 	// as vast majority of our code doesn't like
@@ -996,6 +1047,15 @@ String HTTPHeader::url(bool withport)
 	if (answer.endsWith("//")) {
 		answer.chop();
 	}
+	
+	
+	//make sure ssl stuff is logged as https
+#ifdef __SSLMITM
+	if(isssl){
+		answer = "https://" + answer.after("://");
+	}
+#endif
+	
 #ifdef DGDEBUG
 	std::cout << "from header url:" << answer << std::endl;
 #endif
@@ -1040,6 +1100,21 @@ void HTTPHeader::chopScanBypass(String url)
 		} else {
 			String bypass(url.after("&GSBYPASS="));
 			header.front() = header.front().before("&GSBYPASS=") + header.front().after(bypass.toCharArray());
+		}
+	}
+	cachedurl = "";
+}
+
+// same for MITM accept
+void HTTPHeader::chopMITMAccept(String url)
+{
+	if (url.contains("GMACCEPT=")) {
+		if (url.contains("?GMACCEPT=")) {
+			String bypass(url.after("?GMACCEPT="));
+			header.front() = header.front().before("?GMACCEPT=") + header.front().after(bypass.toCharArray());
+		} else {
+			String bypass(url.after("&GMACCEPT="));
+			header.front() = header.front().before("&GMACCEPT=") + header.front().after(bypass.toCharArray());
 		}
 	}
 	cachedurl = "";
@@ -1122,6 +1197,116 @@ bool HTTPHeader::isBypassCookie(String url, const char *magic, const char *clien
 	if (timeu < timen) {
 #ifdef DGDEBUG
 		std::cout << "Cookie GBYPASS expired: " << timeu << " " << timen << std::endl;
+#endif
+		return false;
+	}
+	return true;
+}
+
+// is this a MITM acceptance URL?
+bool HTTPHeader::isMITMAcceptURL(String * url, const char *magic, const char *clientip)
+{
+#ifdef DGDEBUG
+	std::cout << "Testing for GMACCEPT..." << std::endl;
+#endif
+	if ((*url).length() <= 45) {
+#ifdef DGDEBUG
+		std::cout << "too short: " << *url << std::endl;
+#endif
+		return false;  // Too short, can't be an accept URL
+	}
+	if (!(*url).contains("GMACCEPT=")) {
+#ifdef DGDEBUG
+		std::cout << "no tag: " << *url << std::endl;
+#endif
+		return false;
+	}
+#ifdef DGDEBUG
+	std::cout << "URL GMACCEPT found checking..." << std::endl;
+#endif
+
+	String url_left((*url).before("GMACCEPT="));
+	url_left.chop();  // remove the ? or &
+	String url_right((*url).after("GMACCEPT="));
+
+	String url_hash(url_right.subString(0, 32));
+	String url_time(url_right.after(url_hash.toCharArray()));
+#ifdef DGDEBUG
+	std::cout << "URL: " << url_left << ", HASH: " << url_hash << ", TIME: " << url_time << std::endl;
+#endif
+
+	String tohash(clientip + url_time + magic);
+	String hashed(tohash.md5());
+
+#ifdef DGDEBUG
+	std::cout << "checking hash: " << clientip << " " << url_left << " " << url_time << " " << magic << " " << hashed << std::endl;
+#endif
+
+	if (hashed != url_hash) {
+#ifdef DGDEBUG
+		std::cout << "URL GMACCEPT HASH mismatch" << std::endl;
+#endif
+		return false;
+	}
+
+	time_t timen = time(NULL);
+	time_t timeu = url_time.toLong();
+
+	if (timeu < 1) {
+#ifdef DGDEBUG
+		std::cout << "URL GMACCEPT bad time value" << std::endl;
+#endif
+		return 1;  // bad time value
+	}
+	if (timeu < timen) {	// expired key
+#ifdef DGDEBUG
+		std::cout << "URL GMACCEPT expired" << std::endl;
+#endif
+		return 1;  // denotes expired but there
+	}
+#ifdef DGDEBUG
+	std::cout << "URL GMACCEPT not expired" << std::endl;
+#endif
+
+	return true;
+}
+
+bool HTTPHeader::isMITMAcceptCookie(String url, const char *magic, const char *clientip)
+{
+	String cookie(getCookie("GMACCEPT"));
+	if (!cookie.length()) {
+#ifdef DGDEBUG
+		std::cout << "No MITM accept cookie" << std::endl;
+#endif
+		return false;
+	}
+	String cookiehash(cookie.subString(0, 32));
+	String cookietime(cookie.after(cookiehash.toCharArray()));
+	String mymagic(magic);
+	mymagic += clientip;
+	mymagic += cookietime;
+	bool matched = false;
+	while(url.contains(".")) {
+		url = "." + url;
+		String hashed(url.md5(mymagic.toCharArray()));
+		if (hashed == cookiehash) {
+			matched = true;
+			break;
+		}
+		url = url.after(".");
+		url = url.after(".");
+	}
+	if (not matched) {
+#ifdef DGDEBUG
+		std::cout << "Cookie GMACCEPT not match" << std::endl;
+#endif
+		return false;
+	}
+	time_t timen = time(NULL);
+	time_t timeu = cookietime.toLong();
+	if (timeu < timen) {
+#ifdef DGDEBUG
+		std::cout << "Cookie GMACCEPT expired: " << timeu << " " << timen << std::endl;
 #endif
 		return false;
 	}
@@ -1422,8 +1607,22 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 	if (sendflag == __DGHEADER_SENDALL || sendflag == __DGHEADER_SENDFIRSTLINE) {
 		if (header.size() > 0) {
 			l = header.front() + "\n";
+
 #ifdef DGDEBUG
-			std::cout << "headertoclient:" << l << std::endl;
+			std::cout << "headertoclient was:" << l << std::endl;
+#endif
+
+			//if a socket is ssl we want to send relative paths not absolute urls
+			//also HTTP responses dont want to be processed (if we are writing to an ssl client socket then we are doing a request)
+			if (sock->isSsl() && !sock->isSslServer())
+			{
+				//GET http://support.digitalbrain.com/themes/client_default/linerepeat.gif HTTP/1.0
+				//	get the request method		//get the relative path					//everything after that in the header
+				l = header.front().before(" ") + " /" + header.front().after("://").after("/").before(" ") + " HTTP/1.0\r\n";
+			}
+
+#ifdef DGDEBUG
+			std::cout << "headertoclient is:" << l << std::endl;
 #endif
 			// first reconnect loop - send first line
 			while (true) {
@@ -1577,3 +1776,4 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 
 	checkheader(allowpersistent);  // sort out a few bits in the header
 }
+

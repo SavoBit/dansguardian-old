@@ -51,7 +51,7 @@ public:
 	bool readbplfile(const char *banned, const char *exception, const char *weighted, unsigned int &list, bool force_quick_search);
 	
 	void deRefList(size_t item);
-	
+		
 	// delete lists with refcount zero
 	void garbageCollect();
 

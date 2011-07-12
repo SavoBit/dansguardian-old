@@ -88,6 +88,10 @@ filterip =
 # the port that DansGuardian listens to.
 filterport = 8080
 
+# the ports that DansGuardian listens to when using one or more filterips.
+#filterport = 8080
+#filterport = 8081
+
 # the ip of the proxy (default is the loopback - i.e. this server)
 proxyip = 127.0.0.1
 
@@ -161,7 +165,10 @@ filtergroupslist = '@DGCONFDIR@/lists/filtergroupslist'
 bannediplist = '@DGCONFDIR@/lists/bannediplist'
 exceptioniplist = '@DGCONFDIR@/lists/exceptioniplist'
 
-
+# Per-Room blocking definition directory
+# A directory containing text files containing the room's name followed by IPs or ranges
+# Think of it as bannediplist on crack
+perroomblockingdirectory = '@DGCONFDIR@/lists/bannedrooms/'
 
 # Show weighted phrases found
 # If enabled then the phrases found that made up the total which excedes
@@ -642,3 +649,30 @@ softrestart = off
 # Not used if usesmtp is disabled (filtergroup specific).
 @EMAILSUPPORT@mailer = '/usr/sbin/sendmail -t'
 
+#SSL certificate checking path
+#Path to CA certificates used to validate the certificates of https sites.
+#sslcertificatepath = '/etc/ssl/certs/'
+
+#SSL man in the middle
+#CA certificate path
+#Path to the CA certificate to use as a signing certificate for 
+#generated certificates.
+#cacertificatepath = '/home/stephen/dginstall/ca.pem'
+
+#CA private key path
+#path to the private key that matches the public key in the CA certificate.
+#caprivatekeypath = '/home/stephen/dginstall/ca.key'
+
+#Cert private key path
+#The public / private key pair used by all generated certificates
+#certprivatekeypath = '/home/stephen/dginstall/cert.key'
+
+#Generated cert path
+#The location where generated certificates will be saved for future use.
+#(must be writable by the dg user)
+#generatedcertpath = '/home/stephen/dginstall/generatedcerts/'
+
+#Generated link path = ''
+#The location where symlinks to certificates will be created.
+#(must be writable by the dg user)
+#generatedlinkpath = '/home/stephen/dginstall/generatedlinks/'

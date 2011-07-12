@@ -57,6 +57,16 @@ public:
 	bool enable_PICS;
 	bool deep_url_analysis;
 
+#ifdef __SSLCERT
+	//SSL certificate checking
+	bool ssl_check_cert;
+#endif //__SSLCERT
+
+#ifdef __SSLMITM
+	//SSL Man in the middle
+	bool ssl_mitm;
+#endif //__SSLMITM 
+
 #ifdef ENABLE_EMAIL
 	// Email notification patch by J. Gauthier
 	bool notifyav;
@@ -162,6 +172,7 @@ public:
 	std::string magic;
 	std::string imagic;
 	std::string cookie_magic;
+	std::string mitm_magic;
 
 #ifdef ENABLE_EMAIL
 	// Email notification patch by J. Gauthier
@@ -250,6 +261,8 @@ public:
 	~FOptionContainer();
 	bool read(const char *filename);
 	void reset();
+	void resetJustListData();
+	
 	bool isOurWebserver(String url);
 	char *inBannedSiteList(String url, bool doblanket = false, bool ip = false, bool ssl = false);
 	char *inBannedURLList(String url, bool doblanket = false, bool ip = false, bool ssl = false);
