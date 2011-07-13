@@ -455,6 +455,7 @@ downloadmanager = '@DGCONFDIR@/downloadmanagers/default.conf'
 # See the individual plugin conf file for more options (if any).
 #
 #@CLAMDSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/clamdscan.conf'
+#@AVASTDSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/avastdscan.conf'
 #@KAVDSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/kavdscan.conf'
 #@ICAPSUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/icapscan.conf'
 #@COMMANDLINESUPPORT@contentscanner = '@DGCONFDIR@/contentscanners/commandlinescan.conf'

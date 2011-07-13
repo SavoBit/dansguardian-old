@@ -347,6 +347,32 @@ fi],
 AM_CONDITIONAL(ENABLE_CLAMD, test "x$clamd" = "xtrue")
 AC_SUBST(CLAMDSUPPORT)
 
+# asking user if they want avastd support
+AC_MSG_CHECKING(for avastd support)
+AC_ARG_ENABLE(
+avastd,
+[AC_HELP_STRING([--enable-avastd@<:@=no@:>@], [Enable support for the AvastD content scanner])],
+[ if test "x$enableval" = "xno"; then
+	AC_MSG_RESULT(no)
+	avastd=false
+	AVASTDSUPPORT="!! Not compiled !! "
+else
+	AC_MSG_RESULT(yes)
+	avastd=true
+	cslists=true
+	csconfigs=true
+	AVASTDSUPPORT=""
+	AC_DEFINE([ENABLE_AVASTD],[],[Define to enable AvastD content scanner])
+fi],
+[
+	AC_MSG_RESULT(no)
+	avastd=false
+	AVASTDSUPPORT="!! Not compiled !! "
+]
+)
+AM_CONDITIONAL(ENABLE_AVASTD, test "x$avastd" = "xtrue")
+AC_SUBST(AVASTDSUPPORT)
+
 # asking user if they want icap support
 AC_MSG_CHECKING(for icap support)
 AC_ARG_ENABLE(
@@ -615,6 +641,7 @@ AC_CONFIG_FILES([Makefile
 	        configs/downloadmanagers/trickle.conf
 	        configs/contentscanners/Makefile
 	        configs/contentscanners/clamdscan.conf
+	        configs/contentscanners/avastdscan.conf
 	        configs/contentscanners/icapscan.conf
 	        configs/contentscanners/kavdscan.conf
 	        configs/contentscanners/commandlinescan.conf

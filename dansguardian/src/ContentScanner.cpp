@@ -37,6 +37,10 @@ extern OptionContainer o;
 extern cscreate_t clamdcreate;
 #endif
 
+#ifdef ENABLE_AVASTD
+extern cscreate_t avastdcreate;
+#endif
+
 #ifdef ENABLE_ICAP
 extern cscreate_t icapcreate;
 #endif
@@ -480,6 +484,15 @@ CSPlugin* cs_plugin_load(const char *pluginConfigPath)
 		std::cout << "Enabling ClamDscan CS plugin" << std::endl;
 #endif
 		return clamdcreate(cv);
+	}
+#endif
+
+#ifdef ENABLE_AVASTD
+	if (plugname == "avastdscan") {
+#ifdef DGDEBUG
+		std::cout << "Enabling AvastDscan CS plugin" << std::endl;
+#endif
+		return avastdcreate(cv);
 	}
 #endif
 

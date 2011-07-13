@@ -15,6 +15,12 @@ else
 CLAMDSCAN_SOURCE =
 endif
 
+if ENABLE_AVASTD
+AVASTDSCAN_SOURCE = contentscanners/avastdscan.cpp
+else
+AVASTDSCAN_SOURCE =
+endif
+
 if ENABLE_ICAP
 ICAPSCAN_SOURCE = contentscanners/icapscan.cpp
 else
@@ -104,6 +110,7 @@ dansguardian_SOURCES = String.cpp String.hpp \
                        CertificateAuthority.cpp CertificateAuthority.hpp \
 		       $(ICAPSCAN_SOURCE) \
 		       $(KAVDSCAN_SOURCE) $(CLAMDSCAN_SOURCE) \
+		       $(AVASTDSCAN_SOURCE) \
 		       $(COMMANDLINE_SOURCE) \
 		       $(DEFAULTDM_SOURCE) $(FANCYDM_SOURCE) \
 		       $(TRICKLEDM_SOURCE) $(PROXYAUTH_SOURCE) \
