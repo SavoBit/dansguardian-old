@@ -151,7 +151,7 @@ AC_SUBST(DGPROXYGROUP, "$proxygroup")
 
 AC_MSG_CHECKING(for piddir)
 AC_ARG_WITH(piddir,
-[AC_HELP_STRING([--with-piddir@<:@=PREFIX/LOCALSTATEDIR/run@:>@], [path for pid file])],
+[AC_HELP_STRING([--with-piddir@<:@=${localstatedir}/run@:>@], [path for pid file])],
 [if test "x${withval}" != "x" ; then
   AC_MSG_RESULT(yes)
   piddir=${withval}
@@ -169,7 +169,7 @@ AC_SUBST(DGPIDDIR)
 
 AC_MSG_CHECKING(for logdir)
 AC_ARG_WITH(logdir,
-[AC_HELP_STRING([--with-logdir@<:@=PREFIX/LOCALSTATEDIR/log/dansguardian@:>@], [path for log files])],
+[AC_HELP_STRING([--with-logdir@<:@=${localstatedir}/log/${PACKAGE_NAME}@:>@], [path for log files])],
 [if test "x${withval}" != "x" ; then
   AC_MSG_RESULT(yes)
   logdir=${withval}
