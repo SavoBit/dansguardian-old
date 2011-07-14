@@ -188,10 +188,11 @@ public:
 
 	// per-room blocking: see if given IP is in a room; if it is, return true and put the room name in "room"
 	bool inRoom(const std::string& ip, std::string& room, std::string *&host) const;
-	void loadRooms(std::string &per_room_blocking_directory_location);
+	void loadRooms();
 	void deleteRooms();
 
 private:
+	std::string per_room_blocking_directory_location;
 	std::deque<std::string> conffile;
 	String conffilename;
 	int reporting_level;

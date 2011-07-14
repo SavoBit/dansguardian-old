@@ -644,7 +644,7 @@ bool OptionContainer::read(const char *filename, int type)
 		filter_groups_list_location = findoptionS("filtergroupslist");
 		std::string banned_ip_list_location(findoptionS("bannediplist"));
 		std::string exception_ip_list_location(findoptionS("exceptioniplist"));
-		std::string per_room_blocking_directory_location(findoptionS("perroomblockingdirectory"));
+		per_room_blocking_directory_location = findoptionS("perroomblockingdirectory");
 		group_names_list_location = findoptionS("groupnamesfile");
 		std::string language_list_location(languagepath + "messages");
 		if (reporting_level == 1 || reporting_level == 2) {
@@ -704,7 +704,7 @@ bool OptionContainer::read(const char *filename, int type)
 			return false;
 		}
 
-		loadRooms(per_room_blocking_directory_location);
+		loadRooms();
 
 		if (!language_list.readLanguageList(language_list_location.c_str())) {
 			return false;
@@ -779,9 +779,9 @@ bool OptionContainer::inRoom(const std::string& ip, std::string& room, std::stri
 	return false;
 }
 
-void OptionContainer::loadRooms(std::string &per_room_blocking_directory_location)
+void OptionContainer::loadRooms()
 {
-	DIR* d = opendir(per_room_blocking_directory_location);
+	DIR* d = opendir(per_room_blocking_directory_location.c_str());
 	if (d == NULL)
 	{
 		syslog(LOG_ERR, "Could not open room definitions directory: %s", strerror(errno));

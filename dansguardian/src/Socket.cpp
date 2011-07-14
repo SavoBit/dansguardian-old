@@ -53,6 +53,8 @@ Socket::Socket()
 	ctx = NULL;
 	isssl = false;
 	issslserver = false;
+#else
+	isssl = false;
 #endif
 }
 
@@ -72,6 +74,8 @@ Socket::Socket(int fd):BaseSocket(fd)
 	ctx = NULL;
 	isssl = false;
 	issslserver = false;
+#else
+	isssl = false;
 #endif
 }
 
@@ -92,7 +96,9 @@ Socket::Socket(int newfd, struct sockaddr_in myip, struct sockaddr_in peerip):Ba
 	ssl = NULL;
 	ctx = NULL;
 	isssl = false;
-	issslserver = false;	
+	issslserver = false;
+#else
+	isssl = false;
 #endif
 }
 
