@@ -54,7 +54,7 @@ public:
 	// get local IP
 	std::string getLocalIP();
 	
-//#ifdef __SSLCERT
+#ifdef __SSLCERT
 	//use this socket as an ssl server
 	int startSslClient(const std::string& certPath);
 
@@ -73,7 +73,7 @@ public:
 	int checkCertHostname(const std::string& hostame);
 	
 	void close();
-//#endif //__SSLCERT
+#endif //__SSLCERT
 
 #ifdef __SSLMITM
 	//use this socket as an ssl server

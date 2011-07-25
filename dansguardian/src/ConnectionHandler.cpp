@@ -708,7 +708,11 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 			// is this user banned?
 			isbanneduser = (gmode == 0);
 
+#ifdef __SSLMITM
 			url = header.url(false, peerconn.isSsl());
+#else
+			url = header.url(false, false);
+#endif
 			urld = header.decode(url);
 			if (url.after("://").contains("/")) {
 				urldomain = url.after("//").before("/");
@@ -841,6 +845,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 			}
 #endif
 
+#ifdef __SSLMITM
 			if (peerconn.isSsl()) {
 #ifdef DGDEBUG
 				std::cout << "SSL connection; about to begin MITM" << std::endl;
@@ -918,7 +923,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 				std::cout << "MITM looks good" << std::endl;
 #endif
 			}
-
+#endif
 
 			if (header.isScanBypassURL(&url, (*o.fg[filtergroup]).magic.c_str(), clientip.c_str())) {
 #ifdef DGDEBUG

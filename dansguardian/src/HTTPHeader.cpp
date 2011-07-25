@@ -1593,6 +1593,7 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 			std::cout << "headertoclient was:" << l << std::endl;
 #endif
 
+#ifdef __SSLMITM
 			//if a socket is ssl we want to send relative paths not absolute urls
 			//also HTTP responses dont want to be processed (if we are writing to an ssl client socket then we are doing a request)
 			if (sock->isSsl() && !sock->isSslServer())
@@ -1601,6 +1602,7 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 				//	get the request method		//get the relative path					//everything after that in the header
 				l = header.front().before(" ") + " /" + header.front().after("://").after("/").before(" ") + " HTTP/1.0\r\n";
 			}
+#endif
 
 #ifdef DGDEBUG
 			std::cout << "headertoclient is:" << l << std::endl;
