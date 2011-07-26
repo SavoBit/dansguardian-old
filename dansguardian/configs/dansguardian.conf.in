@@ -83,14 +83,14 @@ logfileformat = 1
 # Normally you would have your firewall protecting this, but if you want
 # you can limit it to a certain IP. To bind to multiple interfaces,
 # specify each IP on an individual filterip line.
+# You can have the same IP twice so long as it has a different port.
 filterip =
 
-# the port that DansGuardian listens to.
-filterport = 8080
-
-# the ports that DansGuardian listens to when using one or more filterips.
-#filterport = 8080
-#filterport = 8081
+# the ports that DansGuardian listens to.  Specify one line per filterip
+# line.  You can specify different authentication mechanisms per port but
+# only if the mechanisms can co-exist (e.g. basic/proxy auth can't)
+filterports = 8080
+#filterports = 8081
 
 # the ip of the proxy (default is the loopback - i.e. this server)
 proxyip = 127.0.0.1
@@ -486,11 +486,8 @@ contentscanexceptions = off
 # handle the extraction of client usernames from various sources, such as
 # Proxy-Authorisation headers and ident servers, enabling requests to be
 # handled according to the settings of the user's filter group.
-# Multiple plugins can be specified, and will be queried in order until one
-# of them either finds a username or throws an error. For example, if Squid
-# is configured with both NTLM and Basic auth enabled, and both the 'proxy-basic'
-# and 'proxy-ntlm' auth plugins are enabled here, then clients which do not support
-# NTLM can fall back to Basic without sacrificing access rights.
+# Multiple plugins can be specified, and will be used per port in the order
+# filterports are listed.
 #
 # If you do not use multiple filter groups, you need not specify this option.
 #

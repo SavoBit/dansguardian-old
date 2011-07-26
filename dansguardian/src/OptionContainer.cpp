@@ -400,10 +400,6 @@ bool OptionContainer::read(const char *filename, int type)
 		custom_banned_flash_file = findoptionS("custombannedflashfile");
 		banned_flash.read(custom_banned_flash_file.c_str());
 		
-		filter_port = findoptionI("filterport");
-		if (!realitycheck(filter_port, 1, 65535, "filterport")) {
-			return false;
-		}		// check its a reasonable value
 		proxy_port = findoptionI("proxyport");
 		if (!realitycheck(proxy_port, 1, 65535, "proxyport")) {
 			return false;
@@ -422,11 +418,15 @@ bool OptionContainer::read(const char *filename, int type)
 		filter_ports = findoptionM("filterports");
 		if (filter_ports.size() != filter_ip.size()) {
 			if (!is_daemonised) {
-				std::cerr << "filterports must match number of filterips" << std::endl;
+				std::cerr << "filterports (" << filter_ports.size() << ") must match number of filterips (" << filter_ip.size() << ")" << std::endl;
 			}
 			syslog(LOG_ERR, "%s", "filterports must match number of filterips");
 			return false;
 		}
+		filter_port = filter_ports[0].toInteger();
+		if (!realitycheck(filter_port, 1, 65535, "filterport[0]")) {
+			return false;
+		}		// check its a reasonable value
 
 #ifdef ENABLE_ORIG_IP
 		if (findoptionS("originalip") == "off") {
