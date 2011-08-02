@@ -96,7 +96,7 @@ int SocketArray::bindAll(std::deque<String> &ips, std::deque<String> &ports)
 				std::cerr << "Error binding server socket: ["
 					<< ports[i] << " " << ips[i] << " " << i << "] (" << strerror(errno) << ")" << std::endl;
 			}
-			syslog(LOG_ERR, "Error binding socket: [%d %s %d] (%s)", ports[i], ips[i].toCharArray(), i, strerror(errno));
+			syslog(LOG_ERR, "Error binding socket: [%s %s %d] (%s)", ports[i].toCharArray(), ips[i].toCharArray(), i, strerror(errno));
 			return -1;
 		}
 	}

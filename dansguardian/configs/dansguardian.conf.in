@@ -147,6 +147,11 @@ usecustombannedimage = on
 custombannedimagefile = '@DGDATADIR@/transparent1x1.gif'
 
 
+#Banned flash replacement
+usecustombannedflash = on
+custombannedflashfile = '@DGDATADIR@/blockedflash.swf'
+
+
 
 # Filter groups options
 # filtergroups sets the number of filter groups. A filter group is a set of content
