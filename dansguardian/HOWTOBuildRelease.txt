@@ -12,7 +12,7 @@ This file documents the DansGuardian release process.
 As root on a modern Linux with build tools and subversion installed do:
 
 rm -fr dansguardian (if you have a dansguardian directory)
-svn co https://dansguardian.svn.sourceforge.net/svnroot/dansguardian dansguardian
+svn co https://dansguardian.svn.sourceforge.net/svnroot/dansguardian/trunk dansguardian
 cd dansguardian/dansguardian
 ./tarballup.sh
 
