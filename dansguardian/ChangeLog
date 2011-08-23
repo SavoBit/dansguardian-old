@@ -1,4 +1,4 @@
-August 2011 - DansGuardian 2.11.0.0 - alpha
+August 2011 - DansGuardian 2.12.0.0 - alpha
 
 - Search term filtering
 - POST data scanning
@@ -21,7 +21,8 @@ August 2011 - DansGuardian 2.11.0.0 - alpha
 - Support individual log items up to 32KB in length, which may require multiple calls to getLine to read in. 
   
   
-
+2010 - DansGuardian 2.11.*.*
+- Unreleased.
 
 
 Fri 5th June 2009 - DansGuardian 2.10.1.1 - stable
