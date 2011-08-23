@@ -16,11 +16,15 @@ svn co https://dansguardian.svn.sourceforge.net/svnroot/dansguardian dansguardia
 cd dansguardian/dansguardian
 ./tarballup.sh
 
-7.  Eventually a tarball called dansguardian-VERSION.tar.gz will be created in the current
-directory.  This file needs to be emailed off to the dansguardian.org website maintainer
-along with text for a news item.
+7. Eventually a tarball called dansguardian-VERSION.tar.gz will be created in the current
+directory
 
-8. When the file is uploaded and the news item live, you should email the DansGuardian
+8. Test build the tarball contents.  Ideally test run it too!
+
+9. Emailed the tarball off to the dansguardian.org website maintainer along with text for
+a news item.
+
+10. When the file is uploaded and the news item live, you should email the DansGuardian
 and DansGuardian-Announce mailing lists.
 
-9. Await feedback on the mailing list.  Rinse and repeat.
+11. Await feedback on the mailing list.  Rinse and repeat.
