@@ -449,7 +449,7 @@ bool icapinstance::doHeaders(Socket & icapsock, HTTPHeader *reqheader, HTTPHeade
 	// use a dummy unless it proves absolutely necessary to do otherwise,
 	// as using real data could lead to e.g. yet another source of password
 	// leakage over the network.
-	String encapsulatedheader("GET " + reqheader->url() + " HTTP/1.0\r\n\r\n");
+	String encapsulatedheader("GET " + reqheader->getUrl() + " HTTP/1.0\r\n\r\n");
 	// body chunk size in hex - either full body, or just preview
 	if (usepreviews && (objectsize > previewsize)) {
 		snprintf(objectsizehex, sizeof(objectsizehex), "%x\r\n", previewsize);

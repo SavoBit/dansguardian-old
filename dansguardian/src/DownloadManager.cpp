@@ -116,7 +116,7 @@ bool DMPlugin::willHandle(HTTPHeader *requestheader, HTTPHeader *docheader)
 	
 	if (extensionlistenabled && !matchedmime) {
 		// determine the extension
-		String path(requestheader->decode(requestheader->url()));
+		String path(requestheader->decode(requestheader->getUrl()));
 		path.removeWhiteSpace();
 		path.toLower();
 		path.removePTP();

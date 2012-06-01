@@ -1,3 +1,13 @@
+May 2012 - Dansguardian 2.12.0.1 - alpha
+- Applied patch 3438750 (GCC 4.4 and 4.6 compatibility) by Mathieu PARENT
+- Applied patch 3438749 (French translation update) by Mathieu PARENT
+- Applied patch 3418297 (Set proxy timeout in dansguardian.conf) by Frederic Bourgeois
+- Applied patch 3419088 (login/password in URL is dropped) by Mathieu PARENT
+- Applied patch 3419089 ("Expect" header should be dropped) by Mathieu PARENT
+- Applied patch 3438751 (Fix queue handling in OptionContainer) by Mathieu PARENT
+- Applied patch 3515167 (Fix digest identication) by Frederic Bourgeois
+
+
 August 2011 - DansGuardian 2.12.0.0 - alpha
 
 - Search term filtering
@@ -829,10 +839,10 @@ Fri 13th June 2003 - DansGuardian 2.7.1-1
 - Fixed Ident.
 
 Mon 12th May 2003 - DansGuardian 2.7.1
-- Added image replacement code based on ideas from Aécio F. Neto which guesses if a banned
+- Added image replacement code based on ideas from Aecio F. Neto which guesses if a banned
 file is an image and if so replaces it with a configurable replacement such as a 1x1 gif.
 - Much improved the IF structure in the ConnectionHandler.cpp to make it slightly faster and a
-LOT more organised.  Based on ideas from Aécio F. Neto again.
+LOT more organised.  Based on ideas from Aecio F. Neto again.
 - Fixed bug in Makefile where contentregexplist would get deleted by mistake.
 
 Sun 20th April 2003 - DansGuardian 2.7.0-1

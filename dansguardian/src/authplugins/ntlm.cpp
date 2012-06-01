@@ -14,8 +14,8 @@
 #include "../FDTunnel.hpp"
 #include "../OptionContainer.hpp"
 
+#include <stddef.h>
 #include <syslog.h>
-
 #include <iconv.h>
 
 
@@ -162,7 +162,7 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 		// we are actually sending to a second Squid, which just does NTLM
 		ntlmcon.connect(transparent_ip, transparent_port);
 		upstreamcon = &ntlmcon;
-		url = h.url();
+		url = h.getUrl();
 		h.makeTransparent(false);
 	} else {
 		upstreamcon = &proxycon;
@@ -207,12 +207,8 @@ int ntlminstance::identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std
 				if (start != std::string::npos)
 				{
 					start += 3;
-					std::string::size_type end = url.find("/", start);
 					std::string domain;
-					if (end != std::string::npos)
-						domain.assign(url, start, end - start);
-					else
-						domain.assign(url, start, url.length() - start);
+					domain = url.getHostname();
 #ifdef DGDEBUG
 					std::cout << "NTLM: URL " << url << ", domain " << domain << std::endl;
 #endif

@@ -93,6 +93,8 @@ public:
 	void removeWhiteSpace();
 	// remove protocol prefix (e.g. http://)
 	void removePTP();
+	// get hostname from string as url
+	String getHostname();
 	// truncate to given length
 	int limitLength(unsigned int l);
 	// remove repeated occurrences of this character

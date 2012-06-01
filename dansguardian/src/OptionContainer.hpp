@@ -64,6 +64,7 @@ public:
 #endif
 	int ll;
 	int max_children;
+	int proxy_timeout;
 	int min_children;
 	int maxspare_children;
 	int prefork_children;

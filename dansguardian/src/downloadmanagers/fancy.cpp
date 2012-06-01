@@ -199,7 +199,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 	// determine downloaded filename
 	String filename(requestheader->disposition());
 	if (filename.length() == 0) {
-		filename = requestheader->url();
+		filename = requestheader->getUrl();
 		filename = requestheader->decode(filename);
 		if (filename.contains("?"))
 			filename = filename.before("?");
@@ -318,7 +318,7 @@ int fancydm::in(DataBuffer * d, Socket * sock, Socket * peersock, class HTTPHead
 						peersock->writeString(message.toCharArray());
 						peersock->writeString("<!-- force flush -->\r\n");
 						// add URL to clean cache (for all groups)
-						String url(requestheader->url());
+						String url(requestheader->getUrl());
 						addToClean(url, o.filter_groups + 1);
 #ifdef DGDEBUG
 						std::cout << "fancydm: file too big to be scanned, entering second stage of download" << std::endl;

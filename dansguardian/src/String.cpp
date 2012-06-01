@@ -367,6 +367,19 @@ void String::removePTP()
 		*this = this->after("://");
 	}
 }
+// get hostname from string as url
+String String::getHostname()
+{
+    String hostname;
+    hostname = this->substr(0);
+    if (hostname.contains("://"))
+        hostname = hostname.after("://");
+	if (hostname.contains("/"))
+		hostname = hostname.before("/");
+	if (hostname.contains("@")) // Contains a username:password combo
+	    hostname = hostname.after("@");
+	return hostname;
+}
 
 // limit string to given length
 int String::limitLength(unsigned int l)

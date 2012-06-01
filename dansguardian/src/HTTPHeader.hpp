@@ -92,7 +92,7 @@ public:
 
 	bool malformedURL(const String& url);
 	String getAuthType();
-	String url(bool withport = false, bool isssl = false);
+	String getUrl(bool withport = false, bool isssl = false);
 
 	// header modifications
 
@@ -152,7 +152,7 @@ private:
 	String *pxforwardedfor;
 	String *pcontentencoding;
 	String *pproxyconnection;
-	// cached result of url()
+	// cached result of getUrl()
 	std::string cachedurl;
 
 	// cached result of contentLength()

@@ -235,6 +235,10 @@ bool OptionContainer::read(const char *filename, int type)
 		if (!realitycheck(max_logitem_length, 0, 0, "maxlogitemlength")) {
 			return false;
 		}
+                proxy_timeout = findoptionI("proxytimeout");
+                if (!realitycheck(proxy_timeout, 20, 100, "proxytimeout")) {
+                       return false;
+                }               // check its a reasonable value
 		max_children = findoptionI("maxchildren");
 		if (!realitycheck(max_children, 4, 0, "maxchildren")) {
 			return false;
@@ -840,8 +844,11 @@ std::string OptionContainer::findoptionS(const char *option)
 	String temp;
 	String temp2;
 	String o(option);
-	for (int i = 0; i < (signed) conffile.size(); i++) {
-		temp = conffile[i].c_str();
+
+	for (std::deque<std::string>::iterator i = conffile.begin(); i != conffile.end(); i++) {
+		if ((*i).empty())
+			continue;
+		temp = (*i).c_str();
 		temp2 = temp.before("=");
 		while (temp2.endsWith(" ")) {	// get rid of tailing spaces before =
 			temp2.chop();
@@ -874,8 +881,11 @@ std::deque<String > OptionContainer::findoptionM(const char *option)
 	String temp2;
 	String o(option);
 	std::deque<String > results;
-	for (int i = 0; i < (signed) conffile.size(); i++) {
-		temp = conffile[i].c_str();
+
+	for (std::deque<std::string>::iterator i = conffile.begin(); i != conffile.end(); i++) {
+		if ((*i).empty())
+			continue;
+		temp = (*i).c_str();
 		temp2 = temp.before("=");
 		while (temp2.endsWith(" ")) {	// get rid of tailing spaces before =
 			temp2.chop();

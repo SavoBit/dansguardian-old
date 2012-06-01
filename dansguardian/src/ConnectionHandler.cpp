@@ -159,10 +159,7 @@ void addToClean(String &url, const int fg)
 // strip the URL down to just the IP/hostname, then do an isIPHostname on the result
 bool ConnectionHandler::isIPHostnameStrip(String url)
 {
-	url.removePTP();  // chop off the ht(f)tp(s)://
-	if (url.contains("/")) {
-		url = url.before("/");  // chop off any path after the domain
-	}
+	url = url.getHostname();
 	return (*o.fg[0]).isIPHostname(url);
 }
 
@@ -382,7 +379,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 
 	HTTPHeader docheader;  // to hold the returned page header from proxy
 
-	docheader.setTimeout(20);
+	docheader.setTimeout(o.proxy_timeout);
 
 	DataBuffer docbody;  // to hold the returned page
 
@@ -709,16 +706,12 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 			isbanneduser = (gmode == 0);
 
 #ifdef __SSLMITM
-			url = header.url(false, peerconn.isSsl());
+			url = header.getUrl(false, peerconn.isSsl());
 #else
-			url = header.url(false, false);
+			url = header.getUrl(false, false);
 #endif
 			urld = header.decode(url);
-			if (url.after("://").contains("/")) {
-				urldomain = url.after("//").before("/");
-			} else {
-				urldomain = url.after("//");
-			}
+			urldomain = url.getHostname();
 
 			// checks for bad URLs to prevent security holes/domain obfuscation.
 			if (header.malformedURL(url))
@@ -866,7 +859,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 						std::cout << "Found MITM Accept URL" << std::endl;
 #endif
 						header.chopMITMAccept(url);
-						url = header.url(false, true);
+						url = header.getUrl(false, true);
 
 #ifdef DGDEBUG
 						std::cout<<"Setting GMACCEPT cookie"<<std::endl;
@@ -992,7 +985,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 				try {
 					docsize = sendFile(&peerconn, tempfilename, tempfilemime, tempfiledis, url);
 					header.chopScanBypass(url);
-					url = header.url();
+					url = header.getUrl();
 					//urld = header.decode(url);  // unneeded really
 
 					doLog(clientuser, clientip, url, header.port, exceptionreason,
@@ -1072,7 +1065,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 			{
 				for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; ++i)
 				{
-					int csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup,
+					int csrc = ((CSPlugin*)(*i))->willScanRequest(header.getUrl(), clientuser.c_str(), filtergroup,
 						clientip.c_str(), false, false, isexception, isbypass);
 					if (csrc > 0)
 						responsescanners.push_back((CSPlugin*)(*i));
@@ -1108,7 +1101,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 						{
 							for (std::deque<Plugin *>::iterator i = o.csplugins_begin; i != o.csplugins_end; ++i)
 							{
-								int csrc = ((CSPlugin*)(*i))->willScanRequest(header.url(), clientuser.c_str(), filtergroup,
+								int csrc = ((CSPlugin*)(*i))->willScanRequest(header.getUrl(), clientuser.c_str(), filtergroup,
 									clientip.c_str(), true, !multipart, isexception, isbypass);
 								if (csrc > 0)
 									requestscanners.push_back((CSPlugin*)(*i));
@@ -1178,13 +1171,10 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 			// URL regexp search and replace
 			urlmodified = header.urlRegExp(filtergroup);
 			if (urlmodified) {
-				url = header.url();
+				url = header.getUrl();
 				urld = header.decode(url);
-				if (url.after("://").contains("/")) {
-					urldomain = url.after("//").before("/");
-				} else {
-					urldomain = url.after("//");
-				}
+				urldomain = url.getHostname();
+
 				// if the user wants, re-check the exception site, URL and regex lists after modification.
 				// this allows you to, for example, force safe search on Google URLs, then flag the
 				// request as an exception, to prevent questionable language in returned site summaries
@@ -1759,7 +1749,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 											{
 												for (std::deque<CSPlugin *>::iterator i = requestscanners.begin(); i != requestscanners.end(); ++i)
 												{
-													int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(),
+													int csrc = (*i)->willScanData(header.getUrl(), clientuser.c_str(), filtergroup, clientip.c_str(),
 														true, false, isexception, isbypass, disposition, mimetype, part->getLength() - offset);
 #ifdef DGDEBUG
 													std::cerr << "willScanData returned: " << csrc << std::endl;
@@ -2020,7 +2010,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 #endif
 						for (std::deque<CSPlugin *>::iterator i = requestscanners.begin(); i != requestscanners.end(); ++i)
 						{
-							int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(),
+							int csrc = (*i)->willScanData(header.getUrl(), clientuser.c_str(), filtergroup, clientip.c_str(),
 								true, true, isexception, isbypass, "", "text/plain", result.length());
 #ifdef DGDEBUG
 							std::cerr << "willScanData returned: " << csrc << std::endl;
@@ -2166,7 +2156,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 					// redirect user to URL with GBYPASS parameter no longer appended
 					docheader.header[0] = "HTTP/1.0 302 Redirect";
 					String loc("Location: ");
-					loc += header.url(true);
+					loc += header.getUrl(true);
 					docheader.header.push_back(loc);
 					docheader.setContentLength(0);
 					docheader.makePersistent(false);
@@ -2202,7 +2192,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip, Socket &p
 					std::deque<CSPlugin *> newplugins;
 					for (std::deque<CSPlugin *>::iterator i = responsescanners.begin(); i != responsescanners.end(); ++i)
 					{
-						int csrc = (*i)->willScanData(header.url(), clientuser.c_str(), filtergroup, clientip.c_str(),
+						int csrc = (*i)->willScanData(header.getUrl(), clientuser.c_str(), filtergroup, clientip.c_str(),
 							false, false, isexception, isbypass, docheader.disposition(), docheader.getContentType(), docheader.contentLength());
 #ifdef DGDEBUG
 						std::cerr << "willScanData for plugin " << j << " returned: " << csrc << std::endl;
@@ -3160,7 +3150,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 						// only going to be happening if the unsafe trickle
 						// buffer method is used and we want the download to be
 						// broken we don't mind too much
-						String fullurl = header->url(true);
+						String fullurl = header->getUrl(true);
 						o.fg[filtergroup]->getHTMLTemplate()->display(peerconn,
 							&fullurl, (*checkme).whatIsNaughty, (*checkme).whatIsNaughtyLog,
 							// grab either the full category list or the thresholded list

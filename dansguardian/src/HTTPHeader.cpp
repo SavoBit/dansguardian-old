@@ -385,7 +385,7 @@ void HTTPHeader::makeTransparent(bool incoming)
 			(*pproxyconnection) += temp;
 		}
 		// call this to fudge the URL into something Squid likes
-		url();
+		getUrl();
 	}
 }
 
@@ -514,7 +514,7 @@ void HTTPHeader::setURL(String &url) {
 		std::cout << " to " << (*pport) << std::endl;
 #endif
 	}
-	// Don't just cache the URL we're sent - url() performs some other
+	// Don't just cache the URL we're sent - getUrl() performs some other
 	// processing, notably stripping the port part. Caching here will
 	// bypass all that.
 	//cachedurl = url.toCharArray();
@@ -609,7 +609,7 @@ bool HTTPHeader::urlRegExp(int filtergroup) {
 #ifdef DGDEBUG
 	std::cout << "Starting URL reg exp replace" << std::endl;
 #endif
-	String newUrl(url());
+	String newUrl(getUrl());
 	if (regExp(newUrl, o.fg[filtergroup]->url_regexp_list_comp, o.fg[filtergroup]->url_regexp_list_rep)) {
 		setURL(newUrl);
 		return true;
@@ -930,13 +930,13 @@ void HTTPHeader::checkheader(bool allowpersistent)
 	// Normalise request headers (fix host, port, first line of header, etc. to all be consistent)
 	if (outgoing)
 	{
-		String newurl(url(true));
+		String newurl(getUrl(true));
 		setURL(newurl);
 	}
 }
 
 // A request may be in the form:
-//  GET http://foo.bar:80/ HTML/1.0 (if :80 is omitted 80 is assumed)
+//  GET http://foo.bar:80/ HTTP/1.0 (if :80 is omitted 80 is assumed)
 // or:
 //  GET / HTML/1.0
 //  Host: foo.bar (optional header in HTTP/1.0, but like HTTP/1.1, we require it!)
@@ -945,7 +945,7 @@ void HTTPHeader::checkheader(bool allowpersistent)
 //  CONNECT foo.bar:443  HTTP/1.1
 // So we need to handle all 3
 
-String HTTPHeader::url(bool withport, bool isssl)
+String HTTPHeader::getUrl(bool withport, bool isssl)
 {
 	// Version of URL *with* port is not cached,
 	// as vast majority of our code doesn't like
@@ -955,6 +955,7 @@ String HTTPHeader::url(bool withport, bool isssl)
 	port = 80;
 	bool https = false;
 	String hostname;
+	String userpassword;
 	String answer(header.front().after(" "));
 	answer.removeMultiChar(' ');
 	if (answer.after(" ").startsWith("HTTP/")) {
@@ -1009,6 +1010,7 @@ String HTTPHeader::url(bool withport, bool isssl)
 			}
 			hostname = hostname.before("/");  // extra / was added 4 here
 			if (hostname.contains("@")) {	// Contains a username:password combo
+				userpassword = hostname.before("@");
 				hostname = hostname.after("@");
 			}
 			if (hostname.contains(":")) {
@@ -1022,7 +1024,10 @@ String HTTPHeader::url(bool withport, bool isssl)
 				hostname.chop();
 			if (withport && (port != (https ? 443 : 80)))
 				hostname += ":" + String(port);
-			answer = protocol + "://" + hostname + url;
+			if (userpassword.length())
+				answer = protocol + "://" + userpassword + "@" + hostname + url;
+			else
+				answer = protocol + "://" + hostname + url;
 		}
 	}
 	if (answer.endsWith("//")) {

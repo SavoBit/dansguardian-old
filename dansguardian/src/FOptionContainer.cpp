@@ -1084,7 +1084,7 @@ char *FOptionContainer::inURLList(String &url, unsigned int list, bool doblanket
 	std::cout << "inURLList (processed): " << url << std::endl;
 #endif
 	if (reverse_lookups && url.after("/").length() > 0) {
-		String hostname(url.before("/"));
+		String hostname(url.getHostname());
 		if (isIPHostname(hostname)) {
 			std::deque<String > *url2s = ipToHostname(hostname.toCharArray());
 			String url2;

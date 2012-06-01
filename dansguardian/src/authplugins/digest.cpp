@@ -22,7 +22,9 @@
 class digestinstance:public AuthPlugin
 {
 public:
-	digestinstance(ConfigVar &definition):AuthPlugin(definition) {};
+	digestinstance(ConfigVar &definition):AuthPlugin(definition) {
+		needs_proxy_query = true;
+	};
 	int identify(Socket& peercon, Socket& proxycon, HTTPHeader &h, std::string &string);
 };
 

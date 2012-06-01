@@ -24,7 +24,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <list>
-
+#include <cstdio>
 
 // GLOBALS
 
