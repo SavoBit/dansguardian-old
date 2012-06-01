@@ -148,10 +148,13 @@ off_t String::toOffset()
 	if (this->length() == 0)
 		return 0;
 	off_t t = 0;
-	if (sizeof(off_t) == 4)
-		sscanf(this->c_str(), "%d", &t);
-	else if (sizeof(off_t) == 8)
-		sscanf(this->c_str(), "%lld", &t);
+
+#if defined(_FILE_OFFSET_BITS) && (_FILE_OFFSET_BITS == 64)
+	sscanf(this->c_str(), "%lld", &t);
+#else
+	sscanf(this->c_str(), "%ld", &t);
+#endif
+
 	return t;
 }
 

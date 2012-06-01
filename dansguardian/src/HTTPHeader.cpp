@@ -1005,6 +1005,9 @@ String HTTPHeader::getUrl(bool withport, bool isssl)
 			hostname = answer.after("://");
 			String url(hostname.after("/"));
 			url.removeWhiteSpace();  // remove rubbish like ^M and blanks
+			if (hostname.endsWith(".")) {
+				hostname.chop();
+			}
 			if (url.length() > 0) {
 				url = "/" + url;
 			}

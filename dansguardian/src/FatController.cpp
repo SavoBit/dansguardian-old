@@ -313,7 +313,7 @@ bool daemonise()
 	close(nullfd);
 
 	setsid();  // become session leader
-	chdir("/");  // change working directory
+	int dummy = chdir("/");  // change working directory
 	umask(0);  // clear our file mode creation mask
 
 	is_daemonised = true;
@@ -1636,7 +1636,7 @@ int ip_list_listener(std::string stat_location, bool logconerror) {
 #endif
 			int statfd = open(stat_location.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 			if (statfd > 0) {
-				write(statfd, usagestats.toCharArray(), usagestats.length());
+				int dummy = write(statfd, usagestats.toCharArray(), usagestats.length());
 			}
 			close(statfd);
 			// reset sleep timer

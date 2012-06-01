@@ -6,7 +6,8 @@ May 2012 - Dansguardian 2.12.0.1 - alpha
 - Applied patch 3419089 ("Expect" header should be dropped) by Mathieu PARENT
 - Applied patch 3438751 (Fix queue handling in OptionContainer) by Mathieu PARENT
 - Applied patch 3515167 (Fix digest identication) by Frederic Bourgeois
-
+- Fixed GCC warnings
+- LFS review in String.cpp (requires different arch review yet)
 
 August 2011 - DansGuardian 2.12.0.0 - alpha
 
