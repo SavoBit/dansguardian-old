@@ -13,6 +13,7 @@
 #include "../HTMLTemplate.hpp"
 #include "../ConnectionHandler.hpp"
 
+#include <string.h>
 #include <syslog.h>
 #include <sys/time.h>
 #include <sys/types.h>

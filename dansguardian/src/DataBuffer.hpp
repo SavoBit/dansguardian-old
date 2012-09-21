@@ -6,6 +6,7 @@
 #define __HPP_DATABUFFER
 
 #include <exception>
+#include <string.h>
 #include "Socket.hpp"
 #include "String.hpp"
 #include "FDFuncs.hpp"

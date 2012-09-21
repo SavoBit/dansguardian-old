@@ -604,7 +604,11 @@ bool OptionContainer::read(const char *filename, int type)
 		for (int i = 0; i < authplugins.size(); i++) {
 			AuthPlugin* tmpPlugin = (AuthPlugin*) authplugins[i];
 			String tmpStr = tmpPlugin->getPluginName();
-			auth_map[filter_ports[i].toInteger()] = tmpStr;
+
+			if (filter_ports.size() == 1 )
+				auth_map[filter_ports[0].toInteger()] = tmpStr;
+			else
+				auth_map[filter_ports[i].toInteger()] = tmpStr;
 		}
 
 		// if the more than one port is being used, validate the combination of auth plugins

@@ -149,6 +149,8 @@ off_t String::toOffset()
 		return 0;
 	off_t t = 0;
 
+	this->removeWhiteSpace();
+
 #if defined(_FILE_OFFSET_BITS) && (_FILE_OFFSET_BITS == 64)
 	sscanf(this->c_str(), "%lld", &t);
 #else

@@ -1,3 +1,15 @@
+September 2012 - Dansguardian 2.12.0.2 - alpha
+- Applied patch #9 (Crash when more than one authplugin are selected) by Frederic Bourgeois
+- Added feature to allow Facebook mock ajax (request #6) by Jason Spiro
+- Added contrib dir
+- Added a new html & css validated html template in contrib (request #3). By Chris Peschke
+- Converted iso-8859 message files to utf-8 (bug #86). Suggested by Fred Ulisses Maranhao
+- Fixed Error reading Content-Length (bug #84). By Carlos Soto
+- Fixed compilation error BSD due lack of string.h when using memcpy() (bug #75). By Alexander Hornung
+- Fixed exceptioniplist case sensitivity (bug #11). By Mark J Hewitt
+- Fixed accept-encoding support for new tokens (bug #13). By userquin
+
+
 May 2012 - Dansguardian 2.12.0.1 - alpha
 - Applied patch 3438750 (GCC 4.4 and 4.6 compatibility) by Mathieu PARENT
 - Applied patch 3438749 (French translation update) by Mathieu PARENT

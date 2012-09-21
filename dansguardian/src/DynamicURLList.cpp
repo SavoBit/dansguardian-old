@@ -11,6 +11,7 @@
 #include "OptionContainer.hpp"
 #include "DynamicURLList.hpp"
 
+#include <string.h>
 #include <syslog.h>
 #include <algorithm>
 #include <ctime>

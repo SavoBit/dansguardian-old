@@ -14,6 +14,7 @@
 #include "../FDTunnel.hpp"
 #include "../OptionContainer.hpp"
 
+#include <string.h>
 #include <stddef.h>
 #include <syslog.h>
 #include <iconv.h>

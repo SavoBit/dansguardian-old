@@ -17,6 +17,7 @@
 #include <sys/socket.h>
 #include <exception>
 #include <time.h>
+#include <string.h>
 #include <syslog.h>
 #include <cerrno>
 #include <zlib.h>
@@ -102,7 +103,7 @@ off_t HTTPHeader::contentLength()
 	if (temp.startsWith("304"))
 		contentlength = 0;
 	else if (pcontentlength != NULL) {
-		temp = pcontentlength->after(" ");
+		temp = pcontentlength->after(":");
 		contentlength = temp.toOffset();
 	}
 
@@ -411,6 +412,10 @@ String HTTPHeader::modifyEncodings(String e)
 #endif
 	if (e.contains("deflate")) {
 		o += ",deflate";
+	}
+
+	if (e.contains("pack200-gzip")) {
+		o += ",pack200-gzip";
 	}
 
 	return o;

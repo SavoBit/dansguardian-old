@@ -11,6 +11,7 @@
 #endif
 
 #include <csignal>
+#include <string.h>
 #include <fcntl.h>
 #include <sys/time.h>
 #include <pwd.h>

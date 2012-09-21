@@ -181,6 +181,7 @@ bool IPList::readIPMelangeList(const char *filename)
 		// hmmm. the line didn't match any of our regular expressions.
 		// assume it's a hostname.
 		else {
+			line.toLower();
 			hostlist.push_back(line);
 		}
 	}

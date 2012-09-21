@@ -12,6 +12,7 @@
 #endif
 #include "Socket.hpp"
 
+#include <string.h>
 #include <syslog.h>
 #include <csignal>
 #include <fcntl.h>
