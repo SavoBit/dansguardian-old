@@ -15,6 +15,7 @@
 
 #include <sys/time.h>
 #include <unistd.h>
+#include <stdexcept>
 #include <cerrno>
 #include <sys/socket.h>
 #include <string.h>
@@ -61,7 +62,9 @@ bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, off_t targe
 #ifdef DGDEBUG
 		std::cout << "Data in fdfrom's buffer; sending " << (sockfrom.bufflen - sockfrom.buffstart) << " bytes" << std::endl;
 #endif
-		sockto.writeToSocket(sockfrom.buffer + sockfrom.buffstart, sockfrom.bufflen - sockfrom.buffstart, 0, 120, false);
+		if (!sockto.writeToSocket(sockfrom.buffer + sockfrom.buffstart, sockfrom.bufflen - sockfrom.buffstart, 0, 120, false))
+			throw std::runtime_error(std::string("Can't write to socket: ") + strerror(errno));
+		
 		throughput += sockfrom.bufflen - sockfrom.buffstart;
 		sockfrom.bufflen = 0;
 		sockfrom.buffstart = 0;

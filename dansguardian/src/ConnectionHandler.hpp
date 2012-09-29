@@ -50,19 +50,18 @@ public:
 	~ConnectionHandler() { delete clienthost; };
 
 	// pass data between proxy and client, filtering as we go.
-	void handleConnection(Socket &peerconn, String &ip);
-	void handleConnection(Socket &peerconn, String &ip, Socket &proxyconn);
+	void handlePeer(Socket &peerconn, String &ip);
 private:
-	std::string *clienthost;
+	int filtergroup;
 	bool matchedip;
-	std::string urlparams;
-
-	std::list<postinfo> postparts;
+	bool persistent_authed;
 
 	std::string clientuser;
-	bool persistent_authed;
-	int filtergroup;
+	std::string *clienthost;
+	std::string urlparams;
+	std::list<postinfo> postparts;
 
+	void handleConnection(Socket &peerconn, String &ip);
 
 	// write a log entry containing the given data (if required)
 	void doLog(std::string &who, std::string &from, String &where, unsigned int &port,

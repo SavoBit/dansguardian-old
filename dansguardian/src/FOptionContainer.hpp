@@ -242,7 +242,15 @@ public:
 		exception_extension_flag(false), exception_mimetype_flag(false),
 		exception_file_site_flag(false), exception_file_url_flag(false),
 		log_site_flag(false), log_url_flag(false), log_regexpurl_flag(false),
-		searchengine_regexp_flag(false) {};
+		searchengine_regexp_flag(false), pics_icra_nuditymalegraphic(0),
+		pics_icra_nudityfemalegraphic(0), pics_icra_nuditytopless(0), pics_icra_nuditybottoms(0),
+		pics_icra_nuditysexualacts(0), pics_icra_nudityobscuredsexualacts(0), pics_icra_nuditysexualtouching(0),
+		pics_icra_nuditykissing(0), pics_icra_nudityartistic(0), pics_icra_nudityeducational(0),
+		pics_icra_nuditymedical(0), pics_icra_drugstobacco(0), pics_icra_drugsalcohol(0), pics_icra_drugsuse(0),
+		pics_icra_gambling(0), pics_icra_weaponuse(0), pics_icra_intolerance(0), pics_icra_badexample(0),
+		pics_icra_pgmaterial(0), pics_icra_violencerape(0), pics_icra_violencetohumans(0),
+		pics_icra_violencetoanimals(0), pics_icra_violencetofantasy(0), pics_icra_violencekillinghumans(0),
+		pics_icra_violencekillinganimals(0), pics_icra_violencekillingfantasy (0) {};
 	~FOptionContainer();
 	bool read(const char *filename);
 	void reset();

@@ -1,3 +1,10 @@
+September 2012 - Dansguardian 2.12.0.3 - alpha
+- Fixed memory leaks reported by analysis from coverity
+- Improved persistent connection for a better RFC compliant implementation, but not yet fully HTTP 1.1
+- Minor improvement for debug output
+- Applied patch #11 (Maxuploadsize per filtergroup) by fredbmail35
+
+
 September 2012 - Dansguardian 2.12.0.2 - alpha
 - Applied patch #9 (Crash when more than one authplugin are selected) by Frederic Bourgeois
 - Added feature to allow Facebook mock ajax (request #6) by Jason Spiro
@@ -9,8 +16,7 @@ September 2012 - Dansguardian 2.12.0.2 - alpha
 - Fixed exceptioniplist case sensitivity (bug #11). By Mark J Hewitt
 - Fixed accept-encoding support for new tokens (bug #13). By userquin
 
-
-May 2012 - Dansguardian 2.12.0.1 - alpha
+May 2012 - Dansguardian 2.12.0.1 - alpha - UNRELEASED
 - Applied patch 3438750 (GCC 4.4 and 4.6 compatibility) by Mathieu PARENT
 - Applied patch 3438749 (French translation update) by Mathieu PARENT
 - Applied patch 3418297 (Set proxy timeout in dansguardian.conf) by Frederic Bourgeois

@@ -62,6 +62,7 @@ void HTTPHeader::reset()
 		pxforwardedfor = NULL;
 		pcontentencoding = NULL;
 		pproxyconnection = NULL;
+		pkeepalive = NULL;
 		
 		dirty = false;
 
@@ -326,9 +327,9 @@ void HTTPHeader::makePersistent(bool persist)
 		// earlier.
 		if (waspersistent && !ispersistent) {
 			if (pproxyconnection != NULL) {
-				(*pproxyconnection) = pproxyconnection->before(":") + ": Keep-Alive\r";
+				(*pproxyconnection) = pproxyconnection->before(":") + ": keep-alive\r";
 			} else {
-				header.push_back(String("Proxy-Connection: Keep-Alive\r"));
+				header.push_back(String("Connection: keep-alive\r"));
 				pproxyconnection = &(header.back());
 			}
 			ispersistent = true;
@@ -337,9 +338,9 @@ void HTTPHeader::makePersistent(bool persist)
 		// Only downgrade to non-persistent if it isn't currently persistent.
 		if (ispersistent) {
 			if (pproxyconnection != NULL) {
-				(*pproxyconnection) = pproxyconnection->before(":") + ": Close\r";
+				(*pproxyconnection) = pproxyconnection->before(":") + ": close\r";
 			} else {
-				header.push_back(String("Proxy-Connection: Close\r"));
+				header.push_back(String("Connection: close\r"));
 				pproxyconnection = &(header.back());
 			}
 			ispersistent = false;
@@ -382,7 +383,7 @@ void HTTPHeader::makeTransparent(bool incoming)
 		}
 		if (pproxyconnection != NULL) {
 			String temp = pproxyconnection->after(":");
-			(*pproxyconnection) = "Proxy-Connection:";
+			(*pproxyconnection) = "Connection:";
 			(*pproxyconnection) += temp;
 		}
 		// call this to fudge the URL into something Squid likes
@@ -749,7 +750,7 @@ bool HTTPHeader::malformedURL(const String& url)
 // are case-insensitive. - Anonymous SF Poster, 2006-02-23
 void HTTPHeader::checkheader(bool allowpersistent)
 {
-	// are these headers outgoing, or incoming?
+	// are these headers outgoing (from browser), or incoming (from web server)?
 	bool outgoing = true;
 	if (header.front().startsWith("HT"))
 	{
@@ -778,6 +779,14 @@ void HTTPHeader::checkheader(bool allowpersistent)
 			(*i) = "Accept-Encoding:" + i->after(":");
 			(*i) = modifyEncodings(*i) + "\r";
 		}
+		else if ((!outgoing) && (pcontentencoding == NULL) && i->startsWithLower("content-encoding:"))
+		{
+			pcontentencoding = &(*i);
+		}
+		else if ((!outgoing) && (pkeepalive == NULL) && i->startsWithLower("keep-alive:"))
+		{
+			pkeepalive = &(*i);
+		}
 		else if ((pcontenttype == NULL) && i->startsWithLower("content-type:"))
 		{
 			pcontenttype = &(*i);
@@ -790,10 +799,6 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		else if ((pcontentdisposition == NULL) && i->startsWithLower("content-disposition:"))
 		{
 			pcontentdisposition = &(*i);
-		}
-		else if ((!outgoing) && (pcontentencoding == NULL) && i->startsWithLower("content-encoding:"))
-		{
-			pcontentencoding = &(*i);
 		}
 		else if ((pproxyauthorization == NULL) && i->startsWithLower("proxy-authorization:"))
 		{
@@ -814,7 +819,7 @@ void HTTPHeader::checkheader(bool allowpersistent)
 			pxforwardedfor = &(*i);
 		}
 		// this one's non-standard, so check for it last
-		else if (outgoing && (pport = NULL) && i->startsWithLower("port:"))
+		else if (outgoing && (pport == NULL) && i->startsWithLower("port:"))
 		{
 			pport = &(*i);
 		}
@@ -855,7 +860,7 @@ void HTTPHeader::checkheader(bool allowpersistent)
 	}
 	else
 	{
-		connectionclose = !onepointone;
+		connectionclose = true;
 	}
 	
 	// Do not allow persistent connections on CONNECT requests - the browser thinks it has a tunnel
@@ -880,17 +885,20 @@ void HTTPHeader::checkheader(bool allowpersistent)
 		// couldnt have done persistency even if we wanted to
 		allowpersistent = false;
 	}
-	else
-	{
-		//must have been persistent 
-		waspersistent = true;
-	}
 
-	// Even though persistent CONNECT requests usually break things, waspersistent should
-	// reflect the intention of the original request headers, or NTLM breaks.
-	if (outgoing && isconnect && !connectionclose)
+	if (outgoing)
 	{
-		waspersistent = true;
+		// Even though persistent CONNECT requests usually break things, waspersistent should
+		// reflect the intention of the original request headers, or NTLM breaks.
+		if(isconnect && !connectionclose)
+		{
+			waspersistent = true;
+		}
+	} else
+	{
+		if(!connectionclose && !(pcontentlength == NULL)) {
+			waspersistent = true;
+		}
 	}
 
 #ifdef DGDEBUG
@@ -898,7 +906,7 @@ void HTTPHeader::checkheader(bool allowpersistent)
 #endif
 
 	// force the headers to reflect whether or not persistency is allowed
-	// (modify pproxyconnection if its there, add our own explicit close/keep-alive otherwise)
+	// (modify pproxyconnection or add connection close/keep-alive - Client version, of course)
 	if (allowpersistent)
 	{
 		if (pproxyconnection == NULL)
@@ -906,12 +914,12 @@ void HTTPHeader::checkheader(bool allowpersistent)
 #ifdef DGDEBUG
 			std::cout << "CheckHeader: Adding our own Proxy-Connection: Keep-Alive" << std::endl;
 #endif
-			header.push_back("Proxy-Connection: Keep-Alive\r");
+			header.push_back("Connection: keep-alive\r");
 			pproxyconnection = &(header.back());
 		}
 		else
 		{
-			(*pproxyconnection) = pproxyconnection->before(":") + ": Keep-Alive\r";
+			(*pproxyconnection) = "Connection: keep-alive\r";
 		}
 	}
 	else
@@ -921,12 +929,12 @@ void HTTPHeader::checkheader(bool allowpersistent)
 #ifdef DGDEBUG
 			std::cout << "CheckHeader: Adding our own Proxy-Connection: Close" << std::endl;
 #endif
-			header.push_back("Proxy-Connection: Close\r");
+			header.push_back("Connection: close\r");
 			pproxyconnection = &(header.back());
 		}
 		else
 		{
-			(*pproxyconnection) = pproxyconnection->before(":") + ": Close\r";
+			(*pproxyconnection) = "Connection: close\r";
 		}
 	}
 	
@@ -1622,7 +1630,7 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 #endif
 			// first reconnect loop - send first line
 			while (true) {
-				if (!(*sock).writeToSocket(l.toCharArray(), l.length(), 0, timeout)) {
+				if (!sock->writeToSocket(l.toCharArray(), l.length(), 0, timeout)) {
 					// reconnect & try again if we've been told to
 					if (reconnect) {
 						// don't try more than once
@@ -1664,7 +1672,7 @@ void HTTPHeader::out(Socket * peersock, Socket * sock, int sendflag, bool reconn
 		// send header to the output stream
 		// need exception for bad write
 
-		if (!(*sock).writeToSocket(l.toCharArray(), l.length(), 0, timeout)) {
+		if (!sock->writeToSocket(l.toCharArray(), l.length(), 0, timeout)) {
 			// reconnect & try again if we've been told to
 			if (reconnect) {
 				// don't try more than once
@@ -1727,7 +1735,8 @@ void HTTPHeader::discard(Socket *sock, off_t cl)
 
 void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfig)
 {
-	if (dirty) reset();
+	if (dirty)
+		reset();
 	dirty = true;
 
 	// the RFCs don't specify a max header line length so this should be
@@ -1745,7 +1754,7 @@ void HTTPHeader::in(Socket * sock, bool allowpersistent, bool honour_reloadconfi
 		// - this lets us break when waiting for the next request on a pconn, but not
 		// during receipt of a request in progress.
 		bool truncated = false;
-		(*sock).getLine(buff, 32768, timeout, firsttime ? honour_reloadconfig : false, NULL, &truncated);
+		sock->getLine(buff, 32768, timeout, firsttime ? honour_reloadconfig : false, NULL, &truncated);
 		if (truncated)
 			throw std::exception();
 

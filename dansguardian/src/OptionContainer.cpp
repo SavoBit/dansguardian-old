@@ -28,7 +28,15 @@ extern bool is_daemonised;
 
 // IMPLEMENTATION
 
-OptionContainer::OptionContainer():numfg(0)
+OptionContainer::OptionContainer():use_filter_groups_list(false), use_group_names_list(false),
+auth_needs_proxy_query(false), prefer_cached_lists(false), no_daemon(false), no_logger(false),
+log_syslog(false),  anonymise_logs(false), log_ad_blocks(false),log_timestamp(false),
+log_user_agent(false), soft_restart(false),delete_downloaded_temp_files(false),
+max_logitem_length(0), max_upload_size(0), max_content_filter_size(0),
+max_content_ramcache_scan_size(0), max_content_filecache_scan_size(0), scan_clean_cache(0),
+content_scan_exceptions(0), initial_trickle_delay(0), trickle_delay(0), content_scanner_timeout(0),
+reporting_level(0), weighted_phrase_mode(0), numfg(0),
+fg(NULL)
 {
 }
 
@@ -269,14 +277,6 @@ bool OptionContainer::read(const char *filename, int type)
 			return false;
 		}
 
-		// TODO: Implement a "findoptionO" and a version of
-		// reality check which uses off_t, for large file support?
-		max_upload_size = findoptionI("maxuploadsize");
-		if (!realitycheck(max_upload_size, -1, 0, "maxuploadsize")) {
-			return false;
-		}		// check its a reasonable value
-		max_upload_size *= 1024;
-		
 		max_content_filter_size = findoptionI("maxcontentfiltersize");
 		if (!realitycheck(max_content_filter_size, 0, 0, "maxcontentfiltersize")) {
 			return false;
@@ -816,7 +816,7 @@ void OptionContainer::loadRooms()
 		rooms.push_back(std::pair<std::string, IPList*>(roomname, contents));
 	}
 
-	while (closedir(d) != 0)
+	if (closedir(d) != 0)
 	{
 		if (errno != EINTR)
 		{

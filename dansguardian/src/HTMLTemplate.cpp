@@ -161,8 +161,9 @@ void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::str
 				std::cout<<"-HOST- placeholder encountered but hostname currently unknown; lookup forced."<<std::endl;
 #endif
 				std::deque<String> *names = ipToHostname(ip->c_str());
-				if (names->size() > 0)
-					host = new std::string(names->front().toCharArray());
+				if (names->size() > 0) {
+					*host = names->front();
+				}
 				delete names;
 			}
 			line = (host ? *host : "");
@@ -203,12 +204,12 @@ void HTMLTemplate::display(Socket *s, String *url, std::string &reason, std::str
 			}
 		}
 		if (line.length() > 0) {
-			(*s).writeString(line.toCharArray());
+			s->writeString(line.toCharArray());
 		}
 		if (newline) {
-			(*s).writeString("\n");
+			s->writeString("\n");
 		}
 	}
-	(*s).writeString(html[sz].toCharArray());
-	(*s).writeString("\n");
+	s->writeString(html[sz].toCharArray());
+	s->writeString("\n");
 }

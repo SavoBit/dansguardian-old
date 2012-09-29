@@ -41,7 +41,10 @@ UDSocket::UDSocket()
 	memset(&my_adr, 0, sizeof my_adr);
 	memset(&peer_adr, 0, sizeof peer_adr);
 	my_adr.sun_family = AF_UNIX;
+	strcpy(my_adr.sun_path, "");
 	peer_adr.sun_family = AF_UNIX;
+	strcpy(peer_adr.sun_path, "");
+	my_adr_length = 0;
 }
 
 // create socket from pre-existing FD (address structs will be invalid!)
@@ -50,7 +53,10 @@ UDSocket::UDSocket(int fd):BaseSocket(fd)
 	memset(&my_adr, 0, sizeof my_adr);
 	memset(&peer_adr, 0, sizeof peer_adr);
 	my_adr.sun_family = AF_UNIX;
-	peer_adr.sun_family = AF_UNIX;
+        strcpy(my_adr.sun_path, "");
+        peer_adr.sun_family = AF_UNIX;
+        strcpy(peer_adr.sun_path, "");
+	my_adr_length = 0;
 }
 
 // create socket from given FD & local address (checkme: is it local or remote that gets passed in here?)
@@ -68,7 +74,10 @@ void UDSocket::reset()
 	memset(&my_adr, 0, sizeof my_adr);
 	memset(&peer_adr, 0, sizeof peer_adr);
 	my_adr.sun_family = AF_UNIX;
-	peer_adr.sun_family = AF_UNIX;
+        strcpy(my_adr.sun_path, "");
+        peer_adr.sun_family = AF_UNIX;
+        strcpy(peer_adr.sun_path, "");
+	my_adr_length = 0;
 }
 
 // accept incoming connection & return new UDSocket
@@ -83,6 +92,9 @@ UDSocket* UDSocket::accept()
 // connect to given server (following default constructor)
 int UDSocket::connect(const char *path)
 {
+	if(strlen(path) > 108)
+		return -1;
+
 #ifdef DGDEBUG
 	std::cout << "uds connect:" << path << std::endl;
 #endif
@@ -96,7 +108,11 @@ int UDSocket::connect(const char *path)
 // bind socket to given path
 int UDSocket::bind(const char *path)
 {				// to bind a unix domain socket to a path
+	if(strlen(path) > 108)
+		return -1;
+
 	unlink(path);
+
 	strcpy(my_adr.sun_path, path);
 
 	my_adr_length = offsetof(struct sockaddr_un, sun_path) + strlen(path);

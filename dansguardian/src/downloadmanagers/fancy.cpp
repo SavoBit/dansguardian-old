@@ -35,7 +35,7 @@ class fancydm:public DMPlugin
 {
 public:
 	fancydm(ConfigVar & definition):DMPlugin(definition),
-		toobig_unscanned(false), toobig_notdownloaded(false) {};
+		upperlimit(0), toobig_unscanned(false), toobig_notdownloaded(false) {};
 	int in(DataBuffer * d, Socket * sock, Socket * peersock, HTTPHeader * requestheader,
 		HTTPHeader * docheader, bool wantall, int *headersent, bool * toobig);
 
@@ -56,6 +56,7 @@ private:
 	
 	// was file too large to be scanned?
 	bool toobig_unscanned;
+
 	// was file so large as to not even be downloaded?
 	bool toobig_notdownloaded;
 

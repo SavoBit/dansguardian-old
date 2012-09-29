@@ -80,7 +80,8 @@ public:
 	// grab raw contents of Proxy-Authorization header, without b64 decode
 	std::string getRawAuthData();
 	// check whether a connection is persistent
-	bool isPersistent() { return ispersistent; };
+	bool isPersistent()  { return ispersistent;  };
+	bool wasPersistent() { return waspersistent; };
 	
 	// set POST data for outgoing requests.
 	// assumes that existing POST data has already been discarded
@@ -132,7 +133,7 @@ public:
 	// add cookie to outgoing headers with given name & value
 	void setCookie(const char *cookie, const char *domain, const char *value);
 	
-	HTTPHeader():postdata(NULL), dirty(true) { reset(); };
+	HTTPHeader():port(0), timeout(120), contentlength(0), postdata(NULL), dirty(true) { reset(); };
 	~HTTPHeader() { delete postdata; };
 
 private:
@@ -152,6 +153,8 @@ private:
 	String *pxforwardedfor;
 	String *pcontentencoding;
 	String *pproxyconnection;
+	String *pkeepalive;
+
 	// cached result of getUrl()
 	std::string cachedurl;
 

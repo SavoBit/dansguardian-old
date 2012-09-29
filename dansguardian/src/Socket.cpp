@@ -18,9 +18,9 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <pwd.h>
+#include <stdexcept>
 #include <cerrno>
 #include <unistd.h>
-#include <stdexcept>
 #include <netinet/tcp.h>
 
 #ifdef __SSLCERT
@@ -40,13 +40,17 @@ extern bool reloadconfig;
 Socket::Socket()
 {
 	sck = socket(AF_INET, SOCK_STREAM, 0);
+
 	memset(&my_adr, 0, sizeof my_adr);
 	memset(&peer_adr, 0, sizeof peer_adr);
 	my_adr.sin_family = AF_INET;
 	peer_adr.sin_family = AF_INET;
 	peer_adr_length = sizeof(struct sockaddr_in);
 	int f = 1;
-	setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, &f, sizeof(int));
+
+	if (sck > 0)
+		int res = setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, &f, sizeof(int));
+
 	my_port = 0;
 
 #ifdef __SSLCERT
@@ -68,7 +72,10 @@ Socket::Socket(int fd):BaseSocket(fd)
 	peer_adr.sin_family = AF_INET;
 	peer_adr_length = sizeof(struct sockaddr_in);
 	int f = 1;
-	setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, &f, sizeof(int));
+
+	int res = setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, &f, sizeof(int));
+
+	my_port = 0;
 
 #ifdef __SSLCERT
 	ssl = NULL;
@@ -91,7 +98,10 @@ Socket::Socket(int newfd, struct sockaddr_in myip, struct sockaddr_in peerip):Ba
 	peer_adr = peerip;
 	peer_adr_length = sizeof(struct sockaddr_in);
 	int f = 1;
-	setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, &f, sizeof(int));
+
+	int res = setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, &f, sizeof(int));
+
+	my_port = 0;
 
 #ifdef __SSLCERT
 	ssl = NULL;
@@ -139,7 +149,9 @@ unsigned long int Socket::getPeerSourceAddr()
 void Socket::reset()
 {
 	this->baseReset();
+
 	sck = socket(AF_INET, SOCK_STREAM, 0);
+
 	memset(&my_adr, 0, sizeof my_adr);
 	memset(&peer_adr, 0, sizeof peer_adr);
 	my_adr.sin_family = AF_INET;
@@ -161,6 +173,7 @@ int Socket::connect(const std::string &ip, int port)
 	peer_adr.sin_port = htons(port);
 	inet_aton(ip.c_str(), &peer_adr.sin_addr);
 	my_port = port;
+
 	return ::connect(sck, (struct sockaddr *) &peer_adr, len);
 }
 // bind socket to given port
@@ -168,9 +181,12 @@ int Socket::bind(int port)
 {
 	int len = sizeof my_adr;
 	int i = 1;
-	setsockopt(sck, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
+
+	int res = setsockopt(sck, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
+
 	my_adr.sin_port = htons(port);
 	my_port = port;
+
 	return ::bind(sck, (struct sockaddr *) &my_adr, len);
 }
 
@@ -179,10 +195,13 @@ int Socket::bind(const std::string &ip, int port)
 {
 	int len = sizeof my_adr;
 	int i = 1;
-	setsockopt(sck, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
+
+	int res = setsockopt(sck, SOL_SOCKET, SO_REUSEADDR, &i, sizeof(i));
+
 	my_adr.sin_port = htons(port);
 	my_adr.sin_addr.s_addr = inet_addr(ip.c_str());
 	my_port = port;
+
 	return ::bind(sck, (struct sockaddr *) &my_adr, len);
 }
 
@@ -191,9 +210,14 @@ Socket* Socket::accept()
 {
 	peer_adr_length = sizeof(struct sockaddr_in);
 	int newfd = this->baseAccept((struct sockaddr*) &peer_adr, &peer_adr_length);
-	Socket* s = new Socket(newfd, my_adr, peer_adr);
-	s->setPort(my_port);
-	return s;
+
+	if (newfd > 0) {
+		Socket* s = new Socket(newfd, my_adr, peer_adr);
+		s->setPort(my_port);
+		return s;
+	}
+	else
+		return NULL;
 }
 
 #ifdef __SSLCERT
@@ -799,12 +823,12 @@ int Socket::readFromSocketn(char *buff, int len, unsigned int flags, int timeout
 	
 	int cnt, rc;
 	cnt = len;
-	
+
 	// first, return what's left from the previous buffer read, if anything
 	if ((bufflen - buffstart) > 0) {
-/*#ifdef DGDEBUG
-		std::cout << "readFromSocketn: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
-#endif*/
+#ifdef DGDEBUG
+		std::cout << "Socket::readFromSocketn: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
+#endif
 		int tocopy = len;
 		if ((bufflen - buffstart) < len)
 			tocopy = bufflen - buffstart;
@@ -824,8 +848,9 @@ int Socket::readFromSocketn(char *buff, int len, unsigned int flags, int timeout
 			return -1;
 		}
 		rc = SSL_read(ssl, buff, cnt);
-
-		std::cout << "ssl read said " << rc << std::endl;
+#ifdef DGDEBUG
+		std::cout << "ssl read said: " << rc << std::endl;
+#endif
 
 		if (rc < 0) {
 			if (errno == EINTR) {
@@ -853,9 +878,9 @@ int Socket::readFromSocket(char *buff, int len, unsigned int flags, int timeout,
 	int cnt = len;
 	int tocopy = 0;
 	if ((bufflen - buffstart) > 0) {
-/*#ifdef DGDEBUG
-		std::cout << "readFromSocket: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
-#endif*/
+#ifdef DGDEBUG
+		std::cout << "Socket::readFromSocket: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
+#endif
 		tocopy = len;
 		if ((bufflen - buffstart) < len)
 			tocopy = bufflen - buffstart;

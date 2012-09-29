@@ -48,7 +48,7 @@ extern dmcreate_t trickledmcreate;
 //
 
 // constructor
-DMPlugin::DMPlugin(ConfigVar &definition):alwaysmatchua(false), cv(definition)
+DMPlugin::DMPlugin(ConfigVar &definition):alwaysmatchua(false), cv(definition), mimelistenabled(false), extensionlistenabled(false)
 {
 }
 

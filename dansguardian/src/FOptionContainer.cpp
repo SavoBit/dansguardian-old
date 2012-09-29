@@ -302,7 +302,15 @@ bool FOptionContainer::read(const char *filename)
 		violations = findoptionI("violations");
 		current_violations=0;
 		violationbody="";
+
 		threshold = findoptionI("threshold");
+                // TODO: Implement a "findoptionO" and a version of
+                // reality check which uses off_t, for large file support?
+                max_upload_size = findoptionI("maxuploadsize");
+                if (!realitycheck(max_upload_size, -1, 0, "maxuploadsize")) {
+                        return false;
+                }               // check its a reasonable value
+                max_upload_size *= 1024;
 
 		avadmin = findoptionS("avadmin");
 		if (avadmin.length()==0) {
@@ -1001,6 +1009,7 @@ char *FOptionContainer::inSiteList(String &url, unsigned int list, bool doblanke
 			while (url2.contains(".")) {
 				i = (*o.lm.l[list]).findInList(url2.toCharArray());
 				if (i != NULL) {
+					delete url2s;
 					return i;  // exact match
 				}
 				url2 = url2.after(".");  // check for being in hld
@@ -1100,11 +1109,13 @@ char *FOptionContainer::inURLList(String &url, unsigned int list, bool doblanket
 						if (url2.length() > fl) {
 							unsigned char c = url[fl];
 							if (c == '/' || c == '?' || c == '&' || c == '=') {
+								delete url2s;
 								return i;  // matches /blah/ or /blah/foo
 								// (or /blah?foo etc.)
 								// but not /blahfoo
 							}
 						} else {
+							delete url2s;
 							return i;  // exact match
 						}
 					}

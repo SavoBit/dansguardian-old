@@ -60,11 +60,12 @@ private:
 	std::deque<unsigned int> offsets;
 	std::deque<unsigned int> lengths;
 
+	// the expression itself
+	regex_t reg;
+
 	// have we matched something yet?
 	bool imatched;
 
-	// the expression itself
-	regex_t reg;
 	// whether it's been pre-compiled
 	bool wascompiled;
 	

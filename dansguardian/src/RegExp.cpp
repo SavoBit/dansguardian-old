@@ -15,7 +15,7 @@
 #include <iostream>
 
 // constructor - set defaults
-RegExp::RegExp():imatched(false), wascompiled(false)
+RegExp::RegExp():reg(), imatched(false), wascompiled(false)
 {
 }
 

@@ -24,7 +24,7 @@ ConfigVar::ConfigVar()
 // construct & read in the given config file
 ConfigVar::ConfigVar(const char *filename, const char *delimiter)
 {
-	readVar(filename, delimiter);
+	int res = readVar(filename, delimiter);
 }
 
 // return the value for the named option

@@ -35,7 +35,7 @@ extern RegExp absurl_re, relurl_re;
 // operator so that the STL sort algorithm can be applied to lists of these.
 class listent {
 public:
-	listent() {};
+	listent():weight(0), string("") {};
 	listent(const int& w, String& s) {
 		weight = w;
 		string = s;

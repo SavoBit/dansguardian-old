@@ -11,10 +11,10 @@
 #include "ImageContainer.hpp"
 
 #include <syslog.h>
-#include <cstdlib>
-#include <cstdio>
 #include <iostream>
 #include <fstream>
+#include <stdexcept>
+#include <cerrno>
 #include <limits.h>
 
 
@@ -52,20 +52,21 @@ void ImageContainer::display(Socket * s)
 	std::cout << "Displaying custom image file" << std::endl;
 	std::cout << "mimetype: " << mimetype << std::endl;
 #endif
-	(*s).writeString("Content-type: ");
-	(*s).writeString(mimetype.toCharArray());
-	(*s).writeString("\n\n");
-	(*s).writeToSocket(image, imagelength, 0, (*s).getTimeout());
+	s->writeString("Content-type: ");
+	s->writeString(mimetype.toCharArray());
+	s->writeString("\n\n");
+
+	if (!s->writeToSocket(image, imagelength, 0, s->getTimeout()))
+		throw std::runtime_error(std::string("Can't write to socket: ") + strerror(errno));
 }
 
 // read image from file
 bool ImageContainer::read(const char *filename)
 {
-	String temp;
-	temp = (char *) filename;
+	String temp(filename);
 	temp.toLower();
-	if (temp.endsWith(".jpg") || temp.endsWith(".jpeg")
-	    || temp.endsWith(".jpe")) {
+
+	if (temp.endsWith(".jpg") || temp.endsWith(".jpeg") || temp.endsWith(".jpe")) {
 		mimetype = "image/jpg";
 	}
 	else if (temp.endsWith("png"))

@@ -194,23 +194,31 @@ bool BaseSocket::checkForInput()
 {
 	if ((bufflen - buffstart) > 0)
 		return true;
+
 	fd_set fdSet;
 	FD_ZERO(&fdSet);  // clear the set
 	FD_SET(sck, &fdSet);  // add fd to the set
 	timeval t;  // timeval struct
 	t.tv_sec = 0;
 	t.tv_usec = 0;
+
 	if (selectEINTR(sck + 1, &fdSet, NULL, NULL, &t) < 1) {
 		return false;
 	}
+
 	return true;
 }
 
 // blocking check for waiting data - blocks for up to given timeout, can be told to break on signal-triggered config reloads
 void BaseSocket::checkForInput(int timeout, bool honour_reloadconfig) throw(std::exception)
 {
+#ifdef DGDEBUG
+		std::cout << "BaseSocket::checkForInput: starting for sck:" << sck << std::endl;
+#endif
+
 	if ((bufflen - buffstart) > 0)
 		return;
+
 	// blocks if socket blocking
 	// until timeout
 	fd_set fdSet;
@@ -263,9 +271,9 @@ int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadcon
 	// first, return what's left from the previous buffer read, if anything
 	int i = 0;
 	if ((bufflen - buffstart) > 0) {
-/*#ifdef DGDEBUG
+#ifdef DGDEBUG
 		std::cout << "data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
-#endif*/
+#endif
 
 		//work out the maximum size we want to read from our internal buffer
 		int tocopy = size-1;
@@ -296,10 +304,10 @@ int BaseSocket::getLine(char *buff, int size, int timeout, bool honour_reloadcon
 		bufflen = 0;
 		try {
 			checkForInput(timeout, honour_reloadconfig);
+			bufflen = recv(sck, buffer, 1024, 0);
 		} catch(std::exception & e) {
 			throw std::runtime_error(std::string("Can't read from socket: ") + e.what());  // on error
 		}
-		bufflen = recv(sck, buffer, 1024, 0);
 #ifdef DGDEBUG
 		std::cout << "read into buffer; bufflen: " << bufflen << std::endl;
 #endif
@@ -392,9 +400,9 @@ int BaseSocket::readFromSocketn(char *buff, int len, unsigned int flags, int tim
 	
 	// first, return what's left from the previous buffer read, if anything
 	if ((bufflen - buffstart) > 0) {
-/*#ifdef DGDEBUG
+#ifdef DGDEBUG
 		std::cout << "readFromSocketn: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
-#endif*/
+#endif
 		int tocopy = len;
 		if ((bufflen - buffstart) < len)
 			tocopy = bufflen - buffstart;
@@ -436,21 +444,25 @@ int BaseSocket::readFromSocket(char *buff, int len, unsigned int flags, int time
 	int cnt = len;
 	int tocopy = 0;
 	if ((bufflen - buffstart) > 0) {
-/*#ifdef DGDEBUG
-		std::cout << "readFromSocket: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
-#endif*/
 		tocopy = len;
+
+#ifdef DGDEBUG
+	std::cout << "readFromSocket: data already in buffer; bufflen: " << bufflen << " buffstart: " << buffstart << std::endl;
+#endif
 		if ((bufflen - buffstart) < len)
 			tocopy = bufflen - buffstart;
+
 		memcpy(buff, buffer + buffstart, tocopy);
 		cnt -= tocopy;
 		buffstart += tocopy;
 		buff += tocopy;
+
 		if (cnt == 0)
 			return len;
 	}
 	
-	int rc;
+	int rc = 0;
+
 	if (check_first) {
 		try {
 			checkForInput(timeout, honour_reloadconfig);
@@ -465,7 +477,9 @@ int BaseSocket::readFromSocket(char *buff, int len, unsigned int flags, int time
 				continue;
 			}
 		}
+
 		break;
 	}
+
 	return rc + tocopy;
 }

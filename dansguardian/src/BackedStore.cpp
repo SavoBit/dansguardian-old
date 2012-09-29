@@ -22,6 +22,7 @@
 
 #include <unistd.h>
 
+#include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/time.h>
 
@@ -65,7 +66,7 @@ BackedStore::~BackedStore()
 		if (rc < 0)
 			std::cout << "BackedStore: cannot delete temp file: " << strerror(errno) << std::endl;
 #endif
-		delete filename;
+		free(filename);
 	}
 }
 
@@ -97,23 +98,24 @@ bool BackedStore::append(const char *data, size_t len)
 			// Open temp file, dump current data in there,
 			// leave code below this if{} to write current
 			// data to the file as well
-			filename = new char[tempdir.length() + 14];
-			strncpy(filename, tempdir.c_str(), tempdir.length());
-			strncpy(filename + tempdir.length(), "/__dgbsXXXXXX", 13);
-			filename[tempdir.length() + 13] = '\0';
+			std::string filename_str = tempdir + "/__dgbsXXXXXX";
+			filename = const_cast<char*>(filename_str.c_str());
 #ifdef DGDEBUG
 			std::cout << "BackedStore: filename template: " << filename << std::endl;
 #endif
+			umask(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 			if ((fd = mkstemp(filename)) < 0)
 			{
 				std::ostringstream ss;
 				ss << "BackedStore could not create temp file: " << strerror(errno);
-				delete filename;
+				free(filename);
 				throw std::runtime_error(ss.str().c_str());
 			}
 #ifdef DGDEBUG
 			std::cout << "BackedStore: filename: " << filename << std::endl;
 #endif
+			free(filename);
+
 			size_t bytes_written = 0;
 			ssize_t rc = 0;
 			do
@@ -260,15 +262,13 @@ std::string BackedStore::store(const char *prefix)
 	// Include timestamp in the name for added uniqueness
 	std::ostringstream timedprefix;
 	timedprefix << prefix << '-' << time(NULL) << '-' << std::flush;
-	std::string pfx(timedprefix.str());
-	char storedname[pfx.length() + 7];
-	strncpy(storedname, pfx.c_str(), pfx.length());
-	strncpy(storedname + pfx.length(), "XXXXXX", 6);
-	storedname[pfx.length() + 6] = '\0';
+	std::string storedname_str(timedprefix.str() + "XXXXXX");
+	char *storedname = const_cast<char*>(storedname_str.c_str());
 #ifdef DGDEBUG
 	std::cout << "BackedStore: storedname template: " << storedname << std::endl;
 #endif
 	int storefd;
+	umask(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 	if ((storefd = mkstemp(storedname)) < 0)
 	{
 		std::ostringstream ss;

@@ -11,6 +11,7 @@
 #include "HTTPHeader.hpp"
 #include "OptionContainer.hpp"
 
+#include <sys/stat.h>
 #include <syslog.h>
 #include <algorithm>
 #include <cstdlib>
@@ -37,7 +38,7 @@ extern OptionContainer o;
 // IMPLEMENTATION
 
 DataBuffer::DataBuffer():data(new char[1]), buffer_length(0), compresseddata(NULL), compressed_buffer_length(0),
-	tempfilesize(0), dontsendbody(false), tempfilefd(-1), timeout(20), bytesalreadysent(0), preservetemp(false)
+	tempfilesize(0), dontsendbody(false), tempfilefd(-1), dm_plugin(NULL), timeout(20), bytesalreadysent(0), preservetemp(false)
 {
 	data[0] = '\0';
 }
@@ -51,12 +52,16 @@ DataBuffer::DataBuffer(const void* indata, off_t length):data(new char[length]),
 void DataBuffer::reset()
 {
 	delete[]data;
+	delete[]compresseddata;
+
 	data = new char[1];
 	data[0] = '\0';
-	delete[]compresseddata;
+
 	compresseddata = NULL;
+
 	buffer_length = 0;
 	compressed_buffer_length = 0;
+
 	if (tempfilefd > -1) {
 		close(tempfilefd);
 		if (!preservetemp) {
@@ -65,6 +70,7 @@ void DataBuffer::reset()
 		tempfilefd = -1;
 		tempfilesize = 0;
 	}
+
 	bytesalreadysent = 0;
 	dontsendbody = false;
 	preservetemp = false;
@@ -166,6 +172,7 @@ int DataBuffer::getTempFileFD()
 	tempfilepath += "/tfXXXXXX";
 	char *tempfilepatharray = new char[tempfilepath.length() + 1];
 	strcpy(tempfilepatharray, tempfilepath.toCharArray());
+	umask(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 	if ((tempfilefd = mkstemp(tempfilepatharray)) < 0) {
 #ifdef DGDEBUG
 		std::cerr << "error creating temp " << tempfilepath << ": " << strerror(errno) << std::endl;
@@ -246,7 +253,10 @@ void DataBuffer::out(Socket * sock) throw(std::exception)
 #endif
 		off_t sent = bytesalreadysent;
 		int rc;
-		lseek(tempfilefd, bytesalreadysent, SEEK_SET);
+
+		if (lseek(tempfilefd, bytesalreadysent, SEEK_SET) < 0)
+			throw std::runtime_error(std::string("Can't write to socket: ") + strerror(errno));
+
 		while (sent < tempfilesize) {
 			rc = readEINTR(tempfilefd, data, buffer_length);
 #ifdef DGDEBUG
@@ -265,8 +275,8 @@ void DataBuffer::out(Socket * sock) throw(std::exception)
 				break;  // should never happen
 			}
 			// as it's cached to disk the buffer must be reasonably big
-			if (!(*sock).writeToSocket(data, rc, 0, timeout)) {
-				throw std::exception();
+			if (!sock->writeToSocket(data, rc, 0, timeout)) {
+				throw std::runtime_error(std::string("Can't write to socket: ") + strerror(errno));
 			}
 			sent += rc;
 #ifdef DGDEBUG
@@ -283,7 +293,7 @@ void DataBuffer::out(Socket * sock) throw(std::exception)
 #endif
 		// it's in RAM, so just send it, no streaming from disk
 		if (buffer_length != 0) {
-			if (!(*sock).writeToSocket(data + bytesalreadysent, buffer_length - bytesalreadysent, 0, timeout))
+			if (!sock->writeToSocket(data + bytesalreadysent, buffer_length - bytesalreadysent, 0, timeout))
 				throw std::exception();
 		} else {
 			if (!sock->writeToSocket("\r\n\r\n", 4, 0, timeout))
@@ -317,9 +327,12 @@ void DataBuffer::zlibinflate(bool header)
 	int newsize = buffer_length * 5;  // good estimate of deflated HTML
 
 	char *block = new char[newsize];
+	block[0] = '\0';
+
 	char *temp = NULL;
-	int err;
+
 	off_t bytesgot = 0;
+	int err;
 
 	z_stream d_stream;
 	d_stream.zalloc = (alloc_func) 0;
@@ -399,6 +412,7 @@ void DataBuffer::zlibinflate(bool header)
 		d_stream.next_out = (Bytef *) (block + bytesgot);
 		d_stream.avail_out = newsize - bytesgot;
 	}
+
 	compresseddata = data;
 	compressed_buffer_length = buffer_length;
 	buffer_length = bytesgot;

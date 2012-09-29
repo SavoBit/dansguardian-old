@@ -33,7 +33,7 @@ extern bool is_daemonised;
 
 // constructor - initialise values to empty defaults
 DynamicURLList::DynamicURLList()
-:index(NULL), urlreftime(NULL), urls(NULL), groups(NULL), size(0), agepos(0), timeout(0)
+:index(NULL), urlreftime(NULL), urls(NULL), groups(NULL), size(0), agepos(0), timeout(0), items(0)
 {
 }
 
