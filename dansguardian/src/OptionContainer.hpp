@@ -132,7 +132,6 @@ public:
 
 	std::string daemon_user;
 	std::string daemon_group;
-	off_t max_upload_size;
 	off_t max_content_filter_size;
 	off_t max_content_ramcache_scan_size;
 	off_t max_content_filecache_scan_size;

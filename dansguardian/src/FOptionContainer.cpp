@@ -120,8 +120,6 @@ void FOptionContainer::resetJustListData()
 	
 	banned_phrase_list_index.clear();
 	
-//	conffile.clear();
-	
 	content_regexp_list_comp.clear();
 	content_regexp_list_rep.clear();
 	url_regexp_list_comp.clear();
@@ -143,9 +141,6 @@ void FOptionContainer::resetJustListData()
 	searchengine_regexp_list_comp.clear();
 	searchengine_regexp_list_source.clear();
 	searchengine_regexp_list_ref.clear();
-	
-//	delete banned_page;
-//	banned_page = NULL;
 }
 
 
@@ -227,6 +222,14 @@ bool FOptionContainer::read(const char *filename)
 			deep_url_analysis = false;
 		}
 
+                // TODO: Implement a "findoptionO" and a version of
+                // reality check which uses off_t, for large file support?
+                max_upload_size = findoptionI("maxuploadsize");
+                if (!realitycheck(max_upload_size, -1, 0, "maxuploadsize")) {
+                        return false;
+                }               // check its a reasonable value
+                max_upload_size *= 1024;
+
 		if (findoptionS("disablecontentscan") == "on") {
 			disable_content_scan = true;
 		} else {
@@ -302,15 +305,7 @@ bool FOptionContainer::read(const char *filename)
 		violations = findoptionI("violations");
 		current_violations=0;
 		violationbody="";
-
 		threshold = findoptionI("threshold");
-                // TODO: Implement a "findoptionO" and a version of
-                // reality check which uses off_t, for large file support?
-                max_upload_size = findoptionI("maxuploadsize");
-                if (!realitycheck(max_upload_size, -1, 0, "maxuploadsize")) {
-                        return false;
-                }               // check its a reasonable value
-                max_upload_size *= 1024;
 
 		avadmin = findoptionS("avadmin");
 		if (avadmin.length()==0) {
@@ -447,6 +442,11 @@ bool FOptionContainer::read(const char *filename)
 			} else {
 				enable_PICS = false;
 			}
+                        if (findoptionS("bannedregexwithblanketblock") == "on") {
+                                enable_regex_grey = true;
+                        } else {
+                                enable_regex_grey = false;
+                        }
 
 			if (findoptionS("blockdownloads") == "on") {
 				block_downloads = true;

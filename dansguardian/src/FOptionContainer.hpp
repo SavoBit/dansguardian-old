@@ -40,7 +40,9 @@ public:
 	int searchterm_limit;
 	bool createlistcachefiles;
 	bool enable_PICS;
+	bool enable_regex_grey;
 	bool deep_url_analysis;
+	off_t max_upload_size;
 
 #ifdef __SSLCERT
 	//SSL certificate checking

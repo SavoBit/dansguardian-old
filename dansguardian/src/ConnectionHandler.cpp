@@ -191,7 +191,7 @@ std::string ConnectionHandler::miniURLEncode(const char *s)
 String ConnectionHandler::hashedURL(String *url, int filtergroup, std::string *clientip, bool infectionbypass)
 {
 	// filter/virus bypass hashes last for a certain time only
-	String timecode(time(NULL) + (infectionbypass ? (*o.fg[filtergroup]).infection_bypass_mode : (*o.fg[filtergroup]).bypass_mode));
+	String timecode(time(NULL) + (infectionbypass ? o.fg[filtergroup]->infection_bypass_mode : o.fg[filtergroup]->bypass_mode));
 	// use the standard key in normal bypass mode, and the infection key in infection bypass mode
 	String magic(infectionbypass ? o.fg[filtergroup]->imagic.c_str() : o.fg[filtergroup]->magic.c_str());
 	magic += clientip->c_str();
@@ -1598,14 +1598,14 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				// Check for POST upload size blocking, unless request is an exception
 				// MIME type test is just an approximation, but probably good enough
 				if (!isbypass && !isexception
-					&& ((o.max_upload_size >= 0) && (cl > o.max_upload_size))
+					&& ((o.fg[filtergroup]->max_upload_size >= 0) && (cl > o.fg[filtergroup]->max_upload_size))
 					&& multipart)
 				{
 #ifdef DGDEBUG
 					std::cout << dbgPeerPort << " -Detected POST upload violation by Content-Length header - discarding rest of POST data..." << std::endl;
 #endif
 					header.discard(&peerconn);
-					checkme.whatIsNaughty = o.max_upload_size == 0 ? o.language_list.getTranslation(700) : o.language_list.getTranslation(701);
+					checkme.whatIsNaughty = o.fg[filtergroup]->max_upload_size == 0 ? o.language_list.getTranslation(700) : o.language_list.getTranslation(701);
 					// Web upload is banned.
 					checkme.whatIsNaughtyLog = checkme.whatIsNaughty;
 					checkme.whatIsNaughtyCategories = "Web upload";
@@ -2804,8 +2804,8 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		data += String(code)+cr;
 		data += String(cachehit)+cr;
 		data += String(mimetype)+cr; 
-		data += String((*thestart).tv_sec)+cr;
-		data += String((*thestart).tv_usec)+cr;
+		data += String(thestart->tv_sec)+cr;
+		data += String(thestart->tv_usec)+cr;
 		data += (clienthost ? (*clienthost) + cr : cr);
 		if (o.log_user_agent)
 			data += (reqheader ? reqheader->userAgent() + cr : cr);
@@ -2856,14 +2856,14 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 	bool &isbanneduser, bool &isbannedip, std::string &room)
 {
 	if (isbannedip) {
-		(*checkme).isItNaughty = true;
-		(*checkme).whatIsNaughtyLog = o.language_list.getTranslation(100);
+		checkme->isItNaughty = true;
+		checkme->whatIsNaughtyLog = o.language_list.getTranslation(100);
 		// Your IP address is not allowed to web browse:
-		(*checkme).whatIsNaughtyLog += clienthost ? *clienthost : *clientip;
-		(*checkme).whatIsNaughty = o.language_list.getTranslation(101);
+		checkme->whatIsNaughtyLog += clienthost ? *clienthost : *clientip;
+		checkme->whatIsNaughty = o.language_list.getTranslation(101);
 		// Your IP address is not allowed to web browse.
 		if (room.empty())
-			(*checkme).whatIsNaughtyCategories = "Banned Client IP";
+			checkme->whatIsNaughtyCategories = "Banned Client IP";
 		else {
 			checkme->whatIsNaughtyCategories = "Banned Room";
 			checkme->whatIsNaughtyLog.append(" in ");
@@ -2872,12 +2872,12 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 		return;
 	}
 	else if (isbanneduser) {
-		(*checkme).isItNaughty = true;
-		(*checkme).whatIsNaughtyLog = o.language_list.getTranslation(102);
+		checkme->isItNaughty = true;
+		checkme->whatIsNaughtyLog = o.language_list.getTranslation(102);
 		// Your username is not allowed to web browse:
-		(*checkme).whatIsNaughtyLog += (*clientuser);
-		(*checkme).whatIsNaughty = (*checkme).whatIsNaughtyLog;
-		(*checkme).whatIsNaughtyCategories = "Banned User";
+		checkme->whatIsNaughtyLog += (*clientuser);
+		checkme->whatIsNaughty = checkme->whatIsNaughtyLog;
+		checkme->whatIsNaughtyCategories = "Banned User";
 		return;
 	}
 
@@ -2918,35 +2918,46 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 
 	// only apply bans to things not in the grey lists
 	bool is_ip = isIPHostnameStrip(temp);
-	if (!((*o.fg[filtergroup]).inGreySiteList(temp, true, is_ip, is_ssl) || (*o.fg[filtergroup]).inGreyURLList(temp, true, is_ip, is_ssl))) {
-		if (!(*checkme).isItNaughty) {
-			if ((i = (*o.fg[filtergroup]).inBannedSiteList(temp, true, is_ip, is_ssl)) != NULL) {
+
+	if (((j = o.fg[filtergroup]->inBannedRegExpURLList(temp)) >= 0) && (o.fg[filtergroup]->enable_regex_grey == true)) {
+		checkme->isItNaughty = true;
+		checkme->whatIsNaughtyLog = o.language_list.getTranslation(503);
+		// Banned Regular Expression URL:
+		checkme->whatIsNaughtyLog += o.fg[filtergroup]->banned_regexpurl_list_source[j].toCharArray();
+		checkme->whatIsNaughty = o.language_list.getTranslation(504);
+		// Banned Regular Expression URL found.
+		checkme->whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_regexpurl_list_ref[j]]->category.toCharArray();
+	}
+
+	if (!(o.fg[filtergroup]->inGreySiteList(temp, true, is_ip, is_ssl) || o.fg[filtergroup]->inGreyURLList(temp, true, is_ip, is_ssl))) {
+		if (!checkme->isItNaughty) {
+			if ((i = o.fg[filtergroup]->inBannedSiteList(temp, true, is_ip, is_ssl)) != NULL) {
 				// need to reintroduce ability to produce the blanket block messages
-				(*checkme).whatIsNaughty = o.language_list.getTranslation(500);  // banned site
-				(*checkme).whatIsNaughty += i;
-				(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-				(*checkme).isItNaughty = true;
-				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_site_list]).lastcategory.toCharArray();
+				checkme->whatIsNaughty = o.language_list.getTranslation(500);  // banned site
+				checkme->whatIsNaughty += i;
+				checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
+				checkme->isItNaughty = true;
+				checkme->whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_site_list]->lastcategory.toCharArray();
 			}
 		}
 
-		if (!(*checkme).isItNaughty) {
-			if ((i = (*o.fg[filtergroup]).inBannedURLList(temp, true, is_ip, is_ssl)) != NULL) {
-				(*checkme).whatIsNaughty = o.language_list.getTranslation(501);
+		if (!checkme->isItNaughty) {
+			if ((i = o.fg[filtergroup]->inBannedURLList(temp, true, is_ip, is_ssl)) != NULL) {
+				checkme->whatIsNaughty = o.language_list.getTranslation(501);
 				// Banned URL:
-				(*checkme).whatIsNaughty += i;
-				(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-				(*checkme).isItNaughty = true;
-				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_url_list]).lastcategory.toCharArray();
+				checkme->whatIsNaughty += i;
+				checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
+				checkme->isItNaughty = true;
+				checkme->whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_url_list]->lastcategory.toCharArray();
 			}
-			else if ((j = (*o.fg[filtergroup]).inBannedRegExpURLList(temp)) >= 0) {
-				(*checkme).isItNaughty = true;
-				(*checkme).whatIsNaughtyLog = o.language_list.getTranslation(503);
+			else if (((j = o.fg[filtergroup]->inBannedRegExpURLList(temp)) >= 0) && (o.fg[filtergroup]->enable_regex_grey == false)) {
+				checkme->isItNaughty = true;
+				checkme->whatIsNaughtyLog = o.language_list.getTranslation(503);
 				// Banned Regular Expression URL:
-				(*checkme).whatIsNaughtyLog += (*o.fg[filtergroup]).banned_regexpurl_list_source[j].toCharArray();
-				(*checkme).whatIsNaughty = o.language_list.getTranslation(504);
+				checkme->whatIsNaughtyLog += o.fg[filtergroup]->banned_regexpurl_list_source[j].toCharArray();
+				checkme->whatIsNaughty = o.language_list.getTranslation(504);
 				// Banned Regular Expression URL found.
-				(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_regexpurl_list_ref[j]]).category.toCharArray();
+				checkme->whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_regexpurl_list_ref[j]]->category.toCharArray();
 			}
 			else if ((j = o.fg[filtergroup]->inBannedRegExpHeaderList(header->header)) >= 0) {
 				checkme->isItNaughty = true;
@@ -2957,7 +2968,7 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 			}
 		}
 		// look for URLs within URLs - ban, for example, images originating from banned sites during a Google image search.
-		if (!(*checkme).isItNaughty && (*o.fg[filtergroup]).deep_url_analysis) {
+		if (!checkme->isItNaughty && o.fg[filtergroup]->deep_url_analysis) {
 #ifdef DGDEBUG
 			std::cout << dbgPeerPort << " -starting deep analysis" << std::endl;
 #endif
@@ -2979,23 +2990,23 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 #endif
 					continue;
 				}
-				if ((i = (*o.fg[filtergroup]).inBannedSiteList(deepurl)) != NULL) {
-					(*checkme).whatIsNaughty = o.language_list.getTranslation(500); // banned site
-					(*checkme).whatIsNaughty += i;
-					(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-					(*checkme).isItNaughty = true;
-					(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_site_list]).lastcategory.toCharArray();
+				if ((i = o.fg[filtergroup]->inBannedSiteList(deepurl)) != NULL) {
+					checkme->whatIsNaughty = o.language_list.getTranslation(500); // banned site
+					checkme->whatIsNaughty += i;
+					checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
+					checkme->isItNaughty = true;
+					checkme->whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_site_list]->lastcategory.toCharArray();
 #ifdef DGDEBUG
 					std::cout << dbgPeerPort << " -deep site: " << deepurl << std::endl;
 #endif
 				}
-				else if ((i = (*o.fg[filtergroup]).inBannedURLList(deepurl)) != NULL) {
-					(*checkme).whatIsNaughty = o.language_list.getTranslation(501);
+				else if ((i = o.fg[filtergroup]->inBannedURLList(deepurl)) != NULL) {
+					checkme->whatIsNaughty = o.language_list.getTranslation(501);
 					 // Banned URL:
-					(*checkme).whatIsNaughty += i;
-					(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-					(*checkme).isItNaughty = true;
-					(*checkme).whatIsNaughtyCategories = (*o.lm.l[(*o.fg[filtergroup]).banned_url_list]).lastcategory.toCharArray();
+					checkme->whatIsNaughty += i;
+					checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
+					checkme->isItNaughty = true;
+					checkme->whatIsNaughtyCategories = o.lm.l[o.fg[filtergroup]->banned_url_list]->lastcategory.toCharArray();
 #ifdef DGDEBUG
 					std::cout << dbgPeerPort << " -deep url: " << deepurl << std::endl;
 #endif
@@ -3013,8 +3024,8 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 	//ssl cert checking is enabled,
 	//ssl mitm is disabled (will get checked by that anyway)
 	//its a connection to port 443
-	if(is_ssl && !((*checkme).isItNaughty) && (*o.fg[filtergroup]).ssl_check_cert &&
-		!(*o.fg[filtergroup]).ssl_mitm && (*header).port == 443)
+	if(is_ssl && !(checkme->isItNaughty) && o.fg[filtergroup]->ssl_check_cert &&
+		!o.fg[filtergroup]->ssl_mitm && (*header).port == 443)
 	{
 	
 #ifdef DGDEBUG
@@ -3025,10 +3036,10 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 		//connect to the local proxy then do a connect 
 		//to make sure we go through any upstream proxys
 		if (ssl_sock.connect(o.proxy_ip.c_str(),o.proxy_port) < 0){
-			(*checkme).whatIsNaughty = "Could not connect to proxy server" ;
-			(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-			(*checkme).isItNaughty = true;
-			(*checkme).whatIsNaughtyCategories = "SSL Site";
+			checkme->whatIsNaughty = "Could not connect to proxy server" ;
+			checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
+			checkme->isItNaughty = true;
+			checkme->whatIsNaughtyCategories = "SSL Site";
 #ifdef DGDEBUG
 			syslog(LOG_ERR, "error opening socket\n");
 			std::cout << dbgPeerPort << " -couldnt connect to proxy for ssl certificate checks. failed with error " << strerror(errno) << std::endl;
@@ -3053,10 +3064,10 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 		//start an ssl client
 		std::string certpath(o.ssl_certificate_path.c_str());
 		if(ssl_sock.startSslClient(certpath) < 0){
-			(*checkme).whatIsNaughty = "Could not open ssl connection" ;
-			(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-			(*checkme).isItNaughty = true;
-			(*checkme).whatIsNaughtyCategories = "SSL Site";
+			checkme->whatIsNaughty = "Could not open ssl connection" ;
+			checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
+			checkme->isItNaughty = true;
+			checkme->whatIsNaughtyCategories = "SSL Site";
 #ifdef DGDEBUG
 			syslog(LOG_ERR, "error opening ssl connection\n");
 			std::cout << dbgPeerPort << " -couldnt connect ssl server to check certificate. failed with error " << strerror(errno) << std::endl;
@@ -3093,7 +3104,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		bool dohash = false;
 		if (reporting_level > 0) {
 			// generate a filter bypass hash
-			if (!wasinfected && ((*o.fg[filtergroup]).bypass_mode != 0) && !ispostblock) {
+			if (!wasinfected && (o.fg[filtergroup]->bypass_mode != 0) && !ispostblock) {
 #ifdef DGDEBUG
 				std::cout << dbgPeerPort << " -Enabling filter bypass hash generation" << std::endl;
 #endif
@@ -3102,9 +3113,9 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 					dohash = true;
 			}
 			// generate an infection bypass hash
-			else if (wasinfected && (*o.fg[filtergroup]).infection_bypass_mode != 0) {
+			else if (wasinfected && o.fg[filtergroup]->infection_bypass_mode != 0) {
 				// only generate if scanerror (if option to only bypass scan errors is enabled)
-				if ((*o.fg[filtergroup]).infection_bypass_errors_only ? scanerror : true) {
+				if (o.fg[filtergroup]->infection_bypass_errors_only ? scanerror : true) {
 #ifdef DGDEBUG
 					std::cout << dbgPeerPort << " -Enabling infection bypass hash generation" << std::endl;
 #endif
@@ -3124,13 +3135,13 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 			// if reporting_level = 1 or 2 and headersent then we can't
 			// send a redirect so we have to display the template instead
 
-			(*proxysock).close();  // finished with proxy
-			(*peerconn).readyForOutput(10);
+			proxysock->close();  // finished with proxy
+			peerconn->readyForOutput(10);
 
 #ifdef __SSLMITM
-			if ((*header).requestType().startsWith("CONNECT") && !(*peerconn).isSsl()) {
+			if (header->requestType().startsWith("CONNECT") && !peerconn->isSsl()) {
 #else
-			if ((*header).requestType().startsWith("CONNECT")) {
+			if (header->requestType().startsWith("CONNECT")) {
 #endif
 				// if it's a CONNECT then headersent can't be set
 				// so we don't need to worry about it
@@ -3154,7 +3165,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				writestring += "</BODY></HTML>\n";
 
 				try {	// writestring throws exception on error/timeout
-					(*peerconn).writeString(writestring.toCharArray());
+					peerconn->writeString(writestring.toCharArray());
 				}
 				catch(std::exception & e) {
 				}
@@ -3174,7 +3185,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 					String lurl((*url));
 					lurl.toLower();
 					if (lurl.endsWith(".gif") || lurl.endsWith(".jpg") || lurl.endsWith(".jpeg") || lurl.endsWith(".jpe")
-						|| lurl.endsWith(".png") || lurl.endsWith(".bmp") || (*docheader).isContentType("image/"))
+						|| lurl.endsWith(".png") || lurl.endsWith(".bmp") || docheader->isContentType("image/"))
 					{
 						replaceimage = true;
 					}
@@ -3183,7 +3194,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				if (o.use_custom_banned_flash) {
 					String lurl((*url));
 					lurl.toLower();
-					if (lurl.endsWith(".swf") || (*docheader).isContentType("application/x-shockwave-flash"))
+					if (lurl.endsWith(".swf") || docheader->isContentType("application/x-shockwave-flash"))
 					{
 						replaceflash = true;
 					}
@@ -3193,14 +3204,14 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				// (or advanced ad block page, or HTML page with bypass URLs)
 				if (replaceimage) {
 					if (headersent == 0) {
-						(*peerconn).writeString("HTTP/1.0 200 OK\n");
+						peerconn->writeString("HTTP/1.0 200 OK\n");
 					}
 					o.banned_image.display(peerconn);
 				} 
 				else if (replaceflash)
 				{
 					if(headersent == 0) {
-						(*peerconn).writeString("HTTP/1.0 200 OK\n");
+						peerconn->writeString("HTTP/1.0 200 OK\n");
 					}
 					o.banned_flash.display(peerconn);
 				} else {
@@ -3219,7 +3230,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 						writestring += o.language_list.getTranslation(1101); // advert blocked
 						writestring += "</A></FONT></CENTER></BODY></HTML>\n";
 						try { // writestring throws exception on error/timeout
-							(*peerconn).writeString(writestring.toCharArray());
+							peerconn->writeString(writestring.toCharArray());
 						} catch (std::exception& e) {}
 					}
 					
@@ -3241,10 +3252,10 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 						}
 
 						if (headersent == 0) {
-							(*peerconn).writeString("HTTP/1.0 200 OK\n");
+							peerconn->writeString("HTTP/1.0 200 OK\n");
 						}
 						if (headersent < 2) {
-							(*peerconn).writeString("Content-type: text/html\n\n");
+							peerconn->writeString("Content-type: text/html\n\n");
 						}
 						// if the header has been sent then likely displaying the
 						// template will break the download, however as this is
@@ -3253,7 +3264,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 						// broken we don't mind too much
 						String fullurl = header->getUrl(true);
 						o.fg[filtergroup]->getHTMLTemplate()->display(peerconn,
-							&fullurl, (*checkme).whatIsNaughty, (*checkme).whatIsNaughtyLog,
+							&fullurl, checkme->whatIsNaughty, checkme->whatIsNaughtyLog,
 							// grab either the full category list or the thresholded list
 							(checkme->usedisplaycats ? checkme->whatIsNaughtyDisplayCategories : checkme->whatIsNaughtyCategories),
 							clientuser, clientip, clienthost, filtergroup, hashed);
@@ -3281,13 +3292,13 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				hashed = "2";
 			}
 
-			(*proxysock).close();  // finshed with proxy
-			(*peerconn).readyForOutput(10);
-			if ((*checkme).whatIsNaughty.length() > 2048) {
-				(*checkme).whatIsNaughty = String((*checkme).whatIsNaughty.c_str()).subString(0, 2048).toCharArray();
+			proxysock->close();  // finshed with proxy
+			peerconn->readyForOutput(10);
+			if (checkme->whatIsNaughty.length() > 2048) {
+				checkme->whatIsNaughty = String(checkme->whatIsNaughty.c_str()).subString(0, 2048).toCharArray();
 			}
-			if ((*checkme).whatIsNaughtyLog.length() > 2048) {
-				(*checkme).whatIsNaughtyLog = String((*checkme).whatIsNaughtyLog.c_str()).subString(0, 2048).toCharArray();
+			if (checkme->whatIsNaughtyLog.length() > 2048) {
+				checkme->whatIsNaughtyLog = String(checkme->whatIsNaughtyLog.c_str()).subString(0, 2048).toCharArray();
 			}
 			String writestring("HTTP/1.0 302 Redirect\n");
 			writestring += "Location: ";
@@ -3295,11 +3306,11 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 
 			if (o.non_standard_delimiter) {
 				writestring += "?DENIEDURL==";
-				writestring += miniURLEncode((*url).toCharArray()).c_str();
+				writestring += miniURLEncode(url->toCharArray()).c_str();
 				writestring += "::IP==";
-				writestring += (*clientip).c_str();
+				writestring += clientip->c_str();
 				writestring += "::USER==";
-				writestring += (*clientuser).c_str();
+				writestring += clientuser->c_str();
 				if (clienthost != NULL) {
 					writestring += "::HOST==";
 					writestring += clienthost->c_str();
@@ -3321,11 +3332,11 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				writestring += "::REASON==";
 			} else {
 				writestring += "?DENIEDURL=";
-				writestring += miniURLEncode((*url).toCharArray()).c_str();
+				writestring += miniURLEncode(url->toCharArray()).c_str();
 				writestring += "&IP=";
-				writestring += (*clientip).c_str();
+				writestring += clientip->c_str();
 				writestring += "&USER=";
-				writestring += (*clientuser).c_str();
+				writestring += clientuser->c_str();
 				if (clienthost != NULL) {
 					writestring += "&HOST=";
 					writestring += clienthost->c_str();
@@ -3345,12 +3356,12 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 				writestring += "&REASON=";
 			}
 			if (reporting_level == 1) {
-				writestring += miniURLEncode((*checkme).whatIsNaughty.c_str()).c_str();
+				writestring += miniURLEncode(checkme->whatIsNaughty.c_str()).c_str();
 			} else {
-				writestring += miniURLEncode((*checkme).whatIsNaughtyLog.c_str()).c_str();
+				writestring += miniURLEncode(checkme->whatIsNaughtyLog.c_str()).c_str();
 			}
 			writestring += "\n\n";
-			(*peerconn).writeString(writestring.toCharArray());
+			peerconn->writeString(writestring.toCharArray());
 #ifdef DGDEBUG			// debug stuff surprisingly enough
 			std::cout << dbgPeerPort << " -******* redirecting to:" << std::endl;
 			std::cout << dbgPeerPort << writestring << std::endl;
@@ -3360,7 +3371,7 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		
 		// the user is using the barebones banned page
 		else if (reporting_level == 0) {
-			(*proxysock).close();  // finshed with proxy
+			proxysock->close();  // finshed with proxy
 			String writestring("HTTP/1.0 200 OK\n");
 			writestring += "Content-type: text/html\n\n";
 			writestring += "<HTML><HEAD><TITLE>DansGuardian - ";
@@ -3368,8 +3379,8 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 			writestring += "</TITLE></HEAD><BODY><CENTER><H1>DansGuardian - ";
 			writestring += o.language_list.getTranslation(1);  // access denied
 			writestring += "</H1></CENTER></BODY></HTML>";
-			(*peerconn).readyForOutput(10);
-			(*peerconn).writeString(writestring.toCharArray());
+			peerconn->readyForOutput(10);
+			peerconn->writeString(writestring.toCharArray());
 #ifdef DGDEBUG			// debug stuff surprisingly enough
 			std::cout << dbgPeerPort << " -******* displaying:" << std::endl;
 			std::cout << dbgPeerPort << writestring << std::endl;
@@ -3379,20 +3390,20 @@ bool ConnectionHandler::denyAccess(Socket * peerconn, Socket * proxysock, HTTPHe
 		
 		// stealth mode
 		else if (reporting_level == -1) {
-			(*checkme).isItNaughty = false;  // dont block
+			checkme->isItNaughty = false;  // dont block
 		}
 	}
 	catch(std::exception & e) {
 	}
 	
 	// we blocked the request, so flush the client connection & close the proxy connection.
-	if ((*checkme).isItNaughty) {
+	if (checkme->isItNaughty) {
 		try {
-			(*peerconn).readyForOutput(10);  //as best a flush as I can
+			peerconn->readyForOutput(10);  //as best a flush as I can
 		}
 		catch(std::exception & e) {
 		}
-		(*proxysock).close();  // close connection to proxy
+		proxysock->close();  // close connection to proxy
 		// we said no to the request, so return true, indicating exit the connhandler
 		return true;  
 	}
@@ -3635,20 +3646,20 @@ int ConnectionHandler::sendProxyConnect(String &hostname, Socket * sock, Naughty
 		syslog(LOG_ERR, "Error creating tunnel through proxy\n");
 		std::cout << dbgPeerPort << " -Error creating tunnel through proxy" << strerror(errno) << std::endl;
 #endif
-		(*checkme).whatIsNaughty = "Unable to create tunnel through local proxy";
-		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-		(*checkme).isItNaughty = true;
-		(*checkme).whatIsNaughtyCategories = "SSL Site";
+		checkme->whatIsNaughty = "Unable to create tunnel through local proxy";
+		checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
+		checkme->isItNaughty = true;
+		checkme->whatIsNaughtyCategories = "SSL Site";
 
 		return -1;
 	}
 	//do http connect
 	if ( header.returnCode() != 200){
 		//connection failed
-		(*checkme).whatIsNaughty = "Opening tunnel failed";
-		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty + " with errror code " + String(header.returnCode());
-		(*checkme).isItNaughty = true;
-		(*checkme).whatIsNaughtyCategories = "SSL Site";
+		checkme->whatIsNaughty = "Opening tunnel failed";
+		checkme->whatIsNaughtyLog = checkme->whatIsNaughty + " with errror code " + String(header.returnCode());
+		checkme->isItNaughty = true;
+		checkme->whatIsNaughtyCategories = "SSL Site";
 
 #ifdef DGDEBUG
 		syslog(LOG_ERR, "Tunnel status not 200 ok aborting\n");
@@ -3673,17 +3684,17 @@ void ConnectionHandler::checkCertificate(String &hostname, Socket * sslsock, Nau
 	if(rc < 0){
 		//no certificate
 		checkme->isItNaughty = true;
-		(*checkme).whatIsNaughty = "No SSL certificate supplied by server";
-		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-		(*checkme).whatIsNaughtyCategories = "SSL Site";
+		checkme->whatIsNaughty = "No SSL certificate supplied by server";
+		checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
+		checkme->whatIsNaughtyCategories = "SSL Site";
 		return;
 	}
 	else if(rc != X509_V_OK) {
 		//something was wrong in the certificate
 		checkme->isItNaughty = true;
-		(*checkme).whatIsNaughty = "Certificate supplied by server was not valid";
-		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty + ": " + X509_verify_cert_error_string(rc);
-		(*checkme).whatIsNaughtyCategories = "SSL Site";
+		checkme->whatIsNaughty = "Certificate supplied by server was not valid";
+		checkme->whatIsNaughtyLog = checkme->whatIsNaughty + ": " + X509_verify_cert_error_string(rc);
+		checkme->whatIsNaughtyCategories = "SSL Site";
 		return;
 	}
 
@@ -3695,12 +3706,11 @@ void ConnectionHandler::checkCertificate(String &hostname, Socket * sslsock, Nau
 	if (sslsock->checkCertHostname(hostname) < 0){
 		//hostname was not matched by the certificate
 		checkme->isItNaughty = true;
-		(*checkme).whatIsNaughty = "Server's SSL certificate does not match domain name";
-		(*checkme).whatIsNaughtyLog = (*checkme).whatIsNaughty;
-		(*checkme).whatIsNaughtyCategories = "SSL Site";
+		checkme->whatIsNaughty = "Server's SSL certificate does not match domain name";
+		checkme->whatIsNaughtyLog = checkme->whatIsNaughty;
+		checkme->whatIsNaughtyCategories = "SSL Site";
 		return;
 	}
 }
 #endif //__SSLCERT
-
 
