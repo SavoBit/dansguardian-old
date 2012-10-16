@@ -9,7 +9,6 @@
 
 
 // INCLUDES
-
 #include <string>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -17,6 +16,8 @@
 #include <exception>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#include "Debug.hpp"
 
 int selectEINTR(int numfds, fd_set * readfds, fd_set * writefds, fd_set * exceptfds, struct timeval *timeout, bool honour_reloadconfig = false);
 

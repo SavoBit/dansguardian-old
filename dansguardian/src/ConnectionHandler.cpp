@@ -81,7 +81,7 @@ bool wasClean(String &url, const int fg)
 		return false;
 	}
 	if (ipcsock.connect(o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
-		syslog(LOG_ERR, "Error connecting via ipc to url cache: %s", strerror(errno));
+		syslog(LOG_ERR, "Error connecting via ipc to url cache: %s", ErrStr().c_str());
 		ipcsock.close();
 		return false;
 	}
@@ -130,9 +130,9 @@ void addToClean(String &url, const int fg)
 		return;
 	}
 	if (ipcsock.connect(o.urlipc_filename.c_str()) < 0) {	// conn to dedicated url cach proc
-		syslog(LOG_ERR, "Error connecting via ipc to url cache: %s", strerror(errno));
+		syslog(LOG_ERR, "Error connecting via ipc to url cache: %s", ErrStr().c_str());
 #ifdef DGDEBUG
-		std::cout << dbgPeerPort << " -Error connecting via ipc to url cache: " << strerror(errno) << std::endl;
+		std::cout << dbgPeerPort << " -Error connecting via ipc to url cache: " << ErrStr() << std::endl;
 #endif
 		return;
 	}
@@ -235,7 +235,7 @@ bool ConnectionHandler::gotIPs(std::string ipstr) {
 	}
 	// TODO: put in proper file name check
 	if (ipcsock.connect(o.ipipc_filename.c_str()) < 0) {  // connect to dedicated ip list proc
-		syslog(LOG_ERR, "Error connecting via ipc to IP cache: %s", strerror(errno));
+		syslog(LOG_ERR, "Error connecting via ipc to IP cache: %s", ErrStr().c_str());
 		return false;
 	}
 	char reply;
@@ -792,7 +792,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 				// connect transparently, and we can assume they aren't vulnerable.
 				if (getsockopt(peerconn.getFD(), SOL_IP, SO_ORIGINAL_DST, &origaddr, &origaddrlen) < 0)
 				{
-					syslog(LOG_ERR, "Failed to get client's original destination IP: %s", strerror(errno));
+					syslog(LOG_ERR, "Failed to get client's original destination IP: %s", ErrStr());
 					break;
 				}
 
@@ -818,7 +818,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 					if (result)
 					{
 						freeaddrinfo(results);
-						syslog(LOG_ERR, "Cannot resolve hostname for host header checks: %s", gai_strerror(errno));
+						syslog(LOG_ERR, "Cannot resolve hostname for host header checks: %s", gai_ErrStr());
 						break;
 					}
 					addrinfo *current = results;
@@ -2110,7 +2110,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 										if ((storefd = mkstemp(storedname)) < 0)
 										{
 											std::ostringstream ss;
-											ss << "Could not create file for single-part POST data: " << strerror(errno);
+											ss << "Could not create file for single-part POST data: " << ErrStr();
 											throw std::runtime_error(ss.str().c_str());
 										}
 #ifdef DGDEBUG
@@ -2129,7 +2129,7 @@ void ConnectionHandler::handleConnection(Socket &peerconn, String &ip)
 										if (rc < 0 && errno != EINTR)
 										{
 											std::ostringstream ss;
-											ss << "Could not write single-part POST data to file: " << strerror(errno);
+											ss << "Could not write single-part POST data to file: " << ErrStr();
 											do
 											{
 												rc = close(storefd);
@@ -2830,8 +2830,8 @@ void ConnectionHandler::doLog(std::string &who, std::string &from, String &where
 		}
 		if (ipcsock.connect(o.ipc_filename.c_str()) < 0) {
 			if (!is_daemonised)
-				std::cout << " -Error connecting via IPC socket to log: " << strerror(errno) << std::endl;
-			syslog(LOG_ERR, "Error connecting via IPC socket to log: %s", strerror(errno));
+				std::cout << " -Error connecting via IPC socket to log: " << ErrStr() << std::endl;
+			syslog(LOG_ERR, "Error connecting via IPC socket to log: %s", ErrStr().c_str());
 			ipcsock.close();
 			return;
 		}
@@ -3042,7 +3042,7 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 			checkme->whatIsNaughtyCategories = "SSL Site";
 #ifdef DGDEBUG
 			syslog(LOG_ERR, "error opening socket\n");
-			std::cout << dbgPeerPort << " -couldnt connect to proxy for ssl certificate checks. failed with error " << strerror(errno) << std::endl;
+			std::cout << dbgPeerPort << " -couldnt connect to proxy for ssl certificate checks. failed with error " << ErrStr() << std::endl;
 #endif
 			return;
 		}
@@ -3070,7 +3070,7 @@ void ConnectionHandler::requestChecks(HTTPHeader *header, NaughtyFilter *checkme
 			checkme->whatIsNaughtyCategories = "SSL Site";
 #ifdef DGDEBUG
 			syslog(LOG_ERR, "error opening ssl connection\n");
-			std::cout << dbgPeerPort << " -couldnt connect ssl server to check certificate. failed with error " << strerror(errno) << std::endl;
+			std::cout << dbgPeerPort << " -couldnt connect ssl server to check certificate. failed with error " << ErrStr() << std::endl;
 #endif
 			return;
 		}
@@ -3644,7 +3644,7 @@ int ConnectionHandler::sendProxyConnect(String &hostname, Socket * sock, Naughty
 
 #ifdef DGDEBUG
 		syslog(LOG_ERR, "Error creating tunnel through proxy\n");
-		std::cout << dbgPeerPort << " -Error creating tunnel through proxy" << strerror(errno) << std::endl;
+		std::cout << dbgPeerPort << " -Error creating tunnel through proxy" << ErrStr() << std::endl;
 #endif
 		checkme->whatIsNaughty = "Unable to create tunnel through local proxy";
 		checkme->whatIsNaughtyLog = checkme->whatIsNaughty;

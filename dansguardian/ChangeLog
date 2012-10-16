@@ -1,5 +1,7 @@
 October 2012 - Dansguardian 2.12.0.4 - beta 
 - Applied patch #1 (subdomain block of greylist domains/sites) by Frederic Bourgeois
+- Added new functions for (soon to be) debug and error messages into Debug.cpp by Aecio F. Neto 
+- Fixed incompatible compilation under OpenIndiana reported by Peter Arnold
 
 September 2012 - Dansguardian 2.12.0.3 - alpha
 - Fixed memory leaks reported by analysis from coverity

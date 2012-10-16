@@ -175,9 +175,9 @@ int DataBuffer::getTempFileFD()
 	umask(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 	if ((tempfilefd = mkstemp(tempfilepatharray)) < 0) {
 #ifdef DGDEBUG
-		std::cerr << "error creating temp " << tempfilepath << ": " << strerror(errno) << std::endl;
+		std::cerr << "error creating temp " << tempfilepath << ": " << ErrStr() << std::endl;
 #endif
-		syslog(LOG_ERR, "Could not create temp file to store download for scanning: %s", strerror(errno));
+		syslog(LOG_ERR, "Could not create temp file to store download for scanning: %s", ErrStr().c_str());
 		tempfilefd = -1;
 		tempfilepath = "";
 	} else {
@@ -255,7 +255,7 @@ void DataBuffer::out(Socket * sock) throw(std::exception)
 		int rc;
 
 		if (lseek(tempfilefd, bytesalreadysent, SEEK_SET) < 0)
-			throw std::runtime_error(std::string("Can't write to socket: ") + strerror(errno));
+			throw std::runtime_error(std::string("Can't write to socket: ") + ErrStr());
 
 		while (sent < tempfilesize) {
 			rc = readEINTR(tempfilefd, data, buffer_length);
@@ -276,7 +276,7 @@ void DataBuffer::out(Socket * sock) throw(std::exception)
 			}
 			// as it's cached to disk the buffer must be reasonably big
 			if (!sock->writeToSocket(data, rc, 0, timeout)) {
-				throw std::runtime_error(std::string("Can't write to socket: ") + strerror(errno));
+				throw std::runtime_error(std::string("Can't write to socket: ") + ErrStr());
 			}
 			sent += rc;
 #ifdef DGDEBUG

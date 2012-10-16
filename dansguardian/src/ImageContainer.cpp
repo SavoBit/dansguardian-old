@@ -13,8 +13,8 @@
 #include <syslog.h>
 #include <iostream>
 #include <fstream>
-#include <stdexcept>
 #include <cerrno>
+#include <stdexcept>
 #include <limits.h>
 
 
@@ -57,7 +57,7 @@ void ImageContainer::display(Socket * s)
 	s->writeString("\n\n");
 
 	if (!s->writeToSocket(image, imagelength, 0, s->getTimeout()))
-		throw std::runtime_error(std::string("Can't write to socket: ") + strerror(errno));
+		throw std::runtime_error(std::string("Can't write to socket: ") + ErrStr());
 }
 
 // read image from file

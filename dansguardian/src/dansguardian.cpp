@@ -304,8 +304,8 @@ int main(int argc, char *argv[])
 	if ((sg = getgrnam(o.daemon_group_name.c_str())) != 0) {
 		o.proxy_group = sg->gr_gid;
 	} else {
-		syslog(LOG_ERR, "Unable to getgrnam(): %s", strerror(errno));
-		std::cerr << "Unable to getgrnam(): " << strerror(errno) << std::endl;
+		syslog(LOG_ERR, "Unable to getgrnam(): %s", ErrStr().c_str());
+		std::cerr << "Unable to getgrnam(): " << ErrStr() << std::endl;
 		return 1;
 	}
 

@@ -9,6 +9,7 @@
 
 
 // INCLUDES
+#include "Debug.hpp"
 #include "Socket.hpp"
 #include "String.hpp"
 

@@ -12,6 +12,7 @@
 #endif
 #include "SocketArray.hpp"
 
+#include <string.h>
 #include <syslog.h>
 #include <cerrno>
 
@@ -94,9 +95,9 @@ int SocketArray::bindAll(std::deque<String> &ips, std::deque<String> &ports)
 		if (drawer[i].bind(ips[i].toCharArray(), ports[i].toInteger())) {
 			if (!is_daemonised) {
 				std::cerr << "Error binding server socket: ["
-					<< ports[i] << " " << ips[i] << " " << i << "] (" << strerror(errno) << ")" << std::endl;
+					<< ports[i] << " " << ips[i] << " " << i << "] (" << ErrStr() << ")" << std::endl;
 			}
-			syslog(LOG_ERR, "Error binding socket: [%s %s %d] (%s)", ports[i].toCharArray(), ips[i].toCharArray(), i, strerror(errno));
+			syslog(LOG_ERR, "Error binding socket: [%s %s %d] (%s)", ports[i].toCharArray(), ips[i].toCharArray(), i, ErrStr().c_str());
 			return -1;
 		}
 	}

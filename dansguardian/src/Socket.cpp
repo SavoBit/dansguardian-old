@@ -233,7 +233,7 @@ int Socket::startSslClient(const std::string& certificate_path)
 	{
 		//needed to get the errors when creating ctx
 		//ERR_print_errors_fp(stderr);
-		//printerr(strerror(errno));
+		//printerr(ErrStr());
 #ifdef DGDEBUG
 		//syslog(LOG_ERR, "error creating ssl context\n");
 		std::cout << "Error ssl context is null (check that openssl has been inited)" << std::endl;
@@ -275,7 +275,7 @@ int Socket::startSslClient(const std::string& certificate_path)
 	if (rc < 0)
 	{
 		ERR_print_errors_fp(stderr);
-		//printerr(strerror(errno));
+		//printerr(ErrStr());
 #ifdef DGDEBUG
 		std::cout << "ssl_connect failed with error " << SSL_get_error(ssl,rc) << std::endl;
 #endif
@@ -723,7 +723,7 @@ int Socket::getLine(char *buff, int size, int timeout, bool honour_reloadconfig,
 		try {
 			checkForInput(timeout, honour_reloadconfig);
 		} catch(std::exception & e) {
-			throw std::runtime_error(std::string("Can't read from socket: ") + strerror(errno));  // on error
+			throw std::runtime_error(std::string("Can't read from socket: ") + ErrStr());  // on error
 		}
 		bufflen = SSL_read(ssl, buffer, 1024);
 #ifdef DGDEBUG
@@ -734,7 +734,7 @@ int Socket::getLine(char *buff, int size, int timeout, bool honour_reloadconfig,
 				continue;
 			}
 			std::cout << "SSL_read failed with error " << SSL_get_error(ssl,bufflen) << std::endl;
-			throw std::runtime_error(std::string("Can't read from ssl socket"));//strerror(errno));  // on error
+			throw std::runtime_error(std::string("Can't read from ssl socket"));//ErrStr());  // on error
 		}
 		//if socket closed...
 		if (bufflen == 0) {
@@ -769,7 +769,7 @@ void Socket::writeString(const char *line) throw(std::exception)
 {
 	int l = strlen(line);
 	if (!writeToSocket(line, l, 0, timeout)) {
-		throw std::runtime_error(std::string("Can't write to socket: ") + strerror(errno));
+		throw std::runtime_error(std::string("Can't write to socket: ") + ErrStr());
 	}
 }
 
@@ -777,7 +777,7 @@ void Socket::writeString(const char *line) throw(std::exception)
 void Socket::writeToSockete(const char *buff, int len, unsigned int flags, int timeout, bool honour_reloadconfig) throw(std::exception)
 {
 	if (!writeToSocket(buff, len, flags, timeout, honour_reloadconfig)) {
-		throw std::runtime_error(std::string("Can't write to socket: ") + strerror(errno));
+		throw std::runtime_error(std::string("Can't write to socket: ") + ErrStr());
 	}
 }
 

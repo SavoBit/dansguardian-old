@@ -63,7 +63,7 @@ bool FDTunnel::tunnel(Socket &sockfrom, Socket &sockto, bool twoway, off_t targe
 		std::cout << "Data in fdfrom's buffer; sending " << (sockfrom.bufflen - sockfrom.buffstart) << " bytes" << std::endl;
 #endif
 		if (!sockto.writeToSocket(sockfrom.buffer + sockfrom.buffstart, sockfrom.bufflen - sockfrom.buffstart, 0, 120, false))
-			throw std::runtime_error(std::string("Can't write to socket: ") + strerror(errno));
+			throw std::runtime_error(std::string("Can't write to socket: ") + ErrStr());
 		
 		throughput += sockfrom.bufflen - sockfrom.buffstart;
 		sockfrom.bufflen = 0;

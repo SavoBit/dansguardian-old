@@ -90,7 +90,7 @@ int CSPlugin::makeTempFile(String * filename)
 	umask(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 	if ((tempfilefd = mkstemp(tempfilepatharray)) < 1) {
 #ifdef DGDEBUG
-		std::cerr << "error creating cs temp " << tempfilepath << ": " << strerror(errno) << std::endl;
+		std::cerr << "error creating cs temp " << tempfilepath << ": " << ErrStr() << std::endl;
 #endif
 		syslog(LOG_ERR, "%s", "Could not create cs temp file.");
 		tempfilefd = -1;

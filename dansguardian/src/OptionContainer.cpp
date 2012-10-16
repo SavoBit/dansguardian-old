@@ -792,7 +792,7 @@ void OptionContainer::loadRooms()
 	DIR* d = opendir(per_room_blocking_directory_location.c_str());
 	if (d == NULL)
 	{
-		syslog(LOG_ERR, "Could not open room definitions directory: %s", strerror(errno));
+		syslog(LOG_ERR, "Could not open room definitions directory: %s", ErrStr().c_str());
 		exit(1);
 	}
 
@@ -820,7 +820,7 @@ void OptionContainer::loadRooms()
 	{
 		if (errno != EINTR)
 		{
-			syslog(LOG_ERR, "Could not close room definitions directory: %s", strerror(errno));
+			syslog(LOG_ERR, "Could not close room definitions directory: %s", ErrStr().c_str());
 			exit(1);
 		}
 	}

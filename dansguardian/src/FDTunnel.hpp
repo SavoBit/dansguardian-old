@@ -11,9 +11,8 @@
 
 
 // INCLUDES
-
 #include "Socket.hpp"
-
+#include "Debug.hpp"
 
 // DECLARATIONS
 

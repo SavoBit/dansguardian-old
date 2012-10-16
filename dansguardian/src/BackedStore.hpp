@@ -5,6 +5,8 @@
 #ifndef __HPP_BACKEDSTORE
 #define __HPP_BACKEDSTORE
 
+#include "Debug.hpp"
+
 // Class into which data can be liberally shoved into RAM up to threshold
 // A, then automagically stored on disk instead up to threshold B, then
 // start failing (but with sensible errors).

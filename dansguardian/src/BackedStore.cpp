@@ -59,12 +59,12 @@ BackedStore::~BackedStore()
 		while (rc < 0 && errno == EINTR);
 #ifdef DGDEBUG
 		if (rc < 0)
-			std::cout << "BackedStore: cannot close temp file fd: " << strerror(errno) << std::endl;
+			std::cout << "BackedStore: cannot close temp file fd: " << ErrStr() << std::endl;
 #endif
 		rc = unlink(filename);
 #ifdef DGDEBUG
 		if (rc < 0)
-			std::cout << "BackedStore: cannot delete temp file: " << strerror(errno) << std::endl;
+			std::cout << "BackedStore: cannot delete temp file: " << ErrStr() << std::endl;
 #endif
 		free(filename);
 	}
@@ -107,7 +107,7 @@ bool BackedStore::append(const char *data, size_t len)
 			if ((fd = mkstemp(filename)) < 0)
 			{
 				std::ostringstream ss;
-				ss << "BackedStore could not create temp file: " << strerror(errno);
+				ss << "BackedStore could not create temp file: " << ErrStr();
 				free(filename);
 				throw std::runtime_error(ss.str().c_str());
 			}
@@ -128,7 +128,7 @@ bool BackedStore::append(const char *data, size_t len)
 			if (rc < 0 && errno != EINTR)
 			{
 				std::ostringstream ss;
-				ss << "BackedStore could not dump RAM buffer to temp file: " << strerror(errno);
+				ss << "BackedStore could not dump RAM buffer to temp file: " << ErrStr();
 				throw std::runtime_error(ss.str().c_str());
 			}
 			length = rambuf.size();
@@ -165,7 +165,7 @@ bool BackedStore::append(const char *data, size_t len)
 		if (rc < 0 && errno != EINTR)
 		{
 			std::ostringstream ss;
-			ss << "BackedStore could not dump RAM buffer to temp file: " << strerror(errno);
+			ss << "BackedStore could not dump RAM buffer to temp file: " << ErrStr();
 			throw std::runtime_error(ss.str().c_str());
 		}
 		length += len;
@@ -197,7 +197,7 @@ void BackedStore::finalise()
 	if (map == MAP_FAILED)
 	{
 		std::ostringstream ss;
-		ss << "BackedStore could not mmap() temp file: " << strerror(errno);
+		ss << "BackedStore could not mmap() temp file: " << ErrStr();
 		throw std::runtime_error(ss.str().c_str());
 	}
 }
@@ -251,7 +251,7 @@ std::string BackedStore::store(const char *prefix)
 			// Failure - but ignore EXDEV, as we can "recover"
 			// from that by taking a different approach
 			std::ostringstream ss;
-			ss << "BackedStore could not create link to existing temp file: " << strerror(errno);
+			ss << "BackedStore could not create link to existing temp file: " << ErrStr();
 			throw std::runtime_error(ss.str().c_str());
 		}
 	}
@@ -272,7 +272,7 @@ std::string BackedStore::store(const char *prefix)
 	if ((storefd = mkstemp(storedname)) < 0)
 	{
 		std::ostringstream ss;
-		ss << "BackedStore could not create stored file: " << strerror(errno);
+		ss << "BackedStore could not create stored file: " << ErrStr();
 		throw std::runtime_error(ss.str().c_str());
 	}
 #ifdef DGDEBUG
@@ -309,7 +309,7 @@ std::string BackedStore::store(const char *prefix)
 	if (rc < 0 && errno != EINTR)
 	{
 		std::ostringstream ss;
-		ss << "BackedStore could not dump RAM buffer to temp file: " << strerror(errno);
+		ss << "BackedStore could not dump RAM buffer to temp file: " << ErrStr();
 		do
 		{
 			rc = close(storefd);

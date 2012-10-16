@@ -232,7 +232,7 @@ bool drop_priv_completely()
 	if (rc == -1) {
 		syslog(LOG_ERR, "%s", "Unable to seteuid(suid)");
 #ifdef DGDEBUG
-		std::cout << strerror(errno) << std::endl;
+		std::cout << ErrStr() << std::endl;
 #endif
 		return false;  // setuid failed for some reason so exit with error
 	}
@@ -363,7 +363,7 @@ int prefork(int num)
 			syslog(LOG_ERR, "%s", "Unable to fork() any more.");
 #ifdef DGDEBUG
 			std::cout << "Unable to fork() any more." << std::endl;
-			std::cout << strerror(errno) << std::endl;
+			std::cout << ErrStr() << std::endl;
 			std::cout << "numchildren:" << numchildren << std::endl;
 #endif
 			failurecount++;  // log the error/failure
@@ -1846,9 +1846,9 @@ int fc_controlit()
 		// listen/bind to a port on any interface
 		if (serversockets.bindSingle(o.filter_port)) {
 			if (!is_daemonised) {
-				std::cerr << "Error binding server socket: [" << o.filter_port << "] (" << strerror(errno) << ")" << std::endl;
+				std::cerr << "Error binding server socket: [" << o.filter_port << "] (" << ErrStr() << ")" << std::endl;
 			}
-			syslog(LOG_ERR, "Error binding server socket: [%d] (%s)", o.filter_port, strerror(errno));
+			syslog(LOG_ERR, "Error binding server socket: [%d] (%s)", o.filter_port, ErrStr().c_str());
 			close(pidfilefd);
 			free(serversockfds);
 			return 1;
@@ -1980,7 +1980,7 @@ int fc_controlit()
 	// this has to be done after daemonise to ensure we get the correct PID.
 	rc = sysv_writepidfile(pidfilefd);  // also closes the fd
 	if (rc != 0) {
-		syslog(LOG_ERR, "Error writing to the dansguardian.pid file: %s", strerror(errno));
+		syslog(LOG_ERR, "Error writing to the dansguardian.pid file: %s", ErrStr().c_str());
 		free(serversockfds);
 		return false;
 	}
@@ -2254,14 +2254,14 @@ int fc_controlit()
 
 		if (rc < 0) {	// was an error
 #ifdef DGDEBUG
-			std::cout << "errno:" << errno << " " << strerror(errno) << std::endl;
+			std::cout << "errno:" << errno << " " << ErrStr() << std::endl;
 #endif
 
 			if (errno == EINTR) {
 				continue;  // was interupted by a signal so restart
 			}
 			if (o.logconerror)
-				syslog(LOG_ERR, "Error polling child process sockets: %s", strerror(errno));
+				syslog(LOG_ERR, "Error polling child process sockets: %s", ErrStr().c_str());
 			failurecount++;  // log the error/failure
 			continue;  // then continue with the looping
 		}

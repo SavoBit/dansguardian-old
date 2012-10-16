@@ -877,7 +877,7 @@ bool ListContainer::makeGraph(bool fqs)
 	current_graphdata_size = (GRAPHENTRYSIZE * ((data_length / 3) + 1)) + ROOTOFFSET;
 	realgraphdata = (int*) calloc(current_graphdata_size, sizeof(int));
 	if (realgraphdata == NULL) {
-		syslog(LOG_ERR, "Cannot allocate memory for phrase tree: %s", strerror(errno));
+		syslog(LOG_ERR, "Cannot allocate memory for phrase tree: %s", ErrStr().c_str());
 		return false;
 	}
 	graphitems++;
@@ -901,7 +901,7 @@ bool ListContainer::makeGraph(bool fqs)
 
 	realgraphdata = (int*) realloc(realgraphdata, sizeof(int) * ((GRAPHENTRYSIZE * graphitems) + ROOTOFFSET));
 	if (realgraphdata == NULL) {
-		syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", strerror(errno));
+		syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", ErrStr().c_str());
 		return false;
 	}
 
@@ -1313,7 +1313,7 @@ void ListContainer::graphAdd(String s, const int inx, int item)
 			int new_current_graphdata_size = (GRAPHENTRYSIZE * (graphitems + 256)) + ROOTOFFSET;
 			realgraphdata = (int*) realloc(realgraphdata, sizeof(int) * new_current_graphdata_size);
 			if (realgraphdata == NULL) {
-				syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", strerror(errno));
+				syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", ErrStr().c_str());
 				exit(1);
 			}
 			memset(realgraphdata + current_graphdata_size, 0, sizeof(int) * (new_current_graphdata_size - current_graphdata_size));
@@ -1374,7 +1374,7 @@ void ListContainer::graphAdd(String s, const int inx, int item)
 				int new_current_graphdata_size = (GRAPHENTRYSIZE * (graphitems + 256)) + ROOTOFFSET;
 				realgraphdata = (int*) realloc(realgraphdata, sizeof(int) * new_current_graphdata_size);
 				if (realgraphdata == NULL) {
-					syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", strerror(errno));
+					syslog(LOG_ERR, "Cannot reallocate memory for phrase tree: %s", ErrStr().c_str());
 					exit(1);
 				}
 				memset(realgraphdata + current_graphdata_size, 0, sizeof(int) * (new_current_graphdata_size - current_graphdata_size));
@@ -1638,7 +1638,7 @@ size_t getFileLength(const char *filename)
 	struct stat status;
 	int rc = stat(filename, &status);
 	if (rc < 0)
-		throw std::runtime_error(strerror(errno));
+		throw std::runtime_error(ErrStr());
 	return status.st_size;
 }
 
@@ -1651,7 +1651,7 @@ time_t getFileDate(const char *filename)
 		if (errno == ENOENT)
 			return 0;
 		else
-			throw std::runtime_error(strerror(errno));
+			throw std::runtime_error(ErrStr());
 	}
 	return status.st_mtime;
 }

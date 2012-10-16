@@ -75,7 +75,8 @@ dansguardian_CPPFLAGS = -D__CONFFILE='"$(DGCONFFILE)"' \
 			-D__PROXYGROUP='"$(DGPROXYGROUP)"' \
 			-D__CONFDIR='"$(DGCONFDIR)"' \
 			$(AM_CPPFLAGS)
-dansguardian_SOURCES = String.cpp String.hpp \
+dansguardian_SOURCES = Debug.cpp Debug.hpp \
+                       String.cpp String.hpp \
                        FDTunnel.cpp FDTunnel.hpp \
                        ConnectionHandler.cpp ConnectionHandler.hpp \
                        DataBuffer.cpp DataBuffer.hpp \
